@@ -394,10 +394,6 @@ def senior_management_dashboard(request):
             day_staff = day_shifts_for_date.filter(
                 user__role__name__in=['SCW', 'SCA']
             ).count()
-            
-            # Debug output
-            if date.day == 15:
-                print(f"DEBUG {home.name} Dec 15: day_seniors={day_seniors}, day_staff={day_staff}, total_day_shifts={day_shifts_for_date.count()}")
             day_leave = LeaveRequest.objects.filter(
                 user__unit__in=units,
                 start_date__lte=date,
