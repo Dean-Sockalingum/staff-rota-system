@@ -1,0 +1,102 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Incident Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2><i class="fas fa-clipboard-list"></i> Incident Management</h2>
+    
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3>{{ total_incidents }}</h3>
+                    <p class="mb-0">Total Incidents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ open_incidents }}</h3>
+                    <p class="mb-0">Open</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ requiring_ci_notification }}</h3>
+                    <p class="mb-0">Requiring CI Notification</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3>{{ this_month }}</h3>
+                    <p class="mb-0">This Month</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="btn-group" role="group">
+                <a href="?filter=all" class="btn btn-{% if filter == 'all' %}primary{% else %}outline-primary{% endif %}">All</a>
+                <a href="?filter=open" class="btn btn-{% if filter == 'open' %}primary{% else %}outline-primary{% endif %}">Open</a>
+                <a href="?filter=high_risk" class="btn btn-{% if filter == 'high_risk' %}primary{% else %}outline-primary{% endif %}">High Risk</a>
+                <a href="?filter=care_inspectorate" class="btn btn-{% if filter == 'care_inspectorate' %}primary{% else %}outline-primary{% endif %}">CI Notified</a>
+                <a href="?filter=pending_review" class="btn btn-{% if filter == 'pending_review' %}primary{% else %}outline-primary{% endif %}">Pending Review</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incidents Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Reported By</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for incident in incidents %}
+                        <tr>
+                            <td>{{ incident.reference_number }}</td>
+                            <td>{{ incident.incident_date|date:"d M Y" }}</td>
+                            <td>{{ incident.get_incident_type_display }}</td>
+                            <td><span class="badge bg-{% if incident.severity == 'MAJOR_HARM' or incident.severity == 'DEATH' %}danger{% elif incident.severity == 'MODERATE_HARM' %}warning{% else %}info{% endif %}">{{ incident.get_severity_display }}</span></td>
+                            <td>{{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}</td>
+                            <td>
+                                {% if not incident.manager_reviewed %}<span class="badge bg-warning">Pending Review</span>{% endif %}
+                                {% if not incident.incident_closed %}<span class="badge bg-info">Open</span>{% else %}<span class="badge bg-success">Closed</span>{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'view_incident' incident.id %}" class="btn btn-sm btn-primary">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No incidents found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

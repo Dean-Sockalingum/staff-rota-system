@@ -1,0 +1,317 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Create Supervision Record{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <h2><i class="fas fa-user-check"></i> Create Supervision Record</h2>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+
+                <!-- Basic Details -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Session Details</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>Staff Member *</label>
+                                <input type="text" id="staff-search" class="form-control mb-2" placeholder="🔍 Search by name or SAP number..." autocomplete="off">
+                                <select name="staff_member" id="staff-select" class="form-select" required size="8" style="font-family: monospace;">
+                                    <option value="">-- Select Staff Member --</option>
+                                    {% for staff in staff_members %}
+                                    <option value="{{ staff.sap }}">{{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted"><span id="staff-count">{{ staff_members|length }}</span> staff members shown</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Session Date *</label>
+                                <input type="date" name="session_date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>Session Type</label>
+                                <select name="session_type" class="form-select">
+                                    <option value="REGULAR">Regular Supervision</option>
+                                    <option value="PROBATIONARY">Probationary Review</option>
+                                    <option value="RETURN_TO_WORK">Return to Work</option>
+                                    <option value="PERFORMANCE">Performance Discussion</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Duration (minutes)</label>
+                                <input type="number" name="duration_minutes" class="form-control" value="60" min="15" max="180">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wellbeing -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Wellbeing & Support</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label>Wellbeing Score (1-10)</label>
+                                <input type="number" name="wellbeing_score" class="form-control" value="5" min="1" max="10">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label>Sickness Days Since Last</label>
+                                <input type="number" name="sickness_days_since_last" class="form-control" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label>Wellbeing Concerns</label>
+                            <textarea name="wellbeing_concerns" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Support Offered</label>
+                            <textarea name="support_offered" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Performance Review</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label>Strengths & Achievements</label>
+                            <textarea name="performance_strengths" class="form-control" rows="3" placeholder="What has the staff member done well?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Areas for Development</label>
+                            <textarea name="performance_development" class="form-control" rows="3" placeholder="What areas need improvement?"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Training & Development</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="mandatory_training_current" class="form-check-input">
+                            <label class="form-check-label">All mandatory training is current</label>
+                        </div>
+                        <div class="mb-3">
+                            <label>Training Needs Identified</label>
+                            <textarea name="training_needs_identified" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SSSC -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>SSSC Registration</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="sssc_registration_current" class="form-check-input">
+                            <label class="form-check-label">SSSC Registration is current</label>
+                        </div>
+                        <div class="mb-3">
+                            <label>SSSC CPD Hours to Date</label>
+                            <input type="number" name="sssc_cpd_hours_to_date" class="form-control" value="0" step="0.5" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Safeguarding -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Safeguarding</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="safeguarding_concerns_discussed" class="form-check-input">
+                            <label class="form-check-label">Safeguarding concerns discussed</label>
+                        </div>
+                        <div class="mb-3">
+                            <label>Safeguarding Notes</label>
+                            <textarea name="safeguarding_notes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Incidents -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Incidents</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label>Incidents Since Last Supervision</label>
+                            <input type="number" name="incidents_since_last" class="form-control" value="0" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label>Learning from Incidents</label>
+                            <textarea name="incident_learning" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workload -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Workload</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="workload_manageable" class="form-check-input">
+                            <label class="form-check-label">Workload is manageable</label>
+                        </div>
+                        <div class="mb-3">
+                            <label>Workload Notes</label>
+                            <textarea name="workload_notes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Actions</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label>Actions from Previous Supervision</label>
+                            <textarea name="actions_from_previous" class="form-control" rows="2" placeholder="Review of actions agreed last time"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>New Actions Agreed</label>
+                            <textarea name="new_actions" class="form-control" rows="3" placeholder="What actions have been agreed for next time?"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Probationary Review -->
+                <div class="card mb-3 border-warning">
+                    <div class="card-header bg-warning"><strong>Probationary Review (if applicable)</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="is_probationary_review" id="is_probationary_review" class="form-check-input">
+                            <label class="form-check-label">This is a probationary review</label>
+                        </div>
+                        <div id="probation-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label>Probation Progress</label>
+                                <textarea name="probation_progress" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label>Recommendation</label>
+                                <select name="probation_recommendation" class="form-select">
+                                    <option value="">-- Select --</option>
+                                    <option value="PASS">Pass Probation</option>
+                                    <option value="EXTEND">Extend Probation</option>
+                                    <option value="FAIL">Fail Probation</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Supervision -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Next Supervision</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label>Next Supervision Date</label>
+                            <input type="date" name="next_supervision_date" class="form-control">
+                            <small class="text-muted">Regular supervision should be every 6 weeks</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'supervision_management' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Supervision Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Probationary review fields toggle
+document.getElementById('is_probationary_review').addEventListener('change', function() {
+    document.getElementById('probation-fields').style.display = this.checked ? 'block' : 'none';
+});
+
+// Staff member search functionality
+const searchInput = document.getElementById('staff-search');
+const staffSelect = document.getElementById('staff-select');
+const staffCount = document.getElementById('staff-count');
+
+function filterStaff() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    let visibleCount = 0;
+    
+    // Loop through all options (skip placeholder at index 0)
+    for (let i = 1; i < staffSelect.options.length; i++) {
+        const option = staffSelect.options[i];
+        const text = option.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+        const matches = searchTerm === '' || text.indexOf(searchTerm) !== -1;
+        
+        if (matches) {
+            option.style.display = '';
+            option.disabled = false;
+            visibleCount++;
+        } else {
+            option.style.display = 'none';
+            option.disabled = true;
+        }
+    }
+    
+    staffCount.textContent = visibleCount;
+    
+    // Auto-select if only one match
+    if (visibleCount === 1) {
+        for (let i = 1; i < staffSelect.options.length; i++) {
+            if (staffSelect.options[i].style.display !== 'none') {
+                staffSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+}
+
+searchInput.addEventListener('input', filterStaff);
+
+staffSelect.addEventListener('change', function() {
+    if (this.value && this.selectedIndex > 0) {
+        searchInput.value = this.options[this.selectedIndex].textContent.trim();
+    }
+});
+
+searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        staffSelect.focus();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        let visibleIndex = null;
+        for (let i = 1; i < staffSelect.options.length; i++) {
+            if (staffSelect.options[i].style.display !== 'none') {
+                if (visibleIndex === null) {
+                    visibleIndex = i;
+                } else {
+                    visibleIndex = null;
+                    break;
+                }
+            }
+        }
+        if (visibleIndex !== null) {
+            staffSelect.selectedIndex = visibleIndex;
+            staffSelect.focus();
+        }
+    }
+});
+
+searchInput.addEventListener('focus', function() {
+    this.select();
+});
+</script>
+{% endblock %}

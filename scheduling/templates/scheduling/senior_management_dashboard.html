@@ -1,0 +1,827 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .dashboard-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+    
+    .dashboard-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.95;
+        font-size: 1.1rem;
+    }
+    
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    
+    .summary-card.good { border-left-color: #10b981; }
+    .summary-card.warning { border-left-color: #f59e0b; }
+    .summary-card.critical { border-left-color: #ef4444; }
+    
+    .summary-card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    
+    .summary-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .summary-card .subtext {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    .section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .section-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #1f2937;
+        font-weight: 600;
+    }
+    
+    .home-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .home-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: box-shadow 0.2s;
+    }
+    
+    .home-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .home-card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #1f2937;
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-badge.good {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-badge.warning {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .status-badge.critical {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .status-badge.over_budget {
+        background: #fecaca;
+        color: #7f1d1d;
+    }
+    
+    .metric-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .metric {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .metric-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metric-value {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .progress-bar {
+        background: #e5e7eb;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #667eea;
+        transition: width 0.3s;
+    }
+    
+    .progress-fill.good { background: #10b981; }
+    .progress-fill.warning { background: #f59e0b; }
+    .progress-fill.critical { background: #ef4444; }
+    
+    .alert-item {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-radius: 4px;
+    }
+    
+    .alert-item.critical {
+        background: #fee2e2;
+        border-left-color: #ef4444;
+    }
+    
+    .alert-item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .alert-item-header strong {
+        color: #1f2937;
+    }
+    
+    .alert-item-header .age {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #9ca3af;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    table th {
+        text-align: left;
+        padding: 0.75rem;
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    table tr:hover {
+        background: #f9fafb;
+    }
+    
+    .currency {
+        font-family: 'Courier New', monospace;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Head of Service Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>🏥 Head of Service Dashboard</h1>
+    <p>Governance Oversight • Multi-Home Operations • {{ current_time|date:"l, F j, Y \a\t g:i A" }}</p>
+    <p style="font-size: 0.95rem; opacity: 0.9; margin-top: 0.5rem;">
+        <i class="fas fa-info-circle"></i> Strategic oversight across all {{ total_homes }} care homes for Head of Service team governance and compliance monitoring
+    </p>
+</div>
+
+<!-- ============================================= -->
+<!-- DATE RANGE FILTER -->
+<!-- ============================================= -->
+<div class="section">
+    <form method="get" action="{% url 'senior_management_dashboard' %}" id="dateFilterForm">
+        <div style="display: grid; grid-template-columns: 1fr 1fr auto auto auto; gap: 1rem; align-items: end;">
+            <div>
+                <label for="start_date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Start Date</label>
+                <input type="date" 
+                       id="start_date" 
+                       name="start_date" 
+                       value="{{ start_date|date:'Y-m-d' }}"
+                       class="form-control"
+                       style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+            </div>
+            <div>
+                <label for="end_date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">End Date</label>
+                <input type="date" 
+                       id="end_date" 
+                       name="end_date" 
+                       value="{{ end_date|date:'Y-m-d' }}"
+                       class="form-control"
+                       style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+            </div>
+            <div>
+                <button type="submit" 
+                        style="background: #667eea; color: white; padding: 0.5rem 1.5rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    📊 Apply Filter
+                </button>
+            </div>
+            <div>
+                <a href="{% url 'senior_management_dashboard' %}" 
+                   style="display: inline-block; background: #6b7280; color: white; padding: 0.5rem 1.5rem; border-radius: 6px; font-weight: 600; text-decoration: none;">
+                    🔄 Reset
+                </a>
+            </div>
+            <div>
+                <button type="button" 
+                        onclick="exportReport()"
+                        style="background: #10b981; color: white; padding: 0.5rem 1.5rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    📥 Export CSV
+                </button>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; color: #6b7280; font-size: 0.9rem;">
+            <strong>Showing data from:</strong> {{ start_date|date:"F j, Y" }} to {{ end_date|date:"F j, Y" }} ({{ days_in_range }} days)
+        </div>
+    </form>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 1: ORGANIZATION SUMMARY -->
+<!-- ============================================= -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <h3>Overall Occupancy</h3>
+        <div class="value">{{ overall_occupancy_rate|floatformat:1 }}%</div>
+        <div class="subtext">{{ total_occupancy }} / {{ total_capacity }} beds</div>
+        <div class="progress-bar">
+            <div class="progress-fill {% if overall_occupancy_rate >= 90 %}good{% elif overall_occupancy_rate >= 75 %}warning{% else %}critical{% endif %}" 
+                 style="width: {{ overall_occupancy_rate }}%"></div>
+        </div>
+    </div>
+    
+    <div class="summary-card {% if overall_utilization < 80 %}good{% elif overall_utilization < 100 %}warning{% else %}critical{% endif %}">
+        <h3>Budget Utilization</h3>
+        <div class="value">{{ overall_utilization|floatformat:1 }}%</div>
+        <div class="subtext">£{{ total_spend|floatformat:0 }} / £{{ total_budget|floatformat:0 }}</div>
+        <div class="progress-bar">
+            <div class="progress-fill {% if overall_utilization < 80 %}good{% elif overall_utilization < 100 %}warning{% else %}critical{% endif %}" 
+                 style="width: {% if overall_utilization > 100 %}100{% else %}{{ overall_utilization }}{% endif %}%"></div>
+        </div>
+    </div>
+    
+    <div class="summary-card {% if critical_alerts|length < 5 %}good{% elif critical_alerts|length < 15 %}warning{% else %}critical{% endif %}">
+        <h3>Open Alerts</h3>
+        <div class="value">{{ critical_alerts|length }}</div>
+        <div class="subtext">Requiring attention</div>
+    </div>
+    
+    <div class="summary-card {% if unfilled_covers < 10 %}good{% elif unfilled_covers < 25 %}warning{% else %}critical{% endif %}">
+        <h3>Unfilled Cover Requests</h3>
+        <div class="value">{{ unfilled_covers }}</div>
+        <div class="subtext">Active requests</div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 1.5: CITYWIDE SUMMARY -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>📊 Citywide Summary</h2>
+        <span class="text-muted">{{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}</span>
+    </div>
+    
+    <!-- DAY SHIFT SUMMARY -->
+    <h3 class="mb-3" style="color: #667eea; font-weight: 600;">
+        <i class="fas fa-sun"></i> Day Shift Coverage
+    </h3>
+    
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered table-sm" style="font-size: 0.85rem;">
+            <thead style="background: #667eea; color: white;">
+                <tr>
+                    <th rowspan="2" style="vertical-align: middle; width: 150px;">Care Home</th>
+                    <th colspan="2" style="text-align: center; border-right: 2px solid white;">Requirements</th>
+                    <th colspan="7" style="text-align: center;">
+                        {{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}
+                    </th>
+                </tr>
+                <tr>
+                    <th style="width: 80px;">Minimum</th>
+                    <th style="width: 80px; border-right: 2px solid white;">Ideal</th>
+                    {% for date in week_dates %}
+                    <th style="text-align: center; width: 90px;">
+                        <div>{{ date|date:"D" }}</div>
+                        <div style="font-size: 0.9em;">{{ date|date:"d" }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for home_data in citywide_day_summary %}
+                <tr style="background: #e0e7ff;">
+                    <td colspan="{{ week_dates|length|add:3 }}" style="font-weight: 600; color: #667eea; padding: 8px;">
+                        {{ home_data.home }} Day Shift
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">SSCW</td>
+                    <td style="text-align: center; background: #fef3c7;">2</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">2</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; {% if day.seniors >= 2 %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                        {{ day.seniors|default:"0" }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Staff</td>
+                    <td style="text-align: center; background: #fef3c7;">{{ home_data.min_required }}</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">{{ home_data.ideal_required }}</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; {% if day.staff >= home_data.min_required %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                        {{ day.staff|default:"0" }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Leave Granted</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">4</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.leave|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Agency Used</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.agency|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">OverTime Used</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.overtime|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7; border-bottom: 2px solid #ddd;">Absent today</td>
+                    <td style="text-align: center; background: #fef3c7; border-bottom: 2px solid #ddd;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd; border-bottom: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7; border-bottom: 2px solid #ddd;">{{ day.absent|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- NIGHT SHIFT SUMMARY -->
+    <h3 class="mb-3 mt-4" style="color: #4c1d95; font-weight: 600;">
+        <i class="fas fa-moon"></i> Night Shift Coverage
+    </h3>
+    
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm" style="font-size: 0.85rem;">
+            <thead style="background: #4c1d95; color: white;">
+                <tr>
+                    <th rowspan="2" style="vertical-align: middle; width: 150px;">Care Home</th>
+                    <th colspan="2" style="text-align: center; border-right: 2px solid white;">Requirements</th>
+                    <th colspan="7" style="text-align: center;">
+                        {{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}
+                    </th>
+                </tr>
+                <tr>
+                    <th style="width: 80px;">Minimum</th>
+                    <th style="width: 80px; border-right: 2px solid white;">Ideal</th>
+                    {% for date in week_dates %}
+                    <th style="text-align: center; width: 90px;">
+                        <div>{{ date|date:"D" }}</div>
+                        <div style="font-size: 0.9em;">{{ date|date:"d" }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for home_data in citywide_night_summary %}
+                <tr style="background: #ddd6fe;">
+                    <td colspan="{{ week_dates|length|add:3 }}" style="font-weight: 600; color: #4c1d95; padding: 8px;">
+                        {{ home_data.home}} Night Shift
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">SSCWN</td>
+                    <td style="text-align: center; background: #fef3c7;">2</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">2</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; {% if day.seniors >= 2 %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                        {{ day.seniors|default:"0" }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Staff</td>
+                    <td style="text-align: center; background: #fef3c7;">{{ home_data.min_required }}</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">{{ home_data.ideal_required }}</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; {% if day.staff >= home_data.min_required %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                        {{ day.staff|default:"0" }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Leave Granted</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">4</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.leave|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">Agency Used</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.agency|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7;">OverTime Used</td>
+                    <td style="text-align: center; background: #fef3c7;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7;">{{ day.overtime|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td style="padding-left: 20px; background: #fef3c7; border-bottom: 2px solid #ddd;">Absent today</td>
+                    <td style="text-align: center; background: #fef3c7; border-bottom: 2px solid #ddd;">0</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd; border-bottom: 2px solid #ddd;">0</td>
+                    {% for day in home_data.days %}
+                    <td style="text-align: center; background: #fef3c7; border-bottom: 2px solid #ddd;">{{ day.absent|default:"0" }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 2: HOME OVERVIEW -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>🏠 Care Home Overview</h2>
+    </div>
+    
+    {% for home in home_overview %}
+    <div class="home-card">
+        <div class="home-card-header">
+            <h3>{{ home.display_name }}</h3>
+            <span class="status-badge {% if home.occupancy_rate >= 90 %}good{% elif home.occupancy_rate >= 75 %}warning{% else %}critical{% endif %}">
+                {{ home.occupancy_rate|floatformat:1 }}% Occupancy
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <div class="metric">
+                <span class="metric-label">Capacity</span>
+                <span class="metric-value">{{ home.occupancy }} / {{ home.capacity }} beds</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Units</span>
+                <span class="metric-value">{{ home.units }} active</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Location</span>
+                <span class="metric-value" style="font-size: 0.9rem;">{{ home.location }}</span>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill {% if home.occupancy_rate >= 90 %}good{% elif home.occupancy_rate >= 75 %}warning{% else %}critical{% endif %}" 
+                 style="width: {{ home.occupancy_rate }}%"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 3: TODAY'S STAFFING -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>👥 Today's Staffing Levels</h2>
+        <span style="color: #6b7280; font-size: 0.9rem;">{{ today|date:"l, F j" }}</span>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Care Home</th>
+                <th>Day Shifts</th>
+                <th>Day Coverage</th>
+                <th>Night Shifts</th>
+                <th>Night Coverage</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for staff in staffing_today %}
+            <tr>
+                <td><strong>{{ staff.home }}</strong></td>
+                <td>{{ staff.day_actual }} / {{ staff.day_required }}</td>
+                <td>
+                    <span style="font-weight: 600; color: {% if staff.day_coverage >= 100 %}#10b981{% elif staff.day_coverage >= 80 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ staff.day_coverage|floatformat:0 }}%
+                    </span>
+                </td>
+                <td>{{ staff.night_actual }} / {{ staff.night_required }}</td>
+                <td>
+                    <span style="font-weight: 600; color: {% if staff.night_coverage >= 100 %}#10b981{% elif staff.night_coverage >= 80 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ staff.night_coverage|floatformat:0 }}%
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge {{ staff.status }}">
+                        {% if staff.status == 'good' %}✓ Fully Staffed
+                        {% elif staff.status == 'warning' %}⚠ Monitoring
+                        {% else %}⚠ Critical{% endif %}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 4: FISCAL MONITORING -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>💰 Fiscal Monitoring - {{ current_month }}</h2>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Care Home</th>
+                <th>Agency Spend</th>
+                <th>Agency %</th>
+                <th>OT Spend</th>
+                <th>OT %</th>
+                <th>Total Spend</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fiscal in fiscal_summary %}
+            <tr>
+                <td><strong>{{ fiscal.home }}</strong></td>
+                <td class="currency">
+                    £{{ fiscal.agency_spend|floatformat:0 }}<br>
+                    <small style="color: #6b7280;">/ £{{ fiscal.agency_budget|floatformat:0 }}</small>
+                </td>
+                <td>
+                    <span style="font-weight: 600; color: {% if fiscal.agency_utilization < 80 %}#10b981{% elif fiscal.agency_utilization < 100 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ fiscal.agency_utilization|floatformat:0 }}%
+                    </span>
+                </td>
+                <td class="currency">
+                    £{{ fiscal.ot_spend|floatformat:0 }}<br>
+                    <small style="color: #6b7280;">/ £{{ fiscal.ot_budget|floatformat:0 }}</small>
+                </td>
+                <td>
+                    <span style="font-weight: 600; color: {% if fiscal.ot_utilization < 80 %}#10b981{% elif fiscal.ot_utilization < 100 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ fiscal.ot_utilization|floatformat:0 }}%
+                    </span>
+                </td>
+                <td class="currency">
+                    <strong>£{{ fiscal.total_spend|floatformat:0 }}</strong><br>
+                    <small style="color: #6b7280;">/ £{{ fiscal.total_budget|floatformat:0 }}</small>
+                </td>
+                <td>
+                    <span class="status-badge {{ fiscal.fiscal_status }}">
+                        {% if fiscal.fiscal_status == 'good' %}✓ On Budget
+                        {% elif fiscal.fiscal_status == 'warning' %}⚠ Watch
+                        {% else %}🚨 Over Budget{% endif %}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight: 600; background: #f9fafb;">
+                <td>TOTAL</td>
+                <td class="currency">£{{ total_agency_spend|floatformat:0 }}</td>
+                <td></td>
+                <td class="currency">£{{ total_ot_spend|floatformat:0 }}</td>
+                <td></td>
+                <td class="currency">£{{ total_spend|floatformat:0 }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 5: CRITICAL ALERTS -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>🚨 Critical Staffing Alerts</h2>
+        <span style="color: #6b7280; font-size: 0.9rem;">Oldest {{ critical_alerts|length }} alerts</span>
+    </div>
+    
+    {% if critical_alerts %}
+        {% for alert in critical_alerts|slice:":10" %}
+        <div class="alert-item {% if alert.severity == 'HIGH' or alert.severity == 'CRITICAL' %}critical{% endif %}">
+            <div class="alert-item-header">
+                <strong>{{ alert.home }} - {{ alert.unit }}</strong>
+                <span class="age">{{ alert.age_hours|floatformat:0 }} hours old</span>
+            </div>
+            <div style="color: #6b7280; font-size: 0.9rem;">
+                {{ alert.date|date:"D, M j, Y" }} • Severity: {{ alert.severity }}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div><i>✓</i></div>
+            <p>No critical alerts at this time</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 6: PENDING MANAGEMENT ACTIONS -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>📋 Pending Management Actions</h2>
+    </div>
+    
+    <div class="metric-row" style="margin-bottom: 1.5rem;">
+        <div class="metric">
+            <span class="metric-label">Manual Review Leave Requests</span>
+            <span class="metric-value" style="color: {% if pending_by_home|length > 5 %}#ef4444{% elif pending_by_home|length > 2 %}#f59e0b{% else %}#10b981{% endif %}">
+                {{ pending_by_home|length }}
+            </span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Pending Reallocations</span>
+            <span class="metric-value" style="color: {% if pending_reallocations > 10 %}#ef4444{% elif pending_reallocations > 5 %}#f59e0b{% else %}#10b981{% endif %}">
+                {{ pending_reallocations }}
+            </span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Unfilled Cover Requests</span>
+            <span class="metric-value" style="color: {% if unfilled_covers > 25 %}#ef4444{% elif unfilled_covers > 10 %}#f59e0b{% else %}#10b981{% endif %}">
+                {{ unfilled_covers }}
+            </span>
+        </div>
+    </div>
+    
+    {% if pending_by_home %}
+    <h4 style="margin: 1rem 0 0.5rem 0; color: #374151;">Leave Requests by Home</h4>
+    {% for home, requests in pending_by_home.items %}
+        <div style="background: #f9fafb; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 4px;">
+            <strong>{{ home }}</strong>: {{ requests|length }} request{{ requests|length|pluralize }}
+        </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 7: QUALITY METRICS (30 Days) -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>📊 Quality Metrics - Last 30 Days</h2>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Care Home</th>
+                <th>Total Shifts</th>
+                <th>Agency Usage Rate</th>
+                <th>Active Staff</th>
+                <th>Quality Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for metric in quality_metrics %}
+            <tr>
+                <td><strong>{{ metric.home }}</strong></td>
+                <td>{{ metric.shifts_30d }}</td>
+                <td>
+                    <span style="font-weight: 600; color: {% if metric.agency_rate < 15 %}#10b981{% elif metric.agency_rate < 30 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ metric.agency_rate|floatformat:1 }}%
+                    </span>
+                </td>
+                <td>{{ metric.staff_count }}</td>
+                <td>
+                    <span style="font-weight: 600; color: {% if metric.quality_score > 85 %}#10b981{% elif metric.quality_score > 70 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ metric.quality_score|floatformat:0 }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="text-align: center; padding: 2rem; color: #9ca3af; font-size: 0.85rem;">
+    <p>Last updated: {{ current_time|date:"F j, Y \a\t g:i A" }}</p>
+    <p>Data reflects real-time information from all {{ total_homes }} care homes</p>
+</div>
+
+<script>
+function exportReport() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const url = new URL('{% url "senior_dashboard_export" %}', window.location.origin);
+    url.searchParams.set('start_date', startDate);
+    url.searchParams.set('end_date', endDate);
+    url.searchParams.set('format', 'csv');
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

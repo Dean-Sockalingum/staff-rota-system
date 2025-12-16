@@ -1,0 +1,241 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Supervision Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-user-check"></i> Supervision Management</h2>
+            <a href="{% url 'create_supervision_record' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Supervision Record
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3>{{ total_sessions }}</h3>
+                    <p class="text-muted mb-0">Total Sessions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ this_month }}</h3>
+                    <p class="text-muted mb-0">This Month</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ staff_needing_supervision|length }}</h3>
+                    <p class="text-muted mb-0">Need Supervision</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue Alert -->
+    {% if staff_needing_supervision %}
+    <div class="alert alert-warning">
+        <h5><i class="fas fa-exclamation-triangle"></i> Staff Needing Supervision (>6 weeks overdue)</h5>
+        <div class="d-flex flex-wrap gap-2">
+            {% for item in staff_needing_supervision %}
+            <span class="badge bg-danger">
+                {{ item.staff.get_full_name|default:item.staff.sap }} 
+                ({{ item.days_overdue|default:"Never" }} days)
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Supervisions Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Supervision Records</h5>
+        </div>
+        <div class="card-body">
+            {% if supervisions %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Supervisor</th>
+                            <th>Wellbeing</th>
+                            <th>Key Areas</th>
+                            <th>Next Session</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supervision in supervisions %}
+                        <tr>
+                            <td>{{ supervision.staff_member.get_full_name|default:supervision.staff_member.sap }}</td>
+                            <td>{{ supervision.session_date|date:"d M Y" }}</td>
+                            <td>
+                                {% if supervision.session_type == 'PROBATIONARY' %}
+                                <span class="badge bg-warning">Probationary</span>
+                                {% elif supervision.session_type == 'RETURN_TO_WORK' %}
+                                <span class="badge bg-info">Return to Work</span>
+                                {% elif supervision.session_type == 'PERFORMANCE' %}
+                                <span class="badge bg-primary">Performance</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Regular</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ supervision.supervisor.get_full_name|default:supervision.supervisor.sap }}</td>
+                            <td>
+                                {% if supervision.wellbeing_score >= 7 %}
+                                <span class="badge bg-success">{{ supervision.wellbeing_score }}/10</span>
+                                {% elif supervision.wellbeing_score >= 4 %}
+                                <span class="badge bg-warning">{{ supervision.wellbeing_score }}/10</span>
+                                {% else %}
+                                <span class="badge bg-danger">{{ supervision.wellbeing_score }}/10</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if supervision.safeguarding_concerns_discussed %}
+                                <span class="badge bg-danger">Safeguarding</span>
+                                {% endif %}
+                                {% if supervision.incidents_since_last > 0 %}
+                                <span class="badge bg-warning">Incidents ({{ supervision.incidents_since_last }})</span>
+                                {% endif %}
+                                {% if not supervision.mandatory_training_current %}
+                                <span class="badge bg-info">Training</span>
+                                {% endif %}
+                                {% if supervision.is_probationary_review %}
+                                <span class="badge bg-primary">Probation Review</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if supervision.next_supervision_date %}
+                                {{ supervision.next_supervision_date|date:"d M Y" }}
+                                {% else %}
+                                <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#details-{{ supervision.id }}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="details-{{ supervision.id }}">
+                            <td colspan="8">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Wellbeing & Support</h6>
+                                                <p><strong>Sickness Days:</strong> {{ supervision.sickness_days_since_last }}</p>
+                                                {% if supervision.wellbeing_concerns %}
+                                                <p><strong>Concerns:</strong> {{ supervision.wellbeing_concerns }}</p>
+                                                {% endif %}
+                                                {% if supervision.support_offered %}
+                                                <p><strong>Support Offered:</strong> {{ supervision.support_offered }}</p>
+                                                {% endif %}
+                                                
+                                                <h6 class="mt-3">Performance</h6>
+                                                {% if supervision.performance_strengths %}
+                                                <p><strong>Strengths:</strong> {{ supervision.performance_strengths }}</p>
+                                                {% endif %}
+                                                {% if supervision.performance_development %}
+                                                <p><strong>Development:</strong> {{ supervision.performance_development }}</p>
+                                                {% endif %}
+
+                                                <h6 class="mt-3">Training & SSSC</h6>
+                                                <p><strong>Mandatory Training Current:</strong> 
+                                                    {% if supervision.mandatory_training_current %}
+                                                    <span class="badge bg-success">Yes</span>
+                                                    {% else %}
+                                                    <span class="badge bg-danger">No</span>
+                                                    {% endif %}
+                                                </p>
+                                                {% if supervision.training_needs_identified %}
+                                                <p><strong>Training Needs:</strong> {{ supervision.training_needs_identified }}</p>
+                                                {% endif %}
+                                                <p><strong>SSSC CPD Hours:</strong> {{ supervision.sssc_cpd_hours_to_date }} hours</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% if supervision.safeguarding_concerns_discussed %}
+                                                <h6>Safeguarding</h6>
+                                                <p>{{ supervision.safeguarding_notes|default:"Discussed during session" }}</p>
+                                                {% endif %}
+
+                                                {% if supervision.incidents_since_last > 0 %}
+                                                <h6 class="mt-3">Incidents</h6>
+                                                <p><strong>Count:</strong> {{ supervision.incidents_since_last }}</p>
+                                                {% if supervision.incident_learning %}
+                                                <p><strong>Learning:</strong> {{ supervision.incident_learning }}</p>
+                                                {% endif %}
+                                                {% endif %}
+
+                                                <h6 class="mt-3">Workload</h6>
+                                                <p><strong>Manageable:</strong> 
+                                                    {% if supervision.workload_manageable %}
+                                                    <span class="badge bg-success">Yes</span>
+                                                    {% else %}
+                                                    <span class="badge bg-warning">No</span>
+                                                    {% endif %}
+                                                </p>
+                                                {% if supervision.workload_notes %}
+                                                <p>{{ supervision.workload_notes }}</p>
+                                                {% endif %}
+
+                                                <h6 class="mt-3">Actions</h6>
+                                                {% if supervision.actions_from_previous %}
+                                                <p><strong>Previous Actions:</strong> {{ supervision.actions_from_previous }}</p>
+                                                {% endif %}
+                                                {% if supervision.new_actions %}
+                                                <p><strong>New Actions:</strong> {{ supervision.new_actions }}</p>
+                                                {% endif %}
+
+                                                {% if supervision.is_probationary_review %}
+                                                <div class="alert alert-warning mt-3">
+                                                    <h6>Probationary Review</h6>
+                                                    <p><strong>Progress:</strong> {{ supervision.probation_progress }}</p>
+                                                    <p><strong>Recommendation:</strong> 
+                                                        {% if supervision.probation_recommendation == 'PASS' %}
+                                                        <span class="badge bg-success">Pass</span>
+                                                        {% elif supervision.probation_recommendation == 'EXTEND' %}
+                                                        <span class="badge bg-warning">Extend</span>
+                                                        {% else %}
+                                                        <span class="badge bg-danger">{{ supervision.probation_recommendation }}</span>
+                                                        {% endif %}
+                                                    </p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-user-check fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No supervision records found</p>
+                <a href="{% url 'create_supervision_record' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create First Supervision Record
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,484 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Manager Dashboard - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> Dashboard - {{ user.role.get_name_display }}</h2>
+        <p class="text-muted">Welcome back, {{ user.full_name }}. Here's what needs your attention today.</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-procedures"></i> Currently Off Sick <span class="badge bg-light text-danger ms-2">{{ current_sickness_absences|length }}</span></h5>
+            </div>
+            <div class="card-body overflow-auto">
+                {% if current_sickness_absences %}
+                    {% for record in current_sickness_absences %}
+                        <div class="d-flex justify-content-between align-items-start border-bottom py-2 gap-3">
+                            <div class="flex-grow-1">
+                                <strong>{{ record.profile.user.full_name }}</strong>
+                                <div class="text-muted small">First working day sick: {{ record.first_working_day|date:"M j, Y" }}</div>
+                                {% if record.reason %}<div class="small">Reason: {{ record.reason }}</div>{% endif %}
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-white text-danger d-block mb-2">{{ record.get_status_display }}</span>
+                                <a class="btn btn-sm btn-danger" href="{% url 'staff_records:profile_detail' record.profile.user.sap %}">
+                                    <i class="fas fa-folder-open"></i> Open record
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No staff currently recorded as off sick.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Incidents Widget (Last 24 Hours) -->
+{% if recent_incidents %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card border-warning">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-circle"></i> Recent Incidents - Last 24 Hours
+                    <span class="badge bg-danger ms-2">{{ recent_incidents|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning mb-3">
+                    <strong><i class="fas fa-info-circle"></i> Action Required:</strong> The following incidents have been reported in the last 24 hours and require your review.
+                </div>
+                {% for incident in recent_incidents %}
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-3">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <span class="badge bg-secondary">Ref: {{ incident.reference_number }}</span>
+                                {% if incident.severity == 'HIGH' %}
+                                    <span class="badge bg-danger">High Severity</span>
+                                {% elif incident.severity == 'MEDIUM' %}
+                                    <span class="badge bg-warning text-dark">Medium Severity</span>
+                                {% elif incident.severity == 'LOW' %}
+                                    <span class="badge bg-info">Low Severity</span>
+                                {% elif incident.severity == 'DEATH' %}
+                                    <span class="badge bg-dark">Death</span>
+                                {% endif %}
+                                {% if incident.care_inspectorate_notification_required %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-bell"></i> Care Inspectorate Notification Required
+                                    </span>
+                                {% endif %}
+                            </h6>
+                            <div class="mb-1">
+                                <strong>{{ incident.get_incident_type_display }}</strong>
+                                {% if incident.person_affected %}
+                                    - Person affected: {{ incident.person_affected }}
+                                {% endif %}
+                            </div>
+                            <div class="small text-muted">
+                                <i class="fas fa-user"></i> Reported by: {{ incident.reported_by.full_name }}<br>
+                                <i class="fas fa-clock"></i> {{ incident.created_at|date:"M j, Y g:i A" }} ({{ incident.created_at|timesince }} ago)
+                            </div>
+                            {% if incident.description %}
+                                <div class="mt-2 small">
+                                    {{ incident.description|truncatewords:30 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end ms-3">
+                            <a class="btn btn-sm btn-warning" href="{% url 'incident_management' %}">
+                                <i class="fas fa-eye"></i> Review
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Staffing Alerts Widget -->
+{% if staffing_alerts %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-circle"></i> Staffing Shortages - Next 7 Days
+                    <span class="badge bg-light text-danger ms-2">{{ staffing_alerts|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger mb-3">
+                    <strong><i class="fas fa-info-circle"></i> Action Required:</strong> The following shifts are below the minimum staffing level of 17 staff. Please address these shortages immediately.
+                </div>
+                <div class="row">
+                    {% for alert in staffing_alerts %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-danger">
+                            <div class="card-body">
+                                <h6 class="card-title text-danger">
+                                    <i class="fas fa-calendar-day"></i> {{ alert.date|date:"l, j F" }}
+                                </h6>
+                                <p class="card-text mb-2">
+                                    <strong>{{ alert.shift }} Shift</strong><br>
+                                    <span class="text-muted">Staff on duty:</span> <strong class="text-danger">{{ alert.actual }}</strong><br>
+                                    <span class="text-muted">Required:</span> <strong>{{ alert.required }}</strong>
+                                </p>
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> {{ alert.deficit }} staff short
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Widget A: Manual Review Required -->
+    <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Action Items: Manual Review
+                    <span class="badge bg-danger ms-2">{{ manual_review_requests.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if manual_review_requests %}
+                    {% for request in manual_review_requests %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ request.user.full_name }}</strong><br>
+                            <small class="text-muted">
+                                {{ request.get_leave_type_display }} - {{ request.start_date }} to {{ request.end_date }}
+                                {% if request.is_blackout_period %}
+                                    <span class="badge bg-warning">⚠️ Blackout Period Request</span>
+                                {% endif %}
+                                {% if request.causes_staffing_shortfall %}
+                                    <span class="badge bg-danger">⚠️ Staffing Shortfall</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            <button class="btn btn-success btn-sm me-1">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm">
+                                <i class="fas fa-times"></i> Deny
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No requests requiring manual review.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget B: Staff Reallocations Needed -->
+    <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exchange-alt"></i> Pending Staff Reallocations
+                    <span class="badge bg-warning ms-2">{{ pending_reallocations.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if pending_reallocations %}
+                    {% for reallocation in pending_reallocations %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ reallocation.target_shift_type.get_name_display }} Cover Needed</strong><br>
+                            <small class="text-muted">
+                                {{ reallocation.target_unit.get_name_display }} - {{ reallocation.target_date }}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="{% url 'rota_view' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-cog"></i> Resolve
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No pending reallocations.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Widget: Upcoming Approved Leave -->
+    <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-plane-departure"></i> Upcoming Approved Leave
+                    <span class="badge bg-light text-dark ms-2">{{ upcoming_approved_leave|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_approved_leave %}
+                    {% for leave in upcoming_approved_leave|slice:":10" %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ leave.user.full_name }}</strong><br>
+                            <small class="text-muted">
+                                {{ leave.get_leave_type_display }} · {{ leave.start_date|date:"M j" }} to {{ leave.end_date|date:"M j" }}
+                            </small>
+                        </div>
+                        <span class="badge bg-success">Approved</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No upcoming approved leave recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget: Pending Leave Requests -->
+    <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-hourglass-half"></i> Pending Leave Requests
+                    <span class="badge bg-warning text-dark ms-2">{{ pending_leave_requests|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if pending_leave_requests %}
+                    {% for leave in pending_leave_requests|slice:":10" %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ leave.user.full_name }}</strong><br>
+                            <small class="text-muted">
+                                {{ leave.get_leave_type_display }} · {{ leave.start_date|date:"M j" }} to {{ leave.end_date|date:"M j" }}
+                            </small>
+                        </div>
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No pending leave requests awaiting review.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Widget C: Today's Staffing Snapshot -->
+    <div class="col-lg-8 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-users"></i> Live Status: Today ({{ today|date:"l, F j, Y" }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for unit_name, summary in staffing_summary.items %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ summary.unit.get_name_display }}</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Day Shift:</strong><br>
+                                        <span class="status-{{ summary.day_status }}">
+                                            {{ summary.day_actual }} / {{ summary.day_required }}
+                                        </span>
+                                        {% if summary.day_supernumerary %}
+                                            <div class="small text-primary mt-1">
+                                                Duty SSCW: {{ summary.day_supernumerary }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="small text-muted mt-1">
+                                            {% if summary.day_care_breakdown %}
+                                                Care mix:
+                                                {% for item in summary.day_care_breakdown %}
+                                                    {{ item.label }} x{{ item.count }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                No care cover scheduled
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Night Shift:</strong><br>
+                                        <span class="status-{{ summary.night_status }}">
+                                            {{ summary.night_actual }} / {{ summary.night_required }}
+                                        </span>
+                                        {% if summary.night_supernumerary %}
+                                            <div class="small text-primary mt-1">
+                                                Duty SSCW: {{ summary.night_supernumerary }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="small text-muted mt-1">
+                                            {% if summary.night_care_breakdown %}
+                                                Care mix:
+                                                {% for item in summary.night_care_breakdown %}
+                                                    {{ item.label }} x{{ item.count }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                No care cover scheduled
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget D: Recent System Activity -->
+    <div class="col-lg-4 col-md-12 mb-4">
+        <div class="card widget-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot"></i> Recent Automated Approvals
+                </h5>
+            </div>
+            <div class="card-body overflow-auto">
+                {% if recent_auto_approvals %}
+                    {% for log in recent_auto_approvals %}
+                    <div class="border-bottom py-2">
+                        <strong>{{ log.user.full_name }}</strong><br>
+                        <small class="text-muted">
+                            {{ log.description }}<br>
+                            <i class="fas fa-clock"></i> {{ log.created_at|timesince }} ago
+                        </small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent automated approvals.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Management -->
+<div class="row mb-4">
+    <div class="col-lg-6 col-md-12">
+        <div class="card widget-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-check"></i> Compliance Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <a href="{% url 'induction_management' %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-user-graduate"></i> Induction Management
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'supervision_management' %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-user-check"></i> Supervision Management
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <a href="{% url 'incident_management' %}" class="btn btn-outline-danger w-100 mb-2">
+                            <i class="fas fa-exclamation-triangle"></i> Incident Management
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'create_supervision_record' %}" class="btn btn-success w-100 mb-2">
+                            <i class="fas fa-plus"></i> Create Supervision
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 col-md-12">
+        <div class="card widget-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line"></i> Compliance Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Quick overview of compliance metrics</p>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-user-graduate text-primary"></i> 
+                        <a href="{% url 'induction_management' %}">Staff Inductions</a>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-user-check text-info"></i> 
+                        <a href="{% url 'supervision_management' %}">Supervision Sessions</a>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-warning"></i> 
+                        <a href="{% url 'incident_management' %}">Incident Reports</a>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-graduation-cap text-success"></i> 
+                        <a href="{% url 'my_training_dashboard' %}">Training Records</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'rota_view' %}" class="btn btn-primary me-2">
+                    <i class="fas fa-calendar-week"></i> View Full Rota
+                </a>
+                <a href="{% url 'staff_management' %}" class="btn btn-success me-2">
+                    <i class="fas fa-users"></i> Staff Management
+                </a>
+                <a href="{% url 'team_management' %}" class="btn btn-info me-2">
+                    <i class="fas fa-layer-group"></i> Team Management
+                </a>
+                <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary me-2">
+                    <i class="fas fa-chart-bar"></i> Generate Reports
+                </a>
+                {% if user.role and user.role.can_approve_leave %}
+                <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-warning text-dark me-2">
+                    <i class="fas fa-user-check"></i> Leave Approvals
+                </a>
+                {% endif %}
+                <a href="{% url 'staff_guidance' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-book"></i> Guidance
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

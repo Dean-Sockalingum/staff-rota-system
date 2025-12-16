@@ -1,0 +1,432 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Staff Management - Home Unit Assignments{% endblock %}
+
+{% block page_title %}Staff Management - Home Unit Assignments{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --sscw-color: #495057;
+        --scw-color: #28a745;
+        --sca-color: #007bff;
+        --team-a-color: #e74c3c;
+        --team-b-color: #f39c12;
+        --team-c-color: #9b59b6;
+    }
+    
+    .unit-card {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .unit-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .sscw-manager {
+        background-color: #f8f9fa;
+        border-left: 4px solid var(--sscw-color);
+        padding: 10px 15px;
+        margin: 10px 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .shift-section {
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    
+    .day-section {
+        background-color: #fff3cd;
+        border-left: 5px solid #ffc107;
+    }
+    
+    .night-section {
+        background-color: #d1ecf1;
+        border-left: 5px solid #17a2b8;
+    }
+    
+    .night-staff-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    
+    .night-staff-section .section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .night-staff-section .team-group {
+        margin-bottom: 8px;
+    }
+    
+    .night-staff-section .team-header {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+        margin-bottom: 5px;
+    }
+    
+    .night-staff-section .staff-member {
+        margin: 3px 0;
+        padding: 5px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .night-staff-section .role-header {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        margin-bottom: 3px;
+    }
+    
+    .team-group {
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+    }
+    
+    .team-a { border-left: 5px solid var(--team-a-color); }
+    .team-b { border-left: 5px solid var(--team-b-color); }
+    .team-c { border-left: 5px solid var(--team-c-color); }
+    
+    .team-header {
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .team-a .team-header { color: var(--team-a-color); }
+    .team-b .team-header { color: var(--team-b-color); }
+    .team-c .team-header { color: var(--team-c-color); }
+    
+    .role-group {
+        margin-bottom: 15px;
+    }
+    
+    .role-header {
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 5px 10px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+    
+    .role-sscw { 
+        background-color: var(--sscw-color); 
+        color: white; 
+    }
+    .role-scw { 
+        background-color: var(--scw-color); 
+        color: white; 
+    }
+    .role-sca { 
+        background-color: var(--sca-color); 
+        color: white; 
+    }
+    
+    .staff-member {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 5px 0;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .staff-member:hover {
+        background-color: #f1f3f4;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .staff-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .staff-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+    }
+    
+    .staff-sap {
+        font-size: 0.8rem;
+        color: #666;
+        font-family: monospace;
+    }
+    
+    .contracted-shifts {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    .no-staff {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px dashed #dee2e6;
+    }
+    
+    .stats-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        padding: 20px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .day-icon, .night-icon {
+        margin-right: 8px;
+        font-size: 1.2rem;
+    }
+    
+    .day-icon { color: #ffc107; }
+    .night-icon { color: #17a2b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Statistics Summary -->
+    <div class="stats-summary">
+        <div class="row">
+            <div class="col-md-3">
+                <h4>{{ total_staff }}</h4>
+                <p class="mb-0">Total Active Staff</p>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ care_staff }}</h4>
+                <p class="mb-0">Care Staff</p>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ staff_with_home_units }}</h4>
+                <p class="mb-0">Staff with Home Units</p>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ staff_without_home_units }}</h4>
+                <p class="mb-0">Staff without Home Units</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Home Unit Assignments -->
+    {% for unit_data in units_with_home_staff %}
+    <div class="unit-card">
+        <!-- Unit Header -->
+        <div class="unit-header">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3><i class="fas fa-hospital"></i> {{ unit_data.unit.get_name_display }}</h3>
+                    <!-- Static SSCW Managers -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% if unit_data.static_sscw_managers.day_sscw %}
+                            <div class="sscw-manager">
+                                <strong><i class="fas fa-sun"></i> Day SSCW Manager:</strong><br>
+                                {{ unit_data.static_sscw_managers.day_sscw.first_name }} {{ unit_data.static_sscw_managers.day_sscw.last_name }}<br>
+                                <small class="text-muted">({{ unit_data.static_sscw_managers.day_sscw.sap }})</small>
+                            </div>
+                            {% else %}
+                            <div class="sscw-manager">
+                                <strong><i class="fas fa-exclamation-triangle"></i> No Day SSCW assigned</strong>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Day Staff directly under Day SSCW -->
+                            {% if unit_data.day_staff %}
+                                <div class="night-staff-section mt-3">
+                                    <div class="section-title mb-2">
+                                        <span class="day-icon">☀️</span> Day Staff ({{ unit_data.day_staff_count }} staff)
+                                    </div>
+                                    
+                                    {% for team, team_data in unit_data.day_staff.items %}
+                                    <div class="team-group team-{{ team|lower }} mb-2">
+                                        <div class="team-header">
+                                            <span>🏷️ Team {{ team }} ({{ team_data.total }} staff)</span>
+                                            <small>{{ team_data.total_shifts }} shifts/week</small>
+                                        </div>
+                                        
+                                        {% for role, staff_list in team_data.roles.items %}
+                                        {% if staff_list %}
+                                        <div class="role-group">
+                                            <div class="role-header role-{{ role|lower }}">
+                                                {{ role }} ({{ staff_list|length }})
+                                            </div>
+                                            {% for staff_data in staff_list %}
+                                            <div class="staff-member" 
+                                                 data-name="{{ staff_data.staff.first_name|lower }} {{ staff_data.staff.last_name|lower }}" 
+                                                 data-sap="{{ staff_data.staff.sap }}" 
+                                                 data-role="{{ role }}">
+                                                <div class="staff-info">
+                                                    <span class="staff-name">{{ staff_data.staff.first_name }} {{ staff_data.staff.last_name }}</span>
+                                                    <span class="staff-sap">{{ staff_data.staff.sap }}</span>
+                                                </div>
+                                                <div class="contracted-shifts">
+                                                    {{ staff_data.contracted_shifts }} shifts/week
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-staff mt-2">
+                                    <small class="text-muted">No day shift staff assigned to this unit as home base</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if unit_data.static_sscw_managers.night_sscw %}
+                            <div class="sscw-manager">
+                                <strong><i class="fas fa-moon"></i> Night SSCW Manager:</strong><br>
+                                {{ unit_data.static_sscw_managers.night_sscw.first_name }} {{ unit_data.static_sscw_managers.night_sscw.last_name }}<br>
+                                <small class="text-muted">({{ unit_data.static_sscw_managers.night_sscw.sap }})</small>
+                            </div>
+                            {% else %}
+                            <div class="sscw-manager">
+                                <strong><i class="fas fa-exclamation-triangle"></i> No Night SSCW assigned</strong>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Night Staff directly under Night SSCW -->
+                            {% if unit_data.night_staff %}
+                                <div class="night-staff-section mt-3">
+                                    <div class="section-title mb-2">
+                                        <span class="night-icon">🌙</span> Night Staff ({{ unit_data.night_staff_count }} staff)
+                                    </div>
+                                    
+                                    {% for team, team_data in unit_data.night_staff.items %}
+                                    <div class="team-group team-{{ team|lower }} mb-2">
+                                        <div class="team-header">
+                                            <span>🏷️ Team {{ team }} ({{ team_data.total }} staff)</span>
+                                            <small>{{ team_data.total_shifts }} shifts/week</small>
+                                        </div>
+                                        
+                                        {% for role, staff_list in team_data.roles.items %}
+                                        {% if staff_list %}
+                                        <div class="role-group">
+                                            <div class="role-header role-{{ role|lower }}">
+                                                {{ role }} ({{ staff_list|length }})
+                                            </div>
+                                            {% for staff_data in staff_list %}
+                                            <div class="staff-member" 
+                                                 data-name="{{ staff_data.staff.first_name|lower }} {{ staff_data.staff.last_name|lower }}" 
+                                                 data-sap="{{ staff_data.staff.sap }}" 
+                                                 data-role="{{ role }}">
+                                                <div class="staff-info">
+                                                    <span class="staff-name">{{ staff_data.staff.first_name }} {{ staff_data.staff.last_name }}</span>
+                                                    <span class="staff-sap">{{ staff_data.staff.sap }}</span>
+                                                </div>
+                                                <div class="contracted-shifts">
+                                                    {{ staff_data.contracted_shifts }} shifts/week
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-staff mt-2">
+                                    <small class="text-muted">No night shift staff assigned to this unit as home base</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-right">
+                    <h4>{{ unit_data.total_home_staff }} Home Staff</h4>
+                    <p class="mb-0">Teams A, B, C Distribution</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unit Body -->
+        <div class="card-body">
+            <!-- Day and Night staff are now positioned under their respective SSCW managers above -->
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        <h4>No units found</h4>
+        <p>No care units are currently configured in the system.</p>
+    </div>
+    {% endfor %}
+
+    <!-- Staff without Home Units -->
+    {% if staff_without_home_units > 0 %}
+    <div class="alert alert-warning">
+        <h5><i class="fas fa-exclamation-triangle"></i> Staff without Home Units</h5>
+        <p>{{ staff_without_home_units }} SCW/SCA staff members do not have a home unit assigned. These staff may need to be allocated to base units for better organization.</p>
+        <a href="{% url 'add_staff' %}" class="btn btn-warning btn-sm">Manage Staff Assignments</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling for better UX
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+    
+    // Add click handlers for staff members to show more details
+    document.querySelectorAll('.staff-member').forEach(member => {
+        member.addEventListener('click', function() {
+            // Future enhancement: show staff details modal
+            console.log('Staff member clicked:', this.querySelector('.staff-name').textContent);
+        });
+    });
+});
+</script>
+{% endblock %}

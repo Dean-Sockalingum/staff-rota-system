@@ -1,0 +1,313 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Staffing Alerts Dashboard - Staff Rota Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .alert-row {
+        transition: background-color 0.3s ease;
+    }
+    .alert-row:hover {
+        background-color: #f8f9fa;
+    }
+    .progress-thin {
+        height: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="h2">
+                <i class="fas fa-tachometer-alt"></i> Staffing Alerts Dashboard
+            </h1>
+            <p class="text-muted">Monitor and manage staffing shortage alerts</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'staffing_create_alert' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Alert
+            </a>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #dc3545;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Active Alerts</h6>
+                            <h2 class="mb-0">{{ stats.total_active }}</h2>
+                        </div>
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #ffc107;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Positions Needed</h6>
+                            <h2 class="mb-0">{{ stats.total_positions }}</h2>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #28a745;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Accepted Responses</h6>
+                            <h2 class="mb-0">{{ stats.total_accepted }}</h2>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #17a2b8;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Fill Rate</h6>
+                            <h2 class="mb-0">{{ stats.fill_rate }}%</h2>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="progress progress-thin mt-2">
+                        <div class="progress-bar bg-info" role="progressbar" 
+                             style="width: {{ stats.fill_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Alerts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell"></i> Active Alerts
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if active_alerts %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Unit</th>
+                                        <th>Shift Type</th>
+                                        <th>Required/Current</th>
+                                        <th>Shortage</th>
+                                        <th>Responses</th>
+                                        <th>Progress</th>
+                                        <th>Priority</th>
+                                        <th>Expires</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for alert in active_alerts %}
+                                    <tr class="alert-row">
+                                        <td>
+                                            <strong>{{ alert.shift_date|date:"D, M d" }}</strong><br>
+                                            <small class="text-muted">{{ alert.shift_date|date:"Y" }}</small>
+                                        </td>
+                                        <td>{{ alert.unit.get_name_display }}</td>
+                                        <td>{{ alert.shift_type.get_name_display }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ alert.required_staff }}</span>
+                                            /
+                                            <span class="badge bg-secondary">{{ alert.current_staff }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger">-{{ alert.shortage }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <i class="fas fa-check text-success"></i> {{ alert.responses_accepted }}
+                                                <i class="fas fa-clock text-warning ms-2"></i> {{ alert.responses_pending }}
+                                                <i class="fas fa-times text-danger ms-2"></i> {{ alert.responses_declined }}
+                                            </div>
+                                        </td>
+                                        <td style="min-width: 150px;">
+                                            {% widthratio alert.responses_accepted alert.shortage 100 as progress %}
+                                            <div class="progress">
+                                                <div class="progress-bar {% if progress >= 100 %}bg-success{% elif progress >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ progress }}%">
+                                                    {{ progress }}%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ alert.responses_accepted }}/{{ alert.shortage }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {% if alert.priority >= 7 %}
+                                            <span class="badge bg-danger">URGENT</span>
+                                            {% elif alert.priority >= 4 %}
+                                            <span class="badge bg-warning text-dark">HIGH</span>
+                                            {% else %}
+                                            <span class="badge bg-info">NORMAL</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small data-expires="{{ alert.expires_at.isoformat }}">
+                                                {{ alert.expires_at|timeuntil }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {% if alert.status == 'PENDING' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                            {% elif alert.status == 'PARTIALLY_FILLED' %}
+                                            <span class="badge bg-info">Partially Filled</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-check-circle fa-4x mb-3 text-success"></i>
+                            <h4>No Active Alerts</h4>
+                            <p>All staffing requirements are currently met</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Completed Alerts -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Recent Completed Alerts
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if completed_alerts %}
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Unit</th>
+                                        <th>Shift</th>
+                                        <th>Shortage</th>
+                                        <th>Filled</th>
+                                        <th>Status</th>
+                                        <th>Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for alert in completed_alerts %}
+                                    <tr>
+                                        <td>{{ alert.shift_date|date:"M d, Y" }}</td>
+                                        <td>{{ alert.unit.get_name_display }}</td>
+                                        <td>{{ alert.shift_type.get_name_display }}</td>
+                                        <td>{{ alert.shortage }}</td>
+                                        <td>{{ alert.responses_accepted }}</td>
+                                        <td>
+                                            {% if alert.status == 'FILLED' %}
+                                            <span class="badge bg-success">Filled</span>
+                                            {% elif alert.status == 'EXPIRED' %}
+                                            <span class="badge bg-danger">Expired</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ alert.updated_at|date:"M d, h:i A" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <p>No completed alerts yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Auto-refresh every 2 minutes
+setTimeout(function() {
+    location.reload();
+}, 120000);
+
+// Update time remaining
+function updateCountdowns() {
+    document.querySelectorAll('[data-expires]').forEach(function(el) {
+        const expires = new Date(el.dataset.expires);
+        const now = new Date();
+        const diff = expires - now;
+        
+        if (diff > 0) {
+            const hours = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            el.textContent = `${hours}h ${mins}m`;
+            el.classList.remove('text-danger');
+        } else {
+            el.textContent = 'EXPIRED';
+            el.classList.add('text-danger', 'fw-bold');
+        }
+    });
+}
+
+setInterval(updateCountdowns, 60000);
+updateCountdowns();
+</script>
+{% endblock %}

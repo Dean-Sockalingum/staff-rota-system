@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Help Assistant - Staff Rota System</title>
+    {% load static %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+    .ai-demo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .ai-demo-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .ai-demo-header h1 {
+        color: #0066CC;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+    
+    .ai-demo-header p {
+        color: #666;
+        font-size: 1.2em;
+    }
+    
+    .demo-sections {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    .demo-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .demo-card h3 {
+        color: #0066CC;
+        margin-top: 0;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .demo-card h3 .icon {
+        font-size: 1.5em;
+    }
+    
+    .example-queries {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .example-queries li {
+        background: #f8f9fa;
+        border-left: 3px solid #0066CC;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-radius: 4px;
+    }
+    
+    .example-queries li:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    
+    .example-queries li::before {
+        content: "💬 ";
+        margin-right: 8px;
+    }
+    
+    .ai-chat-main {
+        background: white;
+        border: 2px solid #0066CC;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        min-height: 500px;
+    }
+    
+    .ai-chat-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .ai-chat-header h2 {
+        color: #0066CC;
+        margin: 0;
+    }
+    
+    .ai-chat-header p {
+        color: #666;
+        margin: 10px 0 0 0;
+    }
+    
+    #ai-demo-messages {
+        min-height: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .ai-message, .user-message {
+        margin-bottom: 15px;
+        padding: 12px 15px;
+        border-radius: 8px;
+        max-width: 80%;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .user-message {
+        background: #0066CC;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .ai-message {
+        background: white;
+        border: 1px solid #ddd;
+    }
+    
+    .ai-input-section {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .ai-input-section input {
+        flex: 1;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 1em;
+    }
+    
+    .ai-input-section button {
+        padding: 12px 30px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+    
+    .ai-input-section button:hover {
+        background: #0052a3;
+    }
+    
+    .ai-input-section button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 12px 15px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-width: 100px;
+    }
+    
+    .typing-indicator.active {
+        display: block;
+    }
+    
+    .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background: #0066CC;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 3px;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+        }
+        30% {
+            transform: translateY(-10px);
+        }
+    }
+</style>
+
+<div class="ai-demo-container">
+    <div class="ai-demo-header">
+        <h1>🤖 AI Help Assistant</h1>
+        <p>Ask questions about staff, shifts, care plans, and more!</p>
+    </div>
+    
+    <div class="demo-sections">
+        <div class="demo-card">
+            <h3><span class="icon">👥</span> Staff Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Who is working today?')">Who is working today?</li>
+                <li onclick="askQuestion('Show me Jane Smith details')">Show me Jane Smith details</li>
+                <li onclick="askQuestion('Who is on night shift tonight?')">Who is on night shift tonight?</li>
+                <li onclick="askQuestion('List all senior carers')">List all senior carers</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">📋</span> Care Plan Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('When is DEM01 review due?')">When is DEM01 review due?</li>
+                <li onclick="askQuestion('Show overdue care plan reviews')">Show overdue care plan reviews</li>
+                <li onclick="askQuestion('How many reviews this month?')">How many reviews this month?</li>
+                <li onclick="askQuestion('Care plan compliance status')">Care plan compliance status</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">📅</span> Leave & Absence</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Who is on leave this week?')">Who is on leave this week?</li>
+                <li onclick="askQuestion('Show my leave balance')">Show my leave balance</li>
+                <li onclick="askQuestion('Annual leave pending approvals')">Annual leave pending approvals</li>
+                <li onclick="askQuestion('Sickness absence report')">Sickness absence report</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">💰</span> Staffing & Costs</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Agency usage this month')">Agency usage this month</li>
+                <li onclick="askQuestion('Show staffing shortages')">Show staffing shortages</li>
+                <li onclick="askQuestion('Overtime costs this week')">Overtime costs this week</li>
+                <li onclick="askQuestion('List agency companies')">List agency companies</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="ai-chat-main">
+        <div class="ai-chat-header">
+            <h2>💬 Ask Your Question</h2>
+            <p>Type your question below or click an example above</p>
+        </div>
+        
+        <div id="ai-demo-messages">
+            <div class="ai-message">
+                👋 Hello! I'm your AI Help Assistant. I can answer questions about:
+                <br><br>
+                • Staff schedules and rotas<br>
+                • Care plan reviews and compliance<br>
+                • Annual leave and absence<br>
+                • Agency bookings and costs<br>
+                • Unit information and resident care<br>
+                <br>
+                Just ask me anything!
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <div class="ai-input-section">
+            <input 
+                type="text" 
+                id="ai-demo-input" 
+                placeholder="Type your question here..."
+                onkeypress="if(event.key === 'Enter') sendDemoMessage()"
+            >
+            <button onclick="sendDemoMessage()" id="send-btn">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const messagesContainer = document.getElementById('ai-demo-messages');
+    const inputField = document.getElementById('ai-demo-input');
+    const sendBtn = document.getElementById('send-btn');
+    const typingIndicator = document.getElementById('typing-indicator');
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function askQuestion(question) {
+        inputField.value = question;
+        inputField.focus();
+        sendDemoMessage();
+    }
+    
+    function sendDemoMessage() {
+        const query = inputField.value.trim();
+        if (!query) return;
+        
+        console.log('Sending query:', query);
+        
+        // Add user message
+        addMessage(query, 'user');
+        inputField.value = '';
+        
+        // Show typing indicator
+        typingIndicator.classList.add('active');
+        sendBtn.disabled = true;
+        
+        // Send to API
+        fetch('/api/ai-assistant/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ query: query })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            typingIndicator.classList.remove('active');
+            sendBtn.disabled = false;
+            
+            if (data.error) {
+                addMessage('❌ Sorry, I encountered an error: ' + data.error, 'ai');
+            } else {
+                const message = data.answer || data.response || 'No response received';
+                addMessage(message, 'ai');
+            }
+        })
+        .catch(error => {
+            typingIndicator.classList.remove('active');
+            sendBtn.disabled = false;
+            addMessage('❌ Sorry, I encountered an error connecting to the assistant. Please try again.', 'ai');
+            console.error('Fetch Error:', error);
+        });
+    }
+    
+    function addMessage(text, type) {
+        console.log('Adding message:', type, text);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = type === 'user' ? 'user-message' : 'ai-message';
+        
+        // Convert markdown-style formatting
+        let formattedText = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+            .replace(/\n/g, '<br>');  // Line breaks
+        
+        messageDiv.innerHTML = formattedText;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        console.log('Message added successfully, total messages:', messagesContainer.children.length);
+    }
+    
+    // Focus input on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        inputField.focus();
+        console.log('AI Assistant page loaded');
+    });
+</script>
+</body>
+</html>

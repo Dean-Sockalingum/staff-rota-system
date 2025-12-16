@@ -1,0 +1,178 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Approve Care Plan Review{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'careplan_manager_dashboard' %}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            
+            <h2>
+                <i class="fas fa-clipboard-check text-primary"></i> Review Care Plan for Approval
+            </h2>
+            <hr>
+        </div>
+    </div>
+
+    <!-- Resident Information -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Resident Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Name:</th>
+                            <td>{{ review.resident.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>ID:</th>
+                            <td>{{ review.resident.resident_id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Unit:</th>
+                            <td>{{ review.resident.unit.get_name_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date of Birth:</th>
+                            <td>{{ review.resident.date_of_birth }}</td>
+                        </tr>
+                        <tr>
+                            <th>Admission Date:</th>
+                            <td>{{ review.resident.admission_date }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-check"></i> Review Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Review Type:</th>
+                            <td>{{ review.get_review_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Due Date:</th>
+                            <td>
+                                {% if review.due_date < today %}
+                                <span class="badge badge-danger">{{ review.due_date }} (Overdue)</span>
+                                {% else %}
+                                {{ review.due_date }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Keyworker:</th>
+                            <td>{{ review.keyworker.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Started:</th>
+                            <td>{{ review.started_date|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge badge-warning">{{ review.get_status_display }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Content -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-medical-alt"></i> Care Plan Review Details</h5>
+                </div>
+                <div class="card-body">
+                    <h6><strong>Care Needs Assessment:</strong></h6>
+                    <div class="border p-3 mb-3 bg-light">
+                        {{ review.care_needs_assessment|default:"Not completed"|linebreaks }}
+                    </div>
+
+                    <h6><strong>Progress Towards Goals:</strong></h6>
+                    <div class="border p-3 mb-3 bg-light">
+                        {{ review.goals_progress|default:"Not completed"|linebreaks }}
+                    </div>
+
+                    <h6><strong>Changes to Care Plan:</strong></h6>
+                    <div class="border p-3 mb-3 bg-light">
+                        {{ review.changes_needed|default:"No changes noted"|linebreaks }}
+                    </div>
+
+                    <h6><strong>Additional Notes:</strong></h6>
+                    <div class="border p-3 mb-3 bg-light">
+                        {{ review.notes|default:"No additional notes"|linebreaks }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-signature"></i> Manager Approval</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="approvalForm">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="manager_comments"><strong>Manager Comments:</strong></label>
+                            <textarea name="manager_comments" id="manager_comments" 
+                                      class="form-control" rows="4" 
+                                      placeholder="Add your comments here (optional for approval, required for rejection)"></textarea>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button type="submit" name="action" value="approve" 
+                                    class="btn btn-success btn-lg mr-3"
+                                    onclick="return confirm('Are you sure you want to approve this care plan review?')">
+                                <i class="fas fa-check-circle"></i> Approve Review
+                            </button>
+                            <button type="submit" name="action" value="reject" 
+                                    class="btn btn-warning btn-lg mr-3"
+                                    onclick="return confirmReject()">
+                                <i class="fas fa-undo"></i> Return for Revision
+                            </button>
+                            <a href="{% url 'careplan_manager_dashboard' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmReject() {
+    const comments = document.getElementById('manager_comments').value.trim();
+    if (!comments) {
+        alert('Please add comments explaining why you are returning this review for revision.');
+        return false;
+    }
+    return confirm('Are you sure you want to return this review for revision? The keyworker will need to update and resubmit.');
+}
+</script>
+{% endblock %}

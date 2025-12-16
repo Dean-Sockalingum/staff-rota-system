@@ -1,0 +1,651 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Reports Dashboard - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-bar"></i> Reports Dashboard</h2>
+        <p class="text-muted">Generate and view operational reports for staff management.</p>
+    </div>
+</div>
+
+<!-- Available Reports -->
+<div class="row">
+    {% for report in available_reports %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas {% if report.icon %}{{ report.icon }}{% else %}fa-file-alt{% endif %}"></i> {{ report.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ report.description }}</p>
+                    <div class="mt-auto">
+                        {% if report.url %}
+                            <a href="{% url report.url %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-chart-line"></i> View Dashboard
+                            </a>
+                        {% else %}
+                            <button class="btn btn-primary btn-sm" onclick="generateReport('{{ report.name|slugify }}')">
+                                <i class="fas fa-play"></i> Generate Report
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="showFilters('{{ report.name|slugify }}')">
+                                <i class="fas fa-filter"></i> Filters
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mt-4">
+    <div class="col-12">
+        <h4><i class="fas fa-tachometer-alt"></i> Quick Statistics</h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Staff</h5>
+                <h2>{{ total_staff|default:"--" }}</h2>
+                <small>Active employees</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">On Duty Today</h5>
+                <h2>{{ on_duty_today|default:"--" }}</h2>
+                <small>Currently scheduled</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Pending Requests</h5>
+                <h2>{{ pending_requests|default:"--" }}</h2>
+                <small>Awaiting approval</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">This Month Leave</h5>
+                <h2>{{ month_leave_days|default:"--" }}</h2>
+                <small>Days taken</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Filters Modal -->
+<div class="modal fade" id="filtersModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Report Filters</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportFiltersForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="unit_filter" class="form-label">Unit</label>
+                            <select class="form-select" id="unit_filter" name="unit">
+                                <option value="">All Units</option>
+                                <option value="DEMENTIA">Dementia Unit</option>
+                                <option value="RESIDENTIAL">Residential Unit</option>
+                                <option value="NURSING">Nursing Unit</option>
+                                <option value="GENERAL">General Care</option>
+                                <option value="ADMIN">Administration</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="staff_filter" class="form-label">Staff Member</label>
+                            <select class="form-select" id="staff_filter" name="staff">
+                                <option value="">All Staff</option>
+                                <!-- This would be populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="format" class="form-label">Export Format</label>
+                        <select class="form-select" id="format" name="format">
+                            <option value="html">View in Browser</option>
+                            <option value="pdf">PDF Download</option>
+                            <option value="excel">Excel Download</option>
+                            <option value="csv">CSV Download</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyFiltersAndGenerate()">
+                    <i class="fas fa-download"></i> Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Carryover Details Modal -->
+<div class="modal fade" id="carryoverModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus"></i> Carryover Hours Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="carryoverContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading carryover details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Results Area -->
+<div class="row mt-4" id="reportResults" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt"></i> Report Results
+                    <button class="btn btn-sm btn-outline-secondary float-end" onclick="hideResults()">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </h5>
+            </div>
+            <div class="card-body" id="reportContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Generating report...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReportType = '';
+let annualLeaveData = null; // Store annual leave data for carryover details
+
+function generateReport(reportType) {
+    currentReportType = reportType;
+    
+    // Show loading
+    document.getElementById('reportResults').style.display = 'block';
+    document.getElementById('reportContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Generating ${reportType} report...</p>
+        </div>
+    `;
+    
+    // Simulate report generation (replace with actual AJAX call)
+    setTimeout(() => {
+        showSampleReport(reportType);
+    }, 2000);
+}
+
+function showFilters(reportType) {
+    currentReportType = reportType;
+    const modal = new bootstrap.Modal(document.getElementById('filtersModal'));
+    modal.show();
+}
+
+function applyFiltersAndGenerate() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('filtersModal'));
+    modal.hide();
+    
+    // Get form data
+    const formData = new FormData(document.getElementById('reportFiltersForm'));
+    
+    // Generate report with filters
+    generateReport(currentReportType);
+}
+
+function showSampleReport(reportType) {
+    let content = '';
+    
+    switch(reportType) {
+        case 'staff-sickness-report':
+            content = `
+                <h6>Staff Sickness Report - October 2025</h6>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Unit</th>
+                                <th>Sick Days This Month</th>
+                                <th>Sick Days YTD</th>
+                                <th>Last Sick Leave</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Alice Johnson</td>
+                                <td>Dementia Unit</td>
+                                <td>2</td>
+                                <td>8</td>
+                                <td>Oct 8, 2025</td>
+                            </tr>
+                            <tr>
+                                <td>Bob Smith</td>
+                                <td>Residential Unit</td>
+                                <td>0</td>
+                                <td>3</td>
+                                <td>Sep 15, 2025</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted">Report generated on ${new Date().toLocaleDateString()}</p>
+            `;
+            break;
+            
+        case 'annual-leave-report':
+            // Fetch real annual leave data
+            console.log('Fetching annual leave data...');
+            fetch('/reports/annual-leave/?year=2025')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data);
+                    
+                    // Store data globally for carryover details
+                    annualLeaveData = data;
+                    
+                    if (data.error) {
+                        content = `<div class="alert alert-danger">${data.error}</div>`;
+                    } else {
+                        const summary = data.summary;
+                        const dayShifts = data.day_shifts;
+                        const nightShifts = data.night_shifts;
+                        
+                        content = `
+                            <h6>📅 Annual Leave Report - ${data.year}</h6>
+                            <p class="text-muted mb-3">All leave must be used by <strong>${new Date(data.end_date).toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'})}</strong></p>
+                            
+                            <!-- Overall Summary -->
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <h6 class="border-bottom pb-2"><i class="fas fa-chart-pie"></i> Overall Summary</h6>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-primary text-white text-center">
+                                        <div class="card-body">
+                                            <h6>Total Staff</h6>
+                                            <h3>${summary.total_staff}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-secondary text-white text-center">
+                                        <div class="card-body">
+                                            <h6>Annual Allocation</h6>
+                                            <h3>${summary.total_entitlement_hours} hrs</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-dark text-white text-center" 
+                                         style="cursor: pointer;" 
+                                         onclick="showCarryoverDetails()"
+                                         title="Click to view carryover details">
+                                        <div class="card-body">
+                                            <h6>Carryover <i class="fas fa-info-circle" style="font-size: 0.8rem;"></i></h6>
+                                            <h3>${summary.total_carryover_hours} hrs</h3>
+                                            <small class="text-muted">Click for details</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-info text-white text-center">
+                                        <div class="card-body">
+                                            <h6>Total Available</h6>
+                                            <h3>${summary.total_available_hours} hrs</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-warning text-white text-center">
+                                        <div class="card-body">
+                                            <h6>Used So Far</h6>
+                                            <h3>${summary.total_used_hours} hrs</h3>
+                                            <small>${summary.overall_usage_percent}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="card bg-success text-white text-center">
+                                        <div class="card-body">
+                                            <h6>Remaining</h6>
+                                            <h3>${summary.total_remaining_hours} hrs</h3>
+                                            <small>${summary.overall_remaining_percent}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Day vs Night Split -->
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <h6 class="border-bottom pb-2"><i class="fas fa-sun"></i> / <i class="fas fa-moon"></i> Split by Shift Type</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-sun text-warning"></i> Day Shifts (${dayShifts.count} staff)</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-borderless mb-0">
+                                                <tr>
+                                                    <td><strong>Total Allocation:</strong></td>
+                                                    <td class="text-end">${dayShifts.total_hours} hrs</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Used:</strong></td>
+                                                    <td class="text-end">${dayShifts.used_hours} hrs <span class="badge bg-warning">${dayShifts.usage_percent}%</span></td>
+                                                </tr>
+                                                <tr class="border-top">
+                                                    <td><strong>Remaining:</strong></td>
+                                                    <td class="text-end"><strong>${dayShifts.remaining_hours} hrs</strong></td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-dark text-white">
+                                            <h6 class="mb-0"><i class="fas fa-moon"></i> Night Shifts (${nightShifts.count} staff)</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-borderless mb-0">
+                                                <tr>
+                                                    <td><strong>Total Allocation:</strong></td>
+                                                    <td class="text-end">${nightShifts.total_hours} hrs</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Used:</strong></td>
+                                                    <td class="text-end">${nightShifts.used_hours} hrs <span class="badge bg-warning">${nightShifts.usage_percent}%</span></td>
+                                                </tr>
+                                                <tr class="border-top">
+                                                    <td><strong>Remaining:</strong></td>
+                                                    <td class="text-end"><strong>${nightShifts.remaining_hours} hrs</strong></td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Individual Staff Breakdown -->
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h6 class="border-bottom pb-2"><i class="fas fa-users"></i> Individual Staff Breakdown</h6>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>SAP</th>
+                                            <th>Name</th>
+                                            <th>Role</th>
+                                            <th>Shift</th>
+                                            <th class="text-end">Allocation</th>
+                                            <th class="text-end">Used</th>
+                                            <th class="text-end">Pending</th>
+                                            <th class="text-end">Remaining</th>
+                                            <th class="text-center">Usage %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.staff.map(staff => `
+                                            <tr>
+                                                <td><small>${staff.sap}</small></td>
+                                                <td>${staff.name}</td>
+                                                <td><small>${staff.role}</small></td>
+                                                <td>
+                                                    ${staff.shift_type === 'Day' 
+                                                        ? '<i class="fas fa-sun text-warning" title="Day shift"></i>' 
+                                                        : '<i class="fas fa-moon text-primary" title="Night shift"></i>'}
+                                                    <small>${staff.shift_type}</small>
+                                                </td>
+                                                <td class="text-end">
+                                                    ${staff.total_hours} hrs
+                                                    <small class="text-muted d-block">(${staff.total_days.toFixed(1)} days)</small>
+                                                </td>
+                                                <td class="text-end">
+                                                    ${staff.used_hours} hrs
+                                                    <small class="text-muted d-block">(${staff.used_days.toFixed(1)} days)</small>
+                                                </td>
+                                                <td class="text-end">
+                                                    ${staff.pending_hours} hrs
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong>${staff.remaining_hours} hrs</strong>
+                                                    <small class="text-success d-block">(${staff.remaining_days.toFixed(1)} days)</small>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge ${staff.usage_percent >= 80 ? 'bg-success' : staff.usage_percent >= 50 ? 'bg-warning' : 'bg-danger'}">
+                                                        ${staff.usage_percent}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle"></i> <strong>Note:</strong> 
+                                Hours are converted to days using 12-hour shift patterns (11.66 hrs/day for 35hr contracts, 12 hrs/day for 24hr contracts).
+                            </div>
+                            
+                            <p class="text-muted mt-3">Report generated on ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}</p>
+                        `;
+                    }
+                    console.log('Content generated, length:', content.length);
+                    const outputElement = document.getElementById('reportContent');
+                    console.log('Output element:', outputElement);
+                    if (outputElement) {
+                        outputElement.innerHTML = content;
+                        document.getElementById('reportResults').style.display = 'block';
+                        console.log('Content inserted into page');
+                    } else {
+                        console.error('reportContent element not found!');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching annual leave report:', error);
+                    content = `<div class="alert alert-danger">Error loading report: ${error.message}</div>`;
+                    const outputElement = document.getElementById('reportContent');
+                    if (outputElement) {
+                        outputElement.innerHTML = content;
+                        document.getElementById('reportResults').style.display = 'block';
+                    }
+                });
+            break;
+            
+        default:
+            content = `
+                <div class="alert alert-info">
+                    <h6>${reportType.replace(/-/g, ' ').toUpperCase()}</h6>
+                    <p>This report is currently being developed. Sample data will be shown here.</p>
+                    <p>Features will include:</p>
+                    <ul>
+                        <li>Detailed analysis and metrics</li>
+                        <li>Graphical charts and visualizations</li>
+                        <li>Export capabilities (PDF, Excel, CSV)</li>
+                        <li>Date range and filter options</li>
+                    </ul>
+                </div>
+            `;
+    }
+    
+    document.getElementById('reportContent').innerHTML = content;
+}
+
+function showCarryoverDetails() {
+    if (!annualLeaveData || !annualLeaveData.staff) {
+        alert('Please generate the Annual Leave Report first to view carryover details.');
+        return;
+    }
+    
+    // Filter staff with carryover hours
+    const staffWithCarryover = annualLeaveData.staff.filter(s => s.carryover_hours > 0);
+    
+    if (staffWithCarryover.length === 0) {
+        document.getElementById('carryoverContent').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No staff members currently have carryover hours.
+            </div>
+        `;
+    } else {
+        // Sort by carryover hours (descending)
+        staffWithCarryover.sort((a, b) => b.carryover_hours - a.carryover_hours);
+        
+        const totalCarryover = staffWithCarryover.reduce((sum, s) => sum + s.carryover_hours, 0);
+        
+        document.getElementById('carryoverContent').innerHTML = `
+            <div class="alert alert-success mb-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong><i class="fas fa-users"></i> Total Staff:</strong> ${staffWithCarryover.length}
+                    </div>
+                    <div class="col-md-4">
+                        <strong><i class="fas fa-clock"></i> Total Hours:</strong> ${totalCarryover.toFixed(1)} hrs
+                    </div>
+                    <div class="col-md-4">
+                        <strong><i class="fas fa-calendar-alt"></i> Total Days:</strong> ${(totalCarryover / 11.66).toFixed(1)} days*
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>SAP</th>
+                            <th>Name</th>
+                            <th class="text-end">Carryover Hours</th>
+                            <th class="text-end">Carryover Days*</th>
+                            <th class="text-end">Leave Year</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${staffWithCarryover.map((staff, index) => {
+                            const daysCarryover = (staff.carryover_hours / 11.66).toFixed(2);
+                            return `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td><span class="badge bg-secondary">${staff.sap}</span></td>
+                                    <td><strong>${staff.name}</strong></td>
+                                    <td class="text-end">
+                                        <span class="badge bg-warning text-dark" style="font-size: 1rem;">
+                                            ${staff.carryover_hours.toFixed(1)} hrs
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-muted">${daysCarryover} days</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <small class="text-muted">${staff.leave_year}</small>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="3" class="text-end">Total:</th>
+                            <th class="text-end">
+                                <strong>${totalCarryover.toFixed(1)} hrs</strong>
+                            </th>
+                            <th class="text-end">
+                                <strong>${(totalCarryover / 11.66).toFixed(1)} days</strong>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="alert alert-light mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> <strong>*Note:</strong> 
+                    Days calculated using 12-hour shift pattern (11.66 hrs/day average for 35hr contracts).
+                    Carryover hours are from the previous leave year.
+                </small>
+            </div>
+        `;
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('carryoverModal'));
+    modal.show();
+}
+
+function hideResults() {
+    document.getElementById('reportResults').style.display = 'none';
+}
+
+// Set default date range to current month
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    document.getElementById('start_date').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('end_date').value = lastDay.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

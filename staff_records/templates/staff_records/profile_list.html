@@ -1,0 +1,89 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Staff Records - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-address-book"></i> Staff Records</h2>
+        <p class="text-muted">Search for personnel and open their record to log sickness, leave, or contact updates.</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <label for="searchTerm" class="form-label">Search by name or SAP</label>
+                <input type="text" id="searchTerm" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Enter name or SAP number">
+            </div>
+            <div class="col-md-4">
+                <label for="status" class="form-label">Employment status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    {% for value, label in employment_status_choices %}
+                        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 align-self-end text-end">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>SAP</th>
+                        <th>Role</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in profiles %}
+                        <tr>
+                            <td>{{ profile.user.full_name }}</td>
+                            <td>{{ profile.user.sap }}</td>
+                            <td>{{ profile.user.role.get_name_display|default:'-' }}</td>
+                            <td>{{ profile.user.unit.get_name_display|default:'-' }}</td>
+                            <td>{{ profile.get_employment_status_display }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'staff_records:profile_detail' profile.user.sap %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-folder-open"></i> View Record
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No staff records found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if is_paginated %}
+        <div class="card-footer d-flex justify-content-between">
+            {% if page_obj.has_previous %}
+                <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+            <span class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

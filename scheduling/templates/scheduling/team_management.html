@@ -1,0 +1,692 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Team Management - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+.team-card {
+    border-left: 4px solid;
+    transition: box-shadow 0.3s ease;
+}
+
+.team-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.team-a { border-left-color: #e74c3c; }
+.team-b { border-left-color: #3498db; }
+.team-c { border-left-color: #2ecc71; }
+
+.team-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.staff-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.staff-member {
+    padding: 0.25rem 0.5rem;
+    margin: 0.1rem 0;
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+
+.role-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.balance-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.balanced { background-color: #2ecc71; }
+.unbalanced { background-color: #e74c3c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Team Management</h2>
+    <div class="btn-group">
+        <a href="{% url 'staff_management' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Staff Management
+        </a>
+        <button class="btn btn-primary" onclick="reassignTeams()">
+            <i class="fas fa-sync-alt"></i> Reassign Teams
+        </button>
+    </div>
+</div>
+
+<!-- Overview Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <h4><i class="fas fa-sun"></i></h4>
+                <h3>{{ total_day_staff }}</h3>
+                <p class="mb-0">Day Shift Staff</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <h4><i class="fas fa-moon"></i></h4>
+                <h3>{{ total_night_staff }}</h3>
+                <p class="mb-0">Night Shift Staff</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <h4><i class="fas fa-layer-group"></i></h4>
+                <h3>3</h3>
+                <p class="mb-0">Active Teams</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {% if unassigned_staff > 0 %}border-warning{% else %}stats-card{% endif %}">
+            <div class="card-body text-center">
+                <h4><i class="fas fa-user-times"></i></h4>
+                <h3>{{ unassigned_staff }}</h3>
+                <p class="mb-0">Unassigned Staff</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Team Structure -->
+<div class="row">
+    {% for team in teams %}
+    <div class="col-lg-4 mb-4">
+        <div class="card team-card team-{{ team.name|lower }}">
+            <div class="card-header team-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-users"></i> Team {{ team.name }}
+                    {% with day_total=team.day_staff.total night_total=team.night_staff.total %}
+                        {% if day_total >= 28 and day_total <= 30 and night_total >= 23 and night_total <= 25 %}
+                            <span class="balance-indicator balanced" title="Well Balanced"></span>
+                        {% else %}
+                            <span class="balance-indicator unbalanced" title="Needs Balancing"></span>
+                        {% endif %}
+                    {% endwith %}
+                </h4>
+            </div>
+            <div class="card-body p-0">
+                <!-- Day Shift Tab -->
+                <div class="p-3 border-bottom">
+                    <h6 class="text-primary mb-2">
+                        <i class="fas fa-sun"></i> Day Shift ({{ team.day_staff.total }} staff)
+                    </h6>
+                    
+                    <div class="row text-center mb-2">
+                        <div class="col-4">
+                            <small class="text-muted">SSCW</small><br>
+                            <span class="badge badge-danger">{{ team.day_staff.sscw|length }}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">SCW</small><br>
+                            <span class="badge badge-warning">{{ team.day_staff.scw|length }}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">SCA</small><br>
+                            <span class="badge badge-success">{{ team.day_staff.sca|length }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="staff-list">
+                        {% if team.day_staff.sscw %}
+                            <strong class="text-muted small">SSCW:</strong>
+                            {% for staff in team.day_staff.sscw %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-danger">SSCW</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if team.day_staff.scw %}
+                            <strong class="text-muted small">Care Workers:</strong>
+                            {% for staff in team.day_staff.scw %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-warning">SCW</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if team.day_staff.sca %}
+                            <strong class="text-muted small">Care Assistants:</strong>
+                            {% for staff in team.day_staff.sca %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-success">SCA</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Night Shift Tab -->
+                <div class="p-3">
+                    <h6 class="text-info mb-2">
+                        <i class="fas fa-moon"></i> Night Shift ({{ team.night_staff.total }} staff)
+                    </h6>
+                    
+                    <div class="row text-center mb-2">
+                        <div class="col-4">
+                            <small class="text-muted">SSCW</small><br>
+                            <span class="badge badge-danger">{{ team.night_staff.sscw|length }}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">SCW</small><br>
+                            <span class="badge badge-warning">{{ team.night_staff.scw|length }}</span>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">SCA</small><br>
+                            <span class="badge badge-success">{{ team.night_staff.sca|length }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="staff-list">
+                        {% if team.night_staff.sscw %}
+                            <strong class="text-muted small">SSCW:</strong>
+                            {% for staff in team.night_staff.sscw %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-danger">SSCW</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if team.night_staff.scw %}
+                            <strong class="text-muted small">Care Workers:</strong>
+                            {% for staff in team.night_staff.scw %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-warning">SCW</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if team.night_staff.sca %}
+                            <strong class="text-muted small">Care Assistants:</strong>
+                            {% for staff in team.night_staff.sca %}
+                                <div class="staff-member">
+                                    <span class="role-badge badge badge-success">SCA</span>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.sap }})
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Shift Coverage Summary -->
+<div class="card mt-4">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <h5 class="mb-2 mb-md-0"><i class="fas fa-chart-line"></i> Shift Coverage Summary</h5>
+        <div class="small text-muted">
+            <span id="shiftSummaryWindow">Loading window...</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-sm-4 col-md-3 mb-3">
+                <label for="shiftSummaryStart" class="form-label">Start date</label>
+                <input type="date" id="shiftSummaryStart" class="form-control" value="{{ default_start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-sm-3 col-md-2 mb-3">
+                <label for="shiftSummaryWeeks" class="form-label">Weeks</label>
+                <select id="shiftSummaryWeeks" class="form-control">
+                    {% for value in "123456" %}
+                        <option value="{{ forloop.counter }}" {% if default_weeks == forloop.counter %}selected{% endif %}>{{ forloop.counter }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-5 col-md-3 mb-3 d-flex">
+                <button class="btn btn-outline-primary mt-4 mt-sm-0" id="shiftSummaryRefresh" type="button">
+                    <i class="fas fa-sync"></i> Refresh Summary
+                </button>
+            </div>
+            <div class="col-md-4 mb-3 text-md-end mt-3 mt-md-0">
+                <span class="badge badge-secondary" id="shiftSummaryStatus">Loading...</span>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-4">
+            <table class="table table-striped table-hover align-middle" id="shiftSummaryTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th scope="col">Team</th>
+                        <th scope="col">SAP</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Shift Type</th>
+                        <th scope="col">Shifts / Week</th>
+                        <th scope="col">Override</th>
+                        <th scope="col">Expected</th>
+                        <th scope="col">Scheduled</th>
+                        <th scope="col">Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">Loading shift data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3" id="shiftSummaryTotals"></div>
+    </div>
+</div>
+
+<!-- Team Balance Information -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Team Balance Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Day Shift Distribution:</h6>
+                <ul class="list-unstyled">
+                    <li><strong>SCW:</strong> 9 per team (3 shifts per week)</li>
+                    <li><strong>SCA:</strong> 17-18 per team (2 shifts per week)</li>
+                    <li><strong>SSCW:</strong> 3 per team (3 shifts per week)</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Night Shift Distribution:</h6>
+                <ul class="list-unstyled">
+                    <li><strong>SCW:</strong> 5 per team (3 shifts per week)</li>
+                    <li><strong>SCA:</strong> 16-17 per team (2 shifts per week)</li>
+                    <li><strong>SSCW:</strong> 2-3 per team (3 shifts per week)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-lightbulb"></i>
+            <strong>6-Week Rotation Pattern:</strong> Each team follows a structured 6-week rotation pattern ensuring fair distribution of shifts and adequate rest periods between intensive shift cycles.
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    function initTeamSummary() {
+        var startInput = document.getElementById('shiftSummaryStart');
+        var weeksSelect = document.getElementById('shiftSummaryWeeks');
+        var refreshButton = document.getElementById('shiftSummaryRefresh');
+        var tableBody = document.querySelector('#shiftSummaryTable tbody');
+        var totalsContainer = document.getElementById('shiftSummaryTotals');
+        var windowLabel = document.getElementById('shiftSummaryWindow');
+        var statusBadge = document.getElementById('shiftSummaryStatus');
+        var summaryUrl = '{% url "team_shift_summary" %}';
+        var updateUrl = '{% url "update_team_assignment" %}';
+
+        if (!startInput || !weeksSelect || !refreshButton || !tableBody) {
+            return;
+        }
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i += 1) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        var csrfToken = getCookie('csrftoken');
+
+        function setStatus(message, level) {
+            if (!statusBadge) {
+                return;
+            }
+            var className = 'badge badge-secondary';
+            if (level === 'success') {
+                className = 'badge badge-success';
+            } else if (level === 'danger') {
+                className = 'badge badge-danger';
+            } else if (level === 'warning') {
+                className = 'badge badge-warning';
+            } else if (level === 'info') {
+                className = 'badge badge-info';
+            }
+            statusBadge.className = className;
+            statusBadge.textContent = message;
+        }
+
+        function formatDateLabel(value) {
+            var date = new Date(value + 'T00:00:00');
+            if (isNaN(date.getTime())) {
+                return value;
+            }
+            return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatDifference(value) {
+            if (value === 0) {
+                return { text: '0', className: 'text-muted' };
+            }
+            return {
+                text: String(value),
+                className: value > 0 ? 'text-success' : 'text-danger'
+            };
+        }
+
+        function updateTotals(totals, weeks) {
+            if (!totalsContainer) {
+                return;
+            }
+            var diffDetails = formatDifference(totals.scheduled_total - totals.expected_total);
+            totalsContainer.innerHTML = [
+                '<div class="alert alert-secondary mb-0">',
+                '  <div class="row text-center">',
+                '    <div class="col-sm-3 col-6 mb-2"><strong>Scheduled:</strong> ' + totals.scheduled_total + '</div>',
+                '    <div class="col-sm-3 col-6 mb-2"><strong>Expected:</strong> ' + totals.expected_total + '</div>',
+                '    <div class="col-sm-3 col-6 mb-2"><strong>Day / Night:</strong> ' + totals.scheduled_day_total + ' / ' + totals.scheduled_night_total + '</div>',
+                '    <div class="col-sm-3 col-6 mb-2 ' + diffDetails.className + '"><strong>Diff:</strong> ' + diffDetails.text + '</div>',
+                '  </div>',
+                '</div>'
+            ].join('');
+        }
+
+        function renderTeams(data) {
+            tableBody.innerHTML = '';
+            var memberRows = 0;
+
+            data.teams.forEach(function(team) {
+                team.members.forEach(function(member) {
+                    memberRows += 1;
+                    var row = document.createElement('tr');
+                    row.dataset.sap = member.sap;
+
+                    var teamCell = document.createElement('td');
+                    var teamSelect = document.createElement('select');
+                    teamSelect.className = 'form-control form-control-sm';
+                    teamSelect.dataset.original = member.team || '';
+                    ['', 'A', 'B', 'C'].forEach(function(optionValue) {
+                        var option = document.createElement('option');
+                        option.value = optionValue;
+                        option.textContent = optionValue === '' ? 'None' : optionValue;
+                        if ((member.team || '') === optionValue) {
+                            option.selected = true;
+                        }
+                        teamSelect.appendChild(option);
+                    });
+                    teamSelect.addEventListener('change', function() {
+                        if (teamSelect.value === teamSelect.dataset.original) {
+                            return;
+                        }
+                        var previousValue = teamSelect.dataset.original;
+                        teamSelect.disabled = true;
+                        handleUpdate(member.sap, { team: teamSelect.value || null }, {
+                            onComplete: function() {
+                                teamSelect.disabled = false;
+                            },
+                            onError: function(errorMessage) {
+                                teamSelect.value = previousValue;
+                                teamSelect.dataset.original = previousValue;
+                                setStatus(errorMessage, 'danger');
+                            },
+                            onSuccess: function() {
+                                teamSelect.dataset.original = teamSelect.value || '';
+                            }
+                        });
+                    });
+                    teamCell.appendChild(teamSelect);
+
+                    var cells = [
+                        teamCell,
+                        createTextCell(member.sap),
+                        createTextCell(member.name),
+                        createTextCell(member.role),
+                        createTextCell(member.shift_preference),
+                        createTextCell(String(member.shifts_per_week)),
+                        createOverrideCell(member),
+                        createTextCell(String(member.expected_total)),
+                        createScheduleCell(member),
+                        createDifferenceCell(member)
+                    ];
+
+                    cells.forEach(function(cell) {
+                        row.appendChild(cell);
+                    });
+
+                    tableBody.appendChild(row);
+                });
+
+                var teamDiff = formatDifference(team.scheduled_total - team.expected_total);
+                var summaryRow = document.createElement('tr');
+                summaryRow.className = 'table-secondary';
+                summaryRow.innerHTML = [
+                    '<td colspan="5"><strong>Team ' + team.name + ' totals</strong></td>',
+                    '<td>' + team.headcount + ' staff</td>',
+                    '<td></td>',
+                    '<td><strong>' + team.expected_total + '</strong></td>',
+                    '<td><strong>' + team.scheduled_total + '</strong><br><small class="text-muted">Day ' + team.scheduled_day_total + ' / Night ' + team.scheduled_night_total + '</small></td>',
+                    '<td class="' + teamDiff.className + '"><strong>' + teamDiff.text + '</strong></td>'
+                ].join('');
+                tableBody.appendChild(summaryRow);
+            });
+
+            if (memberRows === 0) {
+                var emptyRow = document.createElement('tr');
+                var cell = document.createElement('td');
+                cell.colSpan = 10;
+                cell.className = 'text-center text-muted';
+                cell.textContent = 'No staff records found for the selected window.';
+                emptyRow.appendChild(cell);
+                tableBody.appendChild(emptyRow);
+            }
+        }
+
+        function createTextCell(text) {
+            var cell = document.createElement('td');
+            cell.textContent = text;
+            return cell;
+        }
+
+        function createScheduleCell(member) {
+            var cell = document.createElement('td');
+            var label = document.createElement('div');
+            label.textContent = member.scheduled_total;
+            var detail = document.createElement('small');
+            detail.className = 'text-muted d-block';
+            detail.textContent = 'Day ' + member.scheduled_day + ' / Night ' + member.scheduled_night;
+            cell.appendChild(label);
+            cell.appendChild(detail);
+            return cell;
+        }
+
+        function createDifferenceCell(member) {
+            var diffValue = member.scheduled_total - member.expected_total;
+            var diffDetails = formatDifference(diffValue);
+            var cell = document.createElement('td');
+            cell.className = diffDetails.className;
+            cell.textContent = diffDetails.text;
+            return cell;
+        }
+
+        function createOverrideCell(member) {
+            var cell = document.createElement('td');
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.max = '7';
+            input.step = '1';
+            input.className = 'form-control form-control-sm';
+            input.value = member.override !== null && member.override !== undefined ? member.override : '';
+            input.dataset.original = input.value;
+            input.placeholder = 'None';
+            input.title = 'Set a per-week override. Leave blank to use the default pattern.';
+            input.addEventListener('change', function() {
+                if (input.value === input.dataset.original) {
+                    return;
+                }
+                var previousValue = input.dataset.original;
+                input.disabled = true;
+                handleUpdate(member.sap, { shifts_per_week_override: input.value }, {
+                    onComplete: function() {
+                        input.disabled = false;
+                    },
+                    onError: function(errorMessage) {
+                        input.value = previousValue;
+                        input.dataset.original = previousValue;
+                        setStatus(errorMessage, 'danger');
+                    },
+                    onSuccess: function() {
+                        input.dataset.original = input.value;
+                    }
+                });
+            });
+            cell.appendChild(input);
+            return cell;
+        }
+
+        function handleUpdate(sap, payload, callbacks) {
+            callbacks = callbacks || {};
+            var onComplete = callbacks.onComplete;
+            var onError = callbacks.onError;
+            var onSuccess = callbacks.onSuccess;
+            setStatus('Saving changes...', 'info');
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(Object.assign({ sap: sap }, payload)),
+                credentials: 'same-origin'
+            }).then(function(response) {
+                if (!response.ok) {
+                    return response.json().then(function(data) {
+                        var message = data && data.error ? data.error : 'Unable to save changes';
+                        throw new Error(message);
+                    });
+                }
+                return response.json();
+            }).then(function() {
+                setStatus('Changes saved', 'success');
+                if (onSuccess) {
+                    onSuccess();
+                }
+                loadSummary();
+            }).catch(function(error) {
+                if (onError) {
+                    onError(error.message);
+                } else {
+                    setStatus(error.message, 'danger');
+                }
+            }).finally(function() {
+                if (onComplete) {
+                    onComplete();
+                }
+            });
+        }
+
+        function loadSummary() {
+            if (!tableBody) {
+                return;
+            }
+            tableBody.innerHTML = '';
+            var loadingRow = document.createElement('tr');
+            var loadingCell = document.createElement('td');
+            loadingCell.colSpan = 10;
+            loadingCell.className = 'text-center text-muted';
+            loadingCell.textContent = 'Loading shift data...';
+            loadingRow.appendChild(loadingCell);
+            tableBody.appendChild(loadingRow);
+
+            setStatus('Loading summary...', 'info');
+            windowLabel.textContent = 'Loading window...';
+            totalsContainer.innerHTML = '';
+
+            var params = new URLSearchParams();
+            if (startInput.value) {
+                params.append('start_date', startInput.value);
+            }
+            if (weeksSelect.value) {
+                params.append('weeks', weeksSelect.value);
+            }
+
+            fetch(summaryUrl + '?' + params.toString(), {
+                credentials: 'same-origin'
+            }).then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Unable to load summary data');
+                }
+                return response.json();
+            }).then(function(data) {
+                windowLabel.textContent = formatDateLabel(data.start_date) + ' to ' + formatDateLabel(data.end_date) + ' (' + data.weeks + ' week' + (data.weeks === 1 ? '' : 's') + ')';
+                renderTeams(data);
+                updateTotals(data.totals, data.weeks);
+                setStatus('Summary updated', 'success');
+            }).catch(function(error) {
+                setStatus(error.message, 'danger');
+                if (tableBody) {
+                    tableBody.innerHTML = '';
+                    var errorRow = document.createElement('tr');
+                    var errorCell = document.createElement('td');
+                    errorCell.colSpan = 10;
+                    errorCell.className = 'text-center text-danger';
+                    errorCell.textContent = error.message;
+                    errorRow.appendChild(errorCell);
+                    tableBody.appendChild(errorRow);
+                }
+            });
+        }
+
+        refreshButton.addEventListener('click', loadSummary);
+        weeksSelect.addEventListener('change', loadSummary);
+        startInput.addEventListener('change', loadSummary);
+
+        loadSummary();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTeamSummary);
+    } else {
+        initTeamSummary();
+    }
+
+    window.reassignTeams = function() {
+        if (confirm('This will reassign all staff to new balanced teams. Are you sure?')) {
+            window.location.href = "{% url 'team_management' %}?reassign=true";
+        }
+    };
+})();
+</script>
+{% endblock %}
