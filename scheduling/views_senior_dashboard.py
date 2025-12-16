@@ -339,19 +339,21 @@ def senior_management_dashboard(request):
         
         # Specific staffing requirements per home (from Head of Service specification)
         home_staffing = {
-            'HAWTHORN_HOUSE': {'day_min': 18, 'day_ideal': 24, 'night_min': 18, 'night_ideal': 21},
-            'MEADOWBURN': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-            'ORCHARD_GROVE': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-            'RIVERSIDE': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-            'VICTORIA_GARDENS': {'day_min': 10, 'day_ideal': 15, 'night_min': 10, 'night_ideal': 12},
+            'HAWTHORN_HOUSE': {'day_sscw_min': 2, 'day_sscw_ideal': 2, 'day_min': 18, 'day_ideal': 24, 'night_sscwn_min': 2, 'night_sscwn_ideal': 2, 'night_min': 18, 'night_ideal': 21},
+            'MEADOWBURN': {'day_sscw_min': 2, 'day_sscw_ideal': 2, 'day_min': 17, 'day_ideal': 24, 'night_sscwn_min': 2, 'night_sscwn_ideal': 2, 'night_min': 17, 'night_ideal': 21},
+            'ORCHARD_GROVE': {'day_sscw_min': 2, 'day_sscw_ideal': 2, 'day_min': 17, 'day_ideal': 24, 'night_sscwn_min': 2, 'night_sscwn_ideal': 2, 'night_min': 17, 'night_ideal': 21},
+            'RIVERSIDE': {'day_sscw_min': 2, 'day_sscw_ideal': 2, 'day_min': 17, 'day_ideal': 24, 'night_sscwn_min': 2, 'night_sscwn_ideal': 2, 'night_min': 17, 'night_ideal': 21},
+            'VICTORIA_GARDENS': {'day_sscw_min': 1, 'day_sscw_ideal': 2, 'day_min': 10, 'day_ideal': 15, 'night_sscwn_min': 1, 'night_sscwn_ideal': 2, 'night_min': 10, 'night_ideal': 12},
         }
         
-        requirements = home_staffing.get(home.name, {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21})
+        requirements = home_staffing.get(home.name, {'day_sscw_min': 2, 'day_sscw_ideal': 2, 'day_min': 17, 'day_ideal': 24, 'night_sscwn_min': 2, 'night_sscwn_ideal': 2, 'night_min': 17, 'night_ideal': 21})
         
         # Day shift summary for this home
         day_data = {
             'home': home.get_name_display(),
             'home_obj': home,
+            'sscw_min': requirements['day_sscw_min'],
+            'sscw_ideal': requirements['day_sscw_ideal'],
             'min_required': requirements['day_min'],
             'ideal_required': requirements['day_ideal'],
             'days': []
@@ -361,6 +363,8 @@ def senior_management_dashboard(request):
         night_data = {
             'home': home.get_name_display(),
             'home_obj': home,
+            'sscwn_min': requirements['night_sscwn_min'],
+            'sscwn_ideal': requirements['night_sscwn_ideal'],
             'min_required': requirements['night_min'],
             'ideal_required': requirements['night_ideal'],
             'days': []
@@ -388,7 +392,7 @@ def senior_management_dashboard(request):
                 user__role__name='SSCW'
             ).count()
             day_staff = day_shifts_for_date.filter(
-                user__role__name='SCW'
+                user__role__name__in=['SCW', 'SCA']
             ).count()
             
             # Debug output
@@ -415,7 +419,7 @@ def senior_management_dashboard(request):
                 user__role__name='SSCWN'
             ).count()
             night_staff = night_shifts_for_date.filter(
-                user__role__name='SCWN'
+                user__role__name__in=['SCWN', 'SCAN']
             ).count()
             night_leave = LeaveRequest.objects.filter(
                 user__unit__in=units,

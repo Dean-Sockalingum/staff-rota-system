@@ -397,10 +397,10 @@
                 </tr>
                 <tr>
                     <td style="padding-left: 20px; background: #fef3c7;">SSCW</td>
-                    <td style="text-align: center; background: #fef3c7;">2</td>
-                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">2</td>
+                    <td style="text-align: center; background: #fef3c7;">{{ home_data.sscw_min }}</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">{{ home_data.sscw_ideal }}</td>
                     {% for day in home_data.days %}
-                    <td style="text-align: center; {% if day.seniors >= 2 %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                    <td style="text-align: center; {% if day.seniors >= home_data.sscw_min %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
                         {{ day.seniors|default:"0" }}
                     </td>
                     {% endfor %}
@@ -487,10 +487,10 @@
                 </tr>
                 <tr>
                     <td style="padding-left: 20px; background: #fef3c7;">SSCWN</td>
-                    <td style="text-align: center; background: #fef3c7;">2</td>
-                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">2</td>
+                    <td style="text-align: center; background: #fef3c7;">{{ home_data.sscwn_min }}</td>
+                    <td style="text-align: center; background: #fef3c7; border-right: 2px solid #ddd;">{{ home_data.sscwn_ideal }}</td>
                     {% for day in home_data.days %}
-                    <td style="text-align: center; {% if day.seniors >= 2 %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
+                    <td style="text-align: center; {% if day.seniors >= home_data.sscwn_min %}background: #d1fae5;{% else %}background: #fee2e2;{% endif %}">
                         {{ day.seniors|default:"0" }}
                     </td>
                     {% endfor %}
