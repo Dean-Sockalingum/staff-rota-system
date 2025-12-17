@@ -87,6 +87,27 @@ def logout_view(request):
 
 @login_required
 def manager_dashboard(request):
+    # Detect user's home and determine if they can select different homes
+    from .models_multi_home import CareHome
+    
+    user_home = None
+    can_select_home = False
+    
+    # Check if user is senior management (can view any home)
+    if request.user.role and request.user.role.is_senior_management_team:
+        can_select_home = True
+        # Allow selection via GET parameter
+        selected_home_name = request.GET.get('care_home', '')
+        if selected_home_name:
+            try:
+                user_home = CareHome.objects.get(name=selected_home_name)
+            except CareHome.DoesNotExist:
+                user_home = None
+    else:
+        # Regular managers are locked to their home
+        if request.user.unit and request.user.unit.care_home:
+            user_home = request.user.unit.care_home
+    
     # Coverage summary for the full rota period
     rota_start = datetime(2026, 1, 4).date()
     rota_end = rota_start + timedelta(weeks=12) - timedelta(days=1)
@@ -94,7 +115,12 @@ def manager_dashboard(request):
     day_shift_names = ['DAY', 'DAY_SENIOR', 'DAY_ASSISTANT']
     night_shift_names = ['NIGHT', 'NIGHT_SENIOR', 'NIGHT_ASSISTANT']
     coverage_table = []
-    units = list(Unit.objects.filter(is_active=True))
+    
+    # Filter units by home if applicable
+    units_qs = Unit.objects.filter(is_active=True)
+    if user_home:
+        units_qs = units_qs.filter(care_home=user_home)
+    units = list(units_qs)
     for day in all_days:
         row = {'date': day}
         for unit in units:
@@ -118,18 +144,27 @@ def manager_dashboard(request):
         return redirect('staff_dashboard')
     
     # Widget A: Manual Review Required
-    manual_review_requests = LeaveRequest.objects.filter(
+    manual_review_qs = LeaveRequest.objects.filter(
         status='MANUAL_REVIEW'
-    ).select_related('user').order_by('created_at')
+    )
+    if user_home:
+        manual_review_qs = manual_review_qs.filter(user__unit__care_home=user_home)
+    manual_review_requests = manual_review_qs.select_related('user').order_by('created_at')
 
-    pending_leave_requests = LeaveRequest.objects.filter(
+    pending_leave_qs = LeaveRequest.objects.filter(
         status='PENDING'
-    ).select_related('user').order_by('created_at')
+    )
+    if user_home:
+        pending_leave_qs = pending_leave_qs.filter(user__unit__care_home=user_home)
+    pending_leave_requests = pending_leave_qs.select_related('user').order_by('created_at')
     
     # Widget B: Staff Reallocations Needed
-    pending_reallocations = StaffReallocation.objects.filter(
+    reallocations_qs = StaffReallocation.objects.filter(
         status='NEEDED'
-    ).select_related('target_unit', 'target_shift_type').order_by('target_date')
+    )
+    if user_home:
+        reallocations_qs = reallocations_qs.filter(target_unit__care_home=user_home)
+    pending_reallocations = reallocations_qs.select_related('target_unit', 'target_shift_type').order_by('target_date')
     
     # Widget C: Today's Staffing Snapshot
     today = timezone.now().date()
@@ -219,42 +254,63 @@ def manager_dashboard(request):
         }
     
     # Widget D: Recent Automated Approvals
-    recent_auto_approvals = ActivityLog.objects.filter(
+    auto_approvals_qs = ActivityLog.objects.filter(
         action_type='AUTO_APPROVAL',
         automated=True
-    ).select_related('user').order_by('-created_at')[:10]
+    )
+    if user_home:
+        auto_approvals_qs = auto_approvals_qs.filter(user__unit__care_home=user_home)
+    recent_auto_approvals = auto_approvals_qs.select_related('user').order_by('-created_at')[:10]
 
     # Widget E: Current sickness absences
-    current_sickness_absences = (
-        SicknessRecord.objects.filter(
-            status__in=['OPEN', 'AWAITING_FIT_NOTE'],
-            first_working_day__lte=today,
-        )
-        .filter(
-            models.Q(actual_last_working_day__isnull=True) |
-            models.Q(actual_last_working_day__gte=today)
-        )
-        .select_related('profile__user')
-        .order_by('first_working_day')
+    sickness_qs = SicknessRecord.objects.filter(
+        status__in=['OPEN', 'AWAITING_FIT_NOTE'],
+        first_working_day__lte=today,
+    ).filter(
+        models.Q(actual_last_working_day__isnull=True) |
+        models.Q(actual_last_working_day__gte=today)
     )
+    if user_home:
+        sickness_qs = sickness_qs.filter(profile__user__unit__care_home=user_home)
+    current_sickness_absences = sickness_qs.select_related('profile__user').order_by('first_working_day')
 
-    upcoming_approved_leave = (
-        LeaveRequest.objects.filter(
-            status='APPROVED',
-            end_date__gte=today,
-        )
-        .select_related('user')
-        .order_by('start_date')
+    approved_leave_qs = LeaveRequest.objects.filter(
+        status='APPROVED',
+        end_date__gte=today,
     )
+    if user_home:
+        approved_leave_qs = approved_leave_qs.filter(user__unit__care_home=user_home)
+    upcoming_approved_leave = approved_leave_qs.select_related('user').order_by('start_date')
     
-    # Calculate staffing alerts for the next 7 days
+    # Calculate staffing alerts for the next 7 days with home-specific thresholds
+    home_staffing_config = {
+        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18},
+        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17},
+        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17},
+        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17},
+        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10},
+    }
+    
+    # Determine threshold based on selected home
+    if user_home:
+        home_config = home_staffing_config.get(user_home.name, {'day_ideal': 17, 'night_ideal': 17})
+        day_threshold = home_config['day_ideal']
+        night_threshold = home_config['night_ideal']
+    else:
+        # Default threshold when viewing all homes
+        day_threshold = 17
+        night_threshold = 17
+    
     staffing_alerts = []
     for i in range(7):
         check_date = today + timedelta(days=i)
-        date_shifts = Shift.objects.filter(
+        date_shifts_qs = Shift.objects.filter(
             date=check_date,
             status__in=['SCHEDULED', 'CONFIRMED']
-        ).select_related('user', 'user__role', 'shift_type')
+        )
+        if user_home:
+            date_shifts_qs = date_shifts_qs.filter(unit__care_home=user_home)
+        date_shifts = date_shifts_qs.select_related('user', 'user__role', 'shift_type')
         
         # Count day and night care staff
         day_care = date_shifts.filter(
@@ -267,30 +323,33 @@ def manager_dashboard(request):
             user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
         ).count()
         
-        # Check against minimum staffing (17 for each shift)
-        if day_care < 17:
+        # Check against home-specific thresholds
+        if day_care < day_threshold:
             staffing_alerts.append({
                 'date': check_date,
                 'shift': 'Day',
                 'actual': day_care,
-                'required': 17,
-                'deficit': 17 - day_care,
+                'required': day_threshold,
+                'deficit': day_threshold - day_care,
             })
         
-        if night_care < 17:
+        if night_care < night_threshold:
             staffing_alerts.append({
                 'date': check_date,
                 'shift': 'Night',
                 'actual': night_care,
-                'required': 17,
-                'deficit': 17 - night_care,
+                'required': night_threshold,
+                'deficit': night_threshold - night_care,
             })
     
     # Recent incidents (last 24 hours) requiring review
     twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
-    recent_incidents = IncidentReport.objects.filter(
+    incidents_qs = IncidentReport.objects.filter(
         created_at__gte=twenty_four_hours_ago
-    ).select_related('reported_by').order_by('-created_at')
+    )
+    if user_home:
+        incidents_qs = incidents_qs.filter(unit__care_home=user_home)
+    recent_incidents = incidents_qs.select_related('reported_by').order_by('-created_at')
     
     context = {
         'manual_review_requests': manual_review_requests,
@@ -307,6 +366,10 @@ def manager_dashboard(request):
         'rota_start': rota_start,
         'rota_end': rota_end,
         'recent_incidents': recent_incidents,
+        'user_home': user_home,
+        'can_select_home': can_select_home,
+        'all_care_homes': CareHome.objects.all().order_by('name'),
+        'selected_home': user_home.name if user_home else None,
     }
     
     return render(request, 'scheduling/manager_dashboard.html', context)

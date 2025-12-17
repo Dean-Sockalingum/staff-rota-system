@@ -7,6 +7,35 @@
     <div class="col-12">
         <h2><i class="fas fa-tachometer-alt"></i> Dashboard - {{ user.role.get_name_display }}</h2>
         <p class="text-muted">Welcome back, {{ user.full_name }}. Here's what needs your attention today.</p>
+        
+        {% if user_home %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-home"></i> <strong>Care Home:</strong> {{ user_home.display_name }}
+                {% if not can_select_home %}
+                    <span class="text-muted ms-2">(You are viewing your assigned home only)</span>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if can_select_home %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="care_home" class="form-label">Select Care Home</label>
+                            <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- All Homes --</option>
+                                {% for home in all_care_homes %}
+                                    <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                        {{ home.display_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 
