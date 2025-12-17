@@ -260,10 +260,35 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>🏥 Head of Service Dashboard</h1>
-    <p>Governance Oversight • Multi-Home Operations • {{ current_time|date:"l, F j, Y \a\t g:i A" }}</p>
+    <p>Governance Oversight • Multi-Home Operations • <span id="currentTime">{{ current_time|date:"l, F j, Y \a\t g:i A" }}</span></p>
     <p style="font-size: 0.95rem; opacity: 0.9; margin-top: 0.5rem;">
         <i class="fas fa-info-circle"></i> Strategic oversight across all {{ total_homes }} care homes for Head of Service team governance and compliance monitoring
     </p>
+</div>
+
+<!-- ============================================= -->
+<!-- GOVERNANCE TEAM ACCESS NOTICE -->
+<!-- ============================================= -->
+<div class="alert alert-info mb-4" style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 1rem;">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <i class="fas fa-users" style="font-size: 2rem; color: #3b82f6;"></i>
+        <div>
+            <h5 style="margin: 0 0 0.5rem 0; color: #1e40af; font-weight: 600;">Governance Team Access</h5>
+            <p style="margin: 0; color: #1e40af;">
+                This dashboard is accessible to <strong>all Service Managers across all 5 homes</strong> plus HOS and IDI team members for governance review and cross-home oversight. 
+                Current access level: <strong>{{ user.role.get_name_display }}</strong> 
+                {% if user.assigned_care_home %}from <strong>{{ user.assigned_care_home.display_name }}</strong>{% endif %}
+            </p>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.9;">
+                <span id="autoRefreshStatus" style="color: #16a34a;">
+                    <i class="fas fa-sync-alt fa-spin"></i> Live data refresh: Active (updates every 60 seconds)
+                </span>
+                <button type="button" id="toggleAutoRefresh" class="btn btn-sm btn-outline-primary ms-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-pause"></i> Pause Updates
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ============================================= -->
@@ -866,6 +891,144 @@
                     <span style="font-weight: 600; color: {% if metric.quality_score > 85 %}#10b981{% elif metric.quality_score > 70 %}#f59e0b{% else %}#ef4444{% endif %}">
                         {{ metric.quality_score|floatformat:0 }}
                     </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live Data Refresh System
+let autoRefreshEnabled = true;
+let refreshInterval = null;
+let refreshTimer = 60; // seconds
+
+function startAutoRefresh() {
+    if (refreshInterval) return; // Already running
+    
+    autoRefreshEnabled = true;
+    updateRefreshButton();
+    
+    // Start countdown and refresh
+    refreshInterval = setInterval(() => {
+        refreshTimer--;
+        
+        if (refreshTimer <= 0) {
+            refreshPage();
+            refreshTimer = 60;
+        }
+        
+        updateRefreshStatus();
+    }, 1000); // Update every second
+}
+
+function stopAutoRefresh() {
+    autoRefreshEnabled = false;
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    updateRefreshButton();
+    updateRefreshStatus();
+}
+
+function refreshPage() {
+    // Preserve current URL parameters when refreshing
+    const currentUrl = window.location.href;
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Add a timestamp to prevent caching
+    urlParams.set('_refresh', Date.now());
+    
+    // Show loading indicator
+    const statusElement = document.getElementById('autoRefreshStatus');
+    if (statusElement) {
+        statusElement.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing data...';
+    }
+    
+    // Reload with parameters preserved
+    window.location.href = window.location.pathname + '?' + urlParams.toString().replace('&_refresh=' + urlParams.get('_refresh'), '');
+}
+
+function updateRefreshStatus() {
+    const statusElement = document.getElementById('autoRefreshStatus');
+    if (!statusElement) return;
+    
+    if (autoRefreshEnabled) {
+        statusElement.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> Live data refresh: Active (next update in ${refreshTimer}s)`;
+        statusElement.style.color = '#16a34a';
+    } else {
+        statusElement.innerHTML = '<i class="fas fa-pause"></i> Live data refresh: Paused';
+        statusElement.style.color = '#6b7280';
+    }
+}
+
+function updateRefreshButton() {
+    const button = document.getElementById('toggleAutoRefresh');
+    if (!button) return;
+    
+    if (autoRefreshEnabled) {
+        button.innerHTML = '<i class="fas fa-pause"></i> Pause Updates';
+        button.className = 'btn btn-sm btn-outline-warning ms-3';
+    } else {
+        button.innerHTML = '<i class="fas fa-play"></i> Resume Updates';
+        button.className = 'btn btn-sm btn-outline-success ms-3';
+    }
+}
+
+function updateCurrentTime() {
+    const timeElement = document.getElementById('currentTime');
+    if (timeElement) {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        };
+        timeElement.textContent = now.toLocaleString('en-US', options);
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up toggle button
+    const toggleButton = document.getElementById('toggleAutoRefresh');
+    if (toggleButton) {
+        toggleButton.addEventListener('click', function() {
+            if (autoRefreshEnabled) {
+                stopAutoRefresh();
+            } else {
+                refreshTimer = 60;
+                startAutoRefresh();
+            }
+        });
+    }
+    
+    // Start auto-refresh
+    startAutoRefresh();
+    
+    // Update clock every second
+    setInterval(updateCurrentTime, 1000);
+    updateCurrentTime();
+    
+    console.log('HOS Dashboard: Live refresh system initialized (60s interval)');
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+    stopAutoRefresh();
+});
+</script>
+{% endblock %}
                 </td>
             </tr>
             {% endfor %}

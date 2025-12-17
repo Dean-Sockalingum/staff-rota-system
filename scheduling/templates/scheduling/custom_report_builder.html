@@ -1,0 +1,379 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Custom Report Builder - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-builder-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .step-section {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .step-number {
+        background: #667eea;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+    }
+    
+    .step-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #1f2937;
+    }
+    
+    .report-type-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .report-type-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    }
+    
+    .report-type-card.selected {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    
+    .report-type-card input[type="radio"] {
+        margin-right: 0.75rem;
+        width: 20px;
+        height: 20px;
+    }
+    
+    .field-checkboxes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .field-checkbox {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        background: #f9fafb;
+        border-radius: 6px;
+    }
+    
+    .field-checkbox input[type="checkbox"] {
+        margin-right: 0.5rem;
+        width: 18px;
+        height: 18px;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .export-button {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .export-button.csv {
+        background: #10b981;
+        color: white;
+    }
+    
+    .export-button.excel {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .export-button.pdf {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .export-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-builder-header">
+    <h1><i class="fas fa-chart-bar"></i> Custom Report Builder</h1>
+    <p>Generate comprehensive reports with custom fields and date ranges</p>
+</div>
+
+<form method="post" id="reportForm">
+    {% csrf_token %}
+    
+    <!-- Step 1: Select Report Type -->
+    <div class="step-section">
+        <div class="step-header">
+            <div class="step-number">1</div>
+            <h3>Select Report Type</h3>
+        </div>
+        
+        {% for type_id, report in report_types_dict.items %}
+        <div class="report-type-card" onclick="selectReportType('{{ type_id }}')">
+            <label style="cursor: pointer; display: flex; align-items: start; margin: 0;">
+                <input type="radio" name="report_type" value="{{ type_id }}" required>
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #1f2937;">{{ report.name }}</h4>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">{{ report.description }}</p>
+                </div>
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Step 2: Select Date Range -->
+    <div class="step-section">
+        <div class="step-header">
+            <div class="step-number">2</div>
+            <h3>Select Date Range</h3>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">
+                    Start Date
+                </label>
+                <input type="date" 
+                       name="start_date" 
+                       value="{{ today|date:'Y-m-d' }}"
+                       required
+                       class="form-control"
+                       style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">
+                    End Date
+                </label>
+                <input type="date" 
+                       name="end_date" 
+                       value="{{ today|date:'Y-m-d' }}"
+                       required
+                       class="form-control"
+                       style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+            </div>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">
+                Quick Select
+            </label>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDateRange('today')">Today</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDateRange('week')">This Week</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDateRange('month')">This Month</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDateRange('quarter')">This Quarter</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDateRange('year')">This Year</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: Select Care Homes -->
+    <div class="step-section">
+        <div class="step-header">
+            <div class="step-number">3</div>
+            <h3>Select Care Homes</h3>
+        </div>
+        
+        <div class="field-checkboxes">
+            <div class="field-checkbox">
+                <input type="checkbox" id="all_homes" checked onchange="toggleAllHomes(this)">
+                <label for="all_homes" style="margin: 0; cursor: pointer; font-weight: 600;">All Homes</label>
+            </div>
+            
+            {% for home in all_care_homes %}
+            <div class="field-checkbox">
+                <input type="checkbox" 
+                       name="care_homes" 
+                       value="{{ home.name }}" 
+                       class="home-checkbox"
+                       id="home_{{ home.name }}">
+                <label for="home_{{ home.name }}" style="margin: 0; cursor: pointer;">{{ home.display_name }}</label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Step 4: Select Fields -->
+    <div class="step-section" id="fieldsSection" style="display: none;">
+        <div class="step-header">
+            <div class="step-number">4</div>
+            <h3>Select Fields to Include</h3>
+        </div>
+        
+        <div id="fieldsContainer"></div>
+    </div>
+    
+    <!-- Step 5: Generate Report -->
+    <div class="step-section">
+        <div class="step-header">
+            <div class="step-number">5</div>
+            <h3>Generate & Export Report</h3>
+        </div>
+        
+        <p style="text-align: center; color: #6b7280; margin-bottom: 1.5rem;">
+            Choose your preferred export format:
+        </p>
+        
+        <div class="export-buttons">
+            <button type="submit" name="export_format" value="csv" class="export-button csv">
+                <i class="fas fa-file-csv fa-2x"></i>
+                <div>
+                    <div>Export as CSV</div>
+                    <small style="opacity: 0.9;">Raw data • Excel compatible</small>
+                </div>
+            </button>
+            
+            <button type="submit" name="export_format" value="excel" class="export-button excel">
+                <i class="fas fa-file-excel fa-2x"></i>
+                <div>
+                    <div>Export as Excel</div>
+                    <small style="opacity: 0.9;">Formatted spreadsheet • Charts</small>
+                </div>
+            </button>
+            
+            <button type="submit" name="export_format" value="pdf" class="export-button pdf">
+                <i class="fas fa-file-pdf fa-2x"></i>
+                <div>
+                    <div>Export as PDF</div>
+                    <small style="opacity: 0.9;">Professional report • Print-ready</small>
+                </div>
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+const reportTypes = JSON.parse('{{ report_types|escapejs }}');
+
+function selectReportType(typeId) {
+    // Update UI
+    document.querySelectorAll('.report-type-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+    
+    // Load fields for selected report type
+    loadFields(typeId);
+}
+
+function loadFields(typeId) {
+    const fieldsSection = document.getElementById('fieldsSection');
+    const fieldsContainer = document.getElementById('fieldsContainer');
+    
+    const report = reportTypes[typeId];
+    if (!report || !report.fields) return;
+    
+    // Build fields HTML
+    let html = '<div class="field-checkboxes">';
+    
+    report.fields.forEach((field, index) => {
+        const checked = field.selected ? 'checked' : '';
+        html += `
+            <div class="field-checkbox">
+                <input type="checkbox" 
+                       name="fields" 
+                       value="${field.id}" 
+                       id="field_${index}"
+                       ${checked}>
+                <label for="field_${index}" style="margin: 0; cursor: pointer;">${field.label}</label>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    fieldsContainer.innerHTML = html;
+    fieldsSection.style.display = 'block';
+}
+
+function toggleAllHomes(checkbox) {
+    const homeCheckboxes = document.querySelectorAll('.home-checkbox');
+    homeCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+}
+
+function setDateRange(range) {
+    const today = new Date();
+    const startInput = document.querySelector('input[name="start_date"]');
+    const endInput = document.querySelector('input[name="end_date"]');
+    
+    let startDate = new Date(today);
+    let endDate = new Date(today);
+    
+    switch(range) {
+        case 'today':
+            // Already set to today
+            break;
+        case 'week':
+            // Start of week (Monday)
+            const day = today.getDay();
+            const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+            startDate = new Date(today.setDate(diff));
+            endDate = new Date();
+            break;
+        case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+        case 'quarter':
+            const quarter = Math.floor(today.getMonth() / 3);
+            startDate = new Date(today.getFullYear(), quarter * 3, 1);
+            endDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0);
+            break;
+        case 'year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today.getFullYear(), 11, 31);
+            break;
+    }
+    
+    startInput.valueAsDate = startDate;
+    endInput.valueAsDate = endDate;
+}
+</script>
+{% endblock %}

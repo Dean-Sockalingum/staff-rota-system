@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views
-from .views_senior_dashboard import senior_management_dashboard, senior_dashboard_export
+from .views_senior_dashboard import (
+    senior_management_dashboard, 
+    senior_dashboard_export,
+    custom_report_builder
+)
 
 urlpatterns = [
     # Authentication
@@ -16,6 +20,7 @@ urlpatterns = [
     path('home/<slug:home_slug>/', views.home_dashboard, name='home_dashboard_specific'),  # Specific home view
     
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
+    path('senior-dashboard/reports/', custom_report_builder, name='custom_report_builder'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
     path('rota/', views.rota_view, name='rota_view'),
     path('staff-search-rota/', views.staff_search_rota, name='staff_search_rota'),

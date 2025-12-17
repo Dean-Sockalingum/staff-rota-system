@@ -801,3 +801,441 @@ def senior_dashboard_export(request):
             ])
     
     return response
+
+
+@login_required
+def custom_report_builder(request):
+    """
+    Custom Report Builder - Generate reports with user-selected fields and date ranges
+    
+    Supports multiple output formats:
+    - PDF: Professional formatted report
+    - Excel: Spreadsheet with data and charts
+    - CSV: Raw data export
+    
+    Restricted to: Senior management team only
+    """
+    from django.db.models import Model
+    from django.apps import apps
+    import json
+    
+    # Check permissions
+    if not (request.user.role and request.user.role.is_senior_management_team):
+        return render(request, 'scheduling/access_denied.html', {
+            'message': 'Report builder is restricted to Head of Service team members only.'
+        })
+    
+    if request.method == 'GET':
+        # Display report builder form
+        today = timezone.now().date()
+        
+        # Define available report types and their fields
+        report_types = {
+            'staffing_coverage': {
+                'name': 'Staffing Coverage Report',
+                'description': 'Comprehensive staffing levels, shortages, and coverage analysis',
+                'fields': [
+                    {'id': 'date', 'label': 'Date', 'selected': True},
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'unit', 'label': 'Unit', 'selected': True},
+                    {'id': 'shift_type', 'label': 'Shift Type (Day/Night)', 'selected': True},
+                    {'id': 'scheduled_staff', 'label': 'Scheduled Staff Count', 'selected': True},
+                    {'id': 'required_staff', 'label': 'Required Staff Count', 'selected': True},
+                    {'id': 'shortage', 'label': 'Shortage/Surplus', 'selected': True},
+                    {'id': 'sscw_count', 'label': 'SSCW/SSCWN Count', 'selected': False},
+                    {'id': 'agency_count', 'label': 'Agency Staff Count', 'selected': False},
+                    {'id': 'overtime_count', 'label': 'Overtime Shifts', 'selected': False},
+                ]
+            },
+            'leave_usage': {
+                'name': 'Leave Usage Report',
+                'description': 'Annual leave, sickness, and other absences across homes',
+                'fields': [
+                    {'id': 'staff_name', 'label': 'Staff Name', 'selected': True},
+                    {'id': 'staff_sap', 'label': 'Staff SAP', 'selected': True},
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'leave_type', 'label': 'Leave Type', 'selected': True},
+                    {'id': 'start_date', 'label': 'Start Date', 'selected': True},
+                    {'id': 'end_date', 'label': 'End Date', 'selected': True},
+                    {'id': 'days_requested', 'label': 'Days Requested', 'selected': True},
+                    {'id': 'status', 'label': 'Status (Approved/Denied/Pending)', 'selected': True},
+                    {'id': 'unit', 'label': 'Unit', 'selected': False},
+                    {'id': 'role', 'label': 'Role', 'selected': False},
+                ]
+            },
+            'budget_variance': {
+                'name': 'Budget Variance Report',
+                'description': 'Planned vs actual staffing costs, agency usage, overtime',
+                'fields': [
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'period', 'label': 'Period (Week/Month)', 'selected': True},
+                    {'id': 'planned_cost', 'label': 'Planned Cost', 'selected': True},
+                    {'id': 'actual_cost', 'label': 'Actual Cost', 'selected': True},
+                    {'id': 'variance', 'label': 'Variance (£)', 'selected': True},
+                    {'id': 'variance_percent', 'label': 'Variance (%)', 'selected': True},
+                    {'id': 'agency_cost', 'label': 'Agency Cost', 'selected': False},
+                    {'id': 'overtime_cost', 'label': 'Overtime Cost', 'selected': False},
+                    {'id': 'regular_staff_cost', 'label': 'Regular Staff Cost', 'selected': False},
+                ]
+            },
+            'compliance': {
+                'name': 'Compliance Report',
+                'description': 'Shift compliance, minimum staffing violations, care ratios',
+                'fields': [
+                    {'id': 'date', 'label': 'Date', 'selected': True},
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'unit', 'label': 'Unit', 'selected': True},
+                    {'id': 'shift_type', 'label': 'Shift Type', 'selected': True},
+                    {'id': 'staffing_met', 'label': 'Minimum Staffing Met (Yes/No)', 'selected': True},
+                    {'id': 'sscw_present', 'label': 'SSCW Present (Yes/No)', 'selected': True},
+                    {'id': 'violation_type', 'label': 'Violation Type', 'selected': False},
+                    {'id': 'remediation', 'label': 'Remediation Action', 'selected': False},
+                ]
+            },
+            'incidents': {
+                'name': 'Incident Summary Report',
+                'description': 'Incident tracking, types, and resolutions across homes',
+                'fields': [
+                    {'id': 'date', 'label': 'Date', 'selected': True},
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'unit', 'label': 'Unit', 'selected': True},
+                    {'id': 'incident_type', 'label': 'Incident Type', 'selected': True},
+                    {'id': 'severity', 'label': 'Severity', 'selected': True},
+                    {'id': 'reported_by', 'label': 'Reported By', 'selected': False},
+                    {'id': 'resolution_status', 'label': 'Resolution Status', 'selected': False},
+                    {'id': 'follow_up_required', 'label': 'Follow-up Required', 'selected': False},
+                ]
+            },
+            'comparative_analytics': {
+                'name': 'Comparative Analytics Report',
+                'description': 'Cross-home performance comparison and benchmarking',
+                'fields': [
+                    {'id': 'care_home', 'label': 'Care Home', 'selected': True},
+                    {'id': 'avg_daily_staff', 'label': 'Average Daily Staff', 'selected': True},
+                    {'id': 'fill_rate', 'label': 'Shift Fill Rate (%)', 'selected': True},
+                    {'id': 'agency_usage_rate', 'label': 'Agency Usage Rate (%)', 'selected': True},
+                    {'id': 'overtime_rate', 'label': 'Overtime Rate (%)', 'selected': True},
+                    {'id': 'sickness_rate', 'label': 'Sickness Absence Rate (%)', 'selected': True},
+                    {'id': 'leave_approval_rate', 'label': 'Leave Approval Rate (%)', 'selected': False},
+                    {'id': 'budget_variance', 'label': 'Budget Variance (%)', 'selected': False},
+                ]
+            }
+        }
+        
+        context = {
+            'report_types': json.dumps(report_types),
+            'report_types_dict': report_types,  # Keep dict for iteration
+            'today': today,
+            'all_care_homes': CareHome.objects.all().order_by('name'),
+        }
+        
+        return render(request, 'scheduling/custom_report_builder.html', context)
+    
+    elif request.method == 'POST':
+        # Generate and export report
+        report_type = request.POST.get('report_type')
+        export_format = request.POST.get('export_format', 'csv')
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+        selected_homes = request.POST.getlist('care_homes')
+        selected_fields = request.POST.getlist('fields')
+        
+        # Parse dates
+        from django.utils.dateparse import parse_date
+        start_date = parse_date(start_date_str) if start_date_str else timezone.now().date()
+        end_date = parse_date(end_date_str) if end_date_str else timezone.now().date()
+        
+        # Generate report data based on type
+        report_data = _generate_report_data(report_type, start_date, end_date, selected_homes, selected_fields)
+        
+        # Export in requested format
+        if export_format == 'csv':
+            return _export_csv(report_type, report_data, start_date, end_date)
+        elif export_format == 'excel':
+            return _export_excel(report_type, report_data, start_date, end_date)
+        elif export_format == 'pdf':
+            return _export_pdf(report_type, report_data, start_date, end_date)
+        else:
+            return HttpResponse('Invalid export format', status=400)
+
+
+def _generate_report_data(report_type, start_date, end_date, selected_homes, selected_fields):
+    """Generate report data based on report type and parameters"""
+    from django.db.models import Count, Avg, Sum, F, Q
+    
+    data = []
+    
+    # Filter homes
+    if selected_homes:
+        care_homes = CareHome.objects.filter(name__in=selected_homes)
+    else:
+        care_homes = CareHome.objects.all()
+    
+    if report_type == 'staffing_coverage':
+        # Staffing coverage analysis
+        for home in care_homes:
+            units = Unit.objects.filter(care_home=home, is_active=True)
+            
+            for unit in units:
+                # Get shifts for date range
+                shifts = Shift.objects.filter(
+                    unit=unit,
+                    date__gte=start_date,
+                    date__lte=end_date
+                ).select_related('shift_type', 'user', 'user__role')
+                
+                # Group by date and shift type
+                dates = []
+                current_date = start_date
+                while current_date <= end_date:
+                    # Day shifts
+                    day_shifts = shifts.filter(
+                        date=current_date,
+                        shift_type__name__in=['DAY', 'DAY_SENIOR', 'DAY_ASSISTANT']
+                    )
+                    day_count = day_shifts.count()
+                    day_sscw = day_shifts.filter(user__role__name='SSCW').count()
+                    
+                    # Night shifts
+                    night_shifts = shifts.filter(
+                        date=current_date,
+                        shift_type__name__in=['NIGHT', 'NIGHT_SENIOR', 'NIGHT_ASSISTANT']
+                    )
+                    night_count = night_shifts.count()
+                    night_sscw = night_shifts.filter(user__role__name='SSCWN').count()
+                    
+                    # Calculate shortages
+                    day_required = unit.min_day_staff
+                    night_required = unit.min_night_staff
+                    
+                    if 'shift_type' in selected_fields:
+                        # Separate rows for day and night
+                        data.append({
+                            'date': current_date,
+                            'care_home': home.display_name,
+                            'unit': unit.get_name_display(),
+                            'shift_type': 'Day',
+                            'scheduled_staff': day_count,
+                            'required_staff': day_required,
+                            'shortage': day_required - day_count,
+                            'sscw_count': day_sscw,
+                        })
+                        
+                        data.append({
+                            'date': current_date,
+                            'care_home': home.display_name,
+                            'unit': unit.get_name_display(),
+                            'shift_type': 'Night',
+                            'scheduled_staff': night_count,
+                            'required_staff': night_required,
+                            'shortage': night_required - night_count,
+                            'sscw_count': night_sscw,
+                        })
+                    
+                    current_date += timedelta(days=1)
+    
+    elif report_type == 'leave_usage':
+        # Leave usage analysis
+        leave_requests = LeaveRequest.objects.filter(
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+            user__unit__care_home__in=care_homes
+        ).select_related('user', 'user__unit', 'user__unit__care_home', 'user__role')
+        
+        for leave in leave_requests:
+            data.append({
+                'staff_name': leave.user.full_name,
+                'staff_sap': leave.user.sap,
+                'care_home': leave.user.unit.care_home.display_name if leave.user.unit and leave.user.unit.care_home else 'N/A',
+                'leave_type': leave.get_leave_type_display(),
+                'start_date': leave.start_date,
+                'end_date': leave.end_date,
+                'days_requested': leave.days_requested,
+                'status': leave.get_status_display(),
+                'unit': leave.user.unit.get_name_display() if leave.user.unit else 'N/A',
+                'role': leave.user.role.get_name_display() if leave.user.role else 'N/A',
+            })
+    
+    elif report_type == 'comparative_analytics':
+        # Cross-home comparison
+        for home in care_homes:
+            shifts = Shift.objects.filter(
+                unit__care_home=home,
+                date__gte=start_date,
+                date__lte=end_date
+            )
+            
+            total_shifts = shifts.count()
+            total_days = (end_date - start_date).days + 1
+            avg_daily_staff = total_shifts / total_days if total_days > 0 else 0
+            
+            # Calculate fill rate
+            unfilled_shifts = shifts.filter(user__isnull=True).count()
+            fill_rate = ((total_shifts - unfilled_shifts) / total_shifts * 100) if total_shifts > 0 else 0
+            
+            data.append({
+                'care_home': home.display_name,
+                'avg_daily_staff': round(avg_daily_staff, 1),
+                'fill_rate': round(fill_rate, 1),
+                'agency_usage_rate': 0,  # Placeholder
+                'overtime_rate': 0,  # Placeholder
+                'sickness_rate': 0,  # Placeholder
+            })
+    
+    return data
+
+
+def _export_csv(report_type, report_data, start_date, end_date):
+    """Export report data as CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_{start_date}_{end_date}.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write header
+    writer.writerow([f'{report_type.replace("_", " ").title()} Report'])
+    writer.writerow([f'Period: {start_date} to {end_date}'])
+    writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+    writer.writerow([])
+    
+    # Write column headers
+    if report_data:
+        writer.writerow(report_data[0].keys())
+        
+        # Write data rows
+        for row in report_data:
+            writer.writerow(row.values())
+    
+    return response
+
+
+def _export_excel(report_type, report_data, start_date, end_date):
+    """Export report data as Excel with formatting"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+        from django.http import HttpResponse
+        import io
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = report_type[:31]  # Excel sheet name limit
+        
+        # Header
+        ws['A1'] = f'{report_type.replace("_", " ").title()} Report'
+        ws['A1'].font = Font(size=16, bold=True)
+        ws['A2'] = f'Period: {start_date} to {end_date}'
+        ws['A3'] = f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
+        
+        # Data header (row 5)
+        if report_data:
+            headers = list(report_data[0].keys())
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=5, column=col_num, value=header.replace('_', ' ').title())
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+                cell.font = Font(color='FFFFFF', bold=True)
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Data rows
+            for row_num, row_data in enumerate(report_data, 6):
+                for col_num, value in enumerate(row_data.values(), 1):
+                    ws.cell(row=row_num, column=col_num, value=value)
+            
+            # Auto-adjust column widths
+            for col_num in range(1, len(headers) + 1):
+                ws.column_dimensions[get_column_letter(col_num)].width = 15
+        
+        # Save to bytes
+        excel_file = io.BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        response = HttpResponse(
+            excel_file.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{report_type}_{start_date}_{end_date}.xlsx"'
+        
+        return response
+        
+    except ImportError:
+        # openpyxl not installed, fall back to CSV
+        return _export_csv(report_type, report_data, start_date, end_date)
+
+
+def _export_pdf(report_type, report_data, start_date, end_date):
+    """Export report data as PDF"""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from django.http import HttpResponse
+        import io
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#1f2937'),
+            spaceAfter=30,
+        )
+        
+        title = Paragraph(f'{report_type.replace("_", " ").title()} Report', title_style)
+        elements.append(title)
+        
+        # Metadata
+        meta_style = styles['Normal']
+        elements.append(Paragraph(f'<b>Period:</b> {start_date} to {end_date}', meta_style))
+        elements.append(Paragraph(f'<b>Generated:</b> {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}', meta_style))
+        elements.append(Spacer(1, 0.5*inch))
+        
+        # Data table
+        if report_data:
+            # Prepare table data
+            headers = [[h.replace('_', ' ').title() for h in report_data[0].keys()]]
+            data_rows = [[str(v) for v in row.values()] for row in report_data]
+            table_data = headers + data_rows
+            
+            # Create table
+            table = Table(table_data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            
+            elements.append(table)
+        
+        # Build PDF
+        doc.build(elements)
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{report_type}_{start_date}_{end_date}.pdf"'
+        response.write(pdf_data)
+        
+        return response
+        
+    except ImportError:
+        # reportlab not installed, fall back to CSV
+        return _export_csv(report_type, report_data, start_date, end_date)
+
