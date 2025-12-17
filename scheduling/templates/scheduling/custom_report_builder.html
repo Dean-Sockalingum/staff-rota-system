@@ -232,7 +232,7 @@
                        value="{{ home.name }}" 
                        class="home-checkbox"
                        id="home_{{ home.name }}">
-                <label for="home_{{ home.name }}" style="margin: 0; cursor: pointer;">{{ home.display_name }}</label>
+                <label for="home_{{ home.name }}" style="margin: 0; cursor: pointer;">{{ home.get_name_display }}</label>
             </div>
             {% endfor %}
         </div>

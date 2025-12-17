@@ -324,7 +324,7 @@
                     <option value="">All Homes</option>
                     {% for home in all_care_homes %}
                     <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
-                        {{ home.get_name_display }}
+                        {{ home }}
                     </option>
                     {% endfor %}
                 </select>
@@ -1026,29 +1026,5 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('beforeunload', function() {
     stopAutoRefresh();
 });
-</script>
-{% endblock %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<div style="text-align: center; padding: 2rem; color: #9ca3af; font-size: 0.85rem;">
-    <p>Last updated: {{ current_time|date:"F j, Y \a\t g:i A" }}</p>
-    <p>Data reflects real-time information from all {{ total_homes }} care homes</p>
-</div>
-
-<script>
-function exportReport() {
-    const startDate = document.getElementById('start_date').value;
-    const endDate = document.getElementById('end_date').value;
-    const url = new URL('{% url "senior_dashboard_export" %}', window.location.origin);
-    url.searchParams.set('start_date', startDate);
-    url.searchParams.set('end_date', endDate);
-    url.searchParams.set('format', 'csv');
-    window.location.href = url.toString();
-}
 </script>
 {% endblock %}

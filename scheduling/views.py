@@ -212,7 +212,12 @@ def manager_dashboard(request):
     day_care_roles = {'SCW', 'SCA'}
     night_care_roles = {'SCWN', 'SCAN'}
 
-    for unit in Unit.objects.filter(is_active=True):
+    # Filter units by care home if applicable
+    units_for_summary_qs = Unit.objects.filter(is_active=True)
+    if user_home:
+        units_for_summary_qs = units_for_summary_qs.filter(care_home=user_home)
+    
+    for unit in units_for_summary_qs:
         unit_shifts_today = today_shifts.filter(unit=unit)
         day_shifts_qs = unit_shifts_today.filter(shift_type__name__in=day_shift_names)
         night_shifts_qs = unit_shifts_today.filter(shift_type__name__in=night_shift_names)
@@ -348,7 +353,7 @@ def manager_dashboard(request):
         created_at__gte=twenty_four_hours_ago
     )
     if user_home:
-        incidents_qs = incidents_qs.filter(unit__care_home=user_home)
+        incidents_qs = incidents_qs.filter(reported_by__unit__care_home=user_home)
     recent_incidents = incidents_qs.select_related('reported_by').order_by('-created_at')
     
     context = {

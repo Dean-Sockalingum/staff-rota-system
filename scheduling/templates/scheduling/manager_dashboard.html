@@ -27,7 +27,7 @@
                                 <option value="">-- All Homes --</option>
                                 {% for home in all_care_homes %}
                                     <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
-                                        {{ home.display_name }}
+                                        {{ home.get_name_display }}
                                     </option>
                                 {% endfor %}
                             </select>
