@@ -5,7 +5,8 @@ from scheduling.views import (
     agency_companies_api, daily_additional_staffing_report, weekly_additional_staffing_report,
     careplan_overview, careplan_unit_view, careplan_review_detail, careplan_compliance_report,
     careplan_manager_dashboard, careplan_approve_review,
-    staffing_alert_respond, staffing_my_alerts, staffing_create_alert
+    staffing_alert_respond, staffing_my_alerts, staffing_create_alert,
+    home_dashboard  # Home-specific dashboards with role-based access
 )  # Import from main views
 from scheduling.views_compliance import (
     my_training_dashboard, submit_training_record,
@@ -13,7 +14,7 @@ from scheduling.views_compliance import (
     my_supervision_records, create_supervision_record, supervision_management, sign_supervision_record,
     report_incident, my_incident_reports, incident_management, view_incident
 )
-from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export
+from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export, custom_report_builder
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -23,7 +24,13 @@ urlpatterns = [
     path('staff/<str:sap>/', views.staff_detail, name='staff_detail'),
     path('staff-guidance/', views.staff_guidance, name='staff_guidance'),
     path('manager-dashboard/', views.manager_dashboard, name='manager_dashboard'),
+    
+    # Home-Specific Dashboards (5 homes with role-based access)
+    path('home/', home_dashboard, name='home_dashboard'),  # Auto-detects user's home
+    path('home/<slug:home_slug>/', home_dashboard, name='home_dashboard_specific'),  # Specific home view
+    
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
+    path('senior-dashboard/reports/', custom_report_builder, name='custom_report_builder'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
     path('reports-dashboard/', views.reports_dashboard, name='reports_dashboard'),
     path('reports/annual-leave/', views.get_annual_leave_report, name='get_annual_leave_report'),
