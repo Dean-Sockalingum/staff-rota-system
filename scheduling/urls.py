@@ -10,6 +10,11 @@ urlpatterns = [
     
     # Manager/Admin Views
     path('dashboard/', views.manager_dashboard, name='manager_dashboard'),
+    
+    # Home-Specific Dashboards (5 homes with role-based access)
+    path('home/', views.home_dashboard, name='home_dashboard'),  # Auto-detects user's home
+    path('home/<slug:home_slug>/', views.home_dashboard, name='home_dashboard_specific'),  # Specific home view
+    
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
     path('rota/', views.rota_view, name='rota_view'),

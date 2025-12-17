@@ -6329,3 +6329,314 @@ def staffing_dashboard(request):
     }
     
     return render(request, 'scheduling/staffing_dashboard.html', context)
+
+
+@login_required
+def home_dashboard(request, home_slug=None):
+    """
+    Unified home-specific dashboard with role-based access control.
+    Combines functionality from manager dashboard with automatic home detection.
+    
+    URL patterns:
+        /dashboard/ - Auto-detects user's home
+        /dashboard/hawthorn-house/ - Specific home view
+        /dashboard/meadowburn/
+        /dashboard/orchard-grove/
+        /dashboard/riverside/
+        /dashboard/victoria-gardens/
+    
+    Access levels:
+        - FULL (SM/OM): See all data, can approve, manage rotas
+        - MOST (SSCW): View schedules, team data, submit requests
+        - LIMITED (Staff): View own info, submit requests only
+    """
+    from .models_multi_home import CareHome
+    from .decorators import require_management
+    
+    # Determine which home to display
+    care_home = None
+    can_select_home = False
+    
+    # Check if user is senior management (can view any home)
+    if request.user.role and request.user.role.is_senior_management_team:
+        can_select_home = True
+        
+        # Try to get home from URL slug or GET parameter
+        if home_slug:
+            # Convert slug to home name (hawthorn-house -> HAWTHORN_HOUSE)
+            home_name = home_slug.upper().replace('-', '_')
+            try:
+                care_home = CareHome.objects.get(name=home_name)
+            except CareHome.DoesNotExist:
+                messages.error(request, f"Care home not found: {home_slug}")
+                return redirect('home_dashboard')
+        else:
+            # Check GET parameter
+            home_param = request.GET.get('care_home')
+            if home_param:
+                try:
+                    care_home = CareHome.objects.get(name=home_param)
+                except CareHome.DoesNotExist:
+                    pass
+    else:
+        # Regular staff - lock to their assigned home
+        if request.user.assigned_care_home:
+            care_home = request.user.assigned_care_home
+            # Redirect to proper URL if viewing generic /dashboard/
+            if not home_slug:
+                home_url_slug = care_home.name.lower().replace('_', '-')
+                return redirect('home_dashboard_specific', home_slug=home_url_slug)
+        else:
+            messages.error(request, "You are not assigned to a care home.")
+            return redirect('staff_dashboard')
+    
+    # If no home determined yet, redirect to user's home or show error
+    if not care_home:
+        if request.user.assigned_care_home:
+            home_url_slug = request.user.assigned_care_home.name.lower().replace('_', '-')
+            return redirect('home_dashboard_specific', home_slug=home_url_slug)
+        else:
+            messages.error(request, "Please select a care home to view.")
+            return redirect('senior_dashboard')
+    
+    # Get user's permission level
+    permission_level = request.user.role.permission_level if request.user.role else 'LIMITED'
+    
+    # Base date ranges
+    today = timezone.now().date()
+    rota_start = datetime(2026, 1, 4).date()
+    rota_end = rota_start + timedelta(weeks=12) - timedelta(days=1)
+    
+    # Filter units by home
+    units_qs = Unit.objects.filter(is_active=True, care_home=care_home)
+    units = list(units_qs)
+    
+    # Define shift categories
+    day_shift_names = ['DAY', 'DAY_SENIOR', 'DAY_ASSISTANT']
+    night_shift_names = ['NIGHT', 'NIGHT_SENIOR', 'NIGHT_ASSISTANT']
+    day_care_roles = {'SCW', 'SCA'}
+    night_care_roles = {'SCWN', 'SCAN'}
+    role_labels = dict(Role.ROLE_CHOICES)
+    
+    # === Widget Data (filtered by permission level) ===
+    
+    # FULL and MOST access: Leave requests requiring action
+    manual_review_requests = []
+    pending_leave_requests = []
+    if permission_level in ['FULL', 'MOST']:
+        manual_review_qs = LeaveRequest.objects.filter(
+            status='MANUAL_REVIEW',
+            user__unit__care_home=care_home
+        ).select_related('user').order_by('created_at')
+        manual_review_requests = list(manual_review_qs)
+        
+        pending_qs = LeaveRequest.objects.filter(
+            status='PENDING',
+            user__unit__care_home=care_home
+        ).select_related('user').order_by('created_at')
+        
+        # FULL can see all, MOST only sees requests needing SSCW input
+        if permission_level == 'MOST':
+            pending_qs = pending_qs.filter(user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN'])
+        
+        pending_leave_requests = list(pending_qs)
+    
+    # FULL access: Staff reallocations
+    pending_reallocations = []
+    if permission_level == 'FULL':
+        reallocations_qs = StaffReallocation.objects.filter(
+            status='NEEDED',
+            target_unit__care_home=care_home
+        ).select_related('target_unit', 'target_shift_type').order_by('target_date')
+        pending_reallocations = list(reallocations_qs)
+    
+    # ALL levels: Today's staffing snapshot
+    today_shifts = Shift.objects.filter(
+        date=today,
+        unit__care_home=care_home,
+        status__in=['SCHEDULED', 'CONFIRMED']
+    ).select_related('unit', 'shift_type', 'user', 'user__role')
+    
+    def format_breakdown(counts, include_roles=None):
+        if include_roles is not None:
+            counts = {role: count for role, count in counts.items() if role in include_roles}
+        
+        ordered_roles = ['SSCW', 'SCW', 'SCA', 'SSCWN', 'SCWN', 'SCAN']
+        added = set()
+        breakdown = []
+        
+        for role_code in ordered_roles:
+            count = counts.get(role_code, 0)
+            if count:
+                breakdown.append({
+                    'code': role_code,
+                    'label': role_labels.get(role_code, role_code.replace('_', ' ').title()),
+                    'count': count,
+                })
+                added.add(role_code)
+        
+        for role_code, count in counts.items():
+            if role_code in added or count == 0:
+                continue
+            breakdown.append({
+                'code': role_code,
+                'label': role_labels.get(role_code, role_code.replace('_', ' ').title()),
+                'count': count,
+            })
+        
+        return breakdown
+    
+    staffing_summary = {}
+    for unit in units:
+        unit_shifts_today = today_shifts.filter(unit=unit)
+        day_shifts_qs = unit_shifts_today.filter(shift_type__name__in=day_shift_names)
+        night_shifts_qs = unit_shifts_today.filter(shift_type__name__in=night_shift_names)
+        
+        day_role_counts = {}
+        for shift in day_shifts_qs:
+            role_code = getattr(getattr(shift.user, 'role', None), 'name', None)
+            if role_code:
+                day_role_counts[role_code] = day_role_counts.get(role_code, 0) + 1
+        
+        night_role_counts = {}
+        for shift in night_shifts_qs:
+            role_code = getattr(getattr(shift.user, 'role', None), 'name', None)
+            if role_code:
+                night_role_counts[role_code] = night_role_counts.get(role_code, 0) + 1
+        
+        day_care_total = sum(count for role, count in day_role_counts.items() if role in day_care_roles)
+        night_care_total = sum(count for role, count in night_role_counts.items() if role in night_care_roles)
+        
+        staffing_summary[unit.name] = {
+            'unit': unit,
+            'day_actual': day_care_total,
+            'day_required': unit.min_day_staff,
+            'night_actual': night_care_total,
+            'night_required': unit.min_night_staff,
+            'day_status': 'good' if day_care_total >= unit.min_day_staff else 'shortage',
+            'night_status': 'good' if night_care_total >= unit.min_night_staff else 'shortage',
+            'day_breakdown': format_breakdown(day_role_counts),
+            'night_breakdown': format_breakdown(night_role_counts),
+            'day_supernumerary': day_role_counts.get('SSCW', 0),
+            'night_supernumerary': night_role_counts.get('SSCWN', 0),
+        }
+    
+    # FULL and MOST: Current sickness absences
+    current_sickness_absences = []
+    if permission_level in ['FULL', 'MOST']:
+        sickness_qs = SicknessRecord.objects.filter(
+            status__in=['OPEN', 'AWAITING_FIT_NOTE'],
+            first_working_day__lte=today,
+            profile__user__unit__care_home=care_home
+        ).filter(
+            models.Q(actual_last_working_day__isnull=True) |
+            models.Q(actual_last_working_day__gte=today)
+        ).select_related('profile__user').order_by('first_working_day')
+        current_sickness_absences = list(sickness_qs)
+    
+    # ALL levels: Upcoming approved leave (LIMITED sees only own)
+    approved_leave_qs = LeaveRequest.objects.filter(
+        status='APPROVED',
+        end_date__gte=today,
+        user__unit__care_home=care_home
+    )
+    if permission_level == 'LIMITED':
+        approved_leave_qs = approved_leave_qs.filter(user=request.user)
+    
+    upcoming_approved_leave = list(approved_leave_qs.select_related('user').order_by('start_date'))
+    
+    # FULL and MOST: Staffing alerts (7-day forecast)
+    staffing_alerts = []
+    if permission_level in ['FULL', 'MOST']:
+        home_staffing_config = {
+            'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18},
+            'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17},
+            'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17},
+            'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17},
+            'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10},
+        }
+        
+        home_config = home_staffing_config.get(care_home.name, {'day_ideal': 17, 'night_ideal': 17})
+        day_threshold = home_config['day_ideal']
+        night_threshold = home_config['night_ideal']
+        
+        for i in range(7):
+            check_date = today + timedelta(days=i)
+            date_shifts = Shift.objects.filter(
+                date=check_date,
+                unit__care_home=care_home,
+                status__in=['SCHEDULED', 'CONFIRMED']
+            ).select_related('user', 'user__role', 'shift_type')
+            
+            day_care = date_shifts.filter(
+                shift_type__name__in=day_shift_names,
+                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
+            ).count()
+            
+            night_care = date_shifts.filter(
+                shift_type__name__in=night_shift_names,
+                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
+            ).count()
+            
+            if day_care < day_threshold:
+                staffing_alerts.append({
+                    'date': check_date,
+                    'shift': 'Day',
+                    'actual': day_care,
+                    'required': day_threshold,
+                    'deficit': day_threshold - day_care,
+                })
+            
+            if night_care < night_threshold:
+                staffing_alerts.append({
+                    'date': check_date,
+                    'shift': 'Night',
+                    'actual': night_care,
+                    'required': night_threshold,
+                    'deficit': night_threshold - night_care,
+                })
+    
+    # FULL and MOST: Recent incidents (last 24 hours)
+    recent_incidents = []
+    if permission_level in ['FULL', 'MOST']:
+        twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+        incidents_qs = IncidentReport.objects.filter(
+            created_at__gte=twenty_four_hours_ago,
+            unit__care_home=care_home
+        ).select_related('reported_by').order_by('-created_at')
+        recent_incidents = list(incidents_qs)
+    
+    # LIMITED: User's own leave requests only
+    user_leave_requests = []
+    if permission_level == 'LIMITED':
+        user_leave_requests = list(
+            LeaveRequest.objects.filter(user=request.user)
+            .order_by('-created_at')[:10]
+        )
+    
+    context = {
+        'care_home': care_home,
+        'can_select_home': can_select_home,
+        'permission_level': permission_level,
+        'all_care_homes': CareHome.objects.all().order_by('name'),
+        
+        # Dashboard data
+        'manual_review_requests': manual_review_requests,
+        'pending_leave_requests': pending_leave_requests,
+        'pending_reallocations': pending_reallocations,
+        'staffing_summary': staffing_summary,
+        'current_sickness_absences': current_sickness_absences,
+        'upcoming_approved_leave': upcoming_approved_leave,
+        'staffing_alerts': staffing_alerts,
+        'recent_incidents': recent_incidents,
+        'user_leave_requests': user_leave_requests,
+        
+        # Metadata
+        'today': today,
+        'units': units,
+        'rota_start': rota_start,
+        'rota_end': rota_end,
+    }
+    
+    return render(request, 'scheduling/home_dashboard.html', context)
+

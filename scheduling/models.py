@@ -28,6 +28,12 @@ class Role(models.Model):
         ('SCA', 'Social Care Assistant'),
     ]
     
+    PERMISSION_LEVEL_CHOICES = [
+        ('FULL', 'Full Access - SM/OM can approve, manage rotas, view all data'),
+        ('MOST', 'Most Access - SSCW can view schedules, team data, submit requests'),
+        ('LIMITED', 'Limited Access - Staff can view own info, submit requests only'),
+    ]
+    
     name = models.CharField(max_length=100, choices=ROLE_CHOICES, unique=True)
     description = models.TextField(blank=True, null=True)
     is_management = models.BooleanField(default=False)
@@ -38,6 +44,12 @@ class Role(models.Model):
     can_approve_leave = models.BooleanField(default=False)
     can_manage_rota = models.BooleanField(default=False)
     required_headcount = models.IntegerField(default=0, help_text="Target number of staff required for this role")
+    permission_level = models.CharField(
+        max_length=20,
+        choices=PERMISSION_LEVEL_CHOICES,
+        default='LIMITED',
+        help_text="Access level for home-specific dashboards"
+    )
     
     # Color coding for role display
     COLOR_CHOICES = [
@@ -160,6 +172,35 @@ class User(AbstractBaseUser, PermissionsMixin):
             elif self.role.name == 'SCA':
                 return 2
         return 0
+    
+    def has_permission_level(self, required_level):
+        """Check if user has required permission level or higher"""
+        if not self.role:
+            return False
+        
+        level_hierarchy = {'FULL': 3, 'MOST': 2, 'LIMITED': 1}
+        user_level = level_hierarchy.get(self.role.permission_level, 0)
+        required = level_hierarchy.get(required_level, 0)
+        return user_level >= required
+    
+    def can_access_home(self, care_home):
+        """Check if user can access a specific care home's dashboard"""
+        # Senior management team can access all homes
+        if self.role and self.role.is_senior_management_team:
+            return True
+        
+        # Regular staff can only access their assigned home
+        if self.unit and self.unit.care_home:
+            return self.unit.care_home == care_home
+        
+        return False
+    
+    @property
+    def assigned_care_home(self):
+        """Get the care home this user is assigned to"""
+        if self.unit and self.unit.care_home:
+            return self.unit.care_home
+        return None
 
 # Table 3: Units/Departments
 class Unit(models.Model):
