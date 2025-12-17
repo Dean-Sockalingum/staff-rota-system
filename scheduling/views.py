@@ -585,9 +585,25 @@ def rota_view(request):
     view_start_date = start_of_week + timedelta(weeks=week_offset)
     view_end_date = view_start_date + timedelta(days=6)
     
+    # Handle care home filter
+    selected_home = request.GET.get('care_home', 'all')
+    from .models_multi_home import CareHome
+    care_homes = CareHome.objects.all().order_by('name')
+    
     # Handle unit filter
     selected_unit = request.GET.get('unit', 'all')
     units = Unit.objects.filter(is_active=True)
+    
+    # Filter units by care home if selected
+    if selected_home != 'all':
+        units = units.filter(care_home__name=selected_home)
+    
+    # Get selected home label
+    if selected_home == 'all':
+        selected_home_label = 'All Homes'
+    else:
+        home_obj = care_homes.filter(name=selected_home).first()
+        selected_home_label = home_obj.get_name_display() if home_obj else selected_home
 
     # Handle team filter
     team_choices = [{'code': code, 'label': label} for code, label in User.TEAM_CHOICES]
@@ -605,6 +621,10 @@ def rota_view(request):
         date__range=[view_start_date, view_end_date]
     ).select_related('user', 'unit', 'shift_type').order_by('date', 'shift_type__start_time')
     
+    # Filter by care home first (affects both unit and non-unit filters)
+    if selected_home != 'all':
+        shifts_query = shifts_query.filter(unit__care_home__name=selected_home)
+    
     if selected_unit != 'all':
         shifts_query = shifts_query.filter(unit__name=selected_unit)
 
@@ -616,6 +636,10 @@ def rota_view(request):
         start_date__lte=view_end_date,
         end_date__gte=view_start_date,
     ).select_related('user', 'user__role', 'user__unit')
+    
+    # Filter leave by care home
+    if selected_home != 'all':
+        leave_query = leave_query.filter(user__unit__care_home__name=selected_home)
 
     if selected_team != 'all':
         leave_query = leave_query.filter(user__team=selected_team)
@@ -784,6 +808,15 @@ def rota_view(request):
     daily_summary = {}
     staffing_alerts = []  # Track staffing shortages for dashboard
     
+    # Home-specific staffing thresholds (care staff only, not including SSCW/SSCWN)
+    home_staffing_config = {
+        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2},
+        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1},
+    }
+    
     for current_date, shifts_data in shifts_by_date.items():
         # Break down by role groups
         day_sscw = len(shifts_data['day_supernumerary'])
@@ -791,15 +824,21 @@ def rota_view(request):
         night_sscw = len(shifts_data['night_supernumerary'])
         night_care = len(shifts_data['night_care'])
 
-        # Minimum staffing levels (facility-wide)
-        if selected_unit == 'all':
-            required_day = 17
-            required_night = 17
-        else:
+        # Determine staffing requirements based on selected filters
+        if selected_home != 'all':
+            # Use home-specific thresholds
+            requirements = home_staffing_config.get(selected_home, {'day_ideal': 17, 'night_ideal': 17})
+            required_day = requirements['day_ideal']
+            required_night = requirements['night_ideal']
+        elif selected_unit != 'all':
             # For individual units, use their specific requirements
             unit = units.get(name=selected_unit)
             required_day = unit.min_day_staff if unit else 17
             required_night = unit.min_night_staff if unit else 17
+        else:
+            # For facility-wide view (all homes)
+            required_day = 17
+            required_night = 17
 
         # Check for staffing shortages
         day_shortage = day_care < required_day
@@ -841,12 +880,15 @@ def rota_view(request):
         'view_start_date': view_start_date,
         'view_end_date': view_end_date,
         'week_offset': week_offset,
+        'care_homes': care_homes,
+        'selected_home': selected_home,
+        'selected_home_label': selected_home_label,
         'selected_unit': selected_unit,
-    'selected_unit_label': selected_unit_label,
+        'selected_unit_label': selected_unit_label,
         'units': units,
         'team_choices': team_choices,
         'selected_team': selected_team,
-    'selected_team_label': selected_team_label,
+        'selected_team_label': selected_team_label,
         'date_range': [view_start_date + timedelta(days=i) for i in range(7)],
         'roles': Role.objects.all(),
         'today': timezone.now().date(),

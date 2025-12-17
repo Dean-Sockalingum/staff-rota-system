@@ -56,6 +56,7 @@ def senior_management_dashboard(request):
     # Handle date range parameters
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
+    selected_home = request.GET.get('care_home', '')  # Filter by care home
     
     if start_date_str:
         try:
@@ -84,6 +85,10 @@ def senior_management_dashboard(request):
     
     # Get all care homes
     care_homes = CareHome.objects.all().order_by('name')
+    
+    # Filter by selected home if provided
+    if selected_home:
+        care_homes = care_homes.filter(name=selected_home)
     
     # =================================================================
     # SECTION 1: HOME OVERVIEW - Occupancy & Capacity
@@ -466,6 +471,79 @@ def senior_management_dashboard(request):
         citywide_night_summary.append(night_data)
     
     # =================================================================
+    # SECTION 8: WEEKLY SNAPSHOT - Simplified Daily Summary per Home
+    # =================================================================
+    # Generate simplified weekly summary showing SSCW/SSCWN and total Care staff
+    weekly_snapshot = []
+    
+    # Get all care homes for snapshot (respect filtering)
+    all_care_homes = CareHome.objects.all().order_by('name')
+    if selected_home:
+        all_care_homes = all_care_homes.filter(name=selected_home)
+    
+    for home in all_care_homes:
+        units = Unit.objects.filter(care_home=home, is_active=True)
+        
+        # Home-specific requirements (care staff only, not including SSCW/SSCWN)
+        home_staffing_config = {
+            'HAWTHORN_HOUSE': {'day_min': 18, 'day_ideal': 18, 'night_min': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2},
+            'MEADOWBURN': {'day_min': 17, 'day_ideal': 17, 'night_min': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+            'ORCHARD_GROVE': {'day_min': 17, 'day_ideal': 17, 'night_min': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+            'RIVERSIDE': {'day_min': 17, 'day_ideal': 17, 'night_min': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
+            'VICTORIA_GARDENS': {'day_min': 10, 'day_ideal': 10, 'night_min': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1},
+        }
+        
+        requirements = home_staffing_config.get(home.name, {'day_min': 17, 'day_ideal': 17, 'night_min': 17, 'night_ideal': 17})
+        
+        home_snapshot = {
+            'home': home.get_name_display(),
+            'home_obj': home,
+            'day_ideal': requirements['day_ideal'],
+            'night_ideal': requirements['night_ideal'],
+            'days': []
+        }
+        
+        # For each day in the week
+        for date in week_dates:
+            # Day shifts
+            day_shifts = Shift.objects.filter(
+                unit__in=units,
+                date=date,
+                shift_type__name__icontains='DAY',
+                status__in=['SCHEDULED', 'CONFIRMED']
+            )
+            
+            # Count SSCW only (not SM/OM)
+            day_sscw = day_shifts.filter(user__role__name='SSCW').count()
+            
+            # Count all care staff (SCW + SCA)
+            day_care = day_shifts.filter(user__role__name__in=['SCW', 'SCA']).count()
+            
+            # Night shifts
+            night_shifts = Shift.objects.filter(
+                unit__in=units,
+                date=date,
+                shift_type__name__icontains='NIGHT',
+                status__in=['SCHEDULED', 'CONFIRMED']
+            )
+            
+            # Count SSCWN only
+            night_sscwn = night_shifts.filter(user__role__name='SSCWN').count()
+            
+            # Count all night care staff (SCWN + SCAN)
+            night_care = night_shifts.filter(user__role__name__in=['SCWN', 'SCAN']).count()
+            
+            home_snapshot['days'].append({
+                'date': date,
+                'day_sscw': day_sscw,
+                'day_care': day_care,
+                'night_sscwn': night_sscwn,
+                'night_care': night_care,
+            })
+        
+        weekly_snapshot.append(home_snapshot)
+    
+    # =================================================================
     # Context for Template
     # =================================================================
     context = {
@@ -477,6 +555,10 @@ def senior_management_dashboard(request):
         'start_date': start_date,
         'end_date': end_date,
         'days_in_range': days_in_range,
+        
+        # Filtering
+        'all_care_homes': CareHome.objects.all().order_by('name'),
+        'selected_home': selected_home,
         
         # Overview
         'home_overview': home_overview,
@@ -511,6 +593,9 @@ def senior_management_dashboard(request):
         'citywide_day_summary': citywide_day_summary,
         'citywide_night_summary': citywide_night_summary,
         'week_dates': week_dates,
+        
+        # Weekly Snapshot - Simplified view
+        'weekly_snapshot': weekly_snapshot,
     }
     
     return render(request, 'scheduling/senior_management_dashboard.html', context)

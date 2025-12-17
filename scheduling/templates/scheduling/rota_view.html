@@ -584,7 +584,7 @@ td.calendar-day .shift-card.role-scan {
     <div class="col-12">
         <h2><i class="fas fa-calendar-week"></i> Rota Management</h2>
         <p class="text-muted mb-1">Week of {{ view_start_date|date:"F j" }} - {{ view_end_date|date:"F j, Y" }}</p>
-        <p class="text-muted">Unit: {{ selected_unit_label }} · Team: {{ selected_team_label }}</p>
+        <p class="text-muted">Home: {{ selected_home_label }} · Unit: {{ selected_unit_label }} · Team: {{ selected_team_label }}</p>
     </div>
 </div>
 
@@ -596,15 +596,15 @@ td.calendar-day .shift-card.role-scan {
                 <div class="row align-items-center">
                     <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
                         <div class="btn-group" role="group">
-                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'-1' }}&unit={{ selected_unit }}&team={{ selected_team }}" 
+                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'-1' }}&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
                                class="btn btn-outline-primary">
                                 <i class="fas fa-chevron-left"></i> Previous Week
                             </a>
-                            <a href="{% url 'rota_view' %}?week_offset=0&unit={{ selected_unit }}&team={{ selected_team }}" 
+                            <a href="{% url 'rota_view' %}?week_offset=0&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
                                class="btn btn-primary">
                                 This Week
                             </a>
-                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'1' }}&unit={{ selected_unit }}&team={{ selected_team }}" 
+                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'1' }}&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
                                class="btn btn-outline-primary">
                                 Next Week <i class="fas fa-chevron-right"></i>
                             </a>
@@ -614,7 +614,18 @@ td.calendar-day .shift-card.role-scan {
                     <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
                         <form id="rotaFilterForm" method="get" class="form-row align-items-center">
                             <input type="hidden" name="week_offset" value="{{ week_offset }}">
-                            <div class="form-group col-sm-6 mb-2 mb-sm-0">
+                            <div class="form-group col-sm-4 mb-2 mb-sm-0">
+                                <label for="rotaCareHomeFilter" class="sr-only visually-hidden">Care Home</label>
+                                <select class="form-select" id="rotaCareHomeFilter" name="care_home" aria-label="Filter rota by care home" onchange="document.getElementById('rotaFilterForm').submit();">
+                                    <option value="all" {% if selected_home == 'all' %}selected{% endif %}>All Homes</option>
+                                    {% for home in care_homes %}
+                                        <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                            {{ home.get_name_display }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-4 mb-2 mb-sm-0">
                                 <label for="rotaUnitFilter" class="sr-only visually-hidden">Unit</label>
                                 <select class="form-select" id="rotaUnitFilter" name="unit" aria-label="Filter rota by unit" onchange="document.getElementById('rotaFilterForm').submit();">
                                     <option value="all" {% if selected_unit == 'all' %}selected{% endif %}>All Units</option>
@@ -625,7 +636,7 @@ td.calendar-day .shift-card.role-scan {
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="form-group col-sm-6">
+                            <div class="form-group col-sm-4">
                                 <label for="rotaTeamFilter" class="sr-only visually-hidden">Team</label>
                                 <select class="form-select" id="rotaTeamFilter" name="team" aria-label="Filter rota by team" onchange="document.getElementById('rotaFilterForm').submit();">
                                     <option value="all" {% if selected_team == 'all' %}selected{% endif %}>All Teams</option>

@@ -271,7 +271,7 @@
 <!-- ============================================= -->
 <div class="section">
     <form method="get" action="{% url 'senior_management_dashboard' %}" id="dateFilterForm">
-        <div style="display: grid; grid-template-columns: 1fr 1fr auto auto auto; gap: 1rem; align-items: end;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto auto auto; gap: 1rem; align-items: end;">
             <div>
                 <label for="start_date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Start Date</label>
                 <input type="date" 
@@ -289,6 +289,20 @@
                        value="{{ end_date|date:'Y-m-d' }}"
                        class="form-control"
                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+            </div>
+            <div>
+                <label for="care_home" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Care Home</label>
+                <select id="care_home" 
+                        name="care_home" 
+                        class="form-control"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; width: 100%;">
+                    <option value="">All Homes</option>
+                    {% for home in all_care_homes %}
+                    <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                        {{ home.get_name_display }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             <div>
                 <button type="submit" 
@@ -541,6 +555,57 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- ============================================= -->
+<!-- SECTION 1.6: WEEKLY SNAPSHOT - SIMPLIFIED VIEW -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>📅 Weekly Staffing Snapshot</h2>
+        <span class="text-muted">{{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}</span>
+    </div>
+    
+    {% if selected_home %}
+    <p style="color: #667eea; font-weight: 600; margin-bottom: 1.5rem;">
+        <i class="fas fa-filter"></i> Filtered by: {% for home in all_care_homes %}{% if home.name == selected_home %}{{ home.get_name_display }}{% endif %}{% endfor %}
+    </p>
+    {% endif %}
+    
+    {% for home_snapshot in weekly_snapshot %}
+    <div style="margin-bottom: 2rem; border-left: 4px solid #667eea; padding-left: 1rem;">
+        <h3 style="color: #667eea; margin-bottom: 1rem;">{{ home_snapshot.home }}</h3>
+        
+        <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+            {% for day in home_snapshot.days %}
+            <div style="padding: 0.75rem; {% if not forloop.last %}border-bottom: 1px solid #e5e7eb;{% endif %}">
+                <div style="font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                    {{ day.date|date:"D" }} {{ day.date|date:"M d" }}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <span style="color: #f59e0b; font-weight: 600;">Day:</span>
+                        <span style="color: #374151;">SSCW {{ day.day_sscw }}</span>
+                        <span style="color: #6b7280;">·</span>
+                        <span style="color: #374151;">Care {{ day.day_care }}/{{ home_snapshot.day_ideal }}</span>
+                    </div>
+                    <div>
+                        <span style="color: #6366f1; font-weight: 600;">Night:</span>
+                        <span style="color: #374151;">SSCW {{ day.night_sscwn }}</span>
+                        <span style="color: #6b7280;">·</span>
+                        <span style="color: #374151;">Care {{ day.night_care }}/{{ home_snapshot.night_ideal }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <p>No staffing data available for the selected period.</p>
+    </div>
+    {% endfor %}
 </div>
 
 <!-- ============================================= -->
