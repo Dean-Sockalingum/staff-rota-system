@@ -227,6 +227,25 @@
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Care Home Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="care_home" class="form-label"><i class="fas fa-home"></i> Filter by Care Home</label>
+                    <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- All Homes --</option>
+                        {% for home in all_care_homes %}
+                            <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                                {{ home.get_name_display }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <!-- Statistics Summary -->
     <div class="stats-summary">
         <div class="row">

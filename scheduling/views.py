@@ -1872,14 +1872,24 @@ def request_shift_swap(request):
 @login_required
 def staff_management(request):
     """Staff Management Dashboard showing home unit assignments with SSCW managers"""
+    from .models_multi_home import CareHome
     
     # Check permissions
     if not (request.user.role and request.user.role.is_management):
         messages.error(request, 'You do not have permission to manage staff.')
         return redirect('staff_dashboard')
     
+    # Get care home filter parameter
+    care_home_filter = request.GET.get('care_home', '')
+    
     # Get all active care units (excluding ADMIN)
-    care_units = Unit.objects.filter(is_active=True).exclude(name='ADMIN').order_by('name')
+    care_units = Unit.objects.filter(is_active=True).exclude(name='ADMIN')
+    
+    # Apply care home filter if selected
+    if care_home_filter:
+        care_units = care_units.filter(care_home__name=care_home_filter)
+    
+    care_units = care_units.order_by('name')
     
     # Get all staff members
     all_staff = User.objects.filter(is_active=True).select_related('role', 'home_unit', 'unit').order_by('home_unit__name', 'role__name', 'last_name')
@@ -2034,13 +2044,18 @@ def staff_management(request):
     staff_with_home_units = all_staff.filter(home_unit__isnull=False, role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']).count()
     staff_without_home_units = all_staff.filter(home_unit__isnull=True, role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']).count()
     
+    # Get all care homes for filter dropdown
+    all_care_homes = CareHome.objects.all().order_by('name')
+    
     context = {
         'units_with_home_staff': units_with_home_staff,
         'total_staff': total_staff,
         'management_staff': management_staff,
         'care_staff': care_staff,
         'staff_with_home_units': staff_with_home_units,
-        'staff_without_home_units': staff_without_home_units
+        'staff_without_home_units': staff_without_home_units,
+        'all_care_homes': all_care_homes,
+        'selected_care_home': care_home_filter,
     }
     
     return render(request, 'scheduling/staff_management.html', context)
@@ -5604,17 +5619,22 @@ def leave_usage_targets(request):
 def careplan_overview(request):
     """Quick overview of all residents and their care plan review status"""
     from .models import Resident, CarePlanReview
+    from .models_multi_home import CareHome
     
     # Get filter parameters
+    care_home_filter = request.GET.get('care_home', '')
     unit_filter = request.GET.get('unit', '')
     status_filter = request.GET.get('status', '')
     
     # Get all residents with their latest review
     residents = Resident.objects.filter(is_active=True).select_related(
-        'unit', 'keyworker', 'unit_manager'
+        'unit', 'unit__care_home', 'keyworker', 'unit_manager'
     ).prefetch_related('care_plan_reviews')
     
     # Apply filters
+    if care_home_filter:
+        residents = residents.filter(unit__care_home__name=care_home_filter)
+    
     if unit_filter:
         residents = residents.filter(unit__name=unit_filter)
     
@@ -5636,8 +5656,14 @@ def careplan_overview(request):
             'review': latest_review,
         })
     
-    # Get units for filter
-    all_units = Unit.objects.all().order_by('name')
+    # Get units for filter - respect care home filter
+    if care_home_filter:
+        all_units = Unit.objects.filter(care_home__name=care_home_filter).order_by('name')
+    else:
+        all_units = Unit.objects.all().order_by('name')
+    
+    # Get all care homes for filter dropdown
+    all_care_homes = CareHome.objects.all().order_by('name')
     
     # Calculate statistics
     total_residents = len(resident_data)
@@ -5684,7 +5710,9 @@ def careplan_overview(request):
         'upcoming_count': upcoming_count,
         'compliance_rate': compliance_rate,
         'all_units': all_units,
+        'all_care_homes': all_care_homes,
         'unit_stats': unit_stats,
+        'selected_care_home': care_home_filter,
         'selected_unit': unit_filter,
         'selected_status': status_filter,
         'status_choices': [
