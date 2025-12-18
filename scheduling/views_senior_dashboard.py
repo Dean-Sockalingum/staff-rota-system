@@ -123,28 +123,31 @@ def senior_management_dashboard(request):
     # =================================================================
     staffing_today = []
     
-    # Home-specific staffing requirements (must match citywide summary)
+    # Home-specific staffing requirements
+    # Minimum = Regulatory/safety minimum (after factoring leave/sickness)
+    # Ideal = Full rota when everyone scheduled (25-41 range from base model)
     home_staffing = {
-        'HAWTHORN_HOUSE': {'day_min': 18, 'day_ideal': 24, 'night_min': 18, 'night_ideal': 21},
-        'MEADOWBURN': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-        'ORCHARD_GROVE': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-        'RIVERSIDE': {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21},
-        'VICTORIA_GARDENS': {'day_min': 10, 'day_ideal': 15, 'night_min': 10, 'night_ideal': 12},
+        'HAWTHORN_HOUSE': {'day_min': 18, 'day_ideal': 41, 'night_min': 18, 'night_ideal': 41},
+        'MEADOWBURN': {'day_min': 17, 'day_ideal': 41, 'night_min': 17, 'night_ideal': 41},
+        'ORCHARD_GROVE': {'day_min': 17, 'day_ideal': 41, 'night_min': 17, 'night_ideal': 41},
+        'RIVERSIDE': {'day_min': 17, 'day_ideal': 41, 'night_min': 17, 'night_ideal': 41},
+        'VICTORIA_GARDENS': {'day_min': 10, 'day_ideal': 18, 'night_min': 10, 'night_ideal': 14},
     }
     
     for home in care_homes:
         units = Unit.objects.filter(care_home=home, is_active=True)
         
         # TODAY'S shifts for this home only (not date range)
+        # Only count UNIQUE user assignments (not multiple shift records per user)
         today_shifts = Shift.objects.filter(
             date=today,
             unit__in=units,
             status__in=['SCHEDULED', 'CONFIRMED']
-        )
+        ).select_related('user', 'shift_type')
         
-        # Count by shift type
-        day_shifts = today_shifts.filter(shift_type__name__icontains='DAY').count()
-        night_shifts = today_shifts.filter(shift_type__name__icontains='NIGHT').count()
+        # Count by shift type - use distinct() to avoid counting duplicates
+        day_shifts = today_shifts.filter(shift_type__name__icontains='DAY').values('user').distinct().count()
+        night_shifts = today_shifts.filter(shift_type__name__icontains='NIGHT').values('user').distinct().count()
         
         # Get home-specific requirements
         requirements = home_staffing.get(home.name, {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21})
@@ -164,7 +167,7 @@ def senior_management_dashboard(request):
             'night_actual': night_shifts,
             'night_required': night_required,
             'night_coverage': night_coverage,
-            'status': 'good' if day_coverage >= 100 and night_coverage >= 100 else 'warning' if day_coverage >= 80 and night_coverage >= 80 else 'critical',
+            'status': 'good' if day_coverage >= 100 and night_coverage >= 100 else 'critical',
         })
     
     # =================================================================
