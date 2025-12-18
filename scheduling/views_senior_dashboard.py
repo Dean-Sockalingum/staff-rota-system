@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import csv
 
-from .models import Shift, Unit, User, LeaveRequest, StaffReallocation
+from .models import Shift, Unit, User, LeaveRequest, StaffReallocation, Resident, CarePlanReview
 from .models_multi_home import CareHome
 # Automated workflow models - to be integrated in Phase 2
 # from .models_automated_workflow import (
@@ -330,7 +330,54 @@ def senior_management_dashboard(request):
         })
     
     # =================================================================
-    # SECTION 7: CITYWIDE SUMMARY - Weekly Overview
+    # SECTION 7: CARE PLAN COMPLIANCE - By Home
+    # =================================================================
+    care_plan_compliance = []
+    
+    for home in care_homes:
+        # Get all active residents for this home
+        residents = Resident.objects.filter(
+            unit__care_home=home,
+            is_active=True
+        )
+        
+        total_residents = residents.count()
+        
+        if total_residents > 0:
+            # Get latest review for each resident
+            reviews = []
+            for resident in residents:
+                latest_review = resident.care_plan_reviews.order_by('-due_date').first()
+                if latest_review:
+                    reviews.append(latest_review)
+            
+            # Count by status
+            completed = sum(1 for r in reviews if r.status == 'COMPLETED')
+            overdue = sum(1 for r in reviews if r.status == 'OVERDUE')
+            due_soon = sum(1 for r in reviews if r.status == 'DUE')
+            upcoming = sum(1 for r in reviews if r.status == 'UPCOMING')
+            in_progress = sum(1 for r in reviews if r.status == 'IN_PROGRESS')
+            
+            # Calculate compliance rate (completed / total reviews)
+            compliance_rate = (completed / len(reviews) * 100) if reviews else 0
+            overdue_rate = (overdue / len(reviews) * 100) if reviews else 0
+            
+            care_plan_compliance.append({
+                'home': home.get_name_display(),
+                'home_obj': home,
+                'total_residents': total_residents,
+                'total_reviews': len(reviews),
+                'completed': completed,
+                'overdue': overdue,
+                'overdue_rate': overdue_rate,
+                'due_soon': due_soon,
+                'upcoming': upcoming,
+                'in_progress': in_progress,
+                'compliance_rate': compliance_rate,
+            })
+    
+    # =================================================================
+    # SECTION 8: CITYWIDE SUMMARY - Weekly Overview
     # =================================================================
     # Generate 7-day view starting from start_date
     citywide_day_summary = []
@@ -588,6 +635,9 @@ def senior_management_dashboard(request):
         
         # Quality
         'quality_metrics': quality_metrics,
+        
+        # Care Plan Compliance
+        'care_plan_compliance': care_plan_compliance,
         
         # Citywide Summary
         'citywide_day_summary': citywide_day_summary,

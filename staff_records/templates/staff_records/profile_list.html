@@ -13,11 +13,22 @@
 <div class="card mb-3">
     <div class="card-body">
         <form method="get" class="row g-2">
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <label for="care_home" class="form-label"><i class="fas fa-home"></i> Filter by Care Home</label>
+                <select id="care_home" name="care_home" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- All Homes --</option>
+                    {% for home in all_care_homes %}
+                        <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                            {{ home.get_name_display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
                 <label for="searchTerm" class="form-label">Search by name or SAP</label>
                 <input type="text" id="searchTerm" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Enter name or SAP number">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="status" class="form-label">Employment status</label>
                 <select id="status" name="status" class="form-select">
                     <option value="">All statuses</option>

@@ -8,6 +8,7 @@ from django.views import View
 from django.views.generic import ListView
 
 from scheduling.models import User
+from scheduling.models_multi_home import CareHome
 
 from .forms import SicknessRecordForm, ContactLogEntryForm, StaffProfileForm
 from .models import StaffProfile, SicknessRecord, ContactLogEntry
@@ -29,9 +30,11 @@ class StaffProfileListView(ListView):
     context_object_name = "profiles"
 
     def get_queryset(self):
-        query = StaffProfile.objects.select_related("user", "user__role", "user__unit")
+        query = StaffProfile.objects.select_related("user", "user__role", "user__unit", "user__unit__care_home")
         term = self.request.GET.get("q")
         status = self.request.GET.get("status")
+        care_home = self.request.GET.get("care_home")
+        
         if term:
             query = query.filter(
                 Q(user__first_name__icontains=term)
@@ -40,11 +43,16 @@ class StaffProfileListView(ListView):
             )
         if status:
             query = query.filter(employment_status=status)
+        if care_home:
+            query = query.filter(user__unit__care_home__name=care_home)
+        
         return query.order_by("user__last_name", "user__first_name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["employment_status_choices"] = StaffProfile.EMPLOYMENT_STATUS_CHOICES
+        context["all_care_homes"] = CareHome.objects.all().order_by('name')
+        context["selected_care_home"] = self.request.GET.get("care_home", "")
         return context
 
 

@@ -898,6 +898,67 @@
     </table>
 </div>
 
+<!-- ============================================= -->
+<!-- SECTION 8: CARE PLAN COMPLIANCE - By Home -->
+<!-- ============================================= -->
+<div class="section">
+    <div class="section-header">
+        <h2>📋 Care Plan Review Compliance</h2>
+        <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Governance oversight of care plan review status by care home</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Care Home</th>
+                <th>Total Residents</th>
+                <th>Completed</th>
+                <th>Overdue</th>
+                <th>Due Soon</th>
+                <th>Compliance Rate</th>
+                <th>Overdue Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for home in care_plan_compliance %}
+            <tr>
+                <td><strong>{{ home.home }}</strong></td>
+                <td>{{ home.total_residents }}</td>
+                <td>
+                    <span style="color: #10b981; font-weight: 600;">
+                        {{ home.completed }}
+                    </span>
+                </td>
+                <td>
+                    <span style="font-weight: 600; {% if home.overdue > 0 %}color: #ef4444;{% else %}color: #6b7280;{% endif %}">
+                        {{ home.overdue }}
+                    </span>
+                </td>
+                <td>
+                    <span style="{% if home.due_soon > 0 %}color: #f59e0b; font-weight: 600;{% endif %}">
+                        {{ home.due_soon }}
+                    </span>
+                </td>
+                <td>
+                    <span style="font-weight: 600; color: {% if home.compliance_rate >= 90 %}#10b981{% elif home.compliance_rate >= 75 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ home.compliance_rate|floatformat:0 }}%
+                    </span>
+                </td>
+                <td>
+                    <span style="font-weight: 600; color: {% if home.overdue_rate == 0 %}#10b981{% elif home.overdue_rate < 10 %}#f59e0b{% else %}#ef4444{% endif %}">
+                        {{ home.overdue_rate|floatformat:0 }}%
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; color: #6b7280;">No care plan data available</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
