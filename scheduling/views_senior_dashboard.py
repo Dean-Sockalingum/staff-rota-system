@@ -345,38 +345,38 @@ def senior_management_dashboard(request):
         
         total_residents = residents.count()
         
-        if total_residents > 0:
-            # Get latest review for each resident
-            reviews = []
-            for resident in residents:
-                latest_review = resident.care_plan_reviews.order_by('-due_date').first()
-                if latest_review:
-                    reviews.append(latest_review)
-            
-            # Count by status
-            completed = sum(1 for r in reviews if r.status == 'COMPLETED')
-            overdue = sum(1 for r in reviews if r.status == 'OVERDUE')
-            due_soon = sum(1 for r in reviews if r.status == 'DUE')
-            upcoming = sum(1 for r in reviews if r.status == 'UPCOMING')
-            in_progress = sum(1 for r in reviews if r.status == 'IN_PROGRESS')
-            
-            # Calculate compliance rate (completed / total reviews)
-            compliance_rate = (completed / len(reviews) * 100) if reviews else 0
-            overdue_rate = (overdue / len(reviews) * 100) if reviews else 0
-            
-            care_plan_compliance.append({
-                'home': home.get_name_display(),
-                'home_obj': home,
-                'total_residents': total_residents,
-                'total_reviews': len(reviews),
-                'completed': completed,
-                'overdue': overdue,
-                'overdue_rate': overdue_rate,
-                'due_soon': due_soon,
-                'upcoming': upcoming,
-                'in_progress': in_progress,
-                'compliance_rate': compliance_rate,
-            })
+        # Get latest review for each resident
+        reviews = []
+        for resident in residents:
+            latest_review = resident.care_plan_reviews.order_by('-due_date').first()
+            if latest_review:
+                reviews.append(latest_review)
+        
+        # Count by status
+        completed = sum(1 for r in reviews if r.status == 'COMPLETED')
+        overdue = sum(1 for r in reviews if r.status == 'OVERDUE')
+        due_soon = sum(1 for r in reviews if r.status == 'DUE')
+        upcoming = sum(1 for r in reviews if r.status == 'UPCOMING')
+        in_progress = sum(1 for r in reviews if r.status == 'IN_PROGRESS')
+        
+        # Calculate compliance rate (completed / total reviews)
+        compliance_rate = (completed / len(reviews) * 100) if reviews else 0
+        overdue_rate = (overdue / len(reviews) * 100) if reviews else 0
+        
+        # Always add home to the list for governance visibility
+        care_plan_compliance.append({
+            'home': home.get_name_display(),
+            'home_obj': home,
+            'total_residents': total_residents,
+            'total_reviews': len(reviews),
+            'completed': completed,
+            'overdue': overdue,
+            'overdue_rate': overdue_rate,
+            'due_soon': due_soon,
+            'upcoming': upcoming,
+            'in_progress': in_progress,
+            'compliance_rate': compliance_rate,
+        })
     
     # =================================================================
     # SECTION 8: CITYWIDE SUMMARY - Weekly Overview
