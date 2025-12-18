@@ -73,12 +73,28 @@
     </style>
 </head>
 <body>
+    <!-- System Mode Indicator Banner -->
+    {% if IS_DEMO_MODE %}
+    <div class="alert alert-warning text-center mb-0" role="alert" style="border-radius: 0; border: none; background-color: #ff9800; color: white; font-weight: bold; padding: 8px;">
+        <i class="fas fa-flask"></i> DEMO MODE - All changes are isolated from production data
+    </div>
+    {% elif IS_PRODUCTION_MODE %}
+    <div class="alert alert-danger text-center mb-0" role="alert" style="border-radius: 0; border: none; background-color: #dc3545; color: white; font-weight: bold; padding: 8px;">
+        <i class="fas fa-exclamation-triangle"></i> PRODUCTION MODE - Live data in use
+    </div>
+    {% endif %}
+    
     <!-- Navigation -->
     {% if user.is_authenticated %}
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% if user.role.is_management %}{% url 'manager_dashboard' %}{% else %}{% url 'staff_dashboard' %}{% endif %}">
                 <i class="fas fa-calendar-alt"></i> Staff Rota System
+                {% if IS_DEMO_MODE %}
+                    <span class="badge bg-warning text-dark ms-2">DEMO</span>
+                {% elif IS_PRODUCTION_MODE %}
+                    <span class="badge bg-danger ms-2">LIVE</span>
+                {% endif %}
             </a>
             
             <div class="collapse navbar-collapse">

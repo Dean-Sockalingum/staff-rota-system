@@ -2,7 +2,26 @@
 
 A comprehensive Django-based staff scheduling and rota management system for care facilities.
 
-## 🆘 Need Help? Ask the AI Assistant!
+## � ONE-CLICK DEMO ACCESS
+
+**Check your Desktop** for 4 shortcuts to instantly demo the system:
+
+- **📱 Start_Demo.command** ← Double-click this to launch demo in one click!
+- **🔄 Switch_Mode.command** - Switch between DEMO and PRODUCTION modes
+- **🛑 Stop_Server.command** - Stop the running server
+- **♻️ Reset_Demo.command** - Reset demo data to clean state
+
+**Quick start:** Double-click `Start_Demo.command` on your Desktop, then login with admin/admin
+
+See: [QUICK_START_DEMO.md](QUICK_START_DEMO.md) for full guide
+
+### Visual Mode Indicators
+- 🟠 **Orange banner** = DEMO mode (safe for testing, training, demonstrations)
+- 🔴 **Red banner** = PRODUCTION mode (live data, changes are permanent)
+
+You'll always know which mode you're in!
+
+## �🆘 Need Help? Ask the AI Assistant!
 
 **New feature:** Built-in AI chatbot for instant help and guidance!
 
