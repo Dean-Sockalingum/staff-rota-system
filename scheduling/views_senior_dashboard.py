@@ -332,9 +332,11 @@ def senior_management_dashboard(request):
     # =================================================================
     # SECTION 7: CARE PLAN COMPLIANCE - By Home
     # =================================================================
+    # Always show all homes for governance reporting regardless of filter
     care_plan_compliance = []
+    all_homes_for_compliance = CareHome.objects.all().order_by('name')
     
-    for home in care_homes:
+    for home in all_homes_for_compliance:
         # Get all active residents for this home
         residents = Resident.objects.filter(
             unit__care_home=home,
