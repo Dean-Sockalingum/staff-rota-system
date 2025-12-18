@@ -135,35 +135,34 @@ def senior_management_dashboard(request):
     for home in care_homes:
         units = Unit.objects.filter(care_home=home, is_active=True)
         
-        # Shifts for this home in date range
-        range_shifts = Shift.objects.filter(
-            date__gte=start_date,
-            date__lte=end_date,
+        # TODAY'S shifts for this home only (not date range)
+        today_shifts = Shift.objects.filter(
+            date=today,
             unit__in=units,
             status__in=['SCHEDULED', 'CONFIRMED']
         )
         
         # Count by shift type
-        day_shifts = range_shifts.filter(shift_type__name__icontains='DAY').count()
-        night_shifts = range_shifts.filter(shift_type__name__icontains='NIGHT').count()
+        day_shifts = today_shifts.filter(shift_type__name__icontains='DAY').count()
+        night_shifts = today_shifts.filter(shift_type__name__icontains='NIGHT').count()
         
         # Get home-specific requirements
         requirements = home_staffing.get(home.name, {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21})
         
-        # Calculate required vs actual (per day in range) using correct minimums
-        total_required_day = requirements['day_min'] * days_in_range
-        total_required_night = requirements['night_min'] * days_in_range
+        # Calculate required vs actual (for TODAY only, not per day in range)
+        day_required = requirements['day_min']
+        night_required = requirements['night_min']
         
-        day_coverage = (day_shifts / total_required_day * 100) if total_required_day > 0 else 100
-        night_coverage = (night_shifts / total_required_night * 100) if total_required_night > 0 else 100
+        day_coverage = (day_shifts / day_required * 100) if day_required > 0 else 100
+        night_coverage = (night_shifts / night_required * 100) if night_required > 0 else 100
         
         staffing_today.append({
             'home': home.get_name_display(),
             'day_actual': day_shifts,
-            'day_required': total_required_day,
+            'day_required': day_required,
             'day_coverage': day_coverage,
             'night_actual': night_shifts,
-            'night_required': total_required_night,
+            'night_required': night_required,
             'night_coverage': night_coverage,
             'status': 'good' if day_coverage >= 100 and night_coverage >= 100 else 'warning' if day_coverage >= 80 and night_coverage >= 80 else 'critical',
         })
