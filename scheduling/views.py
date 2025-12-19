@@ -32,6 +32,7 @@ from .models import (
     User,
     IncidentReport,
 )
+from .models_multi_home import CareHome
 from staff_records.models import SicknessRecord, StaffProfile
 
 def login_view(request):
@@ -3107,6 +3108,361 @@ def generate_audit_report(request):
 # AI ASSISTANT API
 # ============================================================================
 
+# Home name variations for natural language processing
+HOME_NAME_VARIATIONS = {
+    'orchard grove': ['orchard grove', 'og', 'orchard', 'grove'],
+    'meadowburn': ['meadowburn', 'meadow', 'meadowburn house'],
+    'hawthorn house': ['hawthorn house', 'hawthorn', 'hh'],
+    'riverside': ['riverside', 'riverside house'],
+    'victoria gardens': ['victoria gardens', 'vg', 'victoria', 'gardens']
+}
+
+def normalize_home_name(query):
+    """Extract and normalize care home name from query text"""
+    query_lower = query.lower()
+    for canonical_name, variations in HOME_NAME_VARIATIONS.items():
+        for variation in variations:
+            if variation in query_lower:
+                return canonical_name
+    return None
+
+def get_home_performance(home_name, date=None):
+    """
+    Get comprehensive performance metrics for a specific care home
+    Returns: occupancy, staffing, quality metrics, fiscal status, care plan compliance
+    """
+    if date is None:
+        date = timezone.now().date()
+    
+    try:
+        # Try exact match first, then case-insensitive
+        home = CareHome.objects.get(name=home_name.upper().replace(' ', '_'))
+    except CareHome.DoesNotExist:
+        # Try matching against display names
+        for h in CareHome.objects.all():
+            if h.get_name_display().lower() == home_name.lower():
+                home = h
+                break
+        else:
+            return None
+    
+    # Get units for this home
+    units = home.units.filter(is_active=True)
+    unit_ids = list(units.values_list('id', flat=True))
+    
+    # === OCCUPANCY METRICS ===
+    total_beds = home.bed_capacity  # Use CareHome bed_capacity
+    residents = Resident.objects.filter(unit__in=units, is_active=True).count()
+    occupancy_rate = (residents / total_beds * 100) if total_beds > 0 else 0
+    
+    # === STAFFING METRICS (TODAY) ===
+    today_shifts = Shift.objects.filter(
+        unit__in=units,
+        date=date,
+        status__in=['SCHEDULED', 'CONFIRMED']
+    ).select_related('user', 'shift_type')
+    
+    staffing_today = {
+        'total_shifts': today_shifts.count(),
+        'day_shifts': today_shifts.filter(shift_type__name__icontains='DAY').count(),
+        'night_shifts': today_shifts.filter(shift_type__name__icontains='NIGHT').count(),
+        'unfilled': today_shifts.filter(user__isnull=True).count()
+    }
+    
+    # === QUALITY METRICS (30 DAYS) ===
+    thirty_days_ago = date - timedelta(days=30)
+    
+    # Note: IncidentReport doesn't have unit/home field, so we'll use a simplified approach
+    # In production, you'd add a care_home foreign key to IncidentReport model
+    # For now, get all incidents (across all homes)
+    all_incidents_30d = IncidentReport.objects.filter(
+        created_at__gte=timezone.make_aware(datetime.combine(thirty_days_ago, datetime.min.time()))
+    )
+    
+    # Count incidents (simplified - actual implementation should filter by home)
+    quality_30d = {
+        'total_incidents': 0,  # Placeholder - needs care_home field on IncidentReport
+        'major_harm': 0,
+        'deaths': 0,
+        'ci_notifications': 0
+    }
+    
+    # === FISCAL STATUS (THIS MONTH) ===
+    month_start = date.replace(day=1)
+    if date.month == 12:
+        month_end = date.replace(year=date.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        month_end = date.replace(month=date.month + 1, day=1) - timedelta(days=1)
+    
+    month_shifts = Shift.objects.filter(
+        unit__in=units,
+        date__gte=month_start,
+        date__lte=month_end
+    )
+    
+    fiscal_status = {
+        'agency_shifts': month_shifts.filter(shift_classification='AGENCY').count(),
+        'overtime_shifts': month_shifts.filter(shift_classification='OVERTIME').count(),
+        'total_shifts': month_shifts.count()
+    }
+    
+    agency_pct = (fiscal_status['agency_shifts'] / fiscal_status['total_shifts'] * 100) if fiscal_status['total_shifts'] > 0 else 0
+    overtime_pct = (fiscal_status['overtime_shifts'] / fiscal_status['total_shifts'] * 100) if fiscal_status['total_shifts'] > 0 else 0
+    
+    fiscal_status['agency_percentage'] = agency_pct
+    fiscal_status['overtime_percentage'] = overtime_pct
+    
+    # === CARE PLAN COMPLIANCE ===
+    # CarePlanReview links directly to resident, not through a care_plan object
+    care_plans = CarePlanReview.objects.filter(resident__unit__in=units)
+    total_plans = care_plans.count()
+    
+    overdue_reviews = care_plans.filter(
+        due_date__lt=date,
+        status__in=['PENDING', 'STARTED']  # Not completed
+    ).count()
+    
+    upcoming_reviews = care_plans.filter(
+        due_date__gte=date,
+        due_date__lte=date + timedelta(days=7),
+        status__in=['PENDING', 'STARTED']
+    ).count()
+    
+    care_plan_compliance = {
+        'total_plans': total_plans,
+        'overdue_reviews': overdue_reviews,
+        'upcoming_7days': upcoming_reviews,
+        'compliance_rate': ((total_plans - overdue_reviews) / total_plans * 100) if total_plans > 0 else 100
+    }
+    
+    return {
+        'home_name': home.name,
+        'display_name': home.get_name_display(),  # Use get_name_display() for readable name
+        'occupancy': {
+            'residents': residents,
+            'beds': total_beds,
+            'rate': occupancy_rate
+        },
+        'staffing_today': staffing_today,
+        'quality_30d': quality_30d,
+        'fiscal_status': fiscal_status,
+        'care_plans': care_plan_compliance
+    }
+
+def compare_homes(metric='overall'):
+    """
+    Compare all homes across specified metrics
+    Metrics: overall, quality, compliance, occupancy, fiscal
+    """
+    homes = CareHome.objects.all().order_by('name')
+    comparison = []
+    
+    for home in homes:
+        perf = get_home_performance(home.name)
+        if perf:
+            comparison.append(perf)
+    
+    # Sort by specified metric
+    if metric == 'quality':
+        comparison.sort(key=lambda x: x['quality_30d']['total_incidents'])
+    elif metric == 'compliance':
+        comparison.sort(key=lambda x: x['care_plans']['compliance_rate'], reverse=True)
+    elif metric == 'occupancy':
+        comparison.sort(key=lambda x: x['occupancy']['rate'], reverse=True)
+    elif metric == 'fiscal':
+        comparison.sort(key=lambda x: x['fiscal_status']['agency_percentage'])
+    
+    return comparison
+
+def _process_home_performance_query(query):
+    """
+    Process queries about specific home performance, quality audits, or comparisons
+    Examples:
+    - "Show me Orchard Grove's performance"
+    - "How is Hawthorn House doing?"
+    - "Quality audit for Victoria Gardens"
+    - "Compare all homes"
+    - "Which home has the best compliance?"
+    """
+    query_lower = query.lower()
+    
+    # === COMPARISON QUERIES ===
+    if any(word in query_lower for word in ['compare', 'comparison', 'which home', 'best', 'worst', 'all homes']):
+        # Determine comparison metric
+        if 'quality' in query_lower or 'incident' in query_lower:
+            comparison = compare_homes('quality')
+            metric_name = 'Quality (Incidents)'
+        elif 'compliance' in query_lower or 'care plan' in query_lower:
+            comparison = compare_homes('compliance')
+            metric_name = 'Care Plan Compliance'
+        elif 'occupancy' in query_lower or 'bed' in query_lower:
+            comparison = compare_homes('occupancy')
+            metric_name = 'Occupancy Rate'
+        elif 'fiscal' in query_lower or 'agency' in query_lower or 'cost' in query_lower:
+            comparison = compare_homes('fiscal')
+            metric_name = 'Fiscal Performance (Agency Usage)'
+        else:
+            comparison = compare_homes('overall')
+            metric_name = 'Overall Performance'
+        
+        # Format comparison response
+        answer = f"**🏆 Multi-Home Comparison: {metric_name}**\n\n"
+        
+        for i, home_data in enumerate(comparison, 1):
+            medal = ['🥇', '🥈', '🥉'][i-1] if i <= 3 else f"{i}."
+            answer += f"{medal} **{home_data['display_name']}**\n"
+            answer += f"   • Occupancy: {home_data['occupancy']['rate']:.1f}% ({home_data['occupancy']['residents']}/{home_data['occupancy']['beds']} beds)\n"
+            answer += f"   • Staffing Today: {home_data['staffing_today']['total_shifts']} shifts"
+            if home_data['staffing_today']['unfilled'] > 0:
+                answer += f" ⚠️ {home_data['staffing_today']['unfilled']} unfilled"
+            answer += "\n"
+            answer += f"   • Quality (30d): {home_data['quality_30d']['total_incidents']} incidents"
+            if home_data['quality_30d']['ci_notifications'] > 0:
+                answer += f" 🔴 {home_data['quality_30d']['ci_notifications']} CI notifications"
+            answer += "\n"
+            answer += f"   • Agency Usage: {home_data['fiscal_status']['agency_percentage']:.1f}% ({home_data['fiscal_status']['agency_shifts']} shifts)\n"
+            answer += f"   • Care Plan Compliance: {home_data['care_plans']['compliance_rate']:.1f}%"
+            if home_data['care_plans']['overdue_reviews'] > 0:
+                answer += f" ⚠️ {home_data['care_plans']['overdue_reviews']} overdue"
+            answer += "\n\n"
+        
+        answer += "**📊 Quick Links:**\n"
+        answer += "• [View Senior Dashboard](/senior-dashboard/)\n"
+        answer += "• [Generate Custom Report](/reports/custom/)\n"
+        answer += "• [Export Comparison Data](/reports/export/)\n"
+        
+        return {
+            'answer': answer,
+            'related': ['Senior Dashboard', 'Quality Reports', 'Fiscal Analysis', 'Export Data'],
+            'category': 'home_comparison',
+            'comparison_data': comparison
+        }
+    
+    # === HOME-SPECIFIC QUERIES ===
+    home_name = normalize_home_name(query)
+    if not home_name:
+        return None
+    
+    # Get performance data
+    perf = get_home_performance(home_name)
+    if not perf:
+        return {
+            'answer': f"❌ Could not find data for '{home_name}'. Available homes: Orchard Grove, Meadowburn, Hawthorn House, Riverside, Victoria Gardens.",
+            'related': ['View All Homes', 'Senior Dashboard'],
+            'category': 'error'
+        }
+    
+    # === QUALITY AUDIT QUERY ===
+    if 'audit' in query_lower or 'quality' in query_lower:
+        answer = f"**🔍 Quality Audit: {perf['display_name']}**\n\n"
+        answer += f"**📊 30-Day Quality Metrics**\n"
+        answer += f"• Total Incidents: {perf['quality_30d']['total_incidents']}\n"
+        
+        if perf['quality_30d']['deaths'] > 0:
+            answer += f"• ☠️ Deaths: {perf['quality_30d']['deaths']} (requires immediate review)\n"
+        if perf['quality_30d']['major_harm'] > 0:
+            answer += f"• 🔴 Major Harm: {perf['quality_30d']['major_harm']}\n"
+        
+        answer += f"• CI Notifications Required: {perf['quality_30d']['ci_notifications']}\n\n"
+        
+        # Quality status indicator
+        if perf['quality_30d']['deaths'] > 0 or perf['quality_30d']['major_harm'] > 0:
+            answer += "**Status:** 🔴 CRITICAL - Immediate management attention required\n\n"
+        elif perf['quality_30d']['total_incidents'] > 10:
+            answer += "**Status:** 🟡 MODERATE - Enhanced monitoring recommended\n\n"
+        else:
+            answer += "**Status:** 🟢 GOOD - Within acceptable range\n\n"
+        
+        answer += f"**📋 Care Plan Compliance**\n"
+        answer += f"• Total Plans: {perf['care_plans']['total_plans']}\n"
+        answer += f"• Compliance Rate: {perf['care_plans']['compliance_rate']:.1f}%\n"
+        if perf['care_plans']['overdue_reviews'] > 0:
+            answer += f"• ⚠️ Overdue Reviews: {perf['care_plans']['overdue_reviews']} (action required)\n"
+        if perf['care_plans']['upcoming_7days'] > 0:
+            answer += f"• 📅 Due Next 7 Days: {perf['care_plans']['upcoming_7days']}\n"
+        
+        answer += "\n**🔗 Actions:**\n"
+        answer += f"• [View Full Incident Log](/incidents/?home={perf['home_name']})\n"
+        answer += f"• [Care Plan Reviews](/care-plans/?home={perf['home_name']})\n"
+        answer += "• [Generate Quality Report](/reports/quality/)\n"
+        
+        return {
+            'answer': answer,
+            'related': ['Incident Reports', 'Care Plans', 'Quality Metrics'],
+            'category': 'quality_audit',
+            'audit_data': perf
+        }
+    
+    # === GENERAL PERFORMANCE QUERY ===
+    answer = f"**📊 Performance Overview: {perf['display_name']}**\n\n"
+    
+    # Occupancy
+    answer += f"**🏠 Occupancy**\n"
+    answer += f"• Current: {perf['occupancy']['residents']} residents / {perf['occupancy']['beds']} beds\n"
+    answer += f"• Rate: {perf['occupancy']['rate']:.1f}%"
+    if perf['occupancy']['rate'] < 85:
+        answer += " 🟡 Below target"
+    elif perf['occupancy']['rate'] >= 95:
+        answer += " 🟢 Excellent"
+    answer += "\n\n"
+    
+    # Staffing
+    answer += f"**👥 Staffing (Today)**\n"
+    answer += f"• Total Shifts: {perf['staffing_today']['total_shifts']}\n"
+    answer += f"• Day Shifts: {perf['staffing_today']['day_shifts']} | Night Shifts: {perf['staffing_today']['night_shifts']}\n"
+    if perf['staffing_today']['unfilled'] > 0:
+        answer += f"• ⚠️ Unfilled: {perf['staffing_today']['unfilled']} (urgent action needed)\n"
+    else:
+        answer += "• ✅ Fully staffed\n"
+    answer += "\n"
+    
+    # Quality
+    answer += f"**⭐ Quality (30 Days)**\n"
+    answer += f"• Incidents: {perf['quality_30d']['total_incidents']}"
+    if perf['quality_30d']['total_incidents'] > 10:
+        answer += " 🟡 Above average"
+    answer += "\n"
+    if perf['quality_30d']['ci_notifications'] > 0:
+        answer += f"• 🔴 CI Notifications: {perf['quality_30d']['ci_notifications']}\n"
+    answer += "\n"
+    
+    # Fiscal
+    answer += f"**💰 Fiscal Status (This Month)**\n"
+    answer += f"• Agency Usage: {perf['fiscal_status']['agency_percentage']:.1f}% ({perf['fiscal_status']['agency_shifts']} shifts)"
+    if perf['fiscal_status']['agency_percentage'] > 15:
+        answer += " 🔴 High"
+    elif perf['fiscal_status']['agency_percentage'] > 8:
+        answer += " 🟡 Elevated"
+    else:
+        answer += " 🟢 Good"
+    answer += "\n"
+    answer += f"• Overtime: {perf['fiscal_status']['overtime_percentage']:.1f}% ({perf['fiscal_status']['overtime_shifts']} shifts)\n"
+    answer += "\n"
+    
+    # Care Plans
+    answer += f"**📋 Care Plan Compliance**\n"
+    answer += f"• Rate: {perf['care_plans']['compliance_rate']:.1f}%"
+    if perf['care_plans']['compliance_rate'] < 90:
+        answer += " 🔴 Below target"
+    elif perf['care_plans']['compliance_rate'] >= 98:
+        answer += " 🟢 Excellent"
+    answer += "\n"
+    if perf['care_plans']['overdue_reviews'] > 0:
+        answer += f"• ⚠️ Overdue: {perf['care_plans']['overdue_reviews']} reviews\n"
+    
+    answer += "\n**🔗 Quick Actions:**\n"
+    answer += f"• [View Home Details](/homes/{perf['home_name']}/)\n"
+    answer += f"• [Quality Audit](/quality-audit/?home={perf['home_name']})\n"
+    answer += f"• [Staffing Report](/reports/staffing/?home={perf['home_name']})\n"
+    answer += "• [Senior Dashboard](/senior-dashboard/)\n"
+    
+    return {
+        'answer': answer,
+        'related': ['Senior Dashboard', 'Home Details', 'Quality Audit', 'Staffing Report'],
+        'category': 'home_performance',
+        'performance_data': perf
+    }
+
 class ReportGenerator:
     """Generate intelligent reports based on natural language queries"""
     
@@ -5065,19 +5421,25 @@ def ai_assistant_api(request):
         if not query:
             return JsonResponse({'error': 'No query provided'}, status=400)
         
-        # PRIORITY 1: Try to process as specific staff query (names, SAPs, roles)
+        # PRIORITY 1: Try to process as home performance/comparison query (Head of Service)
+        # This catches: "Show me Orchard Grove's performance", "Compare all homes", "Quality audit for Victoria Gardens"
+        home_result = _process_home_performance_query(query)
+        if home_result:
+            return JsonResponse(home_result)
+        
+        # PRIORITY 2: Try to process as specific staff query (names, SAPs, roles)
         # This catches: "Show me Jane Smith", "How much leave does X have", "List all senior carers"
         staff_result = _process_staff_query(query)
         if staff_result:
             return JsonResponse(staff_result)
         
-        # PRIORITY 2: Try to process as care plan review query
+        # PRIORITY 3: Try to process as care plan review query
         # This catches: "When is DEM01 review due?", "How many reviews this month?"
         careplan_result = _process_careplan_query(query)
         if careplan_result:
             return JsonResponse(careplan_result)
         
-        # PRIORITY 3: Try to interpret as report query (more general queries)
+        # PRIORITY 4: Try to interpret as report query (more general queries)
         # This catches: "Show staffing summary", "Who is working today?", etc.
         report_result = ReportGenerator.interpret_query(query)
         if report_result:

@@ -278,6 +278,60 @@
                 <li onclick="askQuestion('Agency usage this month')">Agency usage this month</li>
                 <li onclick="askQuestion('Show staffing shortages')">Show staffing shortages</li>
                 <li onclick="askQuestion('Overtime costs this week')">Overtime costs this week</li>
+                <li onclick="askQuestion('Generate shortage message')">Generate shortage message</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">🏆</span> Head of Service Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Show me Orchard Grove performance')">Show me Orchard Grove performance</li>
+                <li onclick="askQuestion('Quality audit for Victoria Gardens')">Quality audit for Victoria Gardens</li>
+                <li onclick="askQuestion('Compare all homes')">Compare all homes</li>
+                <li onclick="askQuestion('Which home has best compliance?')">Which home has best compliance?</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">🏠</span> Home-Specific Metrics</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Hawthorn House occupancy rate')">Hawthorn House occupancy rate</li>
+                <li onclick="askQuestion('Meadowburn agency spend')">Meadowburn agency spend</li>
+                <li onclick="askQuestion('Riverside staffing today')">Riverside staffing today</li>
+                <li onclick="askQuestion('How is OG doing?')">How is OG doing?</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="ai-chat-main">
+        <div class="ai-chat-header">
+            <h2>💬 Chat with AI Assistant</h2>
+            <p>Type your question below or click an example above</p>
+        </div>
+        
+        <div id="ai-demo-messages"></div>
+        
+        <div class="typing-indicator" id="ai-demo-typing">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <form id="ai-demo-form" class="ai-input-form">
+            <input 
+                type="text" 
+                id="ai-demo-input" 
+                placeholder="Ask anything about staff, shifts, care plans, or home performance..."
+                autocomplete="off"
+                required
+            />
+            <button type="submit" id="ai-demo-send">
+                <span>Send</span>
+                <span class="loading-spinner"></span>
+            </button>
+        </form>
+    </div>
+</div>
                 <li onclick="askQuestion('List agency companies')">List agency companies</li>
             </ul>
         </div>
