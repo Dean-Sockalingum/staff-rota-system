@@ -110,6 +110,7 @@ def regenerate_full_coverage_shifts():
                     if (day_offset + i) % 7 < 5:  # Work 5 out of 7 days
                         Shift.objects.create(
                             user=staff,
+                            unit=unit,
                             date=current_date,
                             shift_type=day_senior_shift
                         )
@@ -119,8 +120,7 @@ def regenerate_full_coverage_shifts():
                 for i, staff in enumerate(regulars):
                     if (day_offset + i) % 7 < 5:  # Work 5 out of 7 days
                         Shift.objects.create(
-                            user=staff,
-                            date=current_date,
+                            user=staff,                            unit=unit,                            date=current_date,
                             shift_type=day_shift
                         )
                         home_shifts_created += 1
@@ -142,6 +142,7 @@ def regenerate_full_coverage_shifts():
                     for staff in mgmt_staff:
                         Shift.objects.create(
                             user=staff,
+                            unit=unit,
                             date=current_date,
                             shift_type=day_shift
                         )
@@ -167,6 +168,7 @@ def regenerate_full_coverage_shifts():
                     if (day_offset + i) % 7 < 5:  # Work 5 out of 7 days
                         Shift.objects.create(
                             user=staff,
+                            unit=unit,
                             date=current_date,
                             shift_type=night_assistant_shift
                         )

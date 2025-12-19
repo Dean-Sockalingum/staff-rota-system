@@ -6284,11 +6284,16 @@ def careplan_manager_dashboard(request):
         messages.error(request, "Access denied. This page is for managers only.")
         return redirect('careplan_overview')
     
-    # Unit filter
+    # Unit and care home filters
     unit_filter = request.GET.get('unit', '')
+    care_home_filter = request.GET.get('care_home', '')
     
     # Base queryset
-    all_reviews = CarePlanReview.objects.select_related('resident', 'resident__unit', 'keyworker', 'completed_by')
+    all_reviews = CarePlanReview.objects.select_related('resident', 'resident__unit', 'resident__unit__care_home', 'keyworker', 'completed_by')
+    
+    # Apply care home filter first
+    if care_home_filter:
+        all_reviews = all_reviews.filter(resident__unit__care_home__name=care_home_filter)
     
     # Apply unit filter
     if unit_filter:
@@ -6315,7 +6320,11 @@ def careplan_manager_dashboard(request):
     
     # Compliance Statistics by Unit
     units_stats = []
-    all_units = Unit.objects.filter(is_active=True).order_by('name')
+    all_units = Unit.objects.filter(is_active=True).select_related('care_home').order_by('name')
+    
+    # Filter units by care home if selected
+    if care_home_filter:
+        all_units = all_units.filter(care_home__name=care_home_filter)
     
     for unit in all_units:
         unit_reviews = CarePlanReview.objects.filter(resident__unit=unit)
@@ -6388,9 +6397,9 @@ def careplan_manager_dashboard(request):
     overall_compliance = round((on_time_all / total_recent_all * 100) if total_recent_all > 0 else 0, 1)
     
     # Recent Activity - Last 10 completed reviews
-    recent_activity = all_reviews.filter(
-        status='COMPLETED'
-    ).order_by('-completed_date')[:10]
+    # Get all care homes for filter dropdown
+    from .models_multi_home import CareHome
+    all_care_homes = CareHome.objects.all().order_by('name')
     
     context = {
         'pending_approvals': pending_approvals,
@@ -6402,6 +6411,12 @@ def careplan_manager_dashboard(request):
         'total_overdue': total_overdue,
         'total_due_soon': total_due_soon,
         'total_completed': total_completed,
+        'overall_compliance': overall_compliance,
+        'recent_activity': recent_activity,
+        'all_units': all_units,
+        'selected_unit': unit_filter,
+        'all_care_homes': all_care_homes,
+        'selected_care_home': care_hometal_completed,
         'overall_compliance': overall_compliance,
         'recent_activity': recent_activity,
         'all_units': all_units,
