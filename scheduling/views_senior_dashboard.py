@@ -15,7 +15,8 @@ Access: SM (Service Manager), OM (Operations Manager), HOS (Head of Service), ID
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Count, Sum, Avg, Q, F
+from django.db.models import Count, Sum, Avg, Q, F, Prefetch
+from django.db import models
 from django.http import HttpResponse
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -86,7 +87,7 @@ def senior_management_dashboard(request):
     # Get all care homes with optimized prefetch for units and today's shifts
     care_homes = CareHome.objects.prefetch_related(
         'units',  # Load all units in one query
-        models.Prefetch(
+        Prefetch(
             'units__shift_set',
             queryset=Shift.objects.filter(
                 date=today,
