@@ -33,6 +33,8 @@ from .models import (
     IncidentReport,
 )
 from .models_multi_home import CareHome
+from .models_feedback import DemoFeedback, FeatureRequest
+from .forms_feedback import DemoFeedbackForm, FeatureRequestForm
 from staff_records.models import SicknessRecord, StaffProfile
 
 def login_view(request):
@@ -7035,3 +7037,146 @@ def home_dashboard(request, home_slug=None):
     
     return render(request, 'scheduling/home_dashboard.html', context)
 
+
+# ============================================================================
+# DEMO FEEDBACK SYSTEM
+# ============================================================================
+
+@login_required
+def demo_feedback(request):
+    """
+    Collect structured feedback from demo system testing
+    Helps gather iteration requirements and user insights
+    """
+    if request.method == 'POST':
+        form = DemoFeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.submitted_by = request.user
+            
+            # Capture IP and user agent for analytics
+            feedback.ip_address = request.META.get('REMOTE_ADDR')
+            feedback.user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+            
+            feedback.save()
+            
+            messages.success(request, 'Thank you for your feedback! Your insights will help us improve the system.')
+            
+            # Redirect back to dashboard or feedback thank you page
+            return redirect('demo_feedback_thanks')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # Pre-populate user role if available
+        initial_data = {}
+        if request.user.role:
+            role_mapping = {
+                'SSCW': 'SENIOR',
+                'SCW': 'STAFF',
+                'SM': 'MANAGER',
+                'HOS': 'HOS',
+                'OM': 'MANAGER',
+                'IDI': 'ADMIN',
+            }
+            initial_data['user_role'] = role_mapping.get(request.user.role.name, 'STAFF')
+        
+        if request.user.unit:
+            initial_data['care_home'] = request.user.unit.care_home.get_name_display()
+        
+        form = DemoFeedbackForm(initial=initial_data)
+    
+    return render(request, 'scheduling/demo_feedback.html', {
+        'form': form,
+        'page_title': 'Demo Feedback'
+    })
+
+
+@login_required
+def demo_feedback_thanks(request):
+    """Thank you page after feedback submission"""
+    return render(request, 'scheduling/demo_feedback_thanks.html', {
+        'page_title': 'Thank You'
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def view_feedback_results(request):
+    """
+    Management view to see all feedback responses
+    Restricted to management team
+    """
+    feedbacks = DemoFeedback.objects.all().select_related('submitted_by', 'submitted_by__role')
+    
+    # Calculate aggregate statistics
+    total_responses = feedbacks.count()
+    
+    if total_responses > 0:
+        avg_overall = round(feedbacks.aggregate(avg=models.Avg('overall_rating'))['avg'] or 0, 1)
+        avg_ease = round(feedbacks.aggregate(avg=models.Avg('ease_of_use'))['avg'] or 0, 1)
+        would_recommend_pct = round((feedbacks.filter(would_recommend=True).count() / total_responses) * 100, 1)
+        ready_for_daily_pct = round((feedbacks.filter(ready_to_use_daily=True).count() / total_responses) * 100, 1)
+        
+        # Feature ratings
+        feature_ratings = {}
+        for field in ['rota_viewing_rating', 'shift_swapping_rating', 'leave_request_rating', 
+                     'ai_assistant_rating', 'dashboard_rating', 'mobile_experience_rating']:
+            avg = feedbacks.filter(**{f'{field}__isnull': False}).aggregate(avg=models.Avg(field))['avg']
+            feature_ratings[field] = round(avg, 1) if avg else None
+        
+        # Feedback needing attention
+        needs_attention = feedbacks.filter(
+            Q(overall_rating__lte=2) | 
+            Q(ease_of_use__lte=2) |
+            Q(ready_to_use_daily=False)
+        ).count()
+    else:
+        avg_overall = 0
+        avg_ease = 0
+        would_recommend_pct = 0
+        ready_for_daily_pct = 0
+        feature_ratings = {}
+        needs_attention = 0
+    
+    # Group by role
+    by_role = feedbacks.values('user_role').annotate(count=Count('id')).order_by('-count')
+    
+    context = {
+        'feedbacks': feedbacks,
+        'total_responses': total_responses,
+        'avg_overall': avg_overall,
+        'avg_ease': avg_ease,
+        'would_recommend_pct': would_recommend_pct,
+        'ready_for_daily_pct': ready_for_daily_pct,
+        'feature_ratings': feature_ratings,
+        'needs_attention': needs_attention,
+        'by_role': by_role,
+        'page_title': 'Feedback Results'
+    }
+    
+    return render(request, 'scheduling/feedback_results.html', context)
+
+
+@login_required
+def submit_feature_request(request):
+    """
+    Allow users to submit feature requests
+    """
+    if request.method == 'POST':
+        form = FeatureRequestForm(request.POST)
+        if form.is_valid():
+            feature_request = form.save(commit=False)
+            feature_request.requested_by = request.user
+            feature_request.save()
+            
+            messages.success(request, 'Feature request submitted! We\'ll review it and update you on the status.')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = FeatureRequestForm()
+    
+    return render(request, 'scheduling/feature_request.html', {
+        'form': form,
+        'page_title': 'Request a Feature'
+    })

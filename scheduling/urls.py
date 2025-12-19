@@ -71,4 +71,10 @@ urlpatterns = [
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
     path('staffing/create-alert/', views.staffing_create_alert, name='staffing_create_alert'),
     path('staffing/dashboard/', views.staffing_dashboard, name='staffing_dashboard'),
+    
+    # Demo Feedback System
+    path('feedback/', views.demo_feedback, name='demo_feedback'),
+    path('feedback/thanks/', views.demo_feedback_thanks, name='demo_feedback_thanks'),
+    path('feedback/results/', views.view_feedback_results, name='view_feedback_results'),
+    path('feature-request/', views.submit_feature_request, name='submit_feature_request'),
 ]
