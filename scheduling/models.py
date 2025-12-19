@@ -278,6 +278,11 @@ class Unit(models.Model):
     ideal_day_staff = models.IntegerField(default=3, help_text='Ideal day staff count for optimal coverage')
     ideal_night_staff = models.IntegerField(default=2, help_text='Ideal night staff count for optimal coverage')
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['care_home', 'is_active']),  # Dashboard home filtering
+        ]
+
     def __str__(self):
         return self.get_name_display()
 
@@ -386,6 +391,8 @@ class Shift(models.Model):
             models.Index(fields=['date', 'unit']),  # Common query pattern
             models.Index(fields=['user', 'date']),  # Staff schedule queries
             models.Index(fields=['date', 'shift_type']),  # Shift type reports
+            models.Index(fields=['date', 'status']),  # Dashboard filtering by date and status
+            models.Index(fields=['unit', 'date', 'status']),  # Home-specific date queries
         ]
 
     def __str__(self):

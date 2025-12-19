@@ -83,8 +83,18 @@ def senior_management_dashboard(request):
     current_month_start = today.replace(day=1)
     next_month_start = (current_month_start + timedelta(days=32)).replace(day=1)
     
-    # Get all care homes
-    care_homes = CareHome.objects.all().order_by('name')
+    # Get all care homes with optimized prefetch for units and today's shifts
+    care_homes = CareHome.objects.prefetch_related(
+        'units',  # Load all units in one query
+        models.Prefetch(
+            'units__shift_set',
+            queryset=Shift.objects.filter(
+                date=today,
+                status__in=['SCHEDULED', 'CONFIRMED']
+            ).select_related('user', 'shift_type'),
+            to_attr='today_shifts'
+        )
+    ).order_by('name')
     
     # Filter by selected home if provided
     if selected_home:
@@ -98,8 +108,9 @@ def senior_management_dashboard(request):
     total_occupancy = 0
     
     for home in care_homes:
-        units = Unit.objects.filter(care_home=home, is_active=True)
-        unit_count = units.count()
+        # Use prefetched units instead of querying database
+        units = [u for u in home.units.all() if u.is_active]
+        unit_count = len(units)
         
         occupancy_rate = (home.current_occupancy / home.bed_capacity * 100) if home.bed_capacity > 0 else 0
         
@@ -135,19 +146,27 @@ def senior_management_dashboard(request):
     }
     
     for home in care_homes:
-        units = Unit.objects.filter(care_home=home, is_active=True)
+        # Use prefetched units and shifts
+        units = [u for u in home.units.all() if u.is_active]
         
-        # TODAY'S shifts for this home only (not date range)
-        # Only count UNIQUE user assignments (not multiple shift records per user)
-        today_shifts = Shift.objects.filter(
-            date=today,
-            unit__in=units,
-            status__in=['SCHEDULED', 'CONFIRMED']
-        ).select_related('user', 'shift_type')
+        # Collect today's shifts from prefetched data
+        today_shifts = []
+        for unit in units:
+            if hasattr(unit, 'today_shifts'):
+                today_shifts.extend(unit.today_shifts)
         
-        # Count by shift type - use distinct() to avoid counting duplicates
-        day_shifts = today_shifts.filter(shift_type__name__icontains='DAY').values('user').distinct().count()
-        night_shifts = today_shifts.filter(shift_type__name__icontains='NIGHT').values('user').distinct().count()
+        # Count by shift type - use set to ensure unique users
+        day_users = set()
+        night_users = set()
+        for shift in today_shifts:
+            if shift.user:
+                if 'DAY' in shift.shift_type.name.upper():
+                    day_users.add(shift.user.pk)
+                elif 'NIGHT' in shift.shift_type.name.upper():
+                    night_users.add(shift.user.pk)
+        
+        day_shifts = len(day_users)
+        night_shifts = len(night_users)
         
         # Get home-specific requirements
         requirements = home_staffing.get(home.name, {'day_min': 17, 'day_ideal': 24, 'night_min': 17, 'night_ideal': 21})
@@ -179,29 +198,33 @@ def senior_management_dashboard(request):
     total_ot_budget = 0
     total_ot_spend = 0
     
+    # Optimize: Single aggregated query for all homes at once
+    all_units = []
     for home in care_homes:
-        units = Unit.objects.filter(care_home=home)
+        all_units.extend([u for u in home.units.all()])
+    
+    # Get shifts grouped by care_home in single query
+    fiscal_stats = Shift.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        status__in=['SCHEDULED', 'CONFIRMED']
+    ).values('unit__care_home').annotate(
+        agency_count=Count('pk', filter=Q(user__isnull=True)),
+        ot_count=Count('pk', filter=Q(shift_classification='OVERTIME'))
+    )
+    
+    # Create lookup dict for quick access
+    fiscal_lookup = {stat['unit__care_home']: stat for stat in fiscal_stats}
+    
+    for home in care_homes:
+        # Get stats from aggregated query
+        stats = fiscal_lookup.get(home.pk, {'agency_count': 0, 'ot_count': 0})
+        agency_shifts_count = stats['agency_count']
+        ot_shifts = stats['ot_count']
         
-        # Agency spend for date range
-        # TODO: Integrate with AgencyBooking model when ready
-        # For now, estimate based on agency shifts
-        agency_shifts_count = Shift.objects.filter(
-            unit__in=units,
-            date__gte=start_date,
-            date__lte=end_date,
-            user__isnull=True,  # Placeholder for agency detection
-            status__in=['SCHEDULED', 'CONFIRMED']
-        ).count()
         # Estimate: £300 per agency shift (rough average)
         agency_spend = Decimal(str(agency_shifts_count * 300))
-        
         # OT spend for date range (estimated at £25/hour, 12 hours per shift)
-        ot_shifts = Shift.objects.filter(
-            unit__in=units,
-            date__gte=start_date,
-            date__lte=end_date,
-            shift_classification='OVERTIME'
-        ).count()
         ot_spend = Decimal(str(ot_shifts * 25 * 12))  # Rough estimate
         
         agency_budget = home.budget_agency_monthly
@@ -236,17 +259,28 @@ def senior_management_dashboard(request):
     # TODO: Integrate with StaffingAlert model
     # For now, identify unfilled shifts as "alerts"
     next_week = today + timedelta(days=7)
+    
+    # Optimize: Get all unfilled shifts in single query, then group by home
+    all_home_units = [u for home in care_homes for u in home.units.all()]
+    all_unfilled = Shift.objects.filter(
+        unit__in=all_home_units,
+        date__gte=today,
+        date__lte=next_week,
+        user__isnull=True,
+        status='SCHEDULED'
+    ).select_related('unit', 'unit__care_home')[:25]  # Top 25 total
+    
+    # Group by home
+    unfilled_by_home = {}
+    for shift in all_unfilled:
+        home_name = shift.unit.care_home.name
+        if home_name not in unfilled_by_home:
+            unfilled_by_home[home_name] = []
+        if len(unfilled_by_home[home_name]) < 5:  # Top 5 per home
+            unfilled_by_home[home_name].append(shift)
+    
     for home in care_homes:
-        units = Unit.objects.filter(care_home=home)
-        
-        # Unfilled shifts in the next 7 days as alerts
-        unfilled = Shift.objects.filter(
-            unit__in=units,
-            date__gte=today,
-            date__lte=next_week,
-            user__isnull=True,
-            status='SCHEDULED'
-        ).select_related('unit')[:5]  # Top 5 per home
+        unfilled = unfilled_by_home.get(home.name, [])
         
         for shift in unfilled:
             critical_alerts.append({
@@ -296,32 +330,38 @@ def senior_management_dashboard(request):
     # =================================================================
     quality_metrics = []
     
+    # Last 30 days metrics
+    last_30_days = today - timedelta(days=30)
+    
+    # Optimize: Single aggregated query for quality metrics
+    quality_stats = Shift.objects.filter(
+        date__gte=last_30_days,
+        date__lte=today
+    ).values('unit__care_home').annotate(
+        total_shifts=Count('pk'),
+        unfilled_shifts=Count('pk', filter=Q(user__isnull=True))
+    )
+    
+    quality_lookup = {stat['unit__care_home']: stat for stat in quality_stats}
+    
+    # Get staff counts by home in single query
+    staff_counts = User.objects.filter(
+        is_active=True
+    ).values('unit__care_home').annotate(
+        staff_count=Count('pk')
+    )
+    staff_lookup = {stat['unit__care_home']: stat['staff_count'] for stat in staff_counts}
+    
     for home in care_homes:
-        units = Unit.objects.filter(care_home=home)
-        
-        # Last 30 days metrics
-        last_30_days = today - timedelta(days=30)
-        
-        # Agency usage rate
-        # TODO: Integrate with AgencyBooking when ready
-        total_shifts = Shift.objects.filter(
-            unit__in=units,
-            date__gte=last_30_days,
-            date__lte=today
-        ).count()
-        
-        # For now, estimate agency as unfilled shifts
-        unfilled_shifts = Shift.objects.filter(
-            unit__in=units,
-            date__gte=last_30_days,
-            date__lte=today,
-            user__isnull=True
-        ).count()
+        # Get stats from aggregated queries
+        stats = quality_lookup.get(home.pk, {'total_shifts': 0, 'unfilled_shifts': 0})
+        total_shifts = stats['total_shifts']
+        unfilled_shifts = stats['unfilled_shifts']
         
         agency_rate = (unfilled_shifts / total_shifts * 100) if total_shifts > 0 else 0
         
         # Staff turnover (placeholder - would need actual termination data)
-        staff_count = User.objects.filter(unit__in=units, is_active=True).count()
+        staff_count = staff_lookup.get(home.pk, 0)
         
         quality_metrics.append({
             'home': home.get_name_display(),
