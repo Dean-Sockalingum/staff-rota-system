@@ -14,7 +14,7 @@ from decimal import Decimal
 
 from scheduling.models import (
     TrainingCourse, TrainingRecord, InductionProgress, 
-    SupervisionRecord, IncidentReport, User
+    SupervisionRecord, IncidentReport, User, CareHome, Unit
 )
 
 
@@ -73,6 +73,191 @@ def my_training_dashboard(request):
     }
     
     return render(request, 'compliance/my_training_dashboard.html', context)
+
+
+@login_required
+def training_compliance_dashboard(request):
+    """Management view of training compliance across all homes"""
+    
+    # Get filters
+    selected_home = request.GET.get('care_home', None)
+    
+    # Get mandatory courses
+    mandatory_courses = TrainingCourse.objects.filter(is_mandatory=True).order_by('name')
+    
+    # Get care homes
+    care_homes = CareHome.objects.filter(is_active=True).order_by('name')
+    
+    # Build compliance data by home
+    home_compliance_data = []
+    
+    for home in care_homes:
+        # Filter if specific home selected
+        if selected_home and home.name != selected_home:
+            continue
+            
+        # Get active staff for this home
+        home_staff = User.objects.filter(
+            unit__care_home=home,
+            is_active=True
+        ).distinct()
+        
+        total_staff = home_staff.count()
+        
+        # Calculate compliance for each mandatory course
+        course_compliance = []
+        for course in mandatory_courses:
+            compliant_count = 0
+            expiring_count = 0
+            expired_count = 0
+            missing_count = 0
+            
+            compliant_staff = []
+            expiring_staff = []
+            expired_staff = []
+            missing_staff = []
+            
+            for staff in home_staff:
+                # Get latest training record for this course
+                latest_record = TrainingRecord.objects.filter(
+                    staff_member=staff,
+                    course=course
+                ).order_by('-completion_date').first()
+                
+                if latest_record:
+                    status = latest_record.get_status()
+                    if status == 'CURRENT':
+                        compliant_count += 1
+                        compliant_staff.append({'staff': staff, 'record': latest_record})
+                    elif status == 'EXPIRING_SOON':
+                        expiring_count += 1
+                        expiring_staff.append({'staff': staff, 'record': latest_record})
+                    elif status == 'EXPIRED':
+                        expired_count += 1
+                        expired_staff.append({
+                            'staff': staff, 
+                            'record': latest_record,
+                            'days_overdue': abs(latest_record.days_until_expiry)
+                        })
+                else:
+                    missing_count += 1
+                    missing_staff.append(staff)
+            
+            compliance_percentage = (compliant_count / total_staff * 100) if total_staff > 0 else 0
+            
+            course_compliance.append({
+                'course': course,
+                'compliant': compliant_count,
+                'expiring': expiring_count,
+                'expired': expired_count,
+                'missing': missing_count,
+                'total': total_staff,
+                'percentage': round(compliance_percentage, 1),
+                'compliant_staff': compliant_staff,
+                'expiring_staff': expiring_staff,
+                'expired_staff': expired_staff,
+                'missing_staff': missing_staff,
+            })
+        
+        # Calculate overall home compliance
+        total_required = total_staff * mandatory_courses.count()
+        total_compliant = sum(c['compliant'] for c in course_compliance)
+        overall_percentage = (total_compliant / total_required * 100) if total_required > 0 else 0
+        
+        home_compliance_data.append({
+            'home': home,
+            'total_staff': total_staff,
+            'course_compliance': course_compliance,
+            'overall_percentage': round(overall_percentage, 1),
+            'total_compliant': total_compliant,
+            'total_required': total_required
+        })
+    
+    context = {
+        'home_compliance_data': home_compliance_data,
+        'mandatory_courses': mandatory_courses,
+        'care_homes': care_homes,
+        'selected_home': selected_home,
+    }
+    
+    return render(request, 'compliance/training_compliance_dashboard.html', context)
+
+
+@login_required
+def add_staff_training_record(request):
+    """Manager adds training record for a staff member"""
+    
+    if request.method == 'POST':
+        staff_id = request.POST.get('staff_member')
+        course_id = request.POST.get('course')
+        completion_date = request.POST.get('completion_date')
+        trainer_name = request.POST.get('trainer_name', '')
+        training_provider = request.POST.get('training_provider', '')
+        certificate_number = request.POST.get('certificate_number', '')
+        sssc_cpd_hours = request.POST.get('sssc_cpd_hours', None)
+        notes = request.POST.get('notes', '')
+        
+        try:
+            staff_member = User.objects.get(id=staff_id)
+            course = TrainingCourse.objects.get(id=course_id)
+            completion_date_obj = date.fromisoformat(completion_date)
+            
+            # Calculate expiry date based on course validity
+            expiry_date = completion_date_obj + timedelta(days=course.validity_months * 30)
+            
+            # Create training record
+            record = TrainingRecord.objects.create(
+                staff_member=staff_member,
+                course=course,
+                completion_date=completion_date_obj,
+                expiry_date=expiry_date,
+                trainer_name=trainer_name,
+                training_provider=training_provider,
+                certificate_number=certificate_number,
+                sssc_cpd_hours_claimed=Decimal(sssc_cpd_hours) if sssc_cpd_hours else None,
+                notes=notes,
+                created_by=request.user
+            )
+            
+            # Handle certificate file upload
+            if 'certificate_file' in request.FILES:
+                record.certificate_file = request.FILES['certificate_file']
+                record.save()
+            
+            messages.success(request, f'Training record for {staff_member.full_name} - {course.name} has been added successfully.')
+            return redirect('training_compliance_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Error adding training record: {str(e)}')
+    
+    # GET request - show form
+    selected_home = request.GET.get('care_home', None)
+    selected_staff_id = request.GET.get('staff', None)
+    
+    # Get staff members
+    if selected_home:
+        staff_members = User.objects.filter(
+            unit__care_home__name=selected_home,
+            is_active=True
+        ).distinct().order_by('first_name', 'last_name')
+    else:
+        staff_members = User.objects.filter(
+            is_active=True,
+            unit__isnull=False
+        ).distinct().order_by('first_name', 'last_name')
+    
+    courses = TrainingCourse.objects.all().order_by('category', 'name')
+    care_homes = CareHome.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'staff_members': staff_members,
+        'courses': courses,
+        'care_homes': care_homes,
+        'selected_home': selected_home,
+        'selected_staff_id': int(selected_staff_id) if selected_staff_id else None,
+    }
+    
+    return render(request, 'compliance/add_staff_training_record.html', context)
 
 
 @login_required
@@ -601,7 +786,15 @@ def incident_management(request):
 def view_incident(request, incident_id):
     """View detailed incident report"""
     
-    incident = get_object_or_404(IncidentReport, id=incident_id)
+    incident = get_object_or_404(
+        IncidentReport.objects.select_related(
+            'reported_by', 
+            'manager', 
+            'investigation_assigned_to', 
+            'closed_by'
+        ), 
+        id=incident_id
+    )
     
     # Check permissions - staff can view their own, managers can view all
     if incident.reported_by != request.user and not (request.user.role and request.user.role.is_management):

@@ -1,0 +1,326 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Training Compliance Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-graduation-cap me-2"></i>Training Compliance Management</h2>
+            <p class="text-muted">Mandatory training compliance across all care homes</p>
+        </div>
+        <div>
+            <a href="{% url 'add_staff_training_record' %}{% if selected_home %}?care_home={{ selected_home }}{% endif %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Add Training Record
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="care_home" class="form-label">Filter by Care Home</label>
+                        <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Homes</option>
+                            {% for home in care_homes %}
+                                <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                    {{ home.name|title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if selected_home %}
+                    <div class="col-md-2">
+                        <a href="{% url 'training_compliance_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Clear Filters
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Overall Summary -->
+    {% if home_compliance_data %}
+    <div class="row mb-4">
+        {% for home_data in home_compliance_data %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ home_data.home.name|title }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="mb-0">{{ home_data.overall_percentage }}%</h2>
+                            <small class="text-muted">Overall Compliance</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-success fw-bold">{{ home_data.total_compliant }}</div>
+                            <small class="text-muted">of {{ home_data.total_required }} required</small>
+                        </div>
+                    </div>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {% if home_data.overall_percentage >= 90 %}bg-success{% elif home_data.overall_percentage >= 75 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ home_data.overall_percentage }}%"
+                             aria-valuenow="{{ home_data.overall_percentage }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ home_data.overall_percentage }}%
+                        </div>
+                    </div>
+                    <div class="small">
+                        <div class="mb-1">
+                            <i class="fas fa-users me-2"></i>
+                            <strong>{{ home_data.total_staff }}</strong> Active Staff
+                        </div>
+                        <div class="mb-1">
+                            <i class="fas fa-book me-2"></i>
+                            <strong>{{ mandatory_courses.count }}</strong> Mandatory Courses
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Detailed Compliance by Course -->
+    {% for home_data in home_compliance_data %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-building me-2"></i>{{ home_data.home.name|title }} - Course Breakdown
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th class="text-center">Compliant</th>
+                            <th class="text-center">Expiring Soon</th>
+                            <th class="text-center">Expired</th>
+                            <th class="text-center">Missing</th>
+                            <th class="text-center">Total Staff</th>
+                            <th class="text-center">Compliance %</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course_data in home_data.course_compliance %}
+                        <tr class="course-row">
+                            <td>
+                                <strong>{{ course_data.course.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ course_data.course.get_category_display }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if course_data.compliant > 0 %}
+                                    <button class="badge bg-success border-0" style="cursor: pointer;" 
+                                            data-bs-toggle="collapse" data-bs-target="#compliant-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                                        {{ course_data.compliant }} <i class="fas fa-chevron-down ms-1"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if course_data.expiring > 0 %}
+                                    <button class="badge bg-warning text-dark border-0" style="cursor: pointer;" 
+                                            data-bs-toggle="collapse" data-bs-target="#expiring-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                                        {{ course_data.expiring }} <i class="fas fa-chevron-down ms-1"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if course_data.expired > 0 %}
+                                    <button class="badge bg-danger border-0" style="cursor: pointer;" 
+                                            data-bs-toggle="collapse" data-bs-target="#expired-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                                        {{ course_data.expired }} <i class="fas fa-chevron-down ms-1"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if course_data.missing > 0 %}
+                                    <button class="badge bg-secondary border-0" style="cursor: pointer;" 
+                                            data-bs-toggle="collapse" data-bs-target="#missing-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                                        {{ course_data.missing }} <i class="fas fa-chevron-down ms-1"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ course_data.total }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong class="{% if course_data.percentage >= 90 %}text-success{% elif course_data.percentage >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ course_data.percentage }}%
+                                </strong>
+                            </td>
+                            <td class="text-center">
+                                {% if course_data.percentage >= 90 %}
+                                    <i class="fas fa-check-circle text-success" title="Good compliance"></i>
+                                {% elif course_data.percentage >= 75 %}
+                                    <i class="fas fa-exclamation-triangle text-warning" title="Needs attention"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle text-danger" title="Critical"></i>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <!-- Expandable rows for staff details -->
+                        {% if course_data.compliant > 0 %}
+                        <tr class="collapse" id="compliant-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                            <td colspan="8" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle"></i> Compliant Staff ({{ course_data.compliant }})</h6>
+                                    <div class="row">
+                                        {% for item in course_data.compliant_staff %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                                <div>
+                                                    <strong>{{ item.staff.full_name }}</strong> ({{ item.staff.sap }})<br>
+                                                    <small class="text-muted">{{ item.staff.role.name }}</small>
+                                                </div>
+                                                <div class="text-end small">
+                                                    Expires: {{ item.record.expiry_date|date:"d M Y" }}<br>
+                                                    <span class="text-success">{{ item.record.days_until_expiry }} days</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if course_data.expiring > 0 %}
+                        <tr class="collapse" id="expiring-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                            <td colspan="8" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="text-warning"><i class="fas fa-exclamation-triangle"></i> Expiring Soon ({{ course_data.expiring }})</h6>
+                                    <div class="row">
+                                        {% for item in course_data.expiring_staff %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                                <div>
+                                                    <strong>{{ item.staff.full_name }}</strong> ({{ item.staff.sap }})<br>
+                                                    <small class="text-muted">{{ item.staff.role.name }}</small>
+                                                </div>
+                                                <div class="text-end small">
+                                                    Expires: {{ item.record.expiry_date|date:"d M Y" }}<br>
+                                                    <span class="text-warning fw-bold">{{ item.record.days_until_expiry }} days</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if course_data.expired > 0 %}
+                        <tr class="collapse" id="expired-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                            <td colspan="8" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="text-danger"><i class="fas fa-times-circle"></i> Expired ({{ course_data.expired }})</h6>
+                                    <div class="row">
+                                        {% for item in course_data.expired_staff %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                                <div>
+                                                    <strong>{{ item.staff.full_name }}</strong> ({{ item.staff.sap }})<br>
+                                                    <small class="text-muted">{{ item.staff.role.name }}</small>
+                                                </div>
+                                                <div class="text-end small">
+                                                    Expired: {{ item.record.expiry_date|date:"d M Y" }}<br>
+                                                    <span class="text-danger fw-bold">{{ item.days_overdue }} days ago</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if course_data.missing > 0 %}
+                        <tr class="collapse" id="missing-{{ home_data.home.id }}-{{ course_data.course.id }}">
+                            <td colspan="8" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="text-secondary"><i class="fas fa-user-slash"></i> No Training Record ({{ course_data.missing }})</h6>
+                                    <div class="row">
+                                        {% for staff in course_data.missing_staff %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                                <div>
+                                                    <strong>{{ staff.full_name }}</strong> ({{ staff.sap }})<br>
+                                                    <small class="text-muted">{{ staff.role.name }}</small>
+                                                </div>
+                                                <div class="text-end">
+                                                    <a href="{% url 'add_staff_training_record' %}?staff={{ staff.id }}" 
+                                                       class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-plus"></i> Add
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No training data available for the selected filters.
+    </div>
+    {% endif %}
+
+    <!-- Legend -->
+    <div class="card">
+        <div class="card-body">
+            <h6 class="card-title">Status Legend</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <span class="badge bg-success me-2">Compliant</span>
+                    Training is current and valid
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-warning text-dark me-2">Expiring Soon</span>
+                    Expires within 30 days
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-danger me-2">Expired</span>
+                    Training has expired
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-secondary me-2">Missing</span>
+                    No training record found
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
