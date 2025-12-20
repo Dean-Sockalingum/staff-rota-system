@@ -36,11 +36,25 @@ class StaffProfileListView(ListView):
         care_home = self.request.GET.get("care_home")
         
         if term:
-            query = query.filter(
-                Q(user__first_name__icontains=term)
-                | Q(user__last_name__icontains=term)
-                | Q(user__sap__icontains=term)
-            )
+            # Split search term to handle "FirstName LastName" searches
+            terms = term.strip().split()
+            if len(terms) > 1:
+                # Multi-word search: each term must match somewhere
+                search_filter = Q()
+                for t in terms:
+                    search_filter &= (
+                        Q(user__first_name__icontains=t)
+                        | Q(user__last_name__icontains=t)
+                        | Q(user__sap__icontains=t)
+                    )
+                query = query.filter(search_filter)
+            else:
+                # Single word search: match any field
+                query = query.filter(
+                    Q(user__first_name__icontains=term)
+                    | Q(user__last_name__icontains=term)
+                    | Q(user__sap__icontains=term)
+                )
         if status:
             query = query.filter(employment_status=status)
         if care_home:
