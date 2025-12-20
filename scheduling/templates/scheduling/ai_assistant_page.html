@@ -163,6 +163,50 @@
         font-size: 1em;
     }
     
+    .ai-input-form {
+        display: flex;
+        gap: 12px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .ai-input-form input {
+        flex: 1;
+        padding: 16px 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.2s;
+    }
+    
+    .ai-input-form input:focus {
+        outline: none;
+        border-color: #0066CC;
+    }
+    
+    .ai-input-form button {
+        padding: 16px 32px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background 0.2s;
+        min-width: 100px;
+    }
+    
+    .ai-input-form button:hover {
+        background: #0052a3;
+    }
+    
+    .ai-input-form button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
     .ai-input-section button {
         padding: 12px 30px;
         background: #0066CC;
@@ -232,6 +276,35 @@
         30% {
             transform: translateY(-10px);
         }
+    }
+    
+    /* Confidence Badge Styles */
+    .confidence-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: bold;
+        margin-left: 8px;
+        text-transform: uppercase;
+    }
+    
+    .confidence-high {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .confidence-medium {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .confidence-low {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
     }
 </style>
 
@@ -332,54 +405,13 @@
         </form>
     </div>
 </div>
-                <li onclick="askQuestion('List agency companies')">List agency companies</li>
-            </ul>
-        </div>
-    </div>
-    
-    <div class="ai-chat-main">
-        <div class="ai-chat-header">
-            <h2>💬 Ask Your Question</h2>
-            <p>Type your question below or click an example above</p>
-        </div>
-        
-        <div id="ai-demo-messages">
-            <div class="ai-message">
-                👋 Hello! I'm your AI Help Assistant. I can answer questions about:
-                <br><br>
-                • Staff schedules and rotas<br>
-                • Care plan reviews and compliance<br>
-                • Annual leave and absence<br>
-                • Agency bookings and costs<br>
-                • Unit information and resident care<br>
-                <br>
-                Just ask me anything!
-            </div>
-        </div>
-        
-        <div class="typing-indicator" id="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-        
-        <div class="ai-input-section">
-            <input 
-                type="text" 
-                id="ai-demo-input" 
-                placeholder="Type your question here..."
-                onkeypress="if(event.key === 'Enter') sendDemoMessage()"
-            >
-            <button onclick="sendDemoMessage()" id="send-btn">Send</button>
-        </div>
-    </div>
-</div>
 
 <script>
     const messagesContainer = document.getElementById('ai-demo-messages');
     const inputField = document.getElementById('ai-demo-input');
-    const sendBtn = document.getElementById('send-btn');
-    const typingIndicator = document.getElementById('typing-indicator');
+    const demoForm = document.getElementById('ai-demo-form');
+    const sendBtn = document.getElementById('ai-demo-send');
+    const typingIndicator = document.getElementById('ai-demo-typing');
     
     // Get CSRF token
     function getCookie(name) {
@@ -402,6 +434,12 @@
         inputField.focus();
         sendDemoMessage();
     }
+    
+    // Handle form submission
+    demoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendDemoMessage();
+    });
     
     function sendDemoMessage() {
         const query = inputField.value.trim();
@@ -439,7 +477,8 @@
                 addMessage('❌ Sorry, I encountered an error: ' + data.error, 'ai');
             } else {
                 const message = data.answer || data.response || 'No response received';
-                addMessage(message, 'ai');
+                const confidence = data.confidence || null;
+                addMessage(message, 'ai', confidence);
             }
         })
         .catch(error => {
@@ -450,8 +489,8 @@
         });
     }
     
-    function addMessage(text, type) {
-        console.log('Adding message:', type, text);
+    function addMessage(text, type, confidence = null) {
+        console.log('Adding message:', type, text, 'confidence:', confidence);
         const messageDiv = document.createElement('div');
         messageDiv.className = type === 'user' ? 'user-message' : 'ai-message';
         
@@ -459,6 +498,23 @@
         let formattedText = text
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
             .replace(/\n/g, '<br>');  // Line breaks
+        
+        // Add confidence badge for AI messages
+        if (type === 'ai' && confidence !== null) {
+            const confidencePercent = Math.round(confidence * 100);
+            let badgeClass = 'confidence-low';
+            let badgeLabel = 'Low Confidence';
+            
+            if (confidence >= 0.8) {
+                badgeClass = 'confidence-high';
+                badgeLabel = 'High Confidence';
+            } else if (confidence >= 0.6) {
+                badgeClass = 'confidence-medium';
+                badgeLabel = 'Medium Confidence';
+            }
+            
+            formattedText += `<span class="confidence-badge ${badgeClass}">${confidencePercent}% ${badgeLabel}</span>`;
+        }
         
         messageDiv.innerHTML = formattedText;
         messagesContainer.appendChild(messageDiv);

@@ -184,9 +184,9 @@ def implement_home(care_home_name):
     home_units = Unit.objects.filter(care_home=home)
     patterns = get_pattern_templates()
     
-    # Generate shifts for 6 months
+    # Generate shifts for full year
     start_date = datetime(2025, 1, 1).date()
-    end_date = datetime(2025, 6, 30).date()
+    end_date = datetime(2025, 12, 31).date()
     cycle_start = start_date
     
     total_shifts = 0

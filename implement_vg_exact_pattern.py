@@ -261,7 +261,7 @@ PATTERNS = {
     },
     'NIGHT': {
         'SSCWN_A': {
-            'count': 2,
+            'count': 1,
             'hours': 35,
             'pattern': [
                 parse_days('sun mon tue'),
@@ -277,6 +277,16 @@ PATTERNS = {
                 parse_days('tue wed thur'),
                 parse_days('sun mon tue'),
                 parse_days('thur fri sat'),
+            ],
+            'role': 'SSCWN'
+        },
+        'SSCWN_C': {
+            'count': 1,
+            'hours': 35,
+            'pattern': [
+                parse_days('thur fri sat'),
+                parse_days('tue wed thur'),
+                parse_days('sun mon tue'),
             ],
             'role': 'SSCWN'
         },
@@ -430,7 +440,7 @@ def main():
     
     # Configuration
     start_date = datetime(2025, 1, 1).date()  # Start of year
-    end_date = datetime(2025, 6, 30).date()    # 6 months
+    end_date = datetime(2025, 12, 31).date()    # Full year
     
     print(f"\nPeriod: {start_date} to {end_date}")
     print(f"Total days: {(end_date - start_date).days + 1}")
@@ -469,7 +479,7 @@ def main():
         'SCW': ShiftType.objects.get(name='DAY_SENIOR'),
         'SCA': ShiftType.objects.get(name='DAY_ASSISTANT'),
         'SSCWN': ShiftType.objects.get(name='NIGHT_SENIOR'),
-        'SCWN': ShiftType.objects.get(name='NIGHT_SENIOR'),
+        'SCWN': ShiftType.objects.get(name='NIGHT_ASSISTANT'),
         'SCAN': ShiftType.objects.get(name='NIGHT_ASSISTANT'),
     }
     

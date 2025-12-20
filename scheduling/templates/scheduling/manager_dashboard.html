@@ -70,6 +70,87 @@
     </div>
 </div>
 
+<!-- Training Compliance Widget -->
+{% if training_compliance_summary %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card {% if training_compliance_summary.percentage >= 90 %}border-success{% elif training_compliance_summary.percentage >= 75 %}border-warning{% else %}border-danger{% endif %}">
+            <div class="card-header {% if training_compliance_summary.percentage >= 90 %}bg-success{% elif training_compliance_summary.percentage >= 75 %}bg-warning{% else %}bg-danger{% endif %} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-graduation-cap"></i> Training Compliance
+                        {% if user_home %}
+                            - {{ user_home.name|title }}
+                        {% endif %}
+                    </h5>
+                    <a href="{% url 'training_compliance_dashboard' %}{% if user_home %}?care_home={{ user_home.name }}{% endif %}" 
+                       class="btn btn-sm btn-light">
+                        <i class="fas fa-chart-bar"></i> View Details
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h2 class="{% if training_compliance_summary.percentage >= 90 %}text-success{% elif training_compliance_summary.percentage >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ training_compliance_summary.percentage }}%
+                            </h2>
+                            <p class="text-muted mb-0">Overall Compliance</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="progress mb-3" style="height: 30px;">
+                            <div class="progress-bar bg-success" style="width: {{ training_compliance_summary.compliant|floatformat:0 }}%" 
+                                 title="Compliant: {{ training_compliance_summary.compliant }}">
+                                {% if training_compliance_summary.compliant > 0 %}
+                                    {{ training_compliance_summary.compliant }}
+                                {% endif %}
+                            </div>
+                            <div class="progress-bar bg-warning" style="width: {{ training_compliance_summary.expiring|floatformat:0 }}%" 
+                                 title="Expiring Soon: {{ training_compliance_summary.expiring }}">
+                                {% if training_compliance_summary.expiring > 0 %}
+                                    {{ training_compliance_summary.expiring }}
+                                {% endif %}
+                            </div>
+                            <div class="progress-bar bg-danger" style="width: {{ training_compliance_summary.expired|floatformat:0 }}%" 
+                                 title="Expired: {{ training_compliance_summary.expired }}">
+                                {% if training_compliance_summary.expired > 0 %}
+                                    {{ training_compliance_summary.expired }}
+                                {% endif %}
+                            </div>
+                            <div class="progress-bar bg-secondary" style="width: {{ training_compliance_summary.missing|floatformat:0 }}%" 
+                                 title="Missing: {{ training_compliance_summary.missing }}">
+                                {% if training_compliance_summary.missing > 0 %}
+                                    {{ training_compliance_summary.missing }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row small">
+                            <div class="col-6 col-md-3 mb-2">
+                                <span class="badge bg-success me-1">{{ training_compliance_summary.compliant }}</span> Compliant
+                            </div>
+                            <div class="col-6 col-md-3 mb-2">
+                                <span class="badge bg-warning text-dark me-1">{{ training_compliance_summary.expiring }}</span> Expiring
+                            </div>
+                            <div class="col-6 col-md-3 mb-2">
+                                <span class="badge bg-danger me-1">{{ training_compliance_summary.expired }}</span> Expired
+                            </div>
+                            <div class="col-6 col-md-3 mb-2">
+                                <span class="badge bg-secondary me-1">{{ training_compliance_summary.missing }}</span> Missing
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <i class="fas fa-users"></i> {{ training_compliance_summary.total_staff }} staff × 11 mandatory courses = {{ training_compliance_summary.total_required }} required records
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Recent Incidents Widget (Last 24 Hours) -->
 {% if recent_incidents %}
 <div class="row mb-4">
@@ -180,11 +261,14 @@
     <!-- Widget A: Manual Review Required -->
     <div class="col-lg-6 col-md-12 mb-4">
         <div class="card widget-card">
-            <div class="card-header bg-warning">
+            <div class="card-header bg-warning d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-exclamation-triangle"></i> Action Items: Manual Review
                     <span class="badge bg-danger ms-2">{{ manual_review_requests.count }}</span>
                 </h5>
+                <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-sm btn-dark">
+                    <i class="fas fa-list"></i> View All
+                </a>
             </div>
             <div class="card-body">
                 {% if manual_review_requests %}
@@ -203,12 +287,9 @@
                             </small>
                         </div>
                         <div>
-                            <button class="btn btn-success btn-sm me-1">
-                                <i class="fas fa-check"></i> Approve
-                            </button>
-                            <button class="btn btn-danger btn-sm">
-                                <i class="fas fa-times"></i> Deny
-                            </button>
+                            <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye"></i> Review
+                            </a>
                         </div>
                     </div>
                     {% endfor %}
@@ -222,11 +303,14 @@
     <!-- Widget B: Staff Reallocations Needed -->
     <div class="col-lg-6 col-md-12 mb-4">
         <div class="card widget-card">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-exchange-alt"></i> Pending Staff Reallocations
                     <span class="badge bg-warning ms-2">{{ pending_reallocations.count }}</span>
                 </h5>
+                <a href="{% url 'rota_view' %}" class="btn btn-sm btn-light">
+                    <i class="fas fa-calendar-alt"></i> Open Rota
+                </a>
             </div>
             <div class="card-body">
                 {% if pending_reallocations %}
@@ -239,7 +323,7 @@
                             </small>
                         </div>
                         <div>
-                            <a href="{% url 'rota_view' %}" class="btn btn-primary btn-sm">
+                            <a href="{% url 'rota_view' %}?care_home={{ reallocation.target_unit.care_home.name }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-cog"></i> Resolve
                             </a>
                         </div>
@@ -324,52 +408,33 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    {% for unit_name, summary in staffing_summary.items %}
+                    {% for home_name, summary in home_staffing_summary.items %}
                     <div class="col-md-6 mb-3">
                         <div class="card border-left-primary">
                             <div class="card-body">
-                                <h6 class="card-title">{{ summary.unit.get_name_display }}</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="card-title mb-0">{{ summary.home.get_name_display }}</h6>
+                                    <a href="{% url 'rota_view' %}?care_home={{ summary.home.name }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-calendar-alt"></i> View Rota
+                                    </a>
+                                </div>
                                 <div class="row">
                                     <div class="col-6">
                                         <strong>Day Shift:</strong><br>
-                                        <span class="status-{{ summary.day_status }}">
-                                            {{ summary.day_actual }} / {{ summary.day_required }}
-                                        </span>
-                                        {% if summary.day_supernumerary %}
-                                            <div class="small text-primary mt-1">
-                                                Duty SSCW: {{ summary.day_supernumerary }}
-                                            </div>
-                                        {% endif %}
                                         <div class="small text-muted mt-1">
-                                            {% if summary.day_care_breakdown %}
-                                                Care mix:
-                                                {% for item in summary.day_care_breakdown %}
-                                                    {{ item.label }} x{{ item.count }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                No care cover scheduled
-                                            {% endif %}
+                                            SSCW: {{ summary.day_sscw }}
+                                        </div>
+                                        <div class="small text-muted">
+                                            Total Staff: {{ summary.day_staff_total }}
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <strong>Night Shift:</strong><br>
-                                        <span class="status-{{ summary.night_status }}">
-                                            {{ summary.night_actual }} / {{ summary.night_required }}
-                                        </span>
-                                        {% if summary.night_supernumerary %}
-                                            <div class="small text-primary mt-1">
-                                                Duty SSCW: {{ summary.night_supernumerary }}
-                                            </div>
-                                        {% endif %}
                                         <div class="small text-muted mt-1">
-                                            {% if summary.night_care_breakdown %}
-                                                Care mix:
-                                                {% for item in summary.night_care_breakdown %}
-                                                    {{ item.label }} x{{ item.count }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                No care cover scheduled
-                                            {% endif %}
+                                            SSCWN: {{ summary.night_sscwn }}
+                                        </div>
+                                        <div class="small text-muted">
+                                            Total Staff: {{ summary.night_staff_total }}
                                         </div>
                                     </div>
                                 </div>

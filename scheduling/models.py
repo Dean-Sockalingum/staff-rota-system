@@ -594,6 +594,42 @@ class ActivityLog(models.Model):
         return f"{self.user.full_name} - {self.action_type} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 
+# AI Assistant Query Log
+class AIQueryLog(models.Model):
+    RESPONSE_TYPE_CHOICES = [
+        ('vacancy', 'Vacancy Report'),
+        ('staff_query', 'Staff Query'),
+        ('careplan', 'Care Plan Query'),
+        ('home_performance', 'Home Performance'),
+        ('staffing_report', 'Staffing Report'),
+        ('leave_report', 'Leave Report'),
+        ('sickness', 'Sickness Report'),
+        ('shortage', 'Staffing Shortage'),
+        ('agency', 'Agency Usage'),
+        ('error', 'Error/Unknown'),
+    ]
+    
+    query = models.TextField(help_text="User's query text")
+    success = models.BooleanField(default=False, help_text="Whether query was understood and answered")
+    response_type = models.CharField(max_length=30, choices=RESPONSE_TYPE_CHOICES, null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True, help_text="Error message if query failed")
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_queries')
+    response_time_ms = models.IntegerField(null=True, blank=True, help_text="Response time in milliseconds")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['success', '-created_at']),
+            models.Index(fields=['response_type', '-created_at']),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.success else "✗"
+        return f"{status} {self.query[:50]} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
 # Import audit and compliance models
 from .models_audit import (
     DataChangeLog,

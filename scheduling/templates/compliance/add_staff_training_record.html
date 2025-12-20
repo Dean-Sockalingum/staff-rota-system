@@ -1,0 +1,260 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Add Staff Training Record{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus me-2"></i>Add Training Record for Staff Member
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Filter by Home -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="filter_home" class="form-label">Filter Staff by Home</label>
+                                <select id="filter_home" class="form-select" onchange="filterStaff()">
+                                    <option value="">All Homes</option>
+                                    {% for home in care_homes %}
+                                        <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                            {{ home.name|title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Staff Member Selection -->
+                        <div class="mb-3">
+                            <label for="staff_member" class="form-label">Staff Member <span class="text-danger">*</span></label>
+                            <select name="staff_member" id="staff_member" class="form-select" required>
+                                <option value="">Select a staff member...</option>
+                                {% for staff in staff_members %}
+                                    <option value="{{ staff.id }}" 
+                                            data-home="{{ staff.unit.care_home.name }}"
+                                            {% if selected_staff_id == staff.id %}selected{% endif %}>
+                                        {{ staff.full_name }} - {{ staff.role.name }} ({{ staff.unit.care_home.name|title }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Course Selection -->
+                        <div class="mb-3">
+                            <label for="course" class="form-label">Training Course <span class="text-danger">*</span></label>
+                            <select name="course" id="course" class="form-select" required onchange="updateCourseInfo()">
+                                <option value="">Select a course...</option>
+                                {% regroup courses by category as course_groups %}
+                                {% for group in course_groups %}
+                                    <optgroup label="{{ group.grouper|upper }}">
+                                        {% for course in group.list %}
+                                            <option value="{{ course.id }}" 
+                                                    data-validity="{{ course.validity_months }}"
+                                                    data-mandatory="{% if course.is_mandatory %}yes{% else %}no{% endif %}"
+                                                    data-cpd-hours="{{ course.sssc_cpd_hours|default:'' }}">
+                                                {{ course.name }}
+                                                {% if course.is_mandatory %}<span class="badge bg-danger">MANDATORY</span>{% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                            <div id="course_info" class="mt-2 small text-muted"></div>
+                        </div>
+
+                        <!-- Completion Date -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="completion_date" class="form-label">Completion Date <span class="text-danger">*</span></label>
+                                <input type="date" name="completion_date" id="completion_date" class="form-control" required 
+                                       max="{{ today|date:'Y-m-d' }}" onchange="calculateExpiry()">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Calculated Expiry Date</label>
+                                <input type="text" id="expiry_date_display" class="form-control" readonly placeholder="Select completion date and course">
+                            </div>
+                        </div>
+
+                        <!-- Trainer Details -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="trainer_name" class="form-label">Trainer Name</label>
+                                <input type="text" name="trainer_name" id="trainer_name" class="form-control" 
+                                       placeholder="Enter trainer's name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="training_provider" class="form-label">Training Provider</label>
+                                <input type="text" name="training_provider" id="training_provider" class="form-control" 
+                                       placeholder="e.g., SSSC, NHS, Internal">
+                            </div>
+                        </div>
+
+                        <!-- Certificate Details -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="certificate_number" class="form-label">Certificate Number</label>
+                                <input type="text" name="certificate_number" id="certificate_number" class="form-control" 
+                                       placeholder="Certificate reference number">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificate_file" class="form-label">Certificate File (Optional)</label>
+                                <input type="file" name="certificate_file" id="certificate_file" class="form-control" 
+                                       accept=".pdf,.jpg,.jpeg,.png">
+                                <small class="text-muted">PDF, JPG, or PNG format</small>
+                            </div>
+                        </div>
+
+                        <!-- SSSC CPD Hours -->
+                        <div class="mb-3">
+                            <label for="sssc_cpd_hours" class="form-label">SSSC CPD Hours Claimed</label>
+                            <input type="number" name="sssc_cpd_hours" id="sssc_cpd_hours" class="form-control" 
+                                   step="0.5" min="0" max="35" placeholder="0.0">
+                            <small class="text-muted">Leave blank if not applicable</small>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                      placeholder="Additional notes about this training..."></textarea>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'training_compliance_dashboard' %}{% if selected_home %}?care_home={{ selected_home }}{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Add Training Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="fas fa-info-circle me-2"></i>Adding Training Records</h6>
+                    <ul class="mb-0 small">
+                        <li>Select the staff member and the training course they completed</li>
+                        <li>Enter the completion date - the expiry date will be calculated automatically</li>
+                        <li>Add trainer details and certificate information if available</li>
+                        <li>For SSSC-registered staff, record CPD hours to track annual requirements</li>
+                        <li>You can upload a PDF or image of the certificate for record-keeping</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter staff by home
+function filterStaff() {
+    const selectedHome = document.getElementById('filter_home').value;
+    const staffSelect = document.getElementById('staff_member');
+    const options = staffSelect.querySelectorAll('option');
+    
+    // Update URL to maintain filter
+    if (selectedHome) {
+        const url = new URL(window.location);
+        url.searchParams.set('care_home', selectedHome);
+        window.history.pushState({}, '', url);
+    } else {
+        const url = new URL(window.location);
+        url.searchParams.delete('care_home');
+        window.history.pushState({}, '', url);
+    }
+    
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = 'block';
+            return;
+        }
+        
+        const staffHome = option.getAttribute('data-home');
+        if (!selectedHome || staffHome === selectedHome) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    // Reset selection if current selection is now hidden
+    if (staffSelect.value) {
+        const currentOption = staffSelect.querySelector(`option[value="${staffSelect.value}"]`);
+        if (currentOption && currentOption.style.display === 'none') {
+            staffSelect.value = '';
+        }
+    }
+}
+
+// Update course information
+function updateCourseInfo() {
+    const courseSelect = document.getElementById('course');
+    const courseInfo = document.getElementById('course_info');
+    const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+    
+    if (courseSelect.value) {
+        const validity = selectedOption.getAttribute('data-validity');
+        const mandatory = selectedOption.getAttribute('data-mandatory');
+        const cpdHours = selectedOption.getAttribute('data-cpd-hours');
+        
+        let info = `Valid for ${validity} months`;
+        if (mandatory === 'yes') {
+            info += ' • <span class="text-danger fw-bold">MANDATORY</span>';
+        }
+        if (cpdHours) {
+            info += ` • SSSC CPD: ${cpdHours} hours`;
+            document.getElementById('sssc_cpd_hours').value = cpdHours;
+        }
+        
+        courseInfo.innerHTML = info;
+    } else {
+        courseInfo.innerHTML = '';
+    }
+    
+    calculateExpiry();
+}
+
+// Calculate expiry date
+function calculateExpiry() {
+    const completionDate = document.getElementById('completion_date').value;
+    const courseSelect = document.getElementById('course');
+    const expiryDisplay = document.getElementById('expiry_date_display');
+    
+    if (completionDate && courseSelect.value) {
+        const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+        const validityMonths = parseInt(selectedOption.getAttribute('data-validity'));
+        
+        const completion = new Date(completionDate);
+        const expiry = new Date(completion);
+        expiry.setMonth(expiry.getMonth() + validityMonths);
+        
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        expiryDisplay.value = expiry.toLocaleDateString('en-GB', options);
+    } else {
+        expiryDisplay.value = '';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    filterStaff();
+    
+    // Set max date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('completion_date').setAttribute('max', today);
+});
+</script>
+{% endblock %}

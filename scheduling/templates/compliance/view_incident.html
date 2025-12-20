@@ -65,7 +65,7 @@
                             <p><strong>Location:</strong> {{ incident.location }}</p>
                         </div>
                         <div class="col-md-6 text-end">
-                            <p><strong>Reported By:</strong> {{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}</p>
+                            <p><strong>Reported By:</strong> {% if incident.reported_by %}{{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}{% else %}N/A{% endif %}</p>
                             <p><strong>Reported Date:</strong> {{ incident.reported_date|date:"d M Y" }}</p>
                             <p>
                                 <strong>Status:</strong>
@@ -222,7 +222,7 @@
             {% if incident.manager_reviewed %}
             <div class="detail-section border-success">
                 <h6><i class="fas fa-user-tie"></i> Manager Review</h6>
-                <p><strong>Reviewed By:</strong> {{ incident.manager.get_full_name|default:incident.manager.sap }}</p>
+                <p><strong>Reviewed By:</strong> {% if incident.manager %}{{ incident.manager.get_full_name|default:incident.manager.sap }}{% else %}N/A{% endif %}</p>
                 <p><strong>Review Date:</strong> {{ incident.manager_review_date|date:"d M Y" }}</p>
                 {% if incident.manager_comments %}
                 <p><strong>Comments:</strong></p>
@@ -239,7 +239,7 @@
             {% if incident.incident_closed %}
             <div class="alert alert-success">
                 <strong><i class="fas fa-check-circle"></i> Incident Closed</strong><br>
-                Closed on {{ incident.closed_date|date:"d M Y" }} by {{ incident.closed_by.get_full_name|default:incident.closed_by.sap }}
+                Closed on {{ incident.closed_date|date:"d M Y" }} {% if incident.closed_by %}by {{ incident.closed_by.get_full_name|default:incident.closed_by.sap }}{% endif %}
             </div>
             {% endif %}
         </div>

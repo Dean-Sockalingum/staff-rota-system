@@ -79,7 +79,7 @@
                             <td>{{ incident.incident_date|date:"d M Y" }}</td>
                             <td>{{ incident.get_incident_type_display }}</td>
                             <td><span class="badge bg-{% if incident.severity == 'MAJOR_HARM' or incident.severity == 'DEATH' %}danger{% elif incident.severity == 'MODERATE_HARM' %}warning{% else %}info{% endif %}">{{ incident.get_severity_display }}</span></td>
-                            <td>{{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}</td>
+                            <td>{% if incident.reported_by %}{{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}{% else %}N/A{% endif %}</td>
                             <td>
                                 {% if not incident.manager_reviewed %}<span class="badge bg-warning">Pending Review</span>{% endif %}
                                 {% if not incident.incident_closed %}<span class="badge bg-info">Open</span>{% else %}<span class="badge bg-success">Closed</span>{% endif %}

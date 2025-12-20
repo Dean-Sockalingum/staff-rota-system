@@ -215,6 +215,57 @@ def manager_dashboard(request):
     day_care_roles = {'SCW', 'SCA'}
     night_care_roles = {'SCWN', 'SCAN'}
 
+    # Aggregate staffing by care home instead of by unit
+    home_staffing_summary = {}
+    
+    # Get all active care homes
+    from .models_multi_home import CareHome
+    care_homes_qs = CareHome.objects.filter(is_active=True)
+    if user_home:
+        care_homes_qs = care_homes_qs.filter(id=user_home.id)
+    
+    for home in care_homes_qs:
+        # Get all units for this home
+        home_units = Unit.objects.filter(care_home=home, is_active=True)
+        
+        # Get all shifts for this home today
+        home_shifts_today = today_shifts.filter(unit__care_home=home)
+        day_shifts_qs = home_shifts_today.filter(shift_type__name__in=day_shift_names)
+        night_shifts_qs = home_shifts_today.filter(shift_type__name__in=night_shift_names)
+
+        # Count by role for day shifts
+        day_role_counts = {}
+        for shift in day_shifts_qs:
+            role_code = getattr(getattr(shift.user, 'role', None), 'name', None)
+            if not role_code:
+                continue
+            day_role_counts[role_code] = day_role_counts.get(role_code, 0) + 1
+
+        # Count by role for night shifts
+        night_role_counts = {}
+        for shift in night_shifts_qs:
+            role_code = getattr(getattr(shift.user, 'role', None), 'name', None)
+            if not role_code:
+                continue
+            night_role_counts[role_code] = night_role_counts.get(role_code, 0) + 1
+
+        # Calculate totals
+        day_sscw = day_role_counts.get('SSCW', 0)
+        day_staff_total = day_shifts_qs.count()
+        night_sscwn = night_role_counts.get('SSCWN', 0)
+        night_staff_total = night_shifts_qs.count()
+        
+        home_staffing_summary[home.name] = {
+            'home': home,
+            'day_sscw': day_sscw,
+            'day_staff_total': day_staff_total,
+            'night_sscwn': night_sscwn,
+            'night_staff_total': night_staff_total,
+        }
+    
+    # Keep old unit-based summary for compatibility (can be removed later)
+    staffing_summary = {}
+    
     # Filter units by care home if applicable
     units_for_summary_qs = Unit.objects.filter(is_active=True)
     if user_home:
@@ -359,10 +410,58 @@ def manager_dashboard(request):
         incidents_qs = incidents_qs.filter(reported_by__unit__care_home=user_home)
     recent_incidents = incidents_qs.select_related('reported_by').order_by('-created_at')
     
+    # Training compliance summary
+    from .models import TrainingCourse, TrainingRecord
+    training_compliance_summary = None
+    
+    mandatory_courses = TrainingCourse.objects.filter(is_mandatory=True)
+    if mandatory_courses.exists() and user_home:
+        # Get staff for user's home
+        home_staff = User.objects.filter(
+            unit__care_home=user_home,
+            is_active=True
+        ).distinct()
+        
+        total_staff = home_staff.count()
+        total_required = total_staff * mandatory_courses.count()
+        total_compliant = 0
+        total_expiring = 0
+        total_expired = 0
+        
+        if total_staff > 0:
+            for staff in home_staff:
+                for course in mandatory_courses:
+                    latest_record = TrainingRecord.objects.filter(
+                        staff_member=staff,
+                        course=course
+                    ).order_by('-completion_date').first()
+                    
+                    if latest_record:
+                        status = latest_record.get_status()
+                        if status == 'CURRENT':
+                            total_compliant += 1
+                        elif status == 'EXPIRING_SOON':
+                            total_expiring += 1
+                        elif status == 'EXPIRED':
+                            total_expired += 1
+            
+            compliance_percentage = (total_compliant / total_required * 100) if total_required > 0 else 0
+            
+            training_compliance_summary = {
+                'total_staff': total_staff,
+                'total_required': total_required,
+                'compliant': total_compliant,
+                'expiring': total_expiring,
+                'expired': total_expired,
+                'missing': total_required - (total_compliant + total_expiring + total_expired),
+                'percentage': round(compliance_percentage, 1),
+            }
+    
     context = {
         'manual_review_requests': manual_review_requests,
         'pending_reallocations': pending_reallocations,
         'staffing_summary': staffing_summary,
+        'home_staffing_summary': home_staffing_summary,
         'recent_auto_approvals': recent_auto_approvals,
         'today': today,
         'current_sickness_absences': current_sickness_absences,
@@ -374,6 +473,7 @@ def manager_dashboard(request):
         'rota_start': rota_start,
         'rota_end': rota_end,
         'recent_incidents': recent_incidents,
+        'training_compliance_summary': training_compliance_summary,
         'user_home': user_home,
         'can_select_home': can_select_home,
         'all_care_homes': CareHome.objects.all().order_by('name'),
@@ -3120,12 +3220,37 @@ HOME_NAME_VARIATIONS = {
 }
 
 def normalize_home_name(query):
-    """Extract and normalize care home name from query text"""
+    """
+    Extract and normalize care home name from query text
+    Phase 3: Enhanced with fuzzy matching for typos
+    """
     query_lower = query.lower()
+    
+    # First try exact matching (fastest)
     for canonical_name, variations in HOME_NAME_VARIATIONS.items():
         for variation in variations:
             if variation in query_lower:
                 return canonical_name
+    
+    # Phase 3: If no exact match, try fuzzy matching
+    # Extract potential home name from query (simple word extraction)
+    words = query_lower.split()
+    for word in words:
+        if len(word) >= 3:  # Only check words with 3+ chars
+            fuzzy_matches = fuzzy_match_home(word, threshold=0.6)
+            if fuzzy_matches:
+                # Return the best match's canonical name
+                best_home, similarity = fuzzy_matches[0]
+                return best_home.name
+    
+    # Also try multi-word combinations (e.g., "orchard grove")
+    for i in range(len(words) - 1):
+        two_word = f"{words[i]} {words[i+1]}"
+        fuzzy_matches = fuzzy_match_home(two_word, threshold=0.6)
+        if fuzzy_matches:
+            best_home, similarity = fuzzy_matches[0]
+            return best_home.name
+    
     return None
 
 def get_home_performance(home_name, date=None):
@@ -3333,11 +3458,18 @@ def _process_home_performance_query(query):
         answer += "• [Generate Custom Report](/reports/custom/)\n"
         answer += "• [Export Comparison Data](/reports/export/)\n"
         
+        home_perf_score = match_intent_keywords(query, 'home_performance')
+        
         return {
             'answer': answer,
             'related': ['Senior Dashboard', 'Quality Reports', 'Fiscal Analysis', 'Export Data'],
             'category': 'home_comparison',
-            'comparison_data': comparison
+            'comparison_data': comparison,
+            'confidence': calculate_confidence_score(query, {
+                'answer': answer,
+                'category': 'home_comparison',
+                'comparison_data': comparison
+            }, home_perf_score)
         }
     
     # === HOME-SPECIFIC QUERIES ===
@@ -3388,11 +3520,18 @@ def _process_home_performance_query(query):
         answer += f"• [Care Plan Reviews](/care-plans/?home={perf['home_name']})\n"
         answer += "• [Generate Quality Report](/reports/quality/)\n"
         
+        home_perf_score = match_intent_keywords(query, 'home_performance')
+        
         return {
             'answer': answer,
             'related': ['Incident Reports', 'Care Plans', 'Quality Metrics'],
             'category': 'quality_audit',
-            'audit_data': perf
+            'audit_data': perf,
+            'confidence': calculate_confidence_score(query, {
+                'answer': answer,
+                'category': 'quality_audit',
+                'audit_data': perf
+            }, home_perf_score)
         }
     
     # === GENERAL PERFORMANCE QUERY ===
@@ -3458,11 +3597,18 @@ def _process_home_performance_query(query):
     answer += f"• [Staffing Report](/reports/staffing/?home={perf['home_name']})\n"
     answer += "• [Senior Dashboard](/senior-dashboard/)\n"
     
+    home_perf_score = match_intent_keywords(query, 'home_performance')
+    
     return {
         'answer': answer,
         'related': ['Senior Dashboard', 'Home Details', 'Quality Audit', 'Staffing Report'],
         'category': 'home_performance',
-        'performance_data': perf
+        'performance_data': perf,
+        'confidence': calculate_confidence_score(query, {
+            'answer': answer,
+            'category': 'home_performance',
+            'performance_data': perf
+        }, home_perf_score)
     }
 
 class ReportGenerator:
@@ -4235,6 +4381,8 @@ def _process_careplan_query(query):
 • [Compliance Report](/careplan/reports/)
 • [Overdue Reviews](/careplan/?status=OVERDUE)"""
         
+        careplan_score = match_intent_keywords(query, 'careplan')
+        
         return {
             'answer': answer,
             'related': ['View Compliance Report', 'Care Plan Overview', 'Generate Reviews'],
@@ -4244,7 +4392,12 @@ def _process_careplan_query(query):
                 'completed': completed,
                 'overdue': overdue,
                 'due_soon': due_soon
-            }
+            },
+            'confidence': calculate_confidence_score(query, {
+                'answer': answer,
+                'category': 'careplan_stats',
+                'data': {'total': total_reviews}
+            }, careplan_score)
         }
     
     # Check for overdue reviews query
@@ -4253,10 +4406,15 @@ def _process_careplan_query(query):
         count = overdue_reviews.count()
         
         if count == 0:
+            careplan_score = match_intent_keywords(query, 'careplan')
             return {
                 'answer': "✅ **Great news!** No overdue care plan reviews.\n\nAll reviews are up to date! [View All Reviews](/careplan/)",
                 'related': ['Care Plan Overview', 'Compliance Report'],
-                'category': 'careplan_stats'
+                'category': 'careplan_stats',
+                'confidence': calculate_confidence_score(query, {
+                    'answer': "No overdue reviews",
+                    'category': 'careplan_stats'
+                }, careplan_score)
             }
         
         # List up to 10 overdue reviews
@@ -4270,11 +4428,18 @@ def _process_careplan_query(query):
         
         answer += f"\n[View All Overdue Reviews](/careplan/?status=OVERDUE)"
         
+        careplan_score = match_intent_keywords(query, 'careplan')
+        
         return {
             'answer': answer,
             'related': ['View Compliance Report', 'Complete Reviews'],
             'category': 'careplan_stats',
-            'data': {'overdue_count': count}
+            'data': {'overdue_count': count},
+            'confidence': calculate_confidence_score(query, {
+                'answer': answer,
+                'category': 'careplan_stats',
+                'data': {'overdue_count': count}
+            }, careplan_score)
         }
     
     # Pattern: "when is [resident ID] review due?" or "show review for [resident ID]"
@@ -4340,6 +4505,8 @@ def _process_careplan_query(query):
 • [Complete Review](/careplan/review/{latest_review.id}/)
 • [View All Reviews](/careplan/)"""
                     
+                    careplan_score = match_intent_keywords(query, 'careplan')
+                    
                     return {
                         'answer': answer,
                         'related': ['Complete Review', 'View Compliance Report', 'Unit Dashboard'],
@@ -4349,7 +4516,12 @@ def _process_careplan_query(query):
                             'unit': resident.unit.name,
                             'review_status': latest_review.status,
                             'due_date': latest_review.due_date.isoformat()
-                        }
+                        },
+                        'confidence': calculate_confidence_score(query, {
+                            'answer': answer,
+                            'category': 'careplan_query',
+                            'data': {'resident_id': resident.resident_id}
+                        }, careplan_score)
                     }
                 else:
                     return {
@@ -4368,12 +4540,1055 @@ def _process_careplan_query(query):
     
     return None
 
+# ============================================================================
+# PHASE 1: AI ASSISTANT IMPROVEMENTS - Query Analytics & Better Understanding
+# ============================================================================
+
+# Synonym mapping for better intent detection
+INTENT_KEYWORDS = {
+    'vacancy': {
+        'primary': ['vacancy', 'vacancies', 'vacant', 'unfilled'],
+        'secondary': ['leaving', 'leaver', 'resigned', 'quit', 'departed', 'resignation'],
+        'context': ['position', 'role', 'staff', 'post']
+    },
+    'staffing': {
+        'primary': ['staff', 'staffing', 'working', 'on duty', 'roster', 'rota'],
+        'secondary': ['who', 'schedule', 'shift', 'today', 'tonight', 'tomorrow', 'scw', 'sscw', 'senior care worker', 'care worker', 'rn', 'nurse', 'registered nurse', 'carer', 'assistant'],
+        'context': ['count', 'number', 'how many', 'list', 'at', 'in']
+    },
+    'leave': {
+        'primary': ['leave', 'holiday', 'vacation', 'time off', 'annual leave'],
+        'secondary': ['balance', 'remaining', 'used', 'taken', 'booked'],
+        'context': ['days', 'hours', 'allowance', 'entitlement']
+    },
+    'sickness': {
+        'primary': ['sick', 'sickness', 'ill', 'illness', 'unwell'],
+        'secondary': ['absence', 'off sick', 'absent', 'medical'],
+        'context': ['certificate', 'note', 'days', 'self-certify']
+    },
+    'careplan': {
+        'primary': ['care plan', 'careplan', 'review', 'assessment'],
+        'secondary': ['resident', 'due', 'overdue', 'completed'],
+        'context': ['compliance', 'rate', 'percentage']
+    },
+    'shortage': {
+        'primary': ['shortage', 'short', 'gap', 'understaffed', 'uncovered'],
+        'secondary': ['need', 'needed', 'require', 'missing'],
+        'context': ['shift', 'cover', 'staff', 'rota']
+    },
+    'agency': {
+        'primary': ['agency', 'temp', 'temporary', 'cover'],
+        'secondary': ['cost', 'hours', 'booking', 'external'],
+        'context': ['staff', 'worker', 'company']
+    },
+    'home_performance': {
+        'primary': ['performance', 'quality', 'audit', 'compliance'],
+        'secondary': ['orchard grove', 'riverside', 'meadowburn', 'hawthorn', 'victoria gardens'],
+        'context': ['compare', 'comparison', 'dashboard', 'report']
+    }
+}
+
+# Query templates with regex patterns for entity extraction
+QUERY_TEMPLATES = {
+    'staff_count': [
+        r'^how\s+many\s+(?P<role>[\w\s]+?)\s+(?:are\s+)?(?:at|in)\s+(?P<location>[\w\s]+)',
+        r'^count\s+(?P<role>[\w\s]+?)\s+(?:at|in)\s+(?P<location>[\w\s]+)',
+        r'^(?P<role>[\w\s]+?)\s+count\s+(?:at|in)\s+(?P<location>[\w\s]+)',
+    ],
+    'staff_list': [
+        r'^(?:who\s+is|who\s+are|list|show)\s+(?:the\s+)?(?P<role>[\w\s]+?)\s+(?:at|in)\s+(?P<location>[\w\s]+)',
+        r'^show\s+me\s+(?:all\s+)?(?P<role>[\w\s]+)',
+        r'^list\s+(?:all\s+)?(?P<role>[\w\s]+)',
+    ],
+    'sickness': [
+        r'^(?:what\s+is|show|get)\s+(?:the\s+)?sickness\s+(?:in|at|for)\s+(?P<location>[\w\s]+)',
+        r'^sickness\s+(?:report|data|stats)\s+(?:for\s+)?(?P<location>[\w\s]+)',
+    ],
+    'vacancy': [
+        r'^how\s+many\s+(?:vacancies|vacant\s+positions)',
+        r'^(?:show|list)\s+(?:all\s+)?vacancies',
+    ],
+    'staff_info': [
+        r'^when\s+did\s+(?P<name>[\w\s]+?)\s+(?:start|commence|join)',
+        r'^what\s+date\s+did\s+(?P<name>[\w\s]+?)\s+(?:start|commence)',
+    ],
+}
+
+def match_query_template(query):
+    """
+    Match query against templates and extract entities
+    Returns (template_type, confidence, entities) or (None, 0, {})
+    """
+    import re
+    query_lower = query.lower().strip()
+    
+    for template_type, patterns in QUERY_TEMPLATES.items():
+        for pattern in patterns:
+            match = re.match(pattern, query_lower, re.IGNORECASE)
+            if match:
+                entities = match.groupdict()
+                # Confidence based on how specific the match is
+                confidence = 0.7 + (0.1 * len(entities))  # Base 0.7, +0.1 per entity
+                confidence = min(confidence, 1.0)  # Cap at 1.0
+                return (template_type, confidence, entities)
+    
+    return (None, 0.0, {})
+
+def calculate_confidence_score(query, response_data, intent_score=None):
+    """
+    Calculate confidence score for a query response
+    Returns float between 0.0 and 1.0
+    """
+    score = 0.0
+    factors = []
+    
+    # Factor 1: Intent keyword matching (0-0.4)
+    if intent_score is not None:
+        intent_confidence = min(intent_score / 3.0, 0.4)  # Max 0.4 for strong match
+        score += intent_confidence
+        factors.append(f"intent:{intent_confidence:.2f}")
+    
+    # Factor 2: Entity extraction (0-0.3)
+    if 'count' in response_data or 'home' in response_data or 'role' in response_data:
+        entity_confidence = 0.3
+        score += entity_confidence
+        factors.append(f"entity:{entity_confidence:.2f}")
+    
+    # Factor 3: Result ambiguity (0-0.3)
+    if 'answer' in response_data:
+        # Check for multiple matches or clarification needed
+        if 'multiple' in response_data.get('answer', '').lower():
+            ambiguity_confidence = 0.1  # Low confidence for multiple matches
+        else:
+            ambiguity_confidence = 0.3  # High confidence for single result
+        score += ambiguity_confidence
+        factors.append(f"ambiguity:{ambiguity_confidence:.2f}")
+    
+    # Ensure score is between 0 and 1
+    score = max(0.0, min(1.0, score))
+    
+    return score
+
+# ============================================================================
+# PHASE 3: AI ASSISTANT IMPROVEMENTS - Fuzzy Matching & Conversation Context
+# ============================================================================
+
+def fuzzy_match_staff(search_term, threshold=0.6, max_results=5):
+    """
+    Fuzzy match staff names using similarity scoring
+    Returns list of (User, similarity_score) tuples
+    """
+    from difflib import SequenceMatcher
+    
+    search_term_lower = search_term.lower().strip()
+    if not search_term_lower or len(search_term_lower) < 2:
+        return []
+    
+    # Get all active staff
+    all_staff = User.objects.filter(is_active=True).select_related('role', 'unit')
+    
+    matches = []
+    for staff in all_staff:
+        full_name = f"{staff.first_name} {staff.last_name}".lower()
+        
+        # Calculate similarity scores for different combinations
+        full_similarity = SequenceMatcher(None, search_term_lower, full_name).ratio()
+        first_similarity = SequenceMatcher(None, search_term_lower, staff.first_name.lower()).ratio()
+        last_similarity = SequenceMatcher(None, search_term_lower, staff.last_name.lower()).ratio()
+        
+        # Take the best match
+        best_similarity = max(full_similarity, first_similarity, last_similarity)
+        
+        if best_similarity >= threshold:
+            matches.append((staff, best_similarity))
+    
+    # Sort by similarity (highest first) and return top results
+    matches.sort(key=lambda x: x[1], reverse=True)
+    return matches[:max_results]
+
+def fuzzy_match_home(search_term, threshold=0.6):
+    """
+    Fuzzy match care home names
+    Returns list of (CareHome, similarity_score) tuples
+    """
+    from difflib import SequenceMatcher
+    
+    search_term_lower = search_term.lower().strip()
+    if not search_term_lower or len(search_term_lower) < 2:
+        return []
+    
+    # Get all homes
+    all_homes = CareHome.objects.all()
+    
+    # Common abbreviations and variations
+    home_variations = {
+        'og': 'orchard grove',
+        'hh': 'hawthorn house',
+        'vg': 'victoria gardens',
+        'rs': 'riverside',
+        'mb': 'meadowburn',
+        'orchard': 'orchard grove',
+        'hawthorn': 'hawthorn house',
+        'victoria': 'victoria gardens',
+    }
+    
+    # Expand search term if it's an abbreviation
+    expanded_search = home_variations.get(search_term_lower, search_term_lower)
+    
+    matches = []
+    for home in all_homes:
+        home_name = home.name.replace('_', ' ').lower()
+        display_name = home.get_name_display().lower()
+        
+        # Calculate similarity with both name formats
+        name_similarity = SequenceMatcher(None, expanded_search, home_name).ratio()
+        display_similarity = SequenceMatcher(None, expanded_search, display_name).ratio()
+        
+        best_similarity = max(name_similarity, display_similarity)
+        
+        if best_similarity >= threshold:
+            matches.append((home, best_similarity))
+    
+    # Sort by similarity (highest first)
+    matches.sort(key=lambda x: x[1], reverse=True)
+    return matches
+
+def fuzzy_match_resident(search_term, threshold=0.6, max_results=5):
+    """
+    Fuzzy match resident names and IDs
+    Returns list of (Resident, similarity_score) tuples
+    """
+    from difflib import SequenceMatcher
+    from scheduling.models import Resident
+    
+    search_term_lower = search_term.lower().strip()
+    if not search_term_lower or len(search_term_lower) < 2:
+        return []
+    
+    # Get all active residents
+    all_residents = Resident.objects.filter(is_active=True).select_related('unit')
+    
+    matches = []
+    for resident in all_residents:
+        # Check resident ID (exact match gets bonus)
+        if search_term_lower.upper() == resident.resident_id:
+            matches.append((resident, 1.0))
+            continue
+        
+        full_name = resident.full_name.lower()
+        resident_id = resident.resident_id.lower()
+        
+        # Calculate similarity scores
+        name_similarity = SequenceMatcher(None, search_term_lower, full_name).ratio()
+        id_similarity = SequenceMatcher(None, search_term_lower, resident_id).ratio()
+        
+        best_similarity = max(name_similarity, id_similarity)
+        
+        if best_similarity >= threshold:
+            matches.append((resident, best_similarity))
+    
+    # Sort by similarity (highest first) and return top results
+    matches.sort(key=lambda x: x[1], reverse=True)
+    return matches[:max_results]
+
+def get_conversation_context(request):
+    """
+    Get conversation context from session
+    Returns list of previous queries with their results
+    """
+    if not hasattr(request, 'session'):
+        return []
+    
+    context = request.session.get('ai_conversation_context', [])
+    return context
+
+def update_conversation_context(request, query, intent_type, entities, result):
+    """
+    Update conversation context in session
+    Keeps last 5 queries for context
+    """
+    if not hasattr(request, 'session'):
+        return
+    
+    from datetime import datetime
+    
+    context = request.session.get('ai_conversation_context', [])
+    
+    # Add new entry
+    context.append({
+        'query': query,
+        'intent': intent_type,
+        'entities': entities,
+        'result_category': result.get('category', 'unknown'),
+        'timestamp': datetime.now().isoformat(),
+    })
+    
+    # Keep only last 5 queries
+    context = context[-5:]
+    
+    request.session['ai_conversation_context'] = context
+    request.session.modified = True
+
+def resolve_context_reference(query, context):
+    """
+    Resolve contextual references in follow-up queries
+    Returns (resolved_query, context_used) or (None, None) if no context detected
+    """
+    query_lower = query.lower().strip()
+    
+    if not context:
+        return (None, None)
+    
+    # Get most recent context
+    last_context = context[-1]
+    
+    # Pattern 1: "tell me more" or "more details"
+    if any(phrase in query_lower for phrase in ['tell me more', 'more details', 'more info', 'elaborate', 'expand']):
+        # Repeat the last query with added detail request
+        last_query = last_context.get('query', '')
+        return (f"{last_query} (detailed)", last_context)
+    
+    # Pattern 2: "what about X" or "how about X"
+    import re
+    what_about_match = re.search(r'(?:what|how)\s+about\s+(.+)', query_lower)
+    if what_about_match and last_context.get('intent'):
+        new_entity = what_about_match.group(1).strip()
+        last_intent = last_context.get('intent')
+        
+        # Reconstruct query with new entity
+        if last_intent == 'staffing' or last_intent == 'staff_count':
+            # Get role from last query if present
+            last_entities = last_context.get('entities', {})
+            role = last_entities.get('role', 'staff')
+            return (f"how many {role} at {new_entity}", last_context)
+        elif last_intent == 'home_performance':
+            return (f"show me {new_entity} performance", last_context)
+        elif last_intent == 'sickness':
+            return (f"what is sickness in {new_entity}", last_context)
+    
+    # Pattern 3: "and X?" - continuing from previous
+    and_match = re.search(r'^and\s+(.+)', query_lower)
+    if and_match and last_context.get('intent'):
+        additional = and_match.group(1).strip()
+        last_intent = last_context.get('intent')
+        
+        if last_intent in ['staffing', 'staff_count', 'home_performance']:
+            # Treat as new location
+            return (f"what about {additional}", last_context)
+    
+    # Pattern 4: Single word that might be a home name
+    words = query_lower.split()
+    if len(words) == 1 and len(words[0]) > 2:
+        last_intent = last_context.get('intent')
+        if last_intent in ['staffing', 'staff_count', 'home_performance', 'sickness']:
+            # Might be asking about different home
+            last_entities = last_context.get('entities', {})
+            role = last_entities.get('role', 'staff')
+            
+            if last_intent == 'staff_count':
+                return (f"how many {role} at {words[0]}", last_context)
+            elif last_intent == 'home_performance':
+                return (f"show me {words[0]} performance", last_context)
+            elif last_intent == 'sickness':
+                return (f"what is sickness in {words[0]}", last_context)
+    
+    return (None, None)
+
+def match_intent_keywords(query, intent_type):
+    """Score how well a query matches an intent using synonym mapping"""
+    query_lower = query.lower()
+    keywords = INTENT_KEYWORDS.get(intent_type, {})
+    
+    score = 0.0
+    
+    # Primary keywords = high weight
+    for keyword in keywords.get('primary', []):
+        if keyword in query_lower:
+            score += 1.0
+    
+    # Secondary keywords = medium weight
+    for keyword in keywords.get('secondary', []):
+        if keyword in query_lower:
+            score += 0.5
+    
+    # Context keywords = low weight (confirms intent)
+    for keyword in keywords.get('context', []):
+        if keyword in query_lower:
+            score += 0.2
+    
+    return score
+
+def generate_helpful_suggestions(query, failed_type=None):
+    """Generate contextual suggestions when queries fail"""
+    query_lower = query.lower()
+    suggestions = []
+    
+    # Detect what user might be asking about based on keywords
+    if any(word in query_lower for word in ['staff', 'worker', 'carer', 'employee']):
+        suggestions.extend([
+            "Who is working today?",
+            "Show me all senior carers",
+            "How many staff do we have?"
+        ])
+    
+    if any(word in query_lower for word in ['leave', 'holiday', 'vacation', 'time off']):
+        suggestions.extend([
+            "Show leave requests for this week",
+            "How much leave does [Name] have?",
+            "List approved leave for December"
+        ])
+    
+    if any(word in query_lower for word in ['sick', 'illness', 'absent', 'unwell']):
+        suggestions.extend([
+            "Who is off sick?",
+            "Show sickness report for this month",
+            "List current sickness absences"
+        ])
+    
+    if any(word in query_lower for word in ['vacancy', 'vacant', 'leaving', 'leaver']):
+        suggestions.extend([
+            "How many staff vacancies?",
+            "Show upcoming leavers",
+            "List current vacancies"
+        ])
+    
+    if any(word in query_lower for word in ['care plan', 'review', 'resident']):
+        suggestions.extend([
+            "Show care plan compliance",
+            "When is [ResidentID] review due?",
+            "List overdue care plan reviews"
+        ])
+    
+    # If no specific topic detected, show general options
+    if not suggestions:
+        suggestions = [
+            "Who is working today?",
+            "Show staffing summary",
+            "How many staff vacancies?",
+            "Show care plan compliance",
+            "List leave requests"
+        ]
+    
+    # Limit to 5 suggestions
+    return suggestions[:5]
+
+def log_ai_query(query, success, response_type=None, error_message=None, user=None, response_time_ms=None):
+    """Log AI assistant query for analytics"""
+    from .models import AIQueryLog
+    try:
+        AIQueryLog.objects.create(
+            query=query,
+            success=success,
+            response_type=response_type,
+            error_message=error_message,
+            user=user,
+            response_time_ms=response_time_ms
+        )
+    except Exception as e:
+        # Don't let logging errors break the assistant
+        print(f"Warning: Failed to log AI query: {e}")
+
+def _process_staff_count_by_role_query(query):
+    """
+    Process "how many [role] at [home]" queries
+    Returns staff count by role and home, or None if not this type of query
+    """
+    from scheduling.models import User, CareHome
+    import re
+    
+    query_lower = query.lower()
+    
+    # Check if this is a "how many [role]" query
+    if not any(phrase in query_lower for phrase in ['how many', 'count', 'number of']):
+        return None
+    
+    # Map common role terms to database role values
+    role_map = {
+        # Day shift roles
+        'scw': 'SCW',
+        'social care worker': 'SCW',
+        'care worker': 'SCW',
+        'sscw': 'SSCW',
+        'senior social care worker': 'SSCW',
+        'senior care worker': 'SSCW',
+        'sca': 'SCA',
+        'social care assistant': 'SCA',
+        'care assistant': 'SCA',
+        'sm': 'SM',
+        'service manager': 'SM',
+        'manager': 'SM',
+        'om': 'OM',
+        'operations manager': 'OM',
+        # Night shift roles
+        'scwn': 'SCWN',
+        'night care worker': 'SCWN',
+        'night scw': 'SCWN',
+        'sscwn': 'SSCWN',
+        'night senior care worker': 'SSCWN',
+        'senior night care worker': 'SSCWN',
+        'night sscw': 'SSCWN',
+        'scan': 'SCAN',
+        'night care assistant': 'SCAN',
+        'night sca': 'SCAN',
+        # Generic terms
+        'carer': 'SCW',
+        'senior carer': 'SSCW',
+        'nursing assistant': 'SCA',
+        'hca': 'SCA',
+        'healthcare assistant': 'SCA'
+    }
+    
+    # Map home names
+    home_map = {
+        'orchard grove': 'ORCHARD_GROVE',
+        'og': 'ORCHARD_GROVE',
+        'riverside': 'RIVERSIDE',
+        'meadowburn': 'MEADOWBURN',
+        'hawthorn': 'HAWTHORN_HOUSE',
+        'hawthorn house': 'HAWTHORN_HOUSE',
+        'victoria gardens': 'VICTORIA_GARDENS',
+        'vg': 'VICTORIA_GARDENS'
+    }
+    
+    # Try to extract role and home from query
+    found_role = None
+    found_home = None
+    is_night_shift = False
+    
+    # Check for night shift indicators
+    if any(term in query_lower for term in ['night', 'nightshift', 'night shift', 'nights']):
+        is_night_shift = True
+    
+    # Sort role terms by length (longest first) to avoid substring matches
+    # e.g., check "sscw" before "scw" so "sscw" doesn't match "scw"
+    sorted_role_terms = sorted(role_map.items(), key=lambda x: len(x[0]), reverse=True)
+    
+    for role_term, role_code in sorted_role_terms:
+        if role_term in query_lower:
+            found_role = role_code
+            break
+    
+    # If night shift is specified, convert to night role variant
+    if is_night_shift and found_role:
+        night_role_map = {
+            'SCW': 'SCWN',
+            'SSCW': 'SSCWN',
+            'SCA': 'SCAN'
+        }
+        found_role = night_role_map.get(found_role, found_role)
+    
+    for home_term, home_code in home_map.items():
+        if home_term in query_lower:
+            found_home = home_code
+            break
+    
+    # If we found a role, count staff
+    if found_role:
+        query_filter = {'role__name': found_role, 'is_active': True}
+        if found_home:
+            query_filter['unit__care_home__name'] = found_home
+        
+        staff_count = User.objects.filter(**query_filter).count()
+        
+        # Get home display name
+        if found_home:
+            try:
+                home_obj = CareHome.objects.get(name=found_home)
+                home_display = home_obj.get_name_display()
+            except:
+                home_display = found_home.replace('_', ' ').title()
+            location_text = f" at {home_display}"
+        else:
+            location_text = " across all homes"
+        
+        # Get role display name  
+        role_display = found_role
+        
+        result = {
+            'answer': f'There are **{staff_count} {role_display}** staff{location_text}.',
+            'type': 'staff_count',
+            'count': staff_count,
+            'role': found_role,
+            'home': found_home
+        }
+        
+        # Calculate confidence score
+        intent_score = match_intent_keywords(query, 'staffing')
+        result['confidence'] = calculate_confidence_score(query, result, intent_score)
+        
+        return result
+    
+    return None
+
+def _process_staff_list_by_role_query(query):
+    """
+    Process "who is [role]" or "list [role]" queries
+    Returns list of staff names by role and home, or None if not this type of query
+    """
+    from scheduling.models import User, CareHome
+    
+    query_lower = query.lower()
+    
+    # Check if this is a "who is" or "list" query
+    if not any(phrase in query_lower for phrase in ['who is', 'who are', 'list', 'show me']):
+        return None
+    
+    # Map common role terms to database role values (same as count function)
+    role_map = {
+        # Day shift roles
+        'scw': 'SCW',
+        'social care worker': 'SCW',
+        'care worker': 'SCW',
+        'sscw': 'SSCW',
+        'senior social care worker': 'SSCW',
+        'senior care worker': 'SSCW',
+        'sca': 'SCA',
+        'social care assistant': 'SCA',
+        'care assistant': 'SCA',
+        'sm': 'SM',
+        'service manager': 'SM',
+        'manager': 'SM',
+        'om': 'OM',
+        'operations manager': 'OM',
+        # Night shift roles
+        'scwn': 'SCWN',
+        'night care worker': 'SCWN',
+        'night scw': 'SCWN',
+        'sscwn': 'SSCWN',
+        'night senior care worker': 'SSCWN',
+        'senior night care worker': 'SSCWN',
+        'night sscw': 'SSCWN',
+        'scan': 'SCAN',
+        'night care assistant': 'SCAN',
+        'night sca': 'SCAN',
+        # Generic terms
+        'carer': 'SCW',
+        'senior carer': 'SSCW',
+        'nursing assistant': 'SCA',
+        'hca': 'SCA',
+        'healthcare assistant': 'SCA'
+    }
+    
+    # Map home names
+    home_map = {
+        'orchard grove': 'ORCHARD_GROVE',
+        'og': 'ORCHARD_GROVE',
+        'riverside': 'RIVERSIDE',
+        'meadowburn': 'MEADOWBURN',
+        'hawthorn': 'HAWTHORN_HOUSE',
+        'hawthorn house': 'HAWTHORN_HOUSE',
+        'victoria gardens': 'VICTORIA_GARDENS',
+        'vg': 'VICTORIA_GARDENS'
+    }
+    
+    # Try to extract role and home from query
+    found_role = None
+    found_home = None
+    is_night_shift = False
+    
+    # Check for night shift indicators
+    if any(term in query_lower for term in ['night', 'nightshift', 'night shift', 'nights']):
+        is_night_shift = True
+    
+    # Sort role terms by length (longest first) to avoid substring matches
+    sorted_role_terms = sorted(role_map.items(), key=lambda x: len(x[0]), reverse=True)
+    
+    for role_term, role_code in sorted_role_terms:
+        if role_term in query_lower:
+            found_role = role_code
+            break
+    
+    # If night shift is specified, convert to night role variant
+    if is_night_shift and found_role:
+        night_role_map = {
+            'SCW': 'SCWN',
+            'SSCW': 'SSCWN',
+            'SCA': 'SCAN'
+        }
+        found_role = night_role_map.get(found_role, found_role)
+    
+    for home_term, home_code in home_map.items():
+        if home_term in query_lower:
+            found_home = home_code
+            break
+    
+    # If we found a role, get staff list
+    if found_role:
+        query_filter = {'role__name': found_role, 'is_active': True}
+        if found_home:
+            query_filter['unit__care_home__name'] = found_home
+        
+        staff_list = User.objects.filter(**query_filter).values_list('first_name', 'last_name', 'sap')
+        
+        if not staff_list:
+            return None
+        
+        # Get home display name
+        if found_home:
+            try:
+                home_obj = CareHome.objects.get(name=found_home)
+                home_display = home_obj.get_name_display()
+            except:
+                home_display = found_home.replace('_', ' ').title()
+            location_text = f" at {home_display}"
+        else:
+            location_text = " across all homes"
+        
+        # Format staff names
+        staff_names = [f"**{first} {last}** ({sap})" for first, last, sap in staff_list]
+        
+        # Get role display name
+        role_display = found_role
+        
+        if len(staff_names) == 1:
+            answer = f"The {role_display}{location_text} is:\n\n{staff_names[0]}"
+        else:
+            answer = f"There are **{len(staff_names)} {role_display}** staff{location_text}:\n\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(staff_names)])
+        
+        result = {
+            'answer': answer,
+            'type': 'staff_list',
+            'count': len(staff_names),
+            'role': found_role,
+            'home': found_home,
+            'staff': [{'name': f"{first} {last}", 'sap': sap} for first, last, sap in staff_list]
+        }
+        
+        # Calculate confidence score
+        intent_score = match_intent_keywords(query, 'staffing')
+        result['confidence'] = calculate_confidence_score(query, result, intent_score)
+        
+        return result
+    
+    return None
+
+def _process_sickness_query(query):
+    """
+    Process sickness/absence queries for specific homes or overall
+    Returns sickness data by home, or None if not a sickness query
+    """
+    from staff_records.models import SicknessRecord
+    from scheduling.models import CareHome
+    from datetime import timedelta
+    
+    query_lower = query.lower()
+    
+    # Check if this is a sickness query using synonym matching
+    sickness_score = match_intent_keywords(query, 'sickness')
+    
+    if sickness_score < 0.5:
+        return None
+    
+    # Map home names
+    home_map = {
+        'orchard grove': 'ORCHARD_GROVE',
+        'og': 'ORCHARD_GROVE',
+        'riverside': 'RIVERSIDE',
+        'meadowburn': 'MEADOWBURN',
+        'hawthorn': 'HAWTHORN_HOUSE',
+        'hawthorn house': 'HAWTHORN_HOUSE',
+        'victoria gardens': 'VICTORIA_GARDENS',
+        'vg': 'VICTORIA_GARDENS'
+    }
+    
+    # Try to extract home from query
+    found_home = None
+    for home_term, home_code in home_map.items():
+        if home_term in query_lower:
+            found_home = home_code
+            break
+    
+    # Get sickness data for last 30 days
+    from django.utils import timezone
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    if found_home:
+        # Specific home sickness data
+        try:
+            home_obj = CareHome.objects.get(name=found_home)
+            home_display = home_obj.get_name_display()
+        except:
+            home_display = found_home.replace('_', ' ').title()
+        
+        sickness_records = SicknessRecord.objects.filter(
+            profile__user__unit__care_home__name=found_home,
+            first_working_day__lte=end_date,
+            status__in=['OPEN', 'AWAITING_FIT_NOTE']
+        ).select_related('profile', 'profile__user', 'profile__user__role')
+        
+        # Count open records and total days
+        total_records = sickness_records.count()
+        total_days = sum(r.total_working_days_sick for r in sickness_records)
+        current_sick = sickness_records.filter(status='OPEN').count()
+        
+        answer = f"**🏥 Sickness Absence - {home_display}**\n\n"
+        answer += f"**Last 30 days ({start_date.strftime('%d %b')} - {end_date.strftime('%d %b %Y')}):**\n"
+        answer += f"• Open sickness records: {total_records}\n"
+        answer += f"• Total working days lost: {total_days}\n"
+        answer += f"• Currently off sick (OPEN status): {current_sick} staff\n"
+        
+        if current_sick > 0:
+            current_list = sickness_records.filter(status='OPEN')
+            answer += f"\n**Currently absent:**\n"
+            for record in current_list[:10]:
+                user = record.profile.user
+                role_name = user.role.name if user.role else 'N/A'
+                answer += f"• {user.full_name} ({role_name}) - Since {record.first_working_day.strftime('%d %b')}\n"
+        
+        result = {
+            'answer': answer,
+            'type': 'sickness',
+            'home': found_home,
+            'total_records': total_records,
+            'total_days': total_days,
+            'current_sick': current_sick
+        }
+        
+        # Calculate confidence score
+        sickness_score = match_intent_keywords(query, 'sickness')
+        result['confidence'] = calculate_confidence_score(query, result, sickness_score)
+        
+        return result
+    else:
+        # All homes sickness summary
+        all_homes = CareHome.objects.all()
+        results = []
+        
+        for home in all_homes:
+            sickness_records = SicknessRecord.objects.filter(
+                profile__user__unit__care_home=home,
+                first_working_day__lte=end_date,
+                status__in=['OPEN', 'AWAITING_FIT_NOTE']
+            )
+            
+            total_days = sum(r.total_working_days_sick for r in sickness_records)
+            current_sick = sickness_records.filter(status='OPEN').count()
+            
+            results.append(f"• **{home.get_name_display()}**: {sickness_records.count()} records, {total_days} days lost, {current_sick} currently sick")
+        
+        answer = f"**🏥 Sickness Absence - All Homes**\n\n"
+        answer += f"**Last 30 days ({start_date.strftime('%d %b')} - {end_date.strftime('%d %b %Y')}):**\n\n"
+        answer += "\n".join(results)
+        
+        return {
+            'answer': answer,
+            'type': 'sickness_all',
+        }
+
+def _process_vacancy_query(query):
+    """Process queries about staff vacancies (leavers)"""
+    from staff_records.models import StaffProfile
+    from datetime import date, timedelta
+    
+    query_lower = query.lower()
+    
+    # Use synonym matching instead of hard-coded keywords
+    vacancy_score = match_intent_keywords(query, 'vacancy')
+    if vacancy_score < 0.5:  # Threshold for intent match
+        return None
+    
+    # Get all vacancies (employment_status='LEAVER')
+    all_vacancies = StaffProfile.objects.filter(
+        employment_status='LEAVER'
+    ).select_related('user__role', 'user__unit__care_home').order_by('end_date')
+    
+    today = date.today()
+    
+    # Split into current vacancies and upcoming leavers
+    current_vacancies = []
+    upcoming_leavers = []
+    
+    for profile in all_vacancies:
+        if profile.end_date:
+            if profile.end_date < today:
+                days_vacant = (today - profile.end_date).days
+                current_vacancies.append({
+                    'name': f"{profile.user.first_name} {profile.user.last_name}",
+                    'sap': profile.user.sap,
+                    'role': profile.user.role.name if profile.user.role else 'N/A',
+                    'home': profile.user.unit.care_home.name if profile.user.unit else 'N/A',
+                    'end_date': profile.end_date,
+                    'days_vacant': days_vacant,
+                    'hours': getattr(profile.user, 'hours_per_week', 37.5)
+                })
+            else:
+                days_until = (profile.end_date - today).days
+                upcoming_leavers.append({
+                    'name': f"{profile.user.first_name} {profile.user.last_name}",
+                    'sap': profile.user.sap,
+                    'role': profile.user.role.name if profile.user.role else 'N/A',
+                    'home': profile.user.unit.care_home.name if profile.user.unit else 'N/A',
+                    'end_date': profile.end_date,
+                    'days_until': days_until,
+                    'hours': getattr(profile.user, 'hours_per_week', 37.5)
+                })
+    
+    # Build response
+    total = len(current_vacancies) + len(upcoming_leavers)
+    
+    if total == 0:
+        answer = "✅ **No Staff Vacancies**\n\nThere are currently no vacant positions or upcoming leavers recorded in the system."
+    else:
+        answer = f"**📊 Staff Vacancies Report**\n\n"
+        answer += f"**Total: {total}** ({len(current_vacancies)} current + {len(upcoming_leavers)} upcoming)\n\n"
+        
+        if current_vacancies:
+            answer += f"**🚨 Current Vacancies ({len(current_vacancies)}):**\n"
+            for v in current_vacancies[:10]:
+                severity = "🔴 HIGH" if v['days_vacant'] > 30 else "🟡 MEDIUM" if v['days_vacant'] > 14 else "🟢 LOW"
+                answer += f"\n• **{v['name']}** (SAP: {v['sap']})\n"
+                answer += f"  Role: {v['role']} | Home: {v['home']}\n"
+                answer += f"  Left: {v['end_date'].strftime('%d %b %Y')} ({v['days_vacant']} days ago) | {severity}\n"
+            
+            if len(current_vacancies) > 10:
+                answer += f"\n... and {len(current_vacancies) - 10} more\n"
+        
+        if upcoming_leavers:
+            answer += f"\n**📅 Upcoming Leavers ({len(upcoming_leavers)}):**\n"
+            for v in upcoming_leavers[:10]:
+                answer += f"\n• **{v['name']}** (SAP: {v['sap']})\n"
+                answer += f"  Role: {v['role']} | Home: {v['home']}\n"
+                answer += f"  Leaving: {v['end_date'].strftime('%d %b %Y')} (in {v['days_until']} days)\n"
+            
+            if len(upcoming_leavers) > 10:
+                answer += f"\n... and {len(upcoming_leavers) - 10} more\n"
+    
+    return {
+        'answer': answer,
+        'related': ['View Senior Dashboard', 'Recruitment Status', 'Staff Records'],
+        'category': 'vacancy_report',
+        'report_data': {
+            'total_vacancies': total,
+            'current_vacant': len(current_vacancies),
+            'upcoming_leavers': len(upcoming_leavers),
+            'vacancies': current_vacancies,
+            'leavers': upcoming_leavers
+        },
+        'confidence': calculate_confidence_score(query, {
+            'answer': answer,
+            'category': 'vacancy_report',
+            'report_data': {'total_vacancies': total}
+        }, vacancy_score)
+    }
+
 def _process_staff_query(query):
     """Process staff-specific queries like leave balance, staff search, etc."""
     from staff_records.models import AnnualLeaveEntitlement, StaffProfile
     import re
     
     query_lower = query.lower()
+    
+    # Pattern -1: "What date did [name] commence/start/join" - staff commencement date queries
+    commence_patterns = [
+        r"(?:what\s+date\s+did|when\s+did)\s+([A-Za-z0-9\s]+?)\s+(?:commence|start|join|begin)",
+        r"([A-Za-z0-9\s]+?)\s+(?:commencement|start|join)\s+date",
+        r"(?:show|get|find)\s+(?:commencement|start|join)\s+date\s+for\s+([A-Za-z0-9\s]+)",
+    ]
+    
+    for pattern in commence_patterns:
+        match = re.search(pattern, query, re.IGNORECASE)
+        if match:
+            identifier = match.group(1).strip()
+            
+            # Check if identifier contains a SAP number (numeric code)
+            sap_match = re.search(r'\b(\d{6,})\b', identifier)
+            
+            if sap_match:
+                # SAP number found - use it for exact match
+                sap = sap_match.group(1)
+                matching_staff = User.objects.filter(sap=sap, is_active=True).select_related('role', 'unit')
+            else:
+                # No SAP - search by name only
+                name_parts = identifier.split()
+                q = Q()
+                for part in name_parts:
+                    if len(part) >= 2:  # At least 2 characters
+                        q |= Q(first_name__icontains=part) | Q(last_name__icontains=part)
+                
+                matching_staff = User.objects.filter(q, is_active=True).select_related('role', 'unit')
+                
+                # PHASE 3: If no exact matches, try fuzzy matching
+                if matching_staff.count() == 0:
+                    fuzzy_matches = fuzzy_match_staff(identifier, threshold=0.65, max_results=5)
+                    if fuzzy_matches:
+                        # Build suggestion message with fuzzy matches
+                        suggestions = [f"• **{staff.full_name}** ({staff.sap}) - {staff.role.name if staff.role else 'N/A'}" for staff, similarity in fuzzy_matches]
+                        answer = f"**🔍 No exact match for '{identifier}', did you mean:**\n\n" + "\n".join(suggestions)
+                        answer += "\n\n💡 Try using one of these names or their SAP number."
+                        
+                        staff_score = match_intent_keywords(query, 'staff')
+                        return {
+                            'answer': answer,
+                            'related': ['Staff Directory', 'View All Staff'],
+                            'category': 'staff_search',
+                            'confidence': calculate_confidence_score(query, {'answer': answer, 'category': 'staff_search'}, staff_score * 0.7)  # Lower confidence for fuzzy matches
+                        }
+            
+            if matching_staff.count() == 1:
+                staff = matching_staff.first()
+                
+                # Try to get commencement date from StaffProfile
+                try:
+                    profile = StaffProfile.objects.get(user_id=staff.sap)
+                    if profile.created_at:
+                        commence_date = profile.created_at.strftime('%d %B %Y')
+                        answer = f"**📅 Commencement Date for {staff.full_name}**\n\n"
+                        answer += f"**Name:** {staff.full_name}\n"
+                        answer += f"**SAP:** {staff.sap}\n"
+                        answer += f"**Role:** {staff.role.name if staff.role else 'N/A'}\n"
+                        answer += f"**Unit:** {staff.unit.get_name_display() if staff.unit else 'N/A'}\n"
+                        answer += f"**Commenced:** {commence_date}\n"
+                        
+                        staff_score = match_intent_keywords(query, 'staff')
+                        
+                        return {
+                            'answer': answer,
+                            'related': ['View Staff Profile', 'Staff Directory'],
+                            'category': 'staff_info',
+                            'data': {'sap': staff.sap, 'name': staff.full_name, 'commenced': commence_date},
+                            'confidence': calculate_confidence_score(query, {
+                                'answer': answer,
+                                'category': 'staff_info',
+                                'data': {'sap': staff.sap}
+                            }, staff_score)
+                        }
+                    else:
+                        return {
+                            'answer': f"**ℹ️ Commencement date not available for {staff.full_name}** ({staff.sap})\n\nPlease check their staff profile or contact HR.",
+                            'related': ['View Staff Profile', 'Contact HR'],
+                            'category': 'staff_info'
+                        }
+                except StaffProfile.DoesNotExist:
+                    staff_score = match_intent_keywords(query, 'staff')
+                    return {
+                        'answer': f"**ℹ️ No profile found for {staff.full_name}** ({staff.sap})\n\nPlease contact HR for commencement details.",
+                        'related': ['Contact HR', 'Staff Directory'],
+                        'category': 'staff_info',
+                        'confidence': calculate_confidence_score(query, {'answer': 'No profile', 'category': 'staff_info'}, staff_score)
+                    }
+            elif matching_staff.count() > 1:
+                # Multiple matches - ask for clarification
+                results = [f"• **{s.full_name}** ({s.sap}) - {s.role.name if s.role else 'N/A'}" for s in matching_staff[:5]]
+                answer = f"**🔍 Multiple staff members found matching '{identifier}':**\n\n" + "\n".join(results)
+                answer += "\n\nPlease be more specific or use their SAP number."
+                
+                staff_score = match_intent_keywords(query, 'staff')
+                
+                return {
+                    'answer': answer,
+                    'related': ['Staff Directory'],
+                    'category': 'staff_search',
+                    'confidence': calculate_confidence_score(query, {'answer': answer, 'category': 'staff_search'}, staff_score)
+                }
+            else:
+                staff_score = match_intent_keywords(query, 'staff')
+                return {
+                    'answer': f"**❌ No staff member found matching '{identifier}'**\n\nTry:\n• Checking the spelling\n• Using their full name\n• Using their SAP number",
+                    'related': ['Staff Directory', 'View All Staff'],
+                    'category': 'staff_search',
+                    'confidence': calculate_confidence_score(query, {'answer': 'Not found', 'category': 'staff_search'}, staff_score)
+                }
     
     # Pattern 0: "List all X" or "Show all X" where X is a role
     role_list_patterns = [
@@ -4446,17 +5661,22 @@ def _process_staff_query(query):
                     
                     answer = f"**👥 {role_term.title()} ({staff.count()} total)**\n\n" + "\n".join(results)
                     
+                    staffing_score = match_intent_keywords(query, 'staffing')
+                    
                     return {
                         'answer': answer,
                         'related': ['View All Staff', 'Staff by Unit'],
                         'category': 'staff_list',
-                        'data': {'role': role_term, 'count': staff.count()}
+                        'data': {'role': role_term, 'count': staff.count()},
+                        'confidence': calculate_confidence_score(query, {'answer': answer, 'category': 'staff_list', 'data': {'count': staff.count()}}, staffing_score)
                     }
                 else:
+                    staffing_score = match_intent_keywords(query, 'staffing')
                     return {
                         'answer': f"❌ No active {role_term} found.\n\nTry:\n• Different role name\n• View all staff grades",
                         'related': ['View All Staff', 'Show All Grades'],
-                        'category': 'staff_list'
+                        'category': 'staff_list',
+                        'confidence': calculate_confidence_score(query, {'answer': 'None found', 'category': 'staff_list'}, staffing_score)
                     }
     
     # Pattern 0.5: "Who is on X shift today/tonight/tomorrow?" or "Who is working X shift?"
@@ -4529,11 +5749,14 @@ def _process_staff_query(query):
 
 """ + "\n".join(results)
                 
+                staffing_score = match_intent_keywords(query, 'staffing')
+                
                 return {
                     'answer': answer,
                     'related': ['Coverage Report', 'View All Shifts', 'Staffing Levels'],
                     'category': 'shift_query',
-                    'data': {'date': str(target_date), 'shift_type': shift_display, 'count': shifts.count()}
+                    'data': {'date': str(target_date), 'shift_type': shift_display, 'count': shifts.count()},
+                    'confidence': calculate_confidence_score(query, {'answer': answer, 'category': 'shift_query', 'data': {'count': shifts.count()}}, staffing_score)
                 }
             else:
                 return {
@@ -5415,30 +6638,119 @@ def ai_assistant_api(request):
     """
     API endpoint for AI assistant queries with enhanced report generation
     Requires authentication and CSRF protection for security
+    
+    Phase 3 Features:
+    - Conversation context tracking (last 5 queries)
+    - Fuzzy name matching for typos and variations
+    - Context-aware follow-up question resolution
     """
+    import time
+    start_time = time.time()
+    
     try:
         data = json.loads(request.body)
         query = data.get('query', '').strip()
         
         if not query:
+            log_ai_query('', False, error_message='Empty query', user=request.user)
             return JsonResponse({'error': 'No query provided'}, status=400)
         
-        # PRIORITY 1: Try to process as home performance/comparison query (Head of Service)
+        # PHASE 3: Get conversation context
+        context = get_conversation_context(request)
+        
+        # PHASE 3: Try to resolve contextual references (follow-up questions)
+        resolved_query, context_used = resolve_context_reference(query, context)
+        if resolved_query:
+            # Add context hint to the response
+            original_query = query
+            query = resolved_query
+            context_hint = f"💡 *Understood as: '{query}' (based on previous context)*\n\n"
+        else:
+            context_hint = ""
+            original_query = query
+        
+        # Extract entities from query for context tracking
+        template_type, template_conf, entities = match_query_template(query)
+        
+        # PRIORITY 1: Try to process as staff list by role query (who is/list staff)
+        # This catches: "Who is SM at Orchard Grove?", "List all SCW", "Show me nurses"
+        staff_list_result = _process_staff_list_by_role_query(query)
+        if staff_list_result:
+            # Add context hint if applicable
+            if context_hint:
+                staff_list_result['answer'] = context_hint + staff_list_result['answer']
+            
+            # Update conversation context
+            update_conversation_context(request, original_query, 'staffing', entities, staff_list_result)
+            
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'staff_list', user=request.user, response_time_ms=response_time)
+            return JsonResponse(staff_list_result)
+        
+        # PRIORITY 2: Try to process as staff count by role query (specific counts)
+        # This catches: "How many SCW at Hawthorn?", "Count nurses at Victoria Gardens"
+        staff_count_result = _process_staff_count_by_role_query(query)
+        if staff_count_result:
+            if context_hint:
+                staff_count_result['answer'] = context_hint + staff_count_result['answer']
+            update_conversation_context(request, original_query, 'staff_count', entities, staff_count_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'staff_count', user=request.user, response_time_ms=response_time)
+            return JsonResponse(staff_count_result)
+        
+        # PRIORITY 3: Try to process as sickness/absence query
+        # This catches: "What is the sickness in Orchard Grove?", "Show sickness absence", "How many staff off sick?"
+        sickness_result = _process_sickness_query(query)
+        if sickness_result:
+            if context_hint:
+                sickness_result['answer'] = context_hint + sickness_result['answer']
+            update_conversation_context(request, original_query, 'sickness', entities, sickness_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'sickness', user=request.user, response_time_ms=response_time)
+            return JsonResponse(sickness_result)
+        
+        # PRIORITY 4: Try to process as home performance/comparison query (Head of Service)
         # This catches: "Show me Orchard Grove's performance", "Compare all homes", "Quality audit for Victoria Gardens"
         home_result = _process_home_performance_query(query)
         if home_result:
+            if context_hint:
+                home_result['answer'] = context_hint + home_result['answer']
+            update_conversation_context(request, original_query, 'home_performance', entities, home_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'home_performance', user=request.user, response_time_ms=response_time)
             return JsonResponse(home_result)
         
-        # PRIORITY 2: Try to process as specific staff query (names, SAPs, roles)
+        # PRIORITY 5: Try to process as vacancy query
+        # This catches: "How many vacancies?", "Show staff leaving", "List leavers"
+        vacancy_result = _process_vacancy_query(query)
+        if vacancy_result:
+            if context_hint:
+                vacancy_result['answer'] = context_hint + vacancy_result['answer']
+            update_conversation_context(request, original_query, 'vacancy', entities, vacancy_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'vacancy', user=request.user, response_time_ms=response_time)
+            return JsonResponse(vacancy_result)
+        
+        # PRIORITY 6: Try to process as specific staff query (names, SAPs, roles)
         # This catches: "Show me Jane Smith", "How much leave does X have", "List all senior carers"
         staff_result = _process_staff_query(query)
         if staff_result:
+            if context_hint:
+                staff_result['answer'] = context_hint + staff_result['answer']
+            update_conversation_context(request, original_query, 'staff_query', entities, staff_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'staff_query', user=request.user, response_time_ms=response_time)
             return JsonResponse(staff_result)
         
-        # PRIORITY 3: Try to process as care plan review query
+        # PRIORITY 7: Try to process as care plan review query
         # This catches: "When is DEM01 review due?", "How many reviews this month?"
         careplan_result = _process_careplan_query(query)
         if careplan_result:
+            if context_hint:
+                careplan_result['answer'] = context_hint + careplan_result['answer']
+            update_conversation_context(request, original_query, 'careplan', entities, careplan_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'careplan', user=request.user, response_time_ms=response_time)
             return JsonResponse(careplan_result)
         
         # PRIORITY 4: Try to interpret as report query (more general queries)
@@ -5785,13 +7097,32 @@ Try rephrasing your question or click a quick action button!""",
                 'related': ['Staffing Report', 'Care Plan Reviews', 'Check Shortages', 'Agency Staff', 'Coverage Report'],
                 'category': 'help'
             })
+        
+        # If nothing matched, return helpful error with suggestions
+        suggestions = generate_helpful_suggestions(query)
+        error_msg = f"❓ I couldn't understand: **{query}**\n\n**Try asking:**\n"
+        error_msg += "\n".join(f"• {s}" for s in suggestions)
+        error_msg += "\n\n💡 **Tip:** Be specific - mention staff names, dates, or care homes."
+        
+        response_time = int((time.time() - start_time) * 1000)
+        log_ai_query(query, False, 'error', error_message='No handler matched', user=request.user, response_time_ms=response_time)
+        
+        return JsonResponse({
+            'answer': error_msg,
+            'suggestions': suggestions,
+            'related': ['Staffing Report', 'Care Plan Reviews', 'Staff Vacancies', 'Leave Requests'],
+            'category': 'help'
+        })
     
     except json.JSONDecodeError:
+        log_ai_query('', False, 'error', error_message='Invalid JSON', user=request.user)
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+        error_detail = str(e)
+        log_ai_query(query if 'query' in locals() else '', False, 'error', error_message=error_detail, user=request.user)
+        return JsonResponse({'error': f'Server error: {error_detail}'}, status=500)
 
 
 @login_required
@@ -6099,11 +7430,13 @@ def careplan_unit_view(request, unit_name):
     
     unit = get_object_or_404(Unit, name=unit_name)
     
+    # Get all residents without ordering first
     residents = Resident.objects.filter(
         unit=unit,
         is_active=True
-    ).select_related('keyworker', 'unit_manager').prefetch_related('care_plan_reviews').order_by('room_number')
+    ).select_related('keyworker', 'unit_manager').prefetch_related('care_plan_reviews')
     
+    # Build resident data with reviews
     resident_data = []
     for resident in residents:
         latest_review = resident.care_plan_reviews.order_by('-due_date').first()
@@ -6111,6 +7444,16 @@ def careplan_unit_view(request, unit_name):
             'resident': resident,
             'review': latest_review,
         })
+    
+    # Sort by room number naturally (handles numbers properly: 1, 2, 10, 11 instead of 1, 10, 11, 2)
+    def natural_sort_key(item):
+        room = item['resident'].room_number or ''
+        # Extract numeric part for proper sorting
+        import re
+        parts = re.split(r'(\d+)', room)
+        return [int(part) if part.isdigit() else part.lower() for part in parts]
+    
+    resident_data.sort(key=natural_sort_key)
     
     # Calculate unit statistics
     reviews = [r['review'] for r in resident_data if r['review']]
@@ -6397,6 +7740,8 @@ def careplan_manager_dashboard(request):
     overall_compliance = round((on_time_all / total_recent_all * 100) if total_recent_all > 0 else 0, 1)
     
     # Recent Activity - Last 10 completed reviews
+    recent_activity = all_reviews.filter(status='COMPLETED').order_by('-completed_date')[:10]
+    
     # Get all care homes for filter dropdown
     from .models_multi_home import CareHome
     all_care_homes = CareHome.objects.all().order_by('name')
@@ -6416,11 +7761,7 @@ def careplan_manager_dashboard(request):
         'all_units': all_units,
         'selected_unit': unit_filter,
         'all_care_homes': all_care_homes,
-        'selected_care_home': care_hometal_completed,
-        'overall_compliance': overall_compliance,
-        'recent_activity': recent_activity,
-        'all_units': all_units,
-        'selected_unit': unit_filter,
+        'selected_care_home': care_home_filter,
         'today': today,
     }
     

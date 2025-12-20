@@ -70,23 +70,43 @@
         </div>
     </div>
 
-    <!-- Unit Filter -->
+    <!-- Filter Controls -->
     <div class="row mb-3">
-        <div class="col-md-4">
-            <form method="get" class="form-inline">
-                <label class="mr-2">Filter by Unit:</label>
-                <select name="unit" class="form-control mr-2" onchange="this.form.submit()">
-                    <option value="">All Units</option>
-                    {% for unit in all_units %}
-                    <option value="{{ unit.name }}" {% if selected_unit == unit.name %}selected{% endif %}>
-                        {{ unit.get_name_display }}
-                    </option>
-                    {% endfor %}
-                </select>
+        <div class="col-md-8">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Care Home:</label>
+                    <select name="care_home" class="form-control" onchange="this.form.submit()">
+                        <option value="">All Homes</option>
+                        {% for home in all_care_homes %}
+                        <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                            {{ home.get_name_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Unit:</label>
+                    <select name="unit" class="form-control" onchange="this.form.submit()">
+                        <option value="">All Units</option>
+                        {% for unit in all_units %}
+                        <option value="{{ unit.name }}" {% if selected_unit == unit.name %}selected{% endif %}>
+                            {{ unit.get_name_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if selected_care_home or selected_unit %}
+                <div class="col-md-4 d-flex align-items-end">
+                    <a href="{% url 'careplan_manager_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                </div>
+                {% endif %}
             </form>
         </div>
-        <div class="col-md-8 text-right">
-            <a href="{% url 'careplan_overview' %}" class="btn btn-outline-secondary">
+        <div class="col-md-4 text-end d-flex align-items-end justify-content-end">
+            <a href="{% url 'careplan_overview' %}" class="btn btn-outline-secondary me-2">
                 <i class="fas fa-list"></i> All Reviews
             </a>
             <a href="{% url 'careplan_compliance_report' %}" class="btn btn-outline-primary">

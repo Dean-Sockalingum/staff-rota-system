@@ -300,9 +300,9 @@ def main():
         {'week1': parse_days('wed thu'), 'week2': parse_days('sun mon'), 'week3': parse_days('fri sat')},
     ]
     
-    # Generate shifts for 6 months
+    # Generate shifts for full year
     start_date = datetime(2025, 1, 1).date()
-    end_date = datetime(2025, 6, 30).date()
+    end_date = datetime(2025, 12, 31).date()
     cycle_start = start_date
     
     total_shifts = 0

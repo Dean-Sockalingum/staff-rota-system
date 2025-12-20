@@ -422,7 +422,88 @@ def senior_management_dashboard(request):
         })
     
     # =================================================================
-    # SECTION 8: CITYWIDE SUMMARY - Weekly Overview
+    # SECTION 8: STAFF VACANCIES TRACKING
+    # =================================================================
+    from staff_records.models import StaffProfile
+    
+    vacancies = []
+    
+    # Get all leavers in the last 90 days and upcoming leavers
+    ninety_days_ago = today - timedelta(days=90)
+    thirty_days_forward = today + timedelta(days=30)
+    
+    # Get staff profiles for leavers
+    leaver_profiles = StaffProfile.objects.filter(
+        employment_status='LEAVER',
+        end_date__isnull=False
+    ).select_related(
+        'user',
+        'user__role',
+        'user__unit',
+        'user__unit__care_home'
+    ).filter(
+        Q(end_date__gte=ninety_days_ago) | Q(end_date__lte=thirty_days_forward)
+    ).order_by('-end_date')
+    
+    for profile in leaver_profiles:
+        if not profile.user or not profile.user.unit or not profile.user.unit.care_home:
+            continue
+            
+        # Calculate days vacant
+        if profile.end_date <= today:
+            days_vacant = (today - profile.end_date).days
+            status = 'VACANT'
+        else:
+            days_vacant = 0
+            status = 'UPCOMING'
+        
+        # Get contracted hours from shifts_per_week (assume 12-hour shifts)
+        hours_per_week = profile.user.shifts_per_week_override or 40  # Default 40 hours
+        
+        vacancies.append({
+            'home': profile.user.unit.care_home.get_name_display(),
+            'home_obj': profile.user.unit.care_home,
+            'role': profile.user.role.get_name_display() if profile.user.role else 'Unknown',
+            'role_code': profile.user.role.name if profile.user.role else 'UNKNOWN',
+            'staff_name': profile.user.full_name,
+            'sap': profile.user.sap,
+            'unit': profile.user.unit.name,
+            'end_date': profile.end_date,
+            'days_vacant': days_vacant,
+            'hours_per_week': hours_per_week,
+            'status': status,
+            'severity': 'HIGH' if days_vacant > 30 else 'MEDIUM' if days_vacant > 14 else 'LOW' if status == 'VACANT' else 'INFO',
+        })
+    
+    # Group by home for summary
+    vacancies_by_home = {}
+    for v in vacancies:
+        home_name = v['home']
+        if home_name not in vacancies_by_home:
+            vacancies_by_home[home_name] = {
+                'home': home_name,
+                'total_vacancies': 0,
+                'vacant_now': 0,
+                'upcoming_leavers': 0,
+                'total_hours_vacant': 0,
+                'roles': {}
+            }
+        
+        vacancies_by_home[home_name]['total_vacancies'] += 1
+        
+        if v['status'] == 'VACANT':
+            vacancies_by_home[home_name]['vacant_now'] += 1
+            vacancies_by_home[home_name]['total_hours_vacant'] += v['hours_per_week']
+        else:
+            vacancies_by_home[home_name]['upcoming_leavers'] += 1
+        
+        role = v['role_code']
+        if role not in vacancies_by_home[home_name]['roles']:
+            vacancies_by_home[home_name]['roles'][role] = 0
+        vacancies_by_home[home_name]['roles'][role] += 1
+    
+    # =================================================================
+    # SECTION 9: CITYWIDE SUMMARY - Weekly Overview
     # =================================================================
     # Generate 7-day view starting from start_date
     citywide_day_summary = []
@@ -636,6 +717,46 @@ def senior_management_dashboard(request):
         weekly_snapshot.append(home_snapshot)
     
     # =================================================================
+    # Training Compliance Summary (All Homes)
+    # =================================================================
+    from scheduling.models import TrainingCourse, TrainingRecord
+    
+    training_compliance_by_home = []
+    mandatory_courses = TrainingCourse.objects.filter(is_mandatory=True)
+    
+    if mandatory_courses.exists():
+        for home in care_homes:
+            home_staff = User.objects.filter(
+                unit__care_home=home,
+                is_active=True
+            ).distinct()
+            
+            total_staff = home_staff.count()
+            total_required = total_staff * mandatory_courses.count()
+            total_compliant = 0
+            
+            if total_staff > 0:
+                for staff in home_staff:
+                    for course in mandatory_courses:
+                        latest_record = TrainingRecord.objects.filter(
+                            staff_member=staff,
+                            course=course
+                        ).order_by('-completion_date').first()
+                        
+                        if latest_record and latest_record.get_status() == 'CURRENT':
+                            total_compliant += 1
+                
+                compliance_percentage = (total_compliant / total_required * 100) if total_required > 0 else 0
+                
+                training_compliance_by_home.append({
+                    'home': home,
+                    'total_staff': total_staff,
+                    'total_required': total_required,
+                    'compliant': total_compliant,
+                    'percentage': round(compliance_percentage, 1),
+                })
+    
+    # =================================================================
     # Context for Template
     # =================================================================
     context = {
@@ -684,6 +805,12 @@ def senior_management_dashboard(request):
         # Care Plan Compliance
         'care_plan_compliance': care_plan_compliance,
         
+        # Staff Vacancies
+        'vacancies': vacancies,
+        'vacancies_by_home': vacancies_by_home,
+        'total_vacancies': len([v for v in vacancies if v['status'] == 'VACANT']),
+        'total_upcoming_leavers': len([v for v in vacancies if v['status'] == 'UPCOMING']),
+        
         # Citywide Summary
         'citywide_day_summary': citywide_day_summary,
         'citywide_night_summary': citywide_night_summary,
@@ -691,6 +818,9 @@ def senior_management_dashboard(request):
         
         # Weekly Snapshot - Simplified view
         'weekly_snapshot': weekly_snapshot,
+        
+        # Training Compliance
+        'training_compliance_by_home': training_compliance_by_home,
     }
     
     return render(request, 'scheduling/senior_management_dashboard.html', context)
