@@ -1,0 +1,75 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      env:
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        python manage.py test scheduling --noinput
+    
+    - name: Build deployment package
+      run: |
+        mkdir -p deploy
+        cp -r scheduling deploy/
+        cp -r rotasystems deploy/
+        cp manage.py deploy/
+        cp requirements.txt deploy/
+        cd deploy && tar -czf ../staging-release.tar.gz *
+    
+    - name: Deploy to staging server
+      env:
+        STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        STAGING_USER: ${{ secrets.STAGING_USER }}
+        STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Note: Configure SSH deployment or use your preferred deployment method"
+        # Example deployment commands (customize for your infrastructure):
+        # - Upload staging-release.tar.gz to staging server
+        # - Extract and restart application
+        # - Run migrations
+        # - Collect static files
+    
+    - name: Run staging smoke tests
+      env:
+        STAGING_URL: ${{ secrets.STAGING_URL }}
+      run: |
+        echo "🧪 Running smoke tests on staging..."
+        # Add smoke test commands here
+        # Example: curl -f ${STAGING_URL}/health/ || exit 1
+    
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Staging deployment successful"
+        else
+          echo "❌ Staging deployment failed"
+        fi

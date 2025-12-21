@@ -1,4 +1,31 @@
-Django
+# Core Django
+Django>=4.2,<5.0
 djangorestframework
 django-cors-headers
+python-decouple
+
+# Celery for background tasks
+celery
+django-celery-beat
+redis
+
+# Communications
 twilio
+
+# Phase 6: Security Hardening Dependencies
+django-axes>=6.1.0  # Brute force protection & account lockout
+django-auditlog>=2.3.0  # Comprehensive audit logging
+django-encrypted-model-fields>=0.6.5  # Field-level encryption
+django-csp>=3.7  # Content Security Policy headers
+safety  # Dependency vulnerability scanner
+pip-audit  # Python package auditing
+urllib3>=2.6.0  # HTTP library (CVE-2025-66418, CVE-2025-66471 fixed)
+
+# Phase 6: Machine Learning Dependencies
+prophet>=1.1.5  # Facebook's time series forecasting
+scikit-learn>=1.3.0  # Machine learning library
+pandas>=2.0.0  # Data manipulation
+numpy>=1.24.0  # Numerical computing
+matplotlib>=3.7.0  # Plotting (for model diagnostics)
+seaborn>=0.12.0  # Statistical visualization
+PuLP>=2.7.0  # Linear programming for optimization

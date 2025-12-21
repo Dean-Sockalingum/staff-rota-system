@@ -120,6 +120,18 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if user.role.is_operations_manager or user.role.is_senior_management_team %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'forecasting_dashboard' %}">
+                            <i class="fas fa-brain"></i> AI Forecasting
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'shift_optimization_dashboard' %}">
+                            <i class="fas fa-robot"></i> Shift Optimizer
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'audit_dashboard' %}">
                             <i class="fas fa-shield-alt"></i> Audit & Compliance

@@ -5,6 +5,11 @@ from .views_senior_dashboard import (
     senior_dashboard_export,
     custom_report_builder
 )
+from .views_forecasting import (
+    forecasting_dashboard,
+    forecast_accuracy_view,
+    unit_performance_view
+)
 
 urlpatterns = [
     # Authentication
@@ -22,6 +27,12 @@ urlpatterns = [
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
     path('senior-dashboard/reports/', custom_report_builder, name='custom_report_builder'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
+    
+    # ML Forecasting Dashboard (Task 11)
+    path('forecasting/', forecasting_dashboard, name='forecasting_dashboard'),
+    path('forecasting/accuracy/', forecast_accuracy_view, name='forecast_accuracy'),
+    path('forecasting/performance/', unit_performance_view, name='unit_performance'),
+    
     path('rota/', views.rota_view, name='rota_view'),
     path('staff-search-rota/', views.staff_search_rota, name='staff_search_rota'),
     path('edit-shift/', views.edit_shift, name='edit_shift'),

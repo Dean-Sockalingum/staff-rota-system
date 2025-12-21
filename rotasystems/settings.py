@@ -48,7 +48,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_celery_beat',  # Celery Beat for periodic tasks
-    # 'django_q',  # Django-Q disabled due to Python 3.14 compatibility - using cron instead
+    # Phase 6: Security & ML apps
+    'axes',  # Account lockout protection
+    'auditlog',  # Audit logging for compliance
+    # Core apps
     'scheduling',
     'scheduling.management',
     'staff_records',
@@ -64,6 +67,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Phase 6: Security middleware
+    'axes.middleware.AxesMiddleware',  # Account lockout protection
+    'csp.middleware.CSPMiddleware',  # Content Security Policy
+    # Custom middleware
     'scheduling.middleware.AuditLoggingMiddleware',  # Automatic audit logging
 ]
 
@@ -118,6 +125,7 @@ else:
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+# Phase 6: Enhanced password security following NCSC guidance & Scottish Design (usability)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -125,6 +133,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 10,  # Scottish Design: Balance security with usability (reduced from 12)
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -133,6 +144,158 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Phase 6: Django-Axes Configuration (Account Lockout Protection)
+# Scottish Design: Balance security with 24/7 care operations
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',  # Axes backend for lockout (v8.x compatible)
+    'django.contrib.auth.backends.ModelBackend',  # Django default
+]
+
+AXES_FAILURE_LIMIT = 5  # Lock account after 5 failed attempts
+AXES_COOLOFF_TIME = 1  # Lockout for 1 hour (in hours)
+AXES_RESET_ON_SUCCESS = True  # Reset counter on successful login
+AXES_LOCKOUT_TEMPLATE = 'lockout.html'  # Custom lockout page
+AXES_VERBOSE = True  # Log lockout attempts for monitoring
+
+# Phase 6: Session Security
+# Scottish Design: 1-hour timeout for healthcare compliance
+SESSION_COOKIE_AGE = 3600  # 1 hour (3600 seconds)
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
+
+# Phase 6: CSRF Protection
+CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
+CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Phase 6: Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking
+
+# Phase 6: HTTPS/SSL Settings (Production only)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Phase 6: Content Security Policy
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com")
+CSP_IMG_SRC = ("'self'", "data:", "https:")
+CSP_FONT_SRC = ("'self'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com")
+CSP_CONNECT_SRC = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'none'",)  # Prevent embedding in iframes
+
+# Phase 6: Field Encryption Key (for sensitive data)
+# Scottish Design: Privacy by design
+FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY', default=None)
+
+# Phase 6: Production Logging Configuration
+# Scottish Design: Transparency and accountability
+if not DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+                'style': '{',
+            },
+            'simple': {
+                'format': '{levelname} {message}',
+                'style': '{',
+            },
+        },
+        'filters': {
+            'require_debug_false': {
+                '()': 'django.utils.log.RequireDebugFalse',
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple',
+            },
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': config('LOG_FILE', default='/var/log/rota/django.log'),
+                'maxBytes': 1024 * 1024 * 15,  # 15MB
+                'backupCount': 10,
+                'formatter': 'verbose',
+            },
+            'security': {
+                'level': 'WARNING',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': config('SECURITY_LOG_FILE', default='/var/log/rota/security.log'),
+                'maxBytes': 1024 * 1024 * 10,  # 10MB
+                'backupCount': 20,
+                'formatter': 'verbose',
+            },
+            'mail_admins': {
+                'level': 'ERROR',
+                'class': 'django.utils.log.AdminEmailHandler',
+                'filters': ['require_debug_false'],
+                'formatter': 'verbose',
+            },
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'django.request': {
+                'handlers': ['file', 'mail_admins'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+            'django.security': {
+                'handlers': ['security'],
+                'level': 'WARNING',
+                'propagate': False,
+            },
+            'axes': {
+                'handlers': ['security'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'auditlog': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
+else:
+    # Development logging - console only
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    }
+
+# Phase 6: Admin Email Notifications for Production Errors
+ADMINS = [
+    ('IT Support', config('ADMIN_EMAIL', default='itsupport@orchardgrove.com')),
+]
+MANAGERS = ADMINS
 
 
 # Internationalization

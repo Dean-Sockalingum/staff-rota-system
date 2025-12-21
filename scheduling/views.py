@@ -714,6 +714,14 @@ def staff_guidance(request):
             'category': 'manager',
             'icon': 'fa-comments',
         },
+        {
+            'title': 'Automated Weekly Reports',
+            'slug': 'automated-weekly-reports',
+            'description': 'Complete guide to automated Monday management reports - schedules, contents, and troubleshooting',
+            'file': docs_path / 'AUTOMATED_WEEKLY_REPORTS.md',
+            'category': 'manager',
+            'icon': 'fa-calendar-alt'
+        },
     ]
 
     selected_slug = request.GET.get('doc') or guidance_docs[0]['slug']

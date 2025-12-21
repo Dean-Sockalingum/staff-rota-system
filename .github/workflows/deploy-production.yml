@@ -1,0 +1,123 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run full test suite
+      env:
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        python manage.py test scheduling --noinput
+    
+    - name: Run performance validation
+      run: |
+        python -c "
+        import os, django
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
+        django.setup()
+        from scheduling.load_testing import quick_load_test
+        results = quick_load_test()
+        avg_time = results['response_times']['average']
+        if avg_time > 1.0:
+            print(f'❌ Performance check failed: {avg_time:.3f}s > 1s target')
+            exit(1)
+        print(f'✅ Performance validated: {avg_time:.3f}s')
+        "
+    
+    - name: Build production package
+      run: |
+        mkdir -p deploy
+        cp -r scheduling deploy/
+        cp -r rotasystems deploy/
+        cp manage.py deploy/
+        cp requirements.txt deploy/
+        cd deploy && tar -czf ../production-release.tar.gz *
+    
+    - name: Create release backup
+      run: |
+        DATE=$(date +%Y-%m-%d_%H-%M-%S)
+        cp production-release.tar.gz production-release-${DATE}.tar.gz
+    
+    - name: Deploy to production server
+      env:
+        PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+        PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+        PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      run: |
+        echo "🚀 Deploying to PRODUCTION environment..."
+        echo "⚠️ This is a production deployment - ensure manual approval is required"
+        # Example deployment commands (customize for your infrastructure):
+        # 1. Backup current production database
+        # 2. Upload production-release.tar.gz to production server
+        # 3. Extract to deployment directory
+        # 4. Run migrations with --check first
+        # 5. Collect static files
+        # 6. Restart application with zero-downtime strategy
+        # 7. Run smoke tests
+        # 8. Monitor logs for errors
+    
+    - name: Run production smoke tests
+      env:
+        PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+      run: |
+        echo "🧪 Running production smoke tests..."
+        # Critical smoke tests:
+        # - Health check endpoint
+        # - Database connectivity
+        # - Redis connectivity
+        # - Prophet model loading
+        # - Dashboard load time < 1s
+        # Example: curl -f ${PRODUCTION_URL}/health/ || exit 1
+    
+    - name: Warm up Prophet models
+      env:
+        PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+      run: |
+        echo "🔥 Warming up Prophet forecasting models..."
+        # Run initial forecast generation to warm cache
+        # python manage.py generate_forecasts --all-units
+    
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "📊 Monitor dashboards and logs for 30 minutes"
+        else
+          echo "❌ PRODUCTION DEPLOYMENT FAILED"
+          echo "🔄 Initiate rollback procedure"
+        fi
+    
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: production-release
+        path: production-release*.tar.gz
+        retention-days: 90

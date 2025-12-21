@@ -15,6 +15,17 @@ from scheduling.views_compliance import (
     report_incident, my_incident_reports, incident_management, view_incident
 )
 from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export, custom_report_builder
+from scheduling.views_forecasting import (
+    forecasting_dashboard,
+    forecast_accuracy_view,
+    unit_performance_view
+)
+from scheduling.views_optimization import (
+    shift_optimization_dashboard,
+    run_optimization,
+    apply_optimization,
+    optimization_comparison
+)
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -32,6 +43,18 @@ urlpatterns = [
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
     path('senior-dashboard/reports/', custom_report_builder, name='custom_report_builder'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
+    
+    # ML Forecasting Dashboard (Task 11 - AI-powered demand forecasting)
+    path('forecasting/', forecasting_dashboard, name='forecasting_dashboard'),
+    path('forecasting/accuracy/', forecast_accuracy_view, name='forecast_accuracy'),
+    path('forecasting/performance/', unit_performance_view, name='unit_performance'),
+    
+    # ML Shift Optimization (Task 12 - AI-powered shift scheduling)
+    path('optimization/', shift_optimization_dashboard, name='shift_optimization_dashboard'),
+    path('optimization/run/', run_optimization, name='run_optimization'),
+    path('optimization/apply/', apply_optimization, name='apply_optimization'),
+    path('optimization/comparison/', optimization_comparison, name='optimization_comparison'),
+    
     path('reports-dashboard/', views.reports_dashboard, name='reports_dashboard'),
     path('reports/annual-leave/', views.get_annual_leave_report, name='get_annual_leave_report'),
     path('reports/leave-targets/', leave_usage_targets, name='leave_usage_targets'),

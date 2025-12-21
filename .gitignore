@@ -76,12 +76,33 @@ celerybeat-schedule
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Phase 6: Security & ML additions
+*.key
+*.pem
+*.p12
+*.pfx
+fieldkeys.txt
+secrets.txt
+
+# ML models and data
+ml_data/
+ml_models/
+*.pkl
+*.joblib
+*.h5
+
+# Backup databases
+db_backup_*.sqlite3
+*.db-journal
 
 # Spyder project settings
 .spyderproject

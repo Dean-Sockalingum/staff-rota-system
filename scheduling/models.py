@@ -1747,3 +1747,209 @@ from .models_automated_workflow import (
 # Import multi-home management models
 from .models_multi_home import CareHome
 
+
+# ==============================================================================
+# MACHINE LEARNING MODELS (Phase 6.2 - ML Forecasting)
+# ==============================================================================
+
+class StaffingForecast(models.Model):
+    """
+    Store Prophet ML forecasts for staffing demand prediction
+    
+    Scottish Design Principles:
+    - Transparent: Store interpretable components (trend, weekly, yearly)
+    - User-Centered: Confidence intervals for OM/SM risk assessment
+    - Evidence-Based: Prophet model with validation metrics
+    - GDPR Compliant: No personal data, aggregated predictions only
+    
+    Usage:
+    - Dashboard: Show 30-day forecasts to OM/SM
+    - Planning: Compare predicted vs actual demand
+    - Alerts: Notify when demand exceeds capacity
+    """
+    
+    # Location
+    care_home = models.ForeignKey(CareHome, on_delete=models.CASCADE, related_name='forecasts')
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='forecasts')
+    forecast_date = models.DateField(db_index=True, help_text="Date being forecasted")
+    
+    # Predictions
+    predicted_shifts = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        help_text="Predicted number of shifts needed"
+    )
+    confidence_lower = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        help_text="Lower bound of 80% confidence interval"
+    )
+    confidence_upper = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        help_text="Upper bound of 80% confidence interval"
+    )
+    
+    # Prophet Components (for debugging/transparency)
+    trend_component = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Long-term trend (increasing/decreasing demand)"
+    )
+    weekly_component = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Day-of-week effect (weekend reduction, etc.)"
+    )
+    yearly_component = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Seasonal effect (winter pressure, summer holidays)"
+    )
+    
+    # Metadata
+    model_version = models.CharField(
+        max_length=50, 
+        default='1.0',
+        help_text="Prophet model version used for this forecast"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When forecast was generated"
+    )
+    
+    # Validation metrics (from model training)
+    mae = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Mean Absolute Error from validation (shifts/day)"
+    )
+    mape = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Mean Absolute Percentage Error from validation (%)"
+    )
+    
+    class Meta:
+        unique_together = ('care_home', 'unit', 'forecast_date', 'model_version')
+        ordering = ['forecast_date', 'care_home', 'unit']
+        indexes = [
+            models.Index(fields=['forecast_date', 'care_home']),
+            models.Index(fields=['forecast_date', 'unit']),
+            models.Index(fields=['care_home', 'unit', 'forecast_date']),
+        ]
+        verbose_name = "Staffing Forecast"
+        verbose_name_plural = "Staffing Forecasts"
+    
+    def __str__(self):
+        return f"{self.care_home.name}/{self.unit.name} - {self.forecast_date}: {self.predicted_shifts:.1f} shifts"
+    
+    @property
+    def uncertainty_range(self):
+        """Calculate the width of the confidence interval"""
+        return float(self.confidence_upper - self.confidence_lower)
+    
+    @property
+    def is_high_uncertainty(self):
+        """Flag forecasts with wide confidence intervals (>50% of prediction)"""
+        if self.predicted_shifts > 0:
+            return (self.uncertainty_range / float(self.predicted_shifts)) > 0.5
+        return False
+    
+    def is_actual_within_ci(self, actual_shifts):
+        """
+        Check if actual demand fell within predicted confidence interval
+        
+        Args:
+            actual_shifts: Actual number of shifts on forecast_date
+            
+        Returns:
+            bool: True if actual within [lower, upper]
+        """
+        return self.confidence_lower <= actual_shifts <= self.confidence_upper
+
+
+class ProphetModelMetrics(models.Model):
+    """
+    Track Prophet forecasting model performance in production
+    
+    Stores:
+    - Forecast accuracy (MAPE)
+    - Distribution drift scores
+    - Model versioning
+    - Retrain audit trail
+    """
+    
+    care_home = models.ForeignKey(
+        'CareHome',
+        on_delete=models.CASCADE,
+        related_name='prophet_metrics'
+    )
+    unit = models.ForeignKey(
+        'Unit',
+        on_delete=models.CASCADE,
+        related_name='prophet_metrics'
+    )
+    forecast_date = models.DateField(
+        db_index=True,
+        help_text="Date the forecast was made for"
+    )
+    actual_value = models.FloatField(
+        help_text="Actual number of shifts on forecast_date"
+    )
+    forecast_value = models.FloatField(
+        help_text="Predicted number of shifts"
+    )
+    mape = models.FloatField(
+        help_text="Mean Absolute Percentage Error for this forecast",
+        validators=[MinValueValidator(0.0)]
+    )
+    drift_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="KS test p-value indicating distribution drift (lower = more drift)"
+    )
+    model_version = models.CharField(
+        max_length=50,
+        help_text="Prophet model version identifier (e.g., 'v1.2024-12-15')"
+    )
+    model_version_date = models.DateField(
+        help_text="Date the model was trained"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'scheduling_prophet_model_metrics'
+        ordering = ['-forecast_date', '-created_at']
+        indexes = [
+            models.Index(fields=['care_home', 'unit', 'forecast_date']),
+            models.Index(fields=['model_version_date']),
+            models.Index(fields=['mape']),
+        ]
+        verbose_name = "Prophet Model Metric"
+        verbose_name_plural = "Prophet Model Metrics"
+    
+    def __str__(self):
+        return f"{self.care_home.name}/{self.unit.name} - {self.forecast_date}: MAPE {self.mape:.1f}%"
+    
+    @property
+    def is_accurate(self):
+        """Flag if MAPE is within acceptable threshold (< 30%)"""
+        return self.mape < 30.0
+    
+    @property
+    def has_drift(self):
+        """Flag if drift is statistically significant (p < 0.05)"""
+        if self.drift_score is None:
+            return False
+        return self.drift_score < 0.05
