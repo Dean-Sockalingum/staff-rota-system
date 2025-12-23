@@ -111,9 +111,9 @@ def generate_om_shifts_for_orchard():
         print(f"\n✓ OM shifts already exist ({existing_om_shifts} shifts)")
         return existing_om_shifts
     
-    # Generate shifts for full year 2025 (Mon-Fri only)
+    # Generate shifts for 2025-2026 (Mon-Fri only)
     start_date = date(2025, 1, 1)
-    end_date = date(2025, 12, 31)
+    end_date = date(2026, 12, 31)
     
     new_shifts = []
     current_date = start_date

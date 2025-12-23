@@ -184,9 +184,9 @@ def implement_home(care_home_name):
     home_units = Unit.objects.filter(care_home=home)
     patterns = get_pattern_templates()
     
-    # Generate shifts for full year
+    # Generate shifts for full year 2025 + 2026
     start_date = datetime(2025, 1, 1).date()
-    end_date = datetime(2025, 12, 31).date()
+    end_date = datetime(2026, 12, 31).date()
     # Cycle must start on a Sunday to keep weeks aligned
     # Jan 1, 2025 is Wednesday, so go back to previous Sunday (Dec 29, 2024)
     cycle_start = datetime(2024, 12, 29).date()

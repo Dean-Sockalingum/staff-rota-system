@@ -300,9 +300,9 @@ def main():
         {'week1': parse_days('wed thu'), 'week2': parse_days('sun mon'), 'week3': parse_days('fri sat')},
     ]
     
-    # Generate shifts for full year
+    # Generate shifts for full year + 2026
     start_date = datetime(2025, 1, 1).date()
-    end_date = datetime(2025, 12, 31).date()
+    end_date = datetime(2026, 12, 31).date()
     # Cycle must start on a Sunday to keep weeks aligned
     # Jan 1, 2025 is Wednesday, so go back to previous Sunday (Dec 29, 2024)
     cycle_start = datetime(2024, 12, 29).date()

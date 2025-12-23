@@ -440,7 +440,7 @@ def main():
     
     # Configuration
     start_date = datetime(2025, 1, 1).date()  # Start of year
-    end_date = datetime(2025, 12, 31).date()    # Full year
+    end_date = datetime(2026, 12, 31).date()    # Through 2026
     # Cycle must start on Sunday to keep weeks aligned
     # Jan 1, 2025 is Wednesday, use Dec 29, 2024 (previous Sunday)
     cycle_start = datetime(2024, 12, 29).date()
