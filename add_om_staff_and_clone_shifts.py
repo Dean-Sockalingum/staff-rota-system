@@ -117,24 +117,21 @@ def generate_om_shifts_for_orchard():
     
     new_shifts = []
     current_date = start_date
-    om_index = 0  # Rotate between OM staff
     
     while current_date <= end_date:
         # Only Mon-Fri (0=Mon, 4=Fri)
         if current_date.weekday() < 5:
-            # Assign to OM staff in rotation
-            om_user = om_staff[om_index % len(om_staff)]
-            
-            new_shift = Shift(
-                user=om_user,
-                unit=orchard_unit,
-                shift_type=admin_shift_type,
-                date=current_date,
-                status='CONFIRMED',
-                shift_classification='REGULAR',
-            )
-            new_shifts.append(new_shift)
-            om_index += 1
+            # Both OMs work every weekday
+            for om_user in om_staff:
+                new_shift = Shift(
+                    user=om_user,
+                    unit=orchard_unit,
+                    shift_type=admin_shift_type,
+                    date=current_date,
+                    status='CONFIRMED',
+                    shift_classification='REGULAR',
+                )
+                new_shifts.append(new_shift)
         
         current_date += timedelta(days=1)
     
