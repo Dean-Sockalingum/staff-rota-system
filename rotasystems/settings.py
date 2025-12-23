@@ -147,10 +147,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Phase 6: Django-Axes Configuration (Account Lockout Protection)
 # Scottish Design: Balance security with 24/7 care operations
-AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesBackend',  # Axes backend for lockout (v8.x compatible)
-    'django.contrib.auth.backends.ModelBackend',  # Django default
-]
+# Note: AUTHENTICATION_BACKENDS configured below with SAP backend (line ~336)
 
 AXES_FAILURE_LIMIT = 5  # Lock account after 5 failed attempts
 AXES_COOLOFF_TIME = 1  # Lockout for 1 hour (in hours)
@@ -334,8 +331,9 @@ AUTH_USER_MODEL = 'scheduling.User'
 
 # Custom Authentication Backend
 AUTHENTICATION_BACKENDS = [
-    'scheduling.backends.SAPAuthenticationBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'axes.backends.AxesStandaloneBackend',  # Account lockout protection (renamed from AxesBackend in v5.0+)
+    'scheduling.backends.SAPAuthenticationBackend',  # SAP number authentication
+    'django.contrib.auth.backends.ModelBackend',  # Django default
 ]
 
 # REST Framework Configuration
