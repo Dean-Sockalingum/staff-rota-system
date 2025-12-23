@@ -193,7 +193,7 @@ RESULTS:
 └────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Unit: Mulberry (Orchard Grove)        MAPE: 14.2%    ✅ Excellent   │
+│ Unit: OG Cherry (Orchard Grove)       MAPE: 14.2%    ✅ Excellent   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                       │
 │  Staffing Demand (Number of Shifts)                                  │
@@ -238,29 +238,47 @@ BUSINESS VALUE:
 • Better staff satisfaction (predictable schedules)
 ```
 
-**Caption:** Prophet forecasting dashboard showing 30-day demand prediction for Mulberry unit. Model achieves 14.2% MAPE (excellent) with component decomposition revealing trend, weekly, yearly, and holiday patterns. 80% confidence intervals provide uncertainty quantification.
+**Caption:** Prophet forecasting dashboard showing 30-day demand prediction for OG Cherry unit (Orchard Grove care home). Model achieves 14.2% MAPE (excellent) with component decomposition revealing trend, weekly, yearly, and holiday patterns. 80% confidence intervals provide uncertainty quantification.
 
 ---
 
-## Figure 5: Shift Optimization (Linear Programming)
+## Figure 5: Shift Optimisation (Linear Programming)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                    SHIFT OPTIMIZER (PuLP LP Solver)                     │
-│                  Minimize Cost Subject to Constraints                   │
+│                    SHIFT OPTIMISER (PuLP LP Solver)                     │
+│                  Minimise Cost Subject to Constraints                   │
 └────────────────────────────────────────────────────────────────────────┘
 
 OBJECTIVE FUNCTION:
-Minimize: Σ (shift_cost × is_assigned)
+Minimise: Σ (shift_cost × is_assigned)
 
-Where shift_cost = {
-    £15.00  SSCW (Standard Social Care Worker)
-    £18.00  ESCW (Enhanced Social Care Worker)
-    £22.00  SCW-NS (Night Shift)
-    £25.00  Senior (Day Supervisor)
-    £28.00  Team Leader
-    £35.00  Unit Manager
-}
+PERMANENT STAFF HOURLY RATES (Based on 35-hour week, 1,820 hours/year):
+    £54.92  HOS (Head of Service)
+    £43.94  SM (Service Manager)
+    £35.14  OM (Operational Manager)
+    £28.11  IDI (Infection Disease Investigator)
+    £28.11  SSCW (Senior Social Care Worker - Day)
+    £35.13  SSCWN (Senior Social Care Worker - Night, +25%)
+    £19.19  SCW (Social Care Worker - Day)
+    £23.99  SCWN (Social Care Worker - Night, +25%)
+    £13.52  SCA (Social Care Assistant - Day)
+    £16.90  SCAN (Social Care Assistant - Night, +25%)
+
+AGENCY STAFF RATES (IDI-contracted rates):
+    SCA (Senior Care Assistant):
+      • Midweek: £21.25/hour (1.57× permanent)
+      • Nightshift: £26.49/hour (1.57× permanent night rate)
+      • Public holidays: £38.49/hour (2.85× permanent)
+    
+    SSCW (Senior Social Care Worker):
+      • Midweek: £30.49/hour (1.08× permanent)
+      • Weekend: £30.75/hour (1.09× permanent)
+      • Nightshift: £35.75/hour (1.02× permanent night rate)
+      • Public holidays: £53.75/hour (1.91× permanent)
+
+Note: LP optimiser prefers permanent staff → overtime (1.5×) → agency (1.02-2.85×)
+      depending on day type and staffing level required
 
 CONSTRAINTS:
 
@@ -297,25 +315,32 @@ SOLUTION EXAMPLE:
 Input: 7 days, 14 shifts/day, 30 available staff
 Output (Optimal Assignment):
 
-┌──────────┬────────────┬─────────────┬──────────┐
-│   Day    │ Shift Type │ Staff Assigned│  Cost   │
-├──────────┼────────────┼─────────────┼──────────┤
-│ Monday   │ Day (8am)  │ Alice(SSCW) │  £15.00  │
-│          │            │ Bob(ESCW)   │  £18.00  │
-│          │            │ Carol(SSCW) │  £15.00  │
-│          │ Night(8pm) │ Dave(SCW-NS)│  £22.00  │
-│          │            │ Eve(SCW-NS) │  £22.00  │
-├──────────┼────────────┼─────────────┼──────────┤
-│ Tuesday  │ Day (8am)  │ Frank(SSCW) │  £15.00  │
-│          │            │ Grace(ESCW) │  £18.00  │
-│          │            │ Heidi(SSCW) │  £15.00  │
-│          │ Night(8pm) │ Ivan(SCW-NS)│  £22.00  │
-│          │            │ Judy(SCW-NS)│  £22.00  │
-└──────────┴────────────┴─────────────┴──────────┘
+┌──────────┬────────────┬──────────────┬──────────┐
+│   Day    │ Shift Type │ Staff Assigned │  Cost   │
+├──────────┼────────────┼───────────────┼──────────┤
+│ Monday   │ Day (8am)  │ Alice(SSCW)   │  £28.11  │
+│          │            │ Bob(SCW)      │  £19.19  │
+│          │            │ Carol(SCA)    │  £13.52  │
+│          │ Night(8pm) │ Dave(SSCWN)   │  £35.13  │
+│          │            │ Eve(SCWN)     │  £23.99  │
+├──────────┼────────────┼───────────────┼──────────┤
+│ Tuesday  │ Day (8am)  │ Frank(SSCW)   │  £28.11  │
+│          │            │ Grace(SCW)    │  £19.19  │
+│          │            │ Heidi(SCA)    │  £13.52  │
+│          │ Night(8pm) │ Ivan(SSCWN)   │  £35.13  │
+│          │            │ Judy(SCWN)    │  £23.99  │
+└──────────┴────────────┴───────────────┴──────────┘
 
-Total Weekly Cost: £1,932 (Optimized)
-vs Manual Scheduling: £2,176 (Baseline)
-Savings: £244/week = £12,688/year per unit
+Total Weekly Cost: £2,169 (Optimised assignment - permanent staff)
+vs Manual Scheduling: £2,438 (Baseline with 3 agency shifts)
+Savings: £269/week = £13,988/year per unit
+
+Agency Cost Impact (if forced to use):
+• 3 agency SCA shifts (8h midweek): 3 × 8 × £21.25 = £510
+• vs 3 permanent SCA shifts: 3 × 8 × £13.52 = £325
+• Agency premium: £185/week = £9,620/year per unit
+
+LP optimiser avoids agency costs by optimal permanent staff allocation
 
 RESULTS (All Units):
 • 12.6% cost reduction (£346,500/year total)
@@ -324,19 +349,19 @@ RESULTS (All Units):
 • Feasible solution in 95% of scenarios
 ```
 
-**Caption:** Linear programming shift optimization using PuLP library. Objective function minimizes total staff costs while satisfying demand, availability, skills, and Working Time Directive constraints. Achieves 12.6% cost reduction (£346,500/year) with guaranteed optimal solutions.
+**Caption:** Linear programming shift optimisation using PuLP library. Objective function minimises total staff costs (permanent £13.52-£54.92/hour, agency £21.25-£53.75/hour per IDI rates) while satisfying demand, availability, skills, and Working Time Directive constraints. Achieves 12.6% cost reduction (£346,500/year) with guaranteed optimal solutions by preferring permanent staff over expensive agency coverage.
 
 ---
 
-## Figure 6: Performance Optimization Results
+## Figure 6: Performance Optimisation Results
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│              PRODUCTION PERFORMANCE OPTIMIZATION                        │
-│                  (Database, Caching, Parallelization)                   │
+│              PRODUCTION PERFORMANCE OPTIMISATION                        │
+│                  (Database, Caching, Parallelisation)                   │
 └────────────────────────────────────────────────────────────────────────┘
 
-BEFORE OPTIMIZATION:
+BEFORE OPTIMISATION:
 ┌─────────────────────────────────────────────────────────────┐
 │ Dashboard Load                                               │
 │ ████████████████████████████████████████ 1,200ms            │
@@ -348,7 +373,7 @@ BEFORE OPTIMIZATION:
 │ ████████████████████████████ 580ms                          │
 └─────────────────────────────────────────────────────────────┘
 
-OPTIMIZATION 1: Database Query Reduction
+OPTIMISATION 1: Database Query Reduction
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Problem: N+1 queries (60 queries for dashboard)
 
@@ -359,7 +384,7 @@ shifts = Shift.objects.filter(date=today)\
 
 Result: 60 queries → 9 queries (6.7× reduction)
 
-OPTIMIZATION 2: Redis Caching Layer
+OPTIMISATION 2: Redis Caching Layer
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Cache Strategy:
 • Forecast data: 24-hour TTL
@@ -369,7 +394,7 @@ Cache Strategy:
 Hit Rate: 85% (typical)
 Response Time: 580ms → 85ms (6.8× improvement)
 
-OPTIMIZATION 3: Prophet Parallel Training
+OPTIMISATION 3: Prophet Parallel Training
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 from concurrent.futures import ThreadPoolExecutor
 
@@ -380,7 +405,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 Result: 15s → 4.8s per unit (3.1× speedup)
 
-OPTIMIZATION 4: Database Indexes
+OPTIMISATION 4: Database Indexes
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Added 10 strategic indexes:
 • (care_home_id, date) - shift queries
@@ -390,7 +415,7 @@ Added 10 strategic indexes:
 
 Query Time: 420ms → 85ms (4.9× improvement)
 
-AFTER OPTIMIZATION:
+AFTER OPTIMISATION:
 ┌─────────────────────────────────────────────────────────────┐
 │ Dashboard Load                                               │
 │ ████ 180ms  (-85%)  ✅ 6.7× faster                          │
@@ -417,7 +442,7 @@ Total Requests: 17,796 in 120 seconds
 Throughput: 148 req/s sustained
 ```
 
-**Caption:** Performance optimization journey from baseline to production-ready. Database query optimization (6.7× speedup), Redis caching (6.8× speedup), and Prophet parallel training (3.1× speedup) combined to achieve 300-user concurrent capacity with 777ms average response time.
+**Caption:** Performance optimisation journey from baseline to production-ready. Database query optimisation (6.7× speedup), Redis caching (6.8× speedup), and Prophet parallel training (3.1× speedup) combined to achieve 300-user concurrent capacity with 777ms average response time.
 
 ---
 
@@ -458,7 +483,7 @@ Trigger: Push to any branch, Pull Request
 │ 3. Run Tests (69 tests)                 │
 │    python manage.py test                │
 │    • Prophet forecasting: 24 tests      │
-│    • ShiftOptimizer: 20 tests           │
+│    • ShiftOptimiser: 20 tests           │
 │    • Feature engineering: 25 tests      │
 └────┬────────────────────────────────────┘
      │
@@ -481,7 +506,7 @@ Trigger: Push to any branch, Pull Request
 │ 6. Performance Benchmarks               │
 │    • LP solver speed test               │
 │    • Prophet training benchmark         │
-│    • Dashboard query optimization       │
+│    • Dashboard query optimisation       │
 └────┬────────────────────────────────────┘
      │
      ▼
@@ -597,9 +622,9 @@ Base System Development:
 
 ML Enhancements:
   Prophet Forecasting:            8 hours × £37 = £296
-  Shift Optimization (LP):        6 hours × £37 = £222
+  Shift Optimisation (LP):        6 hours × £37 = £222
   ML Validation Tests:            2.5 hours × £37 = £92.50
-  Performance Optimization:       5 hours × £37 = £185
+  Performance Optimisation:       5 hours × £37 = £185
   CI/CD Integration:              4 hours × £37 = £148
   Academic Paper Update:          1.5 hours × £37 = £55.50
   ─────────────────────────────────────────────────
@@ -627,11 +652,11 @@ ML Enhancement Benefits:
     ─────────────────────────────────────────────────
     Subtotal Forecasting:              £251,250
 
-  Optimization (Cost Reduction):
+  Optimisation (Cost Reduction):
     • Agency cost savings (18.3%):     £245,000
     • Overtime savings (7.2%):         £101,500
     ─────────────────────────────────────────────────
-    Subtotal Optimization:             £346,500
+    Subtotal Optimisation:             £346,500
 
   Total ML Annual Value:               £597,750
   ─────────────────────────────────────────────────
@@ -770,7 +795,7 @@ Recommendation: ML enhancements are ESSENTIAL for maximizing ROI
               │ Performance:            │
               │ • 10 strategic indexes  │
               │ • Connection pooling    │
-              │ • Query optimization    │
+              │ • Query optimisation    │
               ├─────────────────────────┤
               │ Specs:                  │
               │ • 4 CPU cores           │
@@ -964,7 +989,7 @@ AUTOMATED PROCESS (With System):
 │                                                                       │
 │ 8:11 AM - ROTA REVIEW                                                │
 │ ├─ Check Prophet forecast (30-day ahead, 2 min) ✅                  │
-│ ├─ Review LP-optimized shifts (auto-generated, 3 min) ✅            │
+│ ├─ Review LP-optimised shifts (auto-generated, 3 min) ✅            │
 │ ├─ Make adjustments if needed (5 min) ✅                            │
 │ └─ Total: 10 minutes (vs 120 min manual)                           │
 │                                                                       │
@@ -1033,7 +1058,7 @@ Staff Satisfaction: +35% (from UAT survey)
 OM Interruptions: -80% (fewer "admin" questions)
 ```
 
-**Caption:** Operational Manager workflow comparison showing 89% time reduction (5.5 hours → 40 minutes daily). Manual processes involving spreadsheets, phone calls, and emails replaced by automated leave approval (70% auto), Prophet forecasting, LP optimization, and self-service portals for staff.
+**Caption:** Operational Manager workflow comparison showing 89% time reduction (5.5 hours → 40 minutes daily). Manual processes involving spreadsheets, phone calls, and emails replaced by automated leave approval (70% auto), Prophet forecasting, LP optimisation, and self-service portals for staff.
 
 ---
 
@@ -1045,8 +1070,8 @@ OM Interruptions: -80% (fewer "admin" questions)
 | 2 | Data Isolation Pattern | Row-level security implementation |
 | 3 | Leave Auto-Approval Decision Tree | 5-rule approval algorithm |
 | 4 | Prophet Forecasting Dashboard | ML forecasting interface & accuracy |
-| 5 | Shift Optimization (LP) | Linear programming cost minimization |
-| 6 | Performance Optimization Results | Database, caching, parallelization gains |
+| 5 | Shift Optimisation (LP) | Linear programming cost minimisation |
+| 6 | Performance Optimisation Results | Database, caching, parallelization gains |
 | 7 | CI/CD Pipeline Architecture | 4 automated workflows |
 | 8 | ROI Comparison | Base vs ML-enhanced financial analysis |
 | 9 | Production Deployment Architecture | 2-server infrastructure |

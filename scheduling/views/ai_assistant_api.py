@@ -14,8 +14,9 @@ import os
 
 # Import models for report generation
 from scheduling.models import (
-    User, Shift, LeaveRequest, IncidentReport, Unit, ShiftType
+    User, Shift, LeaveRequest, IncidentReport, Unit, ShiftType, StaffingForecast
 )
+from scheduling.models_multi_home import CareHome
 from staff_records.models import SicknessRecord, StaffProfile
 
 # Import the HelpAssistant from the management command
@@ -183,9 +184,172 @@ class ReportGenerator:
         }
     
     @staticmethod
+    def generate_staffing_forecast(days_ahead=7, care_home_name=None, unit_name=None):
+        """Generate ML-based staffing forecast using Prophet predictions"""
+        today = timezone.now().date()
+        end_date = today + timedelta(days=days_ahead)
+        
+        # Build queryset
+        forecasts_qs = StaffingForecast.objects.filter(
+            forecast_date__gte=today,
+            forecast_date__lte=end_date
+        ).select_related('care_home', 'unit').order_by('forecast_date')
+        
+        # Apply filters
+        if care_home_name:
+            forecasts_qs = forecasts_qs.filter(care_home__name__icontains=care_home_name)
+        
+        if unit_name:
+            forecasts_qs = forecasts_qs.filter(unit__name__icontains=unit_name)
+        
+        forecasts = list(forecasts_qs)
+        
+        if not forecasts:
+            return {
+                'summary': 'No forecast data available. Run `python3 manage.py train_prophet_models` to generate forecasts.',
+                'forecasts': [],
+                'high_risk_days': [],
+                'avg_predicted': 0
+            }
+        
+        # Extract forecast details
+        forecast_list = []
+        high_risk_days = []
+        total_predicted = 0
+        
+        for f in forecasts:
+            uncertainty_pct = (
+                (float(f.confidence_upper) - float(f.confidence_lower)) / float(f.predicted_shifts)
+            ) if f.predicted_shifts > 0 else 0
+            
+            forecast_item = {
+                'date': f.forecast_date.strftime('%Y-%m-%d'),
+                'care_home': f.care_home.name,
+                'unit': f.unit.get_name_display(),
+                'predicted_shifts': float(f.predicted_shifts),
+                'ci_lower': float(f.confidence_lower),
+                'ci_upper': float(f.confidence_upper),
+                'uncertainty_pct': round(uncertainty_pct * 100, 1),
+                'is_high_risk': uncertainty_pct > 0.5
+            }
+            
+            forecast_list.append(forecast_item)
+            total_predicted += float(f.predicted_shifts)
+            
+            if uncertainty_pct > 0.5:
+                high_risk_days.append({
+                    'date': f.forecast_date.strftime('%A, %d %b'),
+                    'unit': f.unit.get_name_display(),
+                    'predicted': round(float(f.predicted_shifts), 1),
+                    'range': f"{round(float(f.confidence_lower), 1)}-{round(float(f.confidence_upper), 1)}"
+                })
+        
+        avg_predicted = total_predicted / len(forecasts) if forecasts else 0
+        
+        return {
+            'summary': f"📊 ML Forecast for next {days_ahead} days: Avg {avg_predicted:.1f} shifts/day. {len(high_risk_days)} high-uncertainty days detected.",
+            'forecasts': forecast_list,
+            'high_risk_days': high_risk_days,
+            'avg_predicted': round(avg_predicted, 1),
+            'days_ahead': days_ahead
+        }
+    
+    @staticmethod
+    def check_staffing_shortage(target_date=None, care_home_name=None):
+        """Check if forecasted demand exceeds available staff"""
+        if target_date is None:
+            target_date = timezone.now().date()
+        elif isinstance(target_date, str):
+            target_date = datetime.strptime(target_date, '%Y-%m-%d').date()
+        
+        # Get forecasts for target date
+        forecasts_qs = StaffingForecast.objects.filter(
+            forecast_date=target_date
+        ).select_related('care_home', 'unit')
+        
+        if care_home_name:
+            forecasts_qs = forecasts_qs.filter(care_home__name__icontains=care_home_name)
+        
+        forecasts = list(forecasts_qs)
+        
+        if not forecasts:
+            return {
+                'summary': f'No ML forecast available for {target_date}. Run forecasting model first.',
+                'shortages': [],
+                'total_shortage': 0
+            }
+        
+        # Get actual scheduled shifts for comparison
+        scheduled_count = Shift.objects.filter(
+            date=target_date,
+            status__in=['SCHEDULED', 'CONFIRMED']
+        ).count()
+        
+        shortages = []
+        total_predicted = 0
+        
+        for f in forecasts:
+            # Get unit-specific scheduled shifts
+            unit_shifts = Shift.objects.filter(
+                date=target_date,
+                unit=f.unit,
+                status__in=['SCHEDULED', 'CONFIRMED']
+            ).count()
+            
+            predicted = float(f.predicted_shifts)
+            total_predicted += predicted
+            
+            # Check if shortage (use upper CI for conservative planning)
+            if unit_shifts < f.confidence_upper:
+                shortage = float(f.confidence_upper) - unit_shifts
+                shortages.append({
+                    'unit': f.unit.get_name_display(),
+                    'care_home': f.care_home.name,
+                    'scheduled': unit_shifts,
+                    'predicted_upper': round(float(f.confidence_upper), 1),
+                    'shortage': round(shortage, 1)
+                })
+        
+        total_shortage = sum(s['shortage'] for s in shortages)
+        
+        if shortages:
+            summary = f"⚠️ ML Prediction: Potential shortage on {target_date.strftime('%A, %d %b')} - {total_shortage:.1f} shifts short across {len(shortages)} units."
+        else:
+            summary = f"✅ ML Prediction: Staffing adequate for {target_date.strftime('%A, %d %b')} - {scheduled_count} scheduled vs {total_predicted:.1f} predicted."
+        
+        return {
+            'summary': summary,
+            'shortages': shortages,
+            'total_shortage': round(total_shortage, 1),
+            'scheduled_count': scheduled_count,
+            'predicted_total': round(total_predicted, 1)
+        }
+    
+    @staticmethod
     def interpret_query(query):
         """Interpret user query and determine what report to generate"""
         query_lower = query.lower()
+        
+        # ML Forecasting queries (NEW)
+        if any(word in query_lower for word in ['forecast', 'predict', 'prediction', 'next week', 'upcoming demand']):
+            days = 7
+            if 'tomorrow' in query_lower:
+                days = 1
+            elif 'week' in query_lower or '7 day' in query_lower:
+                days = 7
+            elif 'month' in query_lower or '30 day' in query_lower:
+                days = 30
+            return {'type': 'ml_forecast', 'data': ReportGenerator.generate_staffing_forecast(days)}
+        
+        # Staffing shortage queries (NEW - ML-powered)
+        if any(word in query_lower for word in ['shortage', 'short-staffed', 'short staffed', 'understaffed', 'need more staff']):
+            date_str = None
+            if 'tomorrow' in query_lower:
+                date_str = (timezone.now().date() + timedelta(days=1)).isoformat()
+            elif 'monday' in query_lower or 'tuesday' in query_lower or 'wednesday' in query_lower:
+                # Simple day detection (could be enhanced)
+                date_str = None
+            return {'type': 'ml_shortage', 'data': ReportGenerator.check_staffing_shortage(date_str)}
         
         # Staffing queries
         if any(word in query_lower for word in ['how many staff', 'total staff', 'staff count', 'staffing levels']):
@@ -287,6 +451,29 @@ def ai_assistant_api(request):
                 for role, count in report_data['by_role'].items():
                     answer += f"• {role}: {count}\n"
             
+            elif report_type == 'ml_forecast':
+                if report_data['high_risk_days']:
+                    answer += "\n\n**⚠️ High-Uncertainty Days:**\n"
+                    for day in report_data['high_risk_days'][:5]:
+                        answer += f"• {day['date']} - {day['unit']}: {day['predicted']} shifts (range: {day['range']})\n"
+                
+                if report_data['forecasts']:
+                    answer += f"\n\n**Next {min(3, len(report_data['forecasts']))} Days:**\n"
+                    for fc in report_data['forecasts'][:3]:
+                        risk_flag = "⚠️" if fc['is_high_risk'] else "✅"
+                        answer += f"{risk_flag} {fc['date']}: {fc['predicted_shifts']:.1f} shifts ({fc['ci_lower']:.1f}-{fc['ci_upper']:.1f})\n"
+            
+            elif report_type == 'ml_shortage':
+                if report_data['shortages']:
+                    answer += "\n\n**⚠️ Predicted Shortages:**\n"
+                    for s in report_data['shortages']:
+                        answer += f"• {s['unit']}: {s['scheduled']} scheduled vs {s['predicted_upper']} needed (short {s['shortage']} shifts)\n"
+                    answer += f"\n**Action Required:** Consider agency staff or overtime for {report_data['total_shortage']} shifts."
+            
+            elif report_type == 'sickness_report':
+                for role, count in report_data['by_role'].items():
+                    answer += f"• {role}: {count}\n"
+            
             elif report_type == 'sickness_report':
                 if report_data['active_cases']:
                     answer += "\n\n**Currently Off Sick:**\n"
@@ -348,6 +535,10 @@ def ai_assistant_api(request):
             answer += "• 'Show me recent incidents'\n"
             answer += "• 'What's the shift coverage today?'\n"
             answer += "• 'Show leave requests'\n"
+            answer += "\n**ML-Powered Forecasts:**\n"
+            answer += "• 'What's the staffing forecast for next week?'\n"
+            answer += "• 'Will we be short-staffed tomorrow?'\n"
+            answer += "• 'Predict staffing demand for next month'\n"
             
             return JsonResponse({
                 'answer': answer,
@@ -376,6 +567,12 @@ def ai_assistant_api(request):
 • "What's the coverage today?"
 • "Show leave requests"
 
+**ML-Powered Forecasts (NEW!):**
+• "What's the staffing forecast for next week?"
+• "Will we be short-staffed tomorrow?"
+• "Predict demand for next 30 days"
+• "Are we understaffed on Monday?"
+
 **Commands:**
 • How to add staff
 • How to generate rotas
@@ -391,8 +588,8 @@ def ai_assistant_api(request):
 • Import errors
 • Permission denied errors
 
-Try asking about staffing, sickness, incidents, or shift coverage for instant reports!""",
-                'related': ['Staffing Report', 'Sickness Report', 'Incident Report', 'Coverage Report'],
+Ask about forecasts, shortages, sickness, or incidents for instant ML-powered insights!""",
+                'related': ['Staffing Forecast', 'Shortage Prediction', 'Sickness Report', 'Coverage Report'],
                 'category': 'help'
             })
     
