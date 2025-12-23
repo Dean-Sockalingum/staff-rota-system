@@ -441,6 +441,9 @@ def main():
     # Configuration
     start_date = datetime(2025, 1, 1).date()  # Start of year
     end_date = datetime(2025, 12, 31).date()    # Full year
+    # Cycle must start on Sunday to keep weeks aligned
+    # Jan 1, 2025 is Wednesday, use Dec 29, 2024 (previous Sunday)
+    cycle_start = datetime(2024, 12, 29).date()
     
     print(f"\nPeriod: {start_date} to {end_date}")
     print(f"Total days: {(end_date - start_date).days + 1}")
@@ -509,7 +512,7 @@ def main():
                     pattern = pattern_def['pattern']
                     count = pattern_def['count']
                     
-                    if should_work(current_date, pattern, start_date):
+                    if should_work(current_date, pattern, cycle_start):
                         available_staff = staff_by_role.get(role, [])
                         
                         # Initialize index for this pattern if not exists

@@ -303,7 +303,9 @@ def main():
     # Generate shifts for full year
     start_date = datetime(2025, 1, 1).date()
     end_date = datetime(2025, 12, 31).date()
-    cycle_start = start_date
+    # Cycle must start on a Sunday to keep weeks aligned
+    # Jan 1, 2025 is Wednesday, so go back to previous Sunday (Dec 29, 2024)
+    cycle_start = datetime(2024, 12, 29).date()
     
     total_shifts = 0
     
