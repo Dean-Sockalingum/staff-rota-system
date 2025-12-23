@@ -188,26 +188,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for forecast in forecasts %}
+                        {% for item in forecasts %}
                         <tr>
-                            <td>{{ forecast.forecast_date|date:'D, M d' }}</td>
-                            <td>{{ forecast.care_home.get_name_display }}</td>
-                            <td><span class="badge bg-secondary">{{ forecast.unit.get_name_display }}</span></td>
-                            <td><strong>{{ forecast.predicted_shifts|floatformat:1 }}</strong></td>
+                            <td>{{ item.forecast.forecast_date|date:'D, M d' }}</td>
+                            <td>{{ item.forecast.care_home.get_name_display }}</td>
+                            <td><span class="badge bg-secondary">{{ item.forecast.unit.get_name_display }}</span></td>
+                            <td><strong>{{ item.forecast.predicted_shifts|floatformat:1 }}</strong></td>
                             <td class="text-muted">
-                                [{{ forecast.confidence_lower|floatformat:1 }}, {{ forecast.confidence_upper|floatformat:1 }}]
+                                [{{ item.forecast.confidence_lower|floatformat:1 }}, {{ item.forecast.confidence_upper|floatformat:1 }}]
                             </td>
                             <td>
-                                {% widthratio forecast.confidence_upper|add:forecast.confidence_lower|-1 forecast.predicted_shifts 100 as uncertainty_pct %}
-                                ±{{ uncertainty_pct }}%
+                                ±{{ item.uncertainty_pct }}%
                             </td>
                             <td>
-                                {% if forecast.mape < 15 %}
-                                <span class="text-success">{{ forecast.mape|floatformat:1 }}%</span>
-                                {% elif forecast.mape < 25 %}
-                                <span class="text-info">{{ forecast.mape|floatformat:1 }}%</span>
+                                {% if item.forecast.mape < 15 %}
+                                <span class="text-success">{{ item.forecast.mape|floatformat:1 }}%</span>
+                                {% elif item.forecast.mape < 25 %}
+                                <span class="text-info">{{ item.forecast.mape|floatformat:1 }}%</span>
                                 {% else %}
-                                <span class="text-warning">{{ forecast.mape|floatformat:1 }}%</span>
+                                <span class="text-warning">{{ item.forecast.mape|floatformat:1 }}%</span>
                                 {% endif %}
                             </td>
                         </tr>

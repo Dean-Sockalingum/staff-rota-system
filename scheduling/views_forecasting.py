@@ -33,7 +33,7 @@ def is_operations_or_senior_manager(user):
     if user.role is None:
         return False
     return (
-        user.role.is_operations_manager or 
+        user.role.name == 'OM' or 
         user.role.is_senior_management_team
     )
 
@@ -69,9 +69,9 @@ def forecasting_dashboard(request):
     # Apply filters
     if care_home_filter:
         forecasts_qs = forecasts_qs.filter(care_home__name=care_home_filter)
-    elif request.user.care_home:
-        # Filter to user's assigned care home
-        forecasts_qs = forecasts_qs.filter(care_home=request.user.care_home)
+    elif hasattr(request.user, 'unit') and request.user.unit and hasattr(request.user.unit, 'care_home'):
+        # Filter to user's assigned care home (via their unit)
+        forecasts_qs = forecasts_qs.filter(care_home=request.user.unit.care_home)
     
     if unit_filter:
         forecasts_qs = forecasts_qs.filter(unit__name=unit_filter)
@@ -102,8 +102,8 @@ def forecasting_dashboard(request):
     units = Unit.objects.all().order_by('name')
     if care_home_filter:
         units = units.filter(care_home__name=care_home_filter)
-    elif request.user.care_home:
-        units = units.filter(care_home=request.user.care_home)
+    elif hasattr(request.user, 'unit') and request.user.unit and hasattr(request.user.unit, 'care_home'):
+        units = units.filter(care_home=request.user.unit.care_home)
     
     # Prepare chart data (JSON for Chart.js)
     chart_data = prepare_forecast_chart_data(forecasts)
@@ -164,8 +164,8 @@ def forecast_accuracy_view(request):
     # Apply filters
     if care_home_filter:
         forecasts_qs = forecasts_qs.filter(care_home__name=care_home_filter)
-    elif request.user.care_home:
-        forecasts_qs = forecasts_qs.filter(care_home=request.user.care_home)
+    elif hasattr(request.user, 'unit') and request.user.unit and hasattr(request.user.unit, 'care_home'):
+        forecasts_qs = forecasts_qs.filter(care_home=request.user.unit.care_home)
     
     if unit_filter:
         forecasts_qs = forecasts_qs.filter(unit__name=unit_filter)
@@ -237,8 +237,8 @@ def forecast_accuracy_view(request):
     units = Unit.objects.all().order_by('name')
     if care_home_filter:
         units = units.filter(care_home__name=care_home_filter)
-    elif request.user.care_home:
-        units = units.filter(care_home=request.user.care_home)
+    elif hasattr(request.user, 'unit') and request.user.unit and hasattr(request.user.unit, 'care_home'):
+        units = units.filter(care_home=request.user.unit.care_home)
     
     # Prepare chart data
     accuracy_chart_data = prepare_accuracy_chart_data(comparisons)
@@ -286,8 +286,8 @@ def unit_performance_view(request):
     # Apply filters
     if care_home_filter:
         forecasts_qs = forecasts_qs.filter(care_home__name=care_home_filter)
-    elif request.user.care_home:
-        forecasts_qs = forecasts_qs.filter(care_home=request.user.care_home)
+    elif hasattr(request.user, 'unit') and request.user.unit and hasattr(request.user.unit, 'care_home'):
+        forecasts_qs = forecasts_qs.filter(care_home=request.user.unit.care_home)
     
     # Aggregate by unit
     unit_performance = forecasts_qs.values(

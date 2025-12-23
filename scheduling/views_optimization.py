@@ -26,7 +26,7 @@ def is_operations_or_senior_manager(user):
         return False
     if not user.role:
         return False
-    return (user.role.is_operations_manager or 
+    return (user.role.name == 'OM' or 
             user.role.is_senior_management_team)
 
 
@@ -112,6 +112,18 @@ def shift_optimization_dashboard(request):
     # Units for this care home
     units = care_home.units.filter(is_active=True).order_by('name')
     
+    # Add uncertainty percentage to each forecast
+    forecast_list = []
+    for forecast in forecasts[:30]:
+        forecast_dict = {
+            'forecast': forecast,
+            'uncertainty_pct': round(
+                ((float(forecast.confidence_upper) - float(forecast.confidence_lower)) / float(forecast.predicted_shifts) * 100)
+                if forecast.predicted_shifts > 0 else 0
+            )
+        }
+        forecast_list.append(forecast_dict)
+    
     # Summary statistics
     summary = {
         'care_home': care_home.get_name_display(),
@@ -128,7 +140,7 @@ def shift_optimization_dashboard(request):
         'care_homes': care_homes,
         'selected_home': care_home,
         'summary': summary,
-        'forecasts': forecasts[:30],  # Limit display
+        'forecasts': forecast_list,
         'units': units,
     }
     
