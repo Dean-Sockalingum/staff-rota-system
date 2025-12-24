@@ -12,6 +12,7 @@ from scheduling.views import (
 )  # Import from main views
 from scheduling.views_compliance import (
     my_training_dashboard, submit_training_record, training_compliance_dashboard, add_staff_training_record,
+    training_breakdown_report,
     my_induction_progress, induction_management, update_induction_progress,
     my_supervision_records, create_supervision_record, supervision_management, sign_supervision_record,
     report_incident, my_incident_reports, incident_management, view_incident
@@ -108,6 +109,7 @@ urlpatterns = [
     path('compliance/training/submit/', submit_training_record, name='submit_training_record'),
     path('compliance/training/management/', training_compliance_dashboard, name='training_compliance_dashboard'),
     path('compliance/training/add-record/', add_staff_training_record, name='add_staff_training_record'),
+    path('compliance/training/breakdown-report/', training_breakdown_report, name='training_breakdown_report'),
     
     # Induction
     path('compliance/induction/', my_induction_progress, name='my_induction_progress'),

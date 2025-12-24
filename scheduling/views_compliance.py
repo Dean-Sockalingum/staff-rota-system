@@ -315,6 +315,376 @@ def submit_training_record(request):
     return render(request, 'compliance/submit_training_record.html', context)
 
 
+@login_required
+def training_breakdown_report(request):
+    """Detailed training breakdown report - by person, course, or home"""
+    import csv
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    
+    # Get filters
+    selected_home = request.GET.get('care_home', None)
+    selected_role = request.GET.get('role', None)
+    selected_status = request.GET.get('status', None)
+    view_type = request.GET.get('view_type', 'by_person')
+    export_format = request.GET.get('export', None)
+    show_all_courses = request.GET.get('show_all_courses', 'yes')  # Default to showing all
+    
+    # Get all courses or just mandatory based on filter
+    if show_all_courses == 'yes':
+        mandatory_courses = TrainingCourse.objects.all().order_by('is_mandatory', 'category', 'name')
+    else:
+        mandatory_courses = TrainingCourse.objects.filter(is_mandatory=True).order_by('name')
+    
+    # Get care homes and roles
+    care_homes = CareHome.objects.filter(is_active=True).order_by('name')
+    from scheduling.models import Role
+    staff_roles = Role.objects.all().order_by('name')
+    
+    # Build staff query
+    staff_query = User.objects.filter(is_active=True)
+    
+    if selected_home:
+        staff_query = staff_query.filter(unit__care_home__name=selected_home)
+    
+    if selected_role:
+        staff_query = staff_query.filter(role__name=selected_role)
+    
+    staff_list = staff_query.distinct().select_related('role', 'unit__care_home').order_by('last_name', 'first_name')
+    
+    # ===== BY PERSON VIEW =====
+    if view_type == 'by_person':
+        staff_training_matrix = []
+        
+        for staff in staff_list:
+            home_name = staff.unit.care_home.get_name_display() if staff.unit else "No Home"
+            courses_status = []
+            compliant_count = 0
+            
+            for course in mandatory_courses:
+                latest_record = TrainingRecord.objects.filter(
+                    staff_member=staff,
+                    course=course
+                ).order_by('-completion_date').first()
+                
+                if latest_record:
+                    status = latest_record.get_status()
+                    courses_status.append({
+                        'course': course,
+                        'status': status,
+                        'completion_date': latest_record.completion_date,
+                        'expiry_date': latest_record.expiry_date,
+                        'days_until_expiry': latest_record.days_until_expiry()
+                    })
+                    if status == 'CURRENT':
+                        compliant_count += 1
+                else:
+                    courses_status.append({
+                        'course': course,
+                        'status': 'MISSING',
+                        'completion_date': None,
+                        'expiry_date': None,
+                        'days_until_expiry': None
+                    })
+            
+            total_courses = mandatory_courses.count()
+            compliance_pct = (compliant_count / total_courses * 100) if total_courses > 0 else 0
+            
+            # Filter by status if selected
+            if selected_status:
+                if selected_status == 'compliant' and compliance_pct < 100:
+                    continue
+                elif selected_status == 'expiring' and not any(c['status'] == 'EXPIRING_SOON' for c in courses_status):
+                    continue
+                elif selected_status == 'expired' and not any(c['status'] == 'EXPIRED' for c in courses_status):
+                    continue
+                elif selected_status == 'missing' and not any(c['status'] == 'MISSING' for c in courses_status):
+                    continue
+            
+            staff_training_matrix.append({
+                'staff': staff,
+                'home_name': home_name,
+                'courses': courses_status,
+                'compliant_count': compliant_count,
+                'total_courses': total_courses,
+                'compliance_pct': compliance_pct
+            })
+    
+    # ===== BY COURSE VIEW =====
+    elif view_type == 'by_course':
+        courses_breakdown = []
+        
+        for course in mandatory_courses:
+            compliant = 0
+            expiring = 0
+            expired = 0
+            missing = 0
+            staff_records = []
+            
+            for staff in staff_list:
+                home_name = staff.unit.care_home.get_name_display() if staff.unit else "No Home"
+                latest_record = TrainingRecord.objects.filter(
+                    staff_member=staff,
+                    course=course
+                ).order_by('-completion_date').first()
+                
+                if latest_record:
+                    status = latest_record.get_status()
+                    staff_records.append({
+                        'staff': staff,
+                        'home': home_name,
+                        'completion_date': latest_record.completion_date,
+                        'expiry_date': latest_record.expiry_date,
+                        'status': status,
+                        'days_until_expiry': latest_record.days_until_expiry()
+                    })
+                    
+                    if status == 'CURRENT':
+                        compliant += 1
+                    elif status == 'EXPIRING_SOON':
+                        expiring += 1
+                    elif status == 'EXPIRED':
+                        expired += 1
+                else:
+                    missing += 1
+                    staff_records.append({
+                        'staff': staff,
+                        'home': home_name,
+                        'completion_date': None,
+                        'expiry_date': None,
+                        'status': 'MISSING',
+                        'days_until_expiry': None
+                    })
+            
+            courses_breakdown.append({
+                'course': course,
+                'compliant': compliant,
+                'expiring': expiring,
+                'expired': expired,
+                'missing': missing,
+                'staff_records': staff_records
+            })
+    
+    # ===== BY HOME SUMMARY VIEW =====
+    else:
+        home_summary = []
+        
+        for home in care_homes:
+            if selected_home and home.name != selected_home:
+                continue
+            
+            home_staff = staff_list.filter(unit__care_home=home)
+            total_staff = home_staff.count()
+            
+            if total_staff == 0:
+                continue
+            
+            # Calculate overall home compliance
+            compliant_staff_count = 0
+            expiring_staff_count = 0
+            non_compliant_staff_count = 0
+            
+            course_breakdown = []
+            
+            for course in mandatory_courses:
+                compliant = 0
+                expiring = 0
+                expired = 0
+                missing = 0
+                
+                for staff in home_staff:
+                    latest_record = TrainingRecord.objects.filter(
+                        staff_member=staff,
+                        course=course
+                    ).order_by('-completion_date').first()
+                    
+                    if latest_record:
+                        status = latest_record.get_status()
+                        if status == 'CURRENT':
+                            compliant += 1
+                        elif status == 'EXPIRING_SOON':
+                            expiring += 1
+                        elif status == 'EXPIRED':
+                            expired += 1
+                    else:
+                        missing += 1
+                
+                compliance_pct = (compliant / total_staff * 100) if total_staff > 0 else 0
+                
+                course_breakdown.append({
+                    'course_name': course.name,
+                    'compliant': compliant,
+                    'expiring': expiring,
+                    'expired': expired,
+                    'missing': missing,
+                    'percentage': compliance_pct
+                })
+            
+            # Count staff by compliance status
+            for staff in home_staff:
+                staff_compliant_count = 0
+                staff_has_expiring = False
+                
+                for course in mandatory_courses:
+                    latest_record = TrainingRecord.objects.filter(
+                        staff_member=staff,
+                        course=course
+                    ).order_by('-completion_date').first()
+                    
+                    if latest_record:
+                        status = latest_record.get_status()
+                        if status == 'CURRENT':
+                            staff_compliant_count += 1
+                        elif status == 'EXPIRING_SOON':
+                            staff_has_expiring = True
+                
+                if staff_compliant_count == mandatory_courses.count():
+                    compliant_staff_count += 1
+                elif staff_has_expiring:
+                    expiring_staff_count += 1
+                else:
+                    non_compliant_staff_count += 1
+            
+            compliance_percentage = (compliant_staff_count / total_staff * 100) if total_staff > 0 else 0
+            
+            home_summary.append({
+                'home_name': home.get_name_display(),
+                'total_staff': total_staff,
+                'compliant_staff': compliant_staff_count,
+                'expiring_staff': expiring_staff_count,
+                'non_compliant_staff': non_compliant_staff_count,
+                'compliance_percentage': compliance_percentage,
+                'course_breakdown': course_breakdown
+            })
+    
+    # Calculate overall statistics
+    total_staff = staff_list.count()
+    fully_compliant = 0
+    has_expiring = 0
+    has_expired_or_missing = 0
+    
+    for staff in staff_list:
+        compliant_count = 0
+        has_expiring_flag = False
+        has_problem_flag = False
+        
+        for course in mandatory_courses:
+            latest_record = TrainingRecord.objects.filter(
+                staff_member=staff,
+                course=course
+            ).order_by('-completion_date').first()
+            
+            if latest_record:
+                status = latest_record.get_status()
+                if status == 'CURRENT':
+                    compliant_count += 1
+                elif status == 'EXPIRING_SOON':
+                    has_expiring_flag = True
+                elif status in ['EXPIRED', 'MISSING']:
+                    has_problem_flag = True
+            else:
+                has_problem_flag = True
+        
+        if compliant_count == mandatory_courses.count():
+            fully_compliant += 1
+        elif has_expiring_flag:
+            has_expiring += 1
+        
+        if has_problem_flag:
+            has_expired_or_missing += 1
+    
+    compliance_percentage = (fully_compliant / total_staff * 100) if total_staff > 0 else 0
+    
+    # ===== EXPORT HANDLING =====
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="training_breakdown_{view_type}.csv"'
+        
+        writer = csv.writer(response)
+        
+        if view_type == 'by_person':
+            # CSV Header
+            header = ['Staff Name', 'Home', 'Role']
+            for course in mandatory_courses:
+                header.extend([f'{course.name} Status', f'{course.name} Expiry'])
+            header.append('Compliance %')
+            writer.writerow(header)
+            
+            # Data rows
+            for item in staff_training_matrix:
+                row = [item['staff'].full_name, item['home_name'], item['staff'].role.name]
+                for course_status in item['courses']:
+                    row.append(course_status['status'])
+                    row.append(course_status['expiry_date'] if course_status['expiry_date'] else '—')
+                row.append(f"{item['compliance_pct']:.1f}%")
+                writer.writerow(row)
+        
+        return response
+    
+    elif export_format == 'excel':
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Training Breakdown"
+        
+        # Styles
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        if view_type == 'by_person':
+            # Excel Header
+            headers = ['Staff Name', 'Home', 'Role']
+            for course in mandatory_courses:
+                headers.extend([f'{course.name} Status', f'{course.name} Expiry'])
+            headers.append('Compliance %')
+            
+            ws.append(headers)
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Data rows
+            for item in staff_training_matrix:
+                row = [item['staff'].full_name, item['home_name'], item['staff'].role.name]
+                for course_status in item['courses']:
+                    row.append(course_status['status'])
+                    row.append(str(course_status['expiry_date']) if course_status['expiry_date'] else '—')
+                row.append(f"{item['compliance_pct']:.1f}%")
+                ws.append(row)
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="training_breakdown_{view_type}.xlsx"'
+        wb.save(response)
+        return response
+    
+    # Regular HTML view
+    context = {
+        'care_homes': care_homes,
+        'staff_roles': staff_roles,
+        'mandatory_courses': mandatory_courses,
+        'selected_home': selected_home,
+        'selected_role': selected_role,
+        'selected_status': selected_status,
+        'view_type': view_type,
+        'show_all_courses': show_all_courses,
+        'total_staff': total_staff,
+        'fully_compliant': fully_compliant,
+        'has_expiring': has_expiring,
+        'has_expired_or_missing': has_expired_or_missing,
+        'compliance_percentage': compliance_percentage,
+    }
+    
+    if view_type == 'by_person':
+        context['staff_training_matrix'] = staff_training_matrix
+    elif view_type == 'by_course':
+        context['courses_breakdown'] = courses_breakdown
+    else:
+        context['home_summary'] = home_summary
+    
+    return render(request, 'compliance/training_breakdown_report.html', context)
+
+
 # ============================================================================
 # INDUCTION TRACKING
 # ============================================================================

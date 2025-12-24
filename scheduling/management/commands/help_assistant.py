@@ -763,6 +763,291 @@ http://127.0.0.1:8000/admin/scheduling/user/
                 },
             },
             
+            # AI Assistant Help
+            'ai_assistant': {
+                'confidence_score': {
+                    'question': ['why is confidence low', 'low confidence', 'confidence score', 'what is confidence', 'explain confidence'],
+                    'answer': """
+**Understanding Confidence Scores:**
+
+The AI assistant calculates a confidence score (0-100%) based on how well it understands your question:
+
+**High Confidence (80-100%):**
+✅ Query matches known patterns exactly
+✅ All required information is present (names, dates, homes)
+✅ Clear, specific question
+Examples:
+- "Show me Jane Smith details" → 95%
+- "How many SCW at Hawthorn House?" → 90%
+- "List staff off sick today" → 88%
+
+**Medium Confidence (50-79%):**
+⚠️ Query partially matches patterns
+⚠️ Some ambiguity or missing details
+⚠️ Multiple possible interpretations
+Examples:
+- "Staff at hospital" → 65% (which home?)
+- "Show me nurses" → 70% (which role specifically?)
+- "Coverage" → 60% (which day/unit?)
+
+**Low Confidence (<50%):**
+❌ Query doesn't match known patterns
+❌ Too vague or unclear
+❌ Might need training or typos
+Examples:
+- "How are things?" → 20%
+- "Check it" → 15%
+- Random words → <10%
+
+**How to Improve Your Results:**
+
+1. **Be Specific:**
+   ❌ "Show staff" → ✅ "Show staff at Orchard Grove"
+   
+2. **Use Full Names:**
+   ❌ "Jane" → ✅ "Jane Smith"
+   
+3. **Include Context:**
+   ❌ "Coverage" → ✅ "Coverage for today at Hawthorn"
+   
+4. **Use Known Terms:**
+   - Care homes: Hawthorn House, Orchard Grove, Victoria Gardens, Riverside, Meadowburn
+   - Roles: SCW, SCA, SSCW, OM, SM
+   - Time: today, tomorrow, this week, December 24
+
+**What I Can Help With:**
+
+📋 **Staff Queries:**
+- "Show me [name] details"
+- "List all [role] at [home]"
+- "Who is working today?"
+- "How many staff do we have?"
+
+📊 **Reports:**
+- "Staffing coverage today"
+- "Who is off sick?"
+- "Show shortages next week"
+- "Sickness report for [home]"
+
+📝 **Care Plans:**
+- "When is [resident ID] review due?"
+- "Show overdue reviews"
+- "How many reviews this month?"
+
+🏥 **Home Performance:**
+- "Show me [home] performance"
+- "Compare all care homes"
+- "Quality audit for [home]"
+
+💼 **Leave & Training:**
+- "How much leave does [name] have?"
+- "Show training compliance"
+- "Training breakdown by person"
+
+**If Confidence is Low:**
+1. Rephrase your question using examples above
+2. Add more details (names, dates, locations)
+3. Try using the quick action buttons
+4. Use standard terminology from the system
+
+**Still Need Help?**
+Try: "Show all topics" to see everything I can answer!
+""",
+                    'related': ['ai_help', 'query_tips', 'examples']
+                },
+                
+                'how_to_ask': {
+                    'question': ['how do i ask', 'how to ask', 'query examples', 'what can you do', 'help me ask'],
+                    'answer': """
+**How to Ask Questions Effectively:**
+
+**Best Query Patterns:**
+
+📋 **Staff Information:**
+```
+✅ "Show me Jane Smith details"
+✅ "List all senior carers at Hawthorn House"
+✅ "How many SCW at Orchard Grove?"
+✅ "Who is working today?"
+✅ "Search for John MacDonald"
+```
+
+📊 **Coverage & Shortages:**
+```
+✅ "What's the coverage today?"
+✅ "Are we short staffed next week?"
+✅ "Show staffing shortage"
+✅ "Coverage for December 25"
+✅ "Check shortages at Victoria Gardens"
+```
+
+🤒 **Sickness & Absence:**
+```
+✅ "Who is off sick today?"
+✅ "Sickness report for Orchard Grove"
+✅ "Show me all sickness absence"
+✅ "How many staff off sick?"
+```
+
+💼 **Leave Requests:**
+```
+✅ "How much leave does ADMIN001 have?"
+✅ "Show leave balance for Jane Smith"
+✅ "List approved leave this week"
+✅ "Annual leave summary"
+```
+
+📝 **Care Plan Reviews:**
+```
+✅ "When is DEM01 review due?"
+✅ "Show overdue care plan reviews"
+✅ "How many reviews this month?"
+✅ "Care plan compliance status"
+```
+
+🏥 **Home Performance:**
+```
+✅ "Show me Orchard Grove's performance"
+✅ "Compare all care homes"
+✅ "Quality audit for Hawthorn House"
+✅ "Performance dashboard"
+```
+
+🎓 **Training Compliance:**
+```
+✅ "Training compliance breakdown"
+✅ "Show training by person"
+✅ "Training report for [home]"
+✅ "Who needs fire safety training?"
+```
+
+📞 **Agency & Overtime:**
+```
+✅ "Show me agency companies"
+✅ "Agency usage this month"
+✅ "Overtime costs this week"
+✅ "How to add overtime shift"
+```
+
+**Quick Tips:**
+
+1️⃣ **Use Full Names:** "Jane Smith" not "Jane"
+2️⃣ **Specify Location:** Add care home name when relevant
+3️⃣ **Include Dates:** "today", "this week", "December 25"
+4️⃣ **Use Proper Roles:** SCW, SCA, SSCW, OM, SM, Nurse
+5️⃣ **Be Specific:** "Coverage at Hawthorn" vs just "Coverage"
+
+**Try These Example Buttons:**
+Click any quick action button below the chat for instant results!
+
+**Need More Help?**
+Ask: "Show all topics" to see complete list of what I can answer!
+""",
+                    'related': ['examples', 'confidence_score', 'ai_help']
+                },
+                
+                'ai_capabilities': {
+                    'question': ['what can you do', 'ai features', 'chatbot help', 'assistant capabilities', 'what questions'],
+                    'answer': """
+**AI Assistant Capabilities:**
+
+I'm trained to help you with:
+
+**1. Staff Information 👥**
+- View staff details and profiles
+- Search by name, SAP ID, or role
+- List staff by care home or unit
+- Check who's working today
+- Find staff by specialty or grade
+
+**2. Staffing Levels 📊**
+- Coverage reports for any date
+- Shortage detection and alerts
+- Staffing by shift and unit
+- Compare staffing across homes
+- Identify understaffed areas
+
+**3. Sickness & Absence 🤒**
+- Who's off sick today/this week
+- Sickness reports by home
+- Absence patterns and trends
+- Return to work tracking
+
+**4. Annual Leave 💼**
+- Leave balance checks
+- Pending leave requests
+- Approved leave schedules
+- Leave usage targets
+- Low balance warnings
+
+**5. Care Plan Reviews 📝**
+- Review due dates
+- Overdue review alerts
+- Compliance reporting
+- Monthly review counts
+- Resident-specific queries
+
+**6. Home Performance 🏥**
+- Quality metrics by home
+- Multi-home comparisons
+- Incident reports
+- Compliance dashboards
+- Performance trends
+
+**7. Training Compliance 🎓**
+- Training breakdown reports
+- Compliance by person/course
+- Expiring training alerts
+- Mandatory vs optional courses
+- Home-level training stats
+
+**8. Reports & Analytics 📈**
+- Custom report generation
+- Export to CSV/Excel
+- Email/SMS alerts
+- Trend analysis
+- Vacancy tracking
+
+**9. Agency & Overtime 📞**
+- Agency usage reports
+- Overtime cost tracking
+- Agency company management
+- Additional staffing requests
+
+**10. System Help 🔧**
+- How-to guides
+- Troubleshooting
+- Command examples
+- Best practices
+- Navigation help
+
+**Smart Features:**
+
+✨ **Fuzzy Matching:** I understand typos and variations
+🧠 **Context Awareness:** I remember your recent questions
+💡 **Suggestions:** I provide helpful alternatives when unsure
+📊 **Rich Responses:** Tables, charts, and formatted data
+🔗 **Quick Actions:** Related links for deeper investigation
+
+**How to Get Best Results:**
+1. Be specific (include names, dates, locations)
+2. Use proper terminology (SCW, OM, Hawthorn House)
+3. Ask one thing at a time
+4. Try the quick action buttons for common queries
+
+**Example Queries:**
+- "Show me staffing coverage for December 25"
+- "How many senior carers at Orchard Grove?"
+- "When is resident CHI0101451001AC review due?"
+- "List all staff off sick this week"
+- "Training compliance breakdown by home"
+
+Ask me anything - I'm here to help! 🚀
+""",
+                    'related': ['how_to_ask', 'confidence_score', 'examples']
+                },
+            },
+            
             # Configuration
             'configuration': {
                 'shift_times': {

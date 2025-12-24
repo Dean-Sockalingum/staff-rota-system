@@ -853,7 +853,12 @@ def rota_view(request):
     care_roles = {'SCW', 'SCA', 'SCWN', 'SCAN'}
     
     # Get all active units for consistent ordering across all days
-    all_unit_names = sorted([unit.name for unit in units if unit.is_active])
+    # If filtering by MGMT unit, exclude care units from display to keep it clean
+    if selected_unit != 'all' and 'MGMT' in selected_unit:
+        # When viewing MGMT unit, only show MGMT unit (not care units)
+        all_unit_names = [selected_unit]
+    else:
+        all_unit_names = sorted([unit.name for unit in units if unit.is_active])
 
     for i in range(7):
         current_date = view_start_date + timedelta(days=i)
@@ -7867,47 +7872,126 @@ def ai_assistant_api(request):
                 'category': result.get('category', '')
             })
         else:
-            # No exact match - provide suggestions
+            # No exact match - provide smart suggestions based on query content
+            query_lower = query.lower()
+            
+            # Detect what user might be asking about
+            suggestions = []
+            category_detected = None
+            
+            if any(word in query_lower for word in ['confidence', 'score', 'low', 'percentage', '%']):
+                category_detected = "**About Confidence Scores:**\n\nThe AI calculates confidence based on how well it understands your question.\n\n"
+                suggestions = [
+                    "💡 Try asking: 'Why is confidence low?' or 'What is confidence score?'",
+                    "• Be more specific with names, dates, and care homes",
+                    "• Use proper terminology: SCW, OM, Hawthorn House, etc.",
+                    "• Try the quick action buttons below for common queries"
+                ]
+            elif any(word in query_lower for word in ['help', 'how', 'what can', 'capabilities', 'do']):
+                category_detected = "**AI Assistant Help:**\n\n"
+                suggestions = [
+                    "💡 Ask: 'What can you do?' to see all my capabilities",
+                    "💡 Ask: 'How to ask questions?' for query tips and examples",
+                    "💡 Ask: 'Show all topics' to see everything I can answer",
+                    "• Try the example queries shown above",
+                    "• Use the quick action buttons for instant results"
+                ]
+            elif any(word in query_lower for word in ['staff', 'worker', 'employee', 'carer', 'nurse']):
+                category_detected = "**Staff Queries - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'Show me [Name] details' - View specific staff member",
+                    "✅ 'List all [Role] at [Home]' - e.g., 'List all SCW at Hawthorn House'",
+                    "✅ 'How many [Role] at [Home]?' - Count staff by role",
+                    "✅ 'Who is working today?' - Today's staff roster",
+                    "✅ 'Search for [Name]' - Find staff by name"
+                ]
+            elif any(word in query_lower for word in ['coverage', 'shortage', 'short staffed', 'rota', 'roster']):
+                category_detected = "**Coverage & Shortages - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'What's the coverage today?' - Today's staffing levels",
+                    "✅ 'Are we short staffed next week?' - Future shortage check",
+                    "✅ 'Show staffing shortage' - Detailed shortage analysis",
+                    "✅ 'Coverage for [date]' - Specific date coverage",
+                    "✅ 'Check shortages at [Home]' - Home-specific check"
+                ]
+            elif any(word in query_lower for word in ['sick', 'sickness', 'absence', 'ill', 'off']):
+                category_detected = "**Sickness & Absence - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'Who is off sick today?' - Current sickness list",
+                    "✅ 'Sickness report for [Home]' - Home-specific sickness",
+                    "✅ 'Show me all sickness absence' - Full sickness overview",
+                    "✅ 'How many staff off sick?' - Sickness count"
+                ]
+            elif any(word in query_lower for word in ['leave', 'holiday', 'annual leave', 'time off']):
+                category_detected = "**Annual Leave - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'How much leave does [Name/SAP] have?' - Leave balance check",
+                    "✅ 'Show leave balance for [Name]' - Specific staff leave",
+                    "✅ 'List approved leave this week' - Weekly leave schedule",
+                    "✅ 'Annual leave summary' - Overview report"
+                ]
+            elif any(word in query_lower for word in ['care plan', 'review', 'resident', 'chi']):
+                category_detected = "**Care Plan Reviews - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'When is [Resident ID] review due?' - Specific resident review",
+                    "✅ 'Show overdue care plan reviews' - Overdue reviews list",
+                    "✅ 'How many reviews this month?' - Monthly review count",
+                    "✅ 'Care plan compliance status' - Compliance overview"
+                ]
+            elif any(word in query_lower for word in ['training', 'course', 'compliance']):
+                category_detected = "**Training Compliance - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'Training compliance breakdown' - Full training report",
+                    "✅ 'Show training by person' - Person-view training matrix",
+                    "✅ 'Training report for [Home]' - Home-specific training",
+                    "✅ 'Who needs [course name] training?' - Course-specific check"
+                ]
+            elif any(word in query_lower for word in ['home', 'performance', 'quality', 'orchard', 'hawthorn', 'victoria', 'riverside', 'meadowburn']):
+                category_detected = "**Home Performance - Try These:**\n\n"
+                suggestions = [
+                    "✅ 'Show me [Home] performance' - Specific home dashboard",
+                    "✅ 'Compare all care homes' - Multi-home comparison",
+                    "✅ 'Quality audit for [Home]' - Quality metrics",
+                    "✅ 'Performance dashboard' - Overall performance"
+                ]
+            else:
+                # Generic fallback
+                category_detected = "**I can help with many things! Try these:**\n\n"
+                suggestions = [
+                    "💡 Ask: 'What can you do?' - See all my capabilities",
+                    "💡 Ask: 'How to ask questions?' - Get query tips and examples",
+                    "💡 Ask: 'Show all topics' - See complete help topics",
+                    "• Use specific names, dates, and care homes in your questions",
+                    "• Try the quick action buttons below for instant results"
+                ]
+            
+            # Build comprehensive fallback response
+            fallback_answer = f"""❓ I didn't quite understand: **"{query}"**
+
+{category_detected}
+{chr(10).join(suggestions)}
+
+**Common Query Examples:**
+
+📋 **Staff:** "Show me Jane Smith details" | "List all SCW at Hawthorn House"
+📊 **Coverage:** "What's the coverage today?" | "Are we short staffed next week?"
+🤒 **Sickness:** "Who is off sick today?" | "Sickness report for Orchard Grove"
+💼 **Leave:** "How much leave does ADMIN001 have?" | "Show leave balance"
+📝 **Reviews:** "When is CHI0101451001AC review due?" | "Show overdue reviews"
+🏥 **Performance:** "Show me Orchard Grove's performance" | "Compare all homes"
+🎓 **Training:** "Training compliance breakdown" | "Show training by person"
+
+**Need Help?**
+• Ask: "What can you do?" for complete capabilities
+• Ask: "How to ask?" for query tips and best practices
+• Use the quick action buttons below for instant results
+
+**💡 Tip:** Be specific! Include names, dates, and locations for best results.
+"""
+            
             return JsonResponse({
-                'answer': """I'm not sure about that specific question. Here are some things I can help with:
-
-**Staff Queries:**
-• "Show me Jane Smith details"
-• "List all senior carers"
-• "How much leave does ADMIN001 have?"
-• "Search for John"
-• "Who is working today?"
-
-**Care Plan Reviews:**
-• "When is DEM01 review due?"
-• "How many reviews this month?"
-• "Show overdue reviews"
-• "Care plan compliance status"
-
-**Reports & Analytics:**
-• "How many staff do we have?"
-• "Show me all grades"
-• "Who is off sick today?"
-• "What's the coverage today?"
-• "Are we short staffed next week?"
-
-**Additional Staffing (Overtime & Agency):**
-• "How to add overtime shift"
-• "Show me agency companies"
-• "Agency usage this month"
-• "Overtime costs this week"
-
-**System Commands:**
-• How to add staff
-• How to generate rotas
-• How to manage annual leave
-
-**Troubleshooting:**
-• Database locked errors
-• Import errors
-
-Try rephrasing your question or click a quick action button!""",
-                'related': ['Staffing Report', 'Care Plan Reviews', 'Check Shortages', 'Agency Staff', 'Coverage Report'],
+                'answer': fallback_answer,
+                'related': ['What Can You Do?', 'How To Ask Questions', 'Show All Topics', 'Staff Queries', 'Coverage Reports'],
                 'category': 'help'
             })
         
