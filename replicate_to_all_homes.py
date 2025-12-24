@@ -78,6 +78,12 @@ def get_pattern_templates():
         {'week1': parse_days('sat sun mon'), 'week2': parse_days('fri sat sun'), 'week3': parse_days('thu fri sat')},
     ]
     
+    # OM patterns (Mon-Fri, 35hrs)
+    om_patterns = [
+        {'week1': parse_days('mon tue wed thu fri'), 'week2': parse_days('mon tue wed thu fri'), 'week3': parse_days('mon tue wed thu fri')},
+        {'week1': parse_days('mon tue wed thu fri'), 'week2': parse_days('mon tue wed thu fri'), 'week3': parse_days('mon tue wed thu fri')},
+    ]
+    
     # SM patterns (Mon-Fri)
     sm_patterns = [
         {'week1': parse_days('mon tue wed thu fri'), 'week2': parse_days('mon tue wed thu fri'), 'week3': parse_days('mon tue wed thu fri')},
@@ -142,6 +148,7 @@ def get_pattern_templates():
     ] * 3  # Repeat to cover more staff
     
     return {
+        'OM': om_patterns,
         'SSCW': sscw_patterns,
         'SSCWN': sscwn_patterns,
         'SM': sm_patterns,
@@ -171,6 +178,7 @@ def implement_home(care_home_name):
     
     # Get roles
     roles = {
+        'OM': Role.objects.get(name='OM'),
         'SSCW': Role.objects.get(name='SSCW'),
         'SSCWN': Role.objects.get(name='SSCWN'),
         'SM': Role.objects.get(name='SM'),
@@ -184,12 +192,11 @@ def implement_home(care_home_name):
     home_units = Unit.objects.filter(care_home=home)
     patterns = get_pattern_templates()
     
-    # Generate shifts for full year 2025 + 2026
-    start_date = datetime(2025, 1, 1).date()
-    end_date = datetime(2026, 12, 31).date()
-    # Cycle must start on a Sunday to keep weeks aligned
-    # Jan 1, 2025 is Wednesday, so go back to previous Sunday (Dec 29, 2024)
-    cycle_start = datetime(2024, 12, 29).date()
+    # Generate shifts for full year 2026-2027
+    start_date = datetime(2026, 1, 4).date()
+    end_date = datetime(2027, 1, 3).date()
+    # Cycle must start on a Sunday - Jan 4, 2026 is Sunday
+    cycle_start = datetime(2026, 1, 4).date()
     
     total_shifts = 0
     
@@ -205,13 +212,14 @@ def implement_home(care_home_name):
         
         # Configure role assignments
         role_configs = [
+            ('OM', admin, 'DAY_0800_2000'),
             ('SSCW', day_senior, 'DAY_0800_2000'),
             ('SSCWN', night_senior, 'NIGHT_2000_0800'),
             ('SM', admin, 'DAY_0800_2000'),
             ('SCA', day_assistant, 'DAY_0800_2000'),
-            ('SCW', day_assistant, 'DAY_0800_2000'),
+            ('SCW', day_senior, 'DAY_0800_2000'),
             ('SCAN', night_assistant, 'NIGHT_2000_0800'),
-            ('SCWN', night_assistant, 'NIGHT_2000_0800'),
+            ('SCWN', night_senior, 'NIGHT_2000_0800'),
         ]
         
         for role_name, shift_type, shift_pattern in role_configs:
