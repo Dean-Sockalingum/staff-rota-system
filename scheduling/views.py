@@ -2021,11 +2021,12 @@ def staff_management(request):
         today = timezone.now().date()
         six_weeks_ago = today - timedelta(weeks=6)
         
-        # Get the most frequently assigned day SSCW for this unit
+        # Get the most frequently assigned day SSCW for this unit (same care home only)
         day_sscw = User.objects.filter(
             role__name='SSCW',
             is_active=True,
             shift_preference='DAY_SENIOR',
+            unit__care_home=unit.care_home,  # Same care home
             shifts__unit=unit,
             shifts__date__gte=six_weeks_ago,
             shifts__shift_type__name='DAY_SENIOR'
@@ -2033,11 +2034,12 @@ def staff_management(request):
             shift_count=models.Count('shifts')
         ).order_by('-shift_count').first()
         
-        # Get the most frequently assigned night SSCWN for this unit
+        # Get the most frequently assigned night SSCWN for this unit (same care home only)
         night_sscw = User.objects.filter(
             role__name='SSCWN',
             is_active=True,
             shift_preference='NIGHT_SENIOR',
+            unit__care_home=unit.care_home,  # Same care home
             shifts__unit=unit,
             shifts__date__gte=six_weeks_ago,
             shifts__shift_type__name='NIGHT_SENIOR'
@@ -2045,19 +2047,21 @@ def staff_management(request):
             shift_count=models.Count('shifts')
         ).order_by('-shift_count').first()
         
-        # Fallback if no SSCW found with recent shifts - get first available
+        # Fallback if no SSCW found with recent shifts - get first available from same care home
         if not day_sscw:
             day_sscw = User.objects.filter(
                 role__name='SSCW',
                 is_active=True,
-                shift_preference='DAY_SENIOR'
+                shift_preference='DAY_SENIOR',
+                unit__care_home=unit.care_home  # Same care home
             ).first()
             
         if not night_sscw:
             night_sscw = User.objects.filter(
                 role__name='SSCWN',
                 is_active=True,
-                shift_preference='NIGHT_SENIOR'
+                shift_preference='NIGHT_SENIOR',
+                unit__care_home=unit.care_home  # Same care home
             ).first()
         
         # Static SSCW assignments
