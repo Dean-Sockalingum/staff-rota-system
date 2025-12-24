@@ -301,6 +301,60 @@ See: STAFFING_ROTA_AND_TQM_ASSISTANT_COMPLETE_GUIDE.md (Reports section)
                     'related': ['additional_staffing', 'reports_dashboard', 'cost_analysis', 'staffing_reports']
                 },
                 
+                'staff_vacancies': {
+                    'question': ['staff vacancies', 'vacancy report', 'vacant positions', 'unfilled positions', 'staff leavers', 'who is leaving', 'upcoming leavers', 'recruitment needs', 'show vacancies'],
+                    'answer': """
+**Staff Vacancies Report:**
+
+**Via Web UI (Recommended):**
+1. Login to http://127.0.0.1:8000
+2. Go to Reports → Staff Vacancies
+3. Filter by care home (optional)
+4. Filter by status (all, current, or upcoming)
+5. Click "Generate Report" to see breakdown
+6. Click "Export to CSV" for detailed list
+
+**Report Shows:**
+- **Current Vacancies:** Staff who have already left
+  * Days since departure
+  * Hours/week impact
+  * Leaving reason
+- **Upcoming Leavers:** Staff with future end dates
+  * Days until departure
+  * Warning for <30 days notice
+  * Leaving reason
+- Breakdown by care home and role
+- Total hours/week needing coverage
+- Complete staff details (name, SAP ID, unit)
+
+**Summary Statistics:**
+- Total current vacancies
+- Total upcoming leavers
+- Combined vacancy count
+- Total hours/week requiring coverage
+
+**CSV Export Includes:**
+- All vacancy details by home
+- Staff information and role
+- End dates and timelines
+- Leaving reasons
+- Hours per week impact
+- Subtotals by home
+- Grand totals across all homes
+
+**Example Queries:**
+- "Show current staff vacancies"
+- "Who is leaving in the next 30 days?"
+- "What are the vacancies at Hawthorn House?"
+- "Show me all unfilled positions"
+
+**Access:** Login → Reports Dashboard → Staff Vacancies
+
+**Urgent Action Required:** Vacancies with <30 days notice flagged with warning icon.
+""",
+                    'related': ['staffing_reports', 'reports_dashboard', 'recruitment', 'workforce_planning']
+                },
+                
                 'care_plan_reviews': {
                     'question': ['care plan', 'review due', 'resident review', 'when is review', 'care plan review', 'review status', 'compliance review', 'overdue review'],
                     'answer': """

@@ -537,6 +537,7 @@ def ai_assistant_api(request):
             answer += "• 'Show leave requests'\n"
             answer += "\n**Advanced Reports & Analytics:**\n"
             answer += "• 'Show OT and Agency usage' - Detailed breakdown by home and grade\n"
+            answer += "• 'Show staff vacancies' - Current and upcoming leavers by home\n"
             answer += "• 'Generate annual leave report'\n"
             answer += "• 'Show leave usage targets by home'\n"
             answer += "• 'Daily additional staffing report'\n"

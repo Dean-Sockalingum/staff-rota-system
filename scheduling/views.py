@@ -1112,6 +1112,7 @@ def reports_dashboard(request):
     context = {
         'available_reports': [
             {'name': 'Overtime & Agency Usage', 'description': 'Comprehensive OT and agency breakdown by home, role, hours, and costs', 'url': 'ot_agency_report', 'icon': 'fa-chart-line'},
+            {'name': 'Staff Vacancies', 'description': 'Current and upcoming staff vacancies by care home with leaving reasons', 'url': 'staff_vacancies_report', 'icon': 'fa-user-times'},
             {'name': 'Leave Usage Targets', 'description': '40-week strategy dashboard showing staff progress against leave targets', 'url': 'leave_usage_targets', 'icon': 'fa-bullseye'},
             {'name': 'Staff Sickness Report', 'description': 'Shows sickness rates and trends'},
             {'name': 'Annual Leave Report', 'description': 'Summary of leave allowances, taken, and remaining'},
@@ -7011,6 +7012,274 @@ def ot_agency_report_csv(request):
     writer.writerow(['Overtime', grand_ot_count, f'{grand_ot_hours:.1f}', f'£{grand_ot_cost:.2f}'])
     writer.writerow(['Agency', grand_agency_count, f'{grand_agency_hours:.1f}', f'£{grand_agency_cost:.2f}'])
     writer.writerow(['COMBINED TOTAL', grand_ot_count + grand_agency_count, f'{grand_ot_hours + grand_agency_hours:.1f}', f'£{grand_ot_cost + grand_agency_cost:.2f}'])
+    
+    return response
+
+
+@login_required
+def staff_vacancies_report(request):
+    """
+    Staff Vacancies Report showing current and upcoming vacancies by care home
+    """
+    from scheduling.models import StaffProfile
+    
+    # Check permissions
+    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+        messages.error(request, 'You do not have permission to view this report.')
+        return redirect('manager_dashboard')
+    
+    # Get filter parameters
+    home_filter = request.GET.get('home_filter', '')
+    status_filter = request.GET.get('status_filter', 'all')  # all, current, upcoming
+    
+    # Get all care homes for the filter dropdown
+    care_homes = CareHome.objects.all().order_by('name')
+    
+    # Get all leavers (staff with employment_status = 'LEAVER' or end_date set)
+    today = timezone.now().date()
+    
+    # Current vacancies (already left)
+    current_vacancies_query = StaffProfile.objects.filter(
+        employment_status='LEAVER',
+        end_date__lte=today
+    ).select_related('user', 'user__role', 'user__unit', 'user__unit__care_home')
+    
+    # Upcoming leavers (future end date)
+    upcoming_vacancies_query = StaffProfile.objects.filter(
+        employment_status='LEAVER',
+        end_date__gt=today
+    ).select_related('user', 'user__role', 'user__unit', 'user__unit__care_home')
+    
+    # Filter by home if specified
+    if home_filter:
+        current_vacancies_query = current_vacancies_query.filter(user__unit__care_home__name=home_filter)
+        upcoming_vacancies_query = upcoming_vacancies_query.filter(user__unit__care_home__name=home_filter)
+    
+    # Apply status filter
+    if status_filter == 'current':
+        upcoming_vacancies_query = StaffProfile.objects.none()
+    elif status_filter == 'upcoming':
+        current_vacancies_query = StaffProfile.objects.none()
+    
+    # Organize vacancies by care home
+    vacancies_by_home = defaultdict(lambda: {
+        'current': [],
+        'upcoming': [],
+        'total_current': 0,
+        'total_upcoming': 0,
+        'total_hours': 0
+    })
+    
+    # Process current vacancies
+    for profile in current_vacancies_query:
+        if not profile.user or not profile.user.unit or not profile.user.unit.care_home:
+            continue
+            
+        home_name = profile.user.unit.care_home.name
+        days_ago = (today - profile.end_date).days if profile.end_date else 0
+        hours = getattr(profile.user, 'hours_per_week', 37.5)
+        
+        vacancy_data = {
+            'name': profile.user.full_name if profile.user else 'Unknown',
+            'sap_id': profile.user.sap_id if profile.user else 'N/A',
+            'role': profile.user.role.name if profile.user and profile.user.role else 'Unknown',
+            'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
+            'end_date': profile.end_date,
+            'days_ago': days_ago,
+            'hours_per_week': hours,
+            'leaving_reason': profile.leaving_reason or 'Not specified'
+        }
+        
+        vacancies_by_home[home_name]['current'].append(vacancy_data)
+        vacancies_by_home[home_name]['total_current'] += 1
+        vacancies_by_home[home_name]['total_hours'] += hours
+    
+    # Process upcoming leavers
+    for profile in upcoming_vacancies_query:
+        if not profile.user or not profile.user.unit or not profile.user.unit.care_home:
+            continue
+            
+        home_name = profile.user.unit.care_home.name
+        days_until = (profile.end_date - today).days if profile.end_date else 0
+        hours = getattr(profile.user, 'hours_per_week', 37.5)
+        
+        vacancy_data = {
+            'name': profile.user.full_name if profile.user else 'Unknown',
+            'sap_id': profile.user.sap_id if profile.user else 'N/A',
+            'role': profile.user.role.name if profile.user and profile.user.role else 'Unknown',
+            'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
+            'end_date': profile.end_date,
+            'days_until': days_until,
+            'hours_per_week': hours,
+            'leaving_reason': profile.leaving_reason or 'Not specified'
+        }
+        
+        vacancies_by_home[home_name]['upcoming'].append(vacancy_data)
+        vacancies_by_home[home_name]['total_upcoming'] += 1
+        vacancies_by_home[home_name]['total_hours'] += hours
+    
+    # Calculate grand totals
+    grand_total_current = sum(home['total_current'] for home in vacancies_by_home.values())
+    grand_total_upcoming = sum(home['total_upcoming'] for home in vacancies_by_home.values())
+    grand_total_hours = sum(home['total_hours'] for home in vacancies_by_home.values())
+    
+    context = {
+        'vacancies_by_home': dict(vacancies_by_home),
+        'care_homes': care_homes,
+        'home_filter': home_filter,
+        'status_filter': status_filter,
+        'grand_total_current': grand_total_current,
+        'grand_total_upcoming': grand_total_upcoming,
+        'grand_total_hours': grand_total_hours,
+        'total_vacancies': grand_total_current + grand_total_upcoming,
+    }
+    
+    return render(request, 'scheduling/staff_vacancies_report.html', context)
+
+
+@login_required
+def staff_vacancies_report_csv(request):
+    """
+    Export staff vacancies report to CSV
+    """
+    from scheduling.models import StaffProfile
+    import csv
+    
+    # Check permissions
+    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+        messages.error(request, 'You do not have permission to export this report.')
+        return redirect('manager_dashboard')
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="staff_vacancies_report.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Get filter parameters
+    home_filter = request.GET.get('home_filter', '')
+    status_filter = request.GET.get('status_filter', 'all')
+    
+    today = timezone.now().date()
+    
+    # Title
+    writer.writerow(['STAFF VACANCIES REPORT'])
+    writer.writerow([f'Generated: {today.strftime("%d %B %Y")}'])
+    writer.writerow([])
+    
+    # Get vacancies
+    current_vacancies = StaffProfile.objects.filter(
+        employment_status='LEAVER',
+        end_date__lte=today
+    ).select_related('user', 'user__role', 'user__unit', 'user__unit__care_home')
+    
+    upcoming_vacancies = StaffProfile.objects.filter(
+        employment_status='LEAVER',
+        end_date__gt=today
+    ).select_related('user', 'user__role', 'user__unit', 'user__unit__care_home')
+    
+    # Apply filters
+    if home_filter:
+        current_vacancies = current_vacancies.filter(user__unit__care_home__name=home_filter)
+        upcoming_vacancies = upcoming_vacancies.filter(user__unit__care_home__name=home_filter)
+    
+    # Organize by home
+    homes_dict = defaultdict(lambda: {'current': [], 'upcoming': []})
+    
+    for profile in current_vacancies:
+        if profile.user and profile.user.unit and profile.user.unit.care_home:
+            home_name = profile.user.unit.care_home.name
+            homes_dict[home_name]['current'].append(profile)
+    
+    for profile in upcoming_vacancies:
+        if profile.user and profile.user.unit and profile.user.unit.care_home:
+            home_name = profile.user.unit.care_home.name
+            homes_dict[home_name]['upcoming'].append(profile)
+    
+    grand_current = 0
+    grand_upcoming = 0
+    grand_hours = 0
+    
+    # Output by home
+    for home_name in sorted(homes_dict.keys()):
+        home_data = homes_dict[home_name]
+        
+        writer.writerow([f'{'=' * 100}'])
+        writer.writerow([home_name.replace('_', ' ').title()])
+        writer.writerow([f'{'=' * 100}'])
+        writer.writerow([])
+        
+        # Current vacancies
+        if home_data['current'] or status_filter != 'upcoming':
+            writer.writerow(['CURRENT VACANCIES (Already Left)'])
+            writer.writerow(['-' * 100])
+            writer.writerow(['Staff Name', 'SAP ID', 'Role', 'Unit', 'End Date', 'Days Ago', 'Hours/Week', 'Leaving Reason'])
+            
+            home_current_hours = 0
+            for profile in home_data['current']:
+                hours = getattr(profile.user, 'hours_per_week', 37.5)
+                days_ago = (today - profile.end_date).days if profile.end_date else 0
+                
+                writer.writerow([
+                    profile.user.full_name if profile.user else 'Unknown',
+                    profile.user.sap_id if profile.user else 'N/A',
+                    profile.user.role.name if profile.user and profile.user.role else 'Unknown',
+                    profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
+                    profile.end_date.strftime('%d/%m/%Y') if profile.end_date else 'N/A',
+                    days_ago,
+                    f'{hours:.1f}',
+                    profile.leaving_reason or 'Not specified'
+                ])
+                
+                home_current_hours += hours
+                grand_current += 1
+                grand_hours += hours
+            
+            writer.writerow([])
+            writer.writerow(['Subtotal', '', '', '', '', '', f'{home_current_hours:.1f} hours/week', f'{len(home_data["current"])} positions'])
+            writer.writerow([])
+        
+        # Upcoming leavers
+        if home_data['upcoming'] or status_filter != 'current':
+            writer.writerow(['UPCOMING LEAVERS (Future End Dates)'])
+            writer.writerow(['-' * 100])
+            writer.writerow(['Staff Name', 'SAP ID', 'Role', 'Unit', 'End Date', 'Days Until', 'Hours/Week', 'Leaving Reason'])
+            
+            home_upcoming_hours = 0
+            for profile in home_data['upcoming']:
+                hours = getattr(profile.user, 'hours_per_week', 37.5)
+                days_until = (profile.end_date - today).days if profile.end_date else 0
+                
+                writer.writerow([
+                    profile.user.full_name if profile.user else 'Unknown',
+                    profile.user.sap_id if profile.user else 'N/A',
+                    profile.user.role.name if profile.user and profile.user.role else 'Unknown',
+                    profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
+                    profile.end_date.strftime('%d/%m/%Y') if profile.end_date else 'N/A',
+                    days_until,
+                    f'{hours:.1f}',
+                    profile.leaving_reason or 'Not specified'
+                ])
+                
+                home_upcoming_hours += hours
+                grand_upcoming += 1
+                grand_hours += hours
+            
+            writer.writerow([])
+            writer.writerow(['Subtotal', '', '', '', '', '', f'{home_upcoming_hours:.1f} hours/week', f'{len(home_data["upcoming"])} positions'])
+            writer.writerow([])
+        
+        writer.writerow([])
+    
+    # Grand totals
+    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['GRAND TOTALS ACROSS ALL HOMES'])
+    writer.writerow([f'{'=' * 100}'])
+    writer.writerow([])
+    writer.writerow(['Category', 'Number of Positions', 'Total Hours/Week'])
+    writer.writerow(['Current Vacancies', grand_current, f'{sum(getattr(p.user, "hours_per_week", 37.5) for p in current_vacancies):.1f}'])
+    writer.writerow(['Upcoming Leavers', grand_upcoming, f'{sum(getattr(p.user, "hours_per_week", 37.5) for p in upcoming_vacancies):.1f}'])
+    writer.writerow(['TOTAL', grand_current + grand_upcoming, f'{grand_hours:.1f}'])
     
     return response
 

@@ -1,0 +1,314 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Staff Vacancies Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vacancy-card {
+        border-left: 4px solid #dc3545;
+        margin-bottom: 1.5rem;
+    }
+    
+    .upcoming-card {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2563eb;
+    }
+    
+    .stat-value.danger {
+        color: #dc3545;
+    }
+    
+    .stat-value.warning {
+        color: #ffc107;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .home-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .home-header {
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .vacancy-table {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .vacancy-table th {
+        background-color: #f3f4f6;
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .vacancy-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .badge-current {
+        background-color: #dc3545;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .badge-upcoming {
+        background-color: #ffc107;
+        color: #000;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .export-btn {
+        background-color: #10b981;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .export-btn:hover {
+        background-color: #059669;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-user-times"></i> Staff Vacancies Report</h1>
+        <a href="{% url 'staff_vacancies_report_csv' %}?home_filter={{ home_filter }}&status_filter={{ status_filter }}" class="export-btn">
+            <i class="fas fa-download"></i> Export to CSV
+        </a>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value danger">{{ grand_total_current }}</div>
+            <div class="stat-label">Current Vacancies</div>
+            <small class="text-muted">Already left</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value warning">{{ grand_total_upcoming }}</div>
+            <div class="stat-label">Upcoming Leavers</div>
+            <small class="text-muted">Future end dates</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ total_vacancies }}</div>
+            <div class="stat-label">Total Vacancies</div>
+            <small class="text-muted">Current + Upcoming</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ grand_total_hours|floatformat:0 }}</div>
+            <div class="stat-label">Hours/Week Impact</div>
+            <small class="text-muted">Total hours to cover</small>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="home_filter" class="form-label">Filter by Care Home</label>
+                <select name="home_filter" id="home_filter" class="form-select">
+                    <option value="">All Homes</option>
+                    {% for home in care_homes %}
+                        <option value="{{ home.name }}" {% if home_filter == home.name %}selected{% endif %}>
+                            {{ home.get_name_display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="status_filter" class="form-label">Filter by Status</label>
+                <select name="status_filter" id="status_filter" class="form-select">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Vacancies</option>
+                    <option value="current" {% if status_filter == 'current' %}selected{% endif %}>Current Only</option>
+                    <option value="upcoming" {% if status_filter == 'upcoming' %}selected{% endif %}>Upcoming Only</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'staff_vacancies_report' %}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-redo"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Vacancies by Home -->
+    {% if total_vacancies > 0 %}
+        {% for home_name, home_data in vacancies_by_home.items %}
+        <div class="home-section">
+            <div class="home-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>{{ home_name|replace:"_":" "|title }}</h3>
+                    <div>
+                        <span class="badge-current me-2">{{ home_data.total_current }} Current</span>
+                        <span class="badge-upcoming">{{ home_data.total_upcoming }} Upcoming</span>
+                        <span class="ms-3 text-muted">{{ home_data.total_hours|floatformat:0 }} hrs/week</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if home_data.current and status_filter != 'upcoming' %}
+            <h4 class="text-danger mt-4">
+                <i class="fas fa-exclamation-circle"></i> Current Vacancies ({{ home_data.total_current }})
+            </h4>
+            <table class="vacancy-table">
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>SAP ID</th>
+                        <th>Role</th>
+                        <th>Unit</th>
+                        <th>End Date</th>
+                        <th>Days Ago</th>
+                        <th>Hours/Week</th>
+                        <th>Leaving Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vacancy in home_data.current %}
+                    <tr>
+                        <td><strong>{{ vacancy.name }}</strong></td>
+                        <td>{{ vacancy.sap_id }}</td>
+                        <td><span class="badge bg-secondary">{{ vacancy.role }}</span></td>
+                        <td>{{ vacancy.unit }}</td>
+                        <td>{{ vacancy.end_date|date:"d M Y" }}</td>
+                        <td class="text-danger"><strong>{{ vacancy.days_ago }} days ago</strong></td>
+                        <td>{{ vacancy.hours_per_week|floatformat:1 }}</td>
+                        <td><em>{{ vacancy.leaving_reason }}</em></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            
+            {% if home_data.upcoming and status_filter != 'current' %}
+            <h4 class="text-warning mt-4">
+                <i class="fas fa-clock"></i> Upcoming Leavers ({{ home_data.total_upcoming }})
+            </h4>
+            <table class="vacancy-table">
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>SAP ID</th>
+                        <th>Role</th>
+                        <th>Unit</th>
+                        <th>End Date</th>
+                        <th>Days Until</th>
+                        <th>Hours/Week</th>
+                        <th>Leaving Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vacancy in home_data.upcoming %}
+                    <tr>
+                        <td><strong>{{ vacancy.name }}</strong></td>
+                        <td>{{ vacancy.sap_id }}</td>
+                        <td><span class="badge bg-secondary">{{ vacancy.role }}</span></td>
+                        <td>{{ vacancy.unit }}</td>
+                        <td>{{ vacancy.end_date|date:"d M Y" }}</td>
+                        <td class="text-warning">
+                            <strong>{{ vacancy.days_until }} days</strong>
+                            {% if vacancy.days_until < 30 %}
+                                <i class="fas fa-exclamation-triangle text-danger ms-1" title="Less than 30 days notice"></i>
+                            {% endif %}
+                        </td>
+                        <td>{{ vacancy.hours_per_week|floatformat:1 }}</td>
+                        <td><em>{{ vacancy.leaving_reason }}</em></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            
+            {% if not home_data.current and not home_data.upcoming %}
+            <p class="text-muted"><em>No vacancies for this home</em></p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="home-section text-center py-5">
+            <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+            <h3 class="mt-3">No Staff Vacancies</h3>
+            <p class="text-muted">
+                {% if home_filter %}
+                    No vacancies found for {{ home_filter|replace:"_":" "|title }}
+                {% else %}
+                    All positions are currently filled across all care homes.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+    
+    <!-- Action Buttons -->
+    <div class="mt-4 text-center">
+        <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Reports
+        </a>
+        <a href="{% url 'staff_vacancies_report_csv' %}?home_filter={{ home_filter }}&status_filter={{ status_filter }}" class="btn btn-success ms-2">
+            <i class="fas fa-file-excel"></i> Download CSV
+        </a>
+    </div>
+</div>
+{% endblock %}

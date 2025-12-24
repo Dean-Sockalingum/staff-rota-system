@@ -81,6 +81,10 @@ urlpatterns = [
     path('reports/ot-agency/', views.ot_agency_report, name='ot_agency_report'),
     path('reports/ot-agency/export/', views.ot_agency_report_csv, name='ot_agency_report_csv'),
     
+    # Staff Vacancies Report
+    path('reports/vacancies/', views.staff_vacancies_report, name='staff_vacancies_report'),
+    path('reports/vacancies/export/', views.staff_vacancies_report_csv, name='staff_vacancies_report_csv'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
