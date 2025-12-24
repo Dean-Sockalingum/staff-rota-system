@@ -62,6 +62,22 @@ class Role(models.Model):
     ]
     color_code = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#3498db')
 
+    def save(self, *args, **kwargs):
+        """Auto-set management permissions based on role name"""
+        # Only SM and OM should have management permissions
+        if self.name in ['SM', 'OM']:
+            self.is_management = True
+            self.can_approve_leave = True
+            self.can_manage_rota = True
+            self.permission_level = 'FULL'
+        else:
+            # All other roles should NOT have management permissions
+            self.is_management = False
+            if self.name not in ['SM', 'OM', 'HOS', 'IDI']:
+                self.is_senior_management_team = False
+        
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.get_name_display()
     

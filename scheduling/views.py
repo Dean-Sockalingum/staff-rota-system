@@ -3962,13 +3962,19 @@ class ReportGenerator:
                 
             elif unit_imbalances and (total_day_staff >= MINIMUM_SAFE_STAFFING or total_night_staff >= MINIMUM_SAFE_STAFFING):
                 # REALLOCATION NEEDED - home has adequate staff but units unbalanced
+                # Calculate automated fair reallocation
+                reallocation_plan = ReportGenerator._calculate_fair_reallocation(
+                    check_date, units, total_day_staff, total_night_staff, EXPECTED_COVERAGE
+                )
+                
                 realloc_info = {
                     'date': check_date,
                     'day_name': check_date.strftime('%A'),
                     'imbalances': unit_imbalances,
                     'total_day_staff': total_day_staff,
                     'total_night_staff': total_night_staff,
-                    'reason': 'Staff reallocation needed between units'
+                    'reason': 'Staff reallocation needed between units',
+                    'reallocation_plan': reallocation_plan  # NEW: Specific staff moves
                 }
                 reallocation_days.append(realloc_info)
         
@@ -3998,6 +4004,89 @@ class ReportGenerator:
             'has_true_shortages': len(shortage_days) > 0,
             'has_reallocation_needs': len(reallocation_days) > 0
         }
+    
+    @staticmethod
+    def _calculate_fair_reallocation(date, units, total_day_staff, total_night_staff, expected_coverage):
+        """
+        Calculate automated fair reallocation between units.
+        Returns specific staff moves to balance units fairly.
+        
+        Algorithm:
+        1. Identify units with excess staff (above expected)
+        2. Identify units with gaps (below expected)
+        3. Suggest specific staff moves from excess to gap units
+        4. Prioritize minimal disruption
+        """
+        from scheduling.models import Shift
+        
+        reallocation_moves = {'day': [], 'night': []}
+        
+        for shift_period in ['DAY', 'NIGHT']:
+            # Get all units with their current staffing
+            unit_staffing = {}
+            unit_staff_objects = {}  # Store actual shift objects for suggestions
+            
+            for unit in units:
+                shifts = Shift.objects.filter(
+                    date=date,
+                    unit=unit,
+                    shift_type__name__icontains=shift_period
+                ).select_related('user', 'shift_type')
+                
+                count = shifts.count()
+                unit_staffing[unit.name] = count
+                unit_staff_objects[unit.name] = list(shifts)
+            
+            # Calculate excess and gaps
+            excess_units = {}
+            gap_units = {}
+            
+            for unit_name, count in unit_staffing.items():
+                expected = expected_coverage[shift_period]
+                if count > expected:
+                    excess_units[unit_name] = count - expected
+                elif count < expected:
+                    gap_units[unit_name] = expected - count
+            
+            # Generate reallocation suggestions
+            for gap_unit, gap_count in gap_units.items():
+                moves_for_unit = []
+                remaining_gap = gap_count
+                
+                # Try to fill from excess units
+                for excess_unit, excess_count in list(excess_units.items()):
+                    if remaining_gap <= 0:
+                        break
+                    
+                    # Calculate how many we can move from this unit
+                    can_move = min(excess_count, remaining_gap)
+                    
+                    # Get specific staff to move
+                    staff_to_move = unit_staff_objects[excess_unit][:can_move]
+                    
+                    for shift in staff_to_move:
+                        if shift.user:  # Only suggest moves for assigned staff
+                            moves_for_unit.append({
+                                'from_unit': excess_unit,
+                                'to_unit': gap_unit,
+                                'staff_name': shift.user.get_full_name(),
+                                'staff_sap': shift.user.sap,
+                                'role': shift.user.role.get_name_display() if shift.user.role else 'Staff',
+                                'shift_id': shift.id
+                            })
+                    
+                    # Update remaining
+                    excess_units[excess_unit] -= can_move
+                    remaining_gap -= can_move
+                    
+                    if excess_units[excess_unit] <= 0:
+                        del excess_units[excess_unit]
+                
+                if moves_for_unit:
+                    period_key = 'day' if shift_period == 'DAY' else 'night'
+                    reallocation_moves[period_key].extend(moves_for_unit)
+        
+        return reallocation_moves
     
     @staticmethod
     def generate_shortage_text_message(shortage_data):
@@ -7597,22 +7686,38 @@ def ai_assistant_api(request):
                 
                 # Show REALLOCATION NEEDS (adequate staff but imbalanced) separately
                 elif report_data.get('reallocation_days'):
-                    answer += "ℹ️ **Staff Reallocation Needed:**\n\n"
+                    answer += "ℹ️ **Automated Staff Reallocation Plan:**\n\n"
                     answer += f"✅ **Good news:** All days have adequate total staffing (17+ staff)\n"
-                    answer += f"📋 **Action needed:** Reallocate staff between units for better balance\n\n"
+                    answer += f"📋 **Action needed:** Reallocate staff between units as suggested below\n\n"
                     
                     for day in report_data['reallocation_days'][:7]:
                         date_str = day['date'].strftime('%a %d %b')
                         answer += f"\n📅 **{date_str}** - {day['total_day_staff']} day staff, {day['total_night_staff']} night staff ✅\n"
-                        answer += f"  **Units needing reallocation:**\n"
                         
-                        for imbalance in day['imbalances'][:5]:
-                            if imbalance.get('day_gap', 0) > 0:
-                                answer += f"  • {imbalance['unit']}: {imbalance['day_gap']} more day staff needed (current: {imbalance['day_current']})\n"
-                            if imbalance.get('night_gap', 0) > 0:
-                                answer += f"  • {imbalance['unit']}: {imbalance['night_gap']} more night staff needed (current: {imbalance['night_current']})\n"
+                        # Show automated reallocation plan
+                        realloc_plan = day.get('reallocation_plan', {})
+                        
+                        if realloc_plan.get('day'):
+                            answer += f"\n**DAY SHIFT REALLOCATIONS:**\n"
+                            for move in realloc_plan['day']:
+                                answer += f"  ➡️ Move {move['staff_name']} ({move['role']})\n"
+                                answer += f"     FROM: {move['from_unit']} → TO: {move['to_unit']}\n"
+                        
+                        if realloc_plan.get('night'):
+                            answer += f"\n**NIGHT SHIFT REALLOCATIONS:**\n"
+                            for move in realloc_plan['night']:
+                                answer += f"  ➡️ Move {move['staff_name']} ({move['role']})\n"
+                                answer += f"     FROM: {move['from_unit']} → TO: {move['to_unit']}\n"
+                        
+                        if not realloc_plan.get('day') and not realloc_plan.get('night'):
+                            answer += f"  **Current imbalances:**\n"
+                            for imbalance in day['imbalances'][:5]:
+                                if imbalance.get('day_gap', 0) > 0:
+                                    answer += f"  • {imbalance['unit']}: {imbalance['day_gap']} more day staff needed (current: {imbalance['day_current']})\n"
+                                if imbalance.get('night_gap', 0) > 0:
+                                    answer += f"  • {imbalance['unit']}: {imbalance['night_gap']} more night staff needed (current: {imbalance['night_current']})\n"
                     
-                    answer += f"\n💡 **Solution:** Use Staff Management → Team Management to reallocate staff between units.\n"
+                    answer += f"\n💡 **How to apply:** Go to Rota View → Edit shifts to reassign staff as suggested above.\n"
                     answer += f"**No agency/OT required** - you have enough staff, just redistribute them!\n"
                 
                 else:
