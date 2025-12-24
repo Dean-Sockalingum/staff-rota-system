@@ -3865,24 +3865,32 @@ class ReportGenerator:
     
     @staticmethod
     def generate_staffing_shortage_report(days=14):
-        """Analyze staffing levels for next N days and identify shortages"""
+        """
+        Analyze staffing levels for next N days and identify TRUE shortages.
+        
+        Logic:
+        1. Check if home has < 17 total staff = CRITICAL shortage (needs agency/OT)
+        2. If home has >= 17 staff but units unbalanced = Reallocation needed (not a shortage)
+        3. Only report as "shortage" if home-level staffing is inadequate
+        """
         from datetime import timedelta
         from collections import defaultdict
         
         today = timezone.now().date()
         end_date = today + timedelta(days=days)
         
-        # CRITICAL: Minimum safe staffing level across entire facility
+        # CRITICAL: Minimum safe staffing level across entire home
         MINIMUM_SAFE_STAFFING = 17
         
-        # Expected coverage per unit per shift type (configurable)
+        # Expected coverage per unit per shift type (for reallocation guidance only)
         EXPECTED_COVERAGE = {
             'DAY': 4,  # 4 day staff per unit
             'NIGHT': 4,  # 4 night staff per unit
         }
         
         # Analyze each day
-        shortage_days = []
+        shortage_days = []  # True shortages (below 17 total)
+        reallocation_days = []  # Adequate staff but needs reallocation
         critical_below_minimum_days = []
         units = Unit.objects.filter(is_active=True)
         
@@ -3901,10 +3909,12 @@ class ReportGenerator:
                 shift_type__name__icontains='NIGHT'
             ).count()
             
-            # Check if we're below CRITICAL minimum (17 staff)
+            # CRITICAL CHECK: Is home below minimum safe staffing?
             day_below_minimum = total_day_staff < MINIMUM_SAFE_STAFFING
             night_below_minimum = total_night_staff < MINIMUM_SAFE_STAFFING
             
+            # If home has adequate staff, check for unit imbalances (reallocation opportunities)
+            unit_imbalances = []
             for unit in units:
                 # Get shifts for this unit on this date
                 unit_shifts = Shift.objects.filter(
@@ -3916,59 +3926,77 @@ class ReportGenerator:
                 day_count = unit_shifts.filter(shift_type__name__icontains='DAY').count()
                 night_count = unit_shifts.filter(shift_type__name__icontains='NIGHT').count()
                 
-                # Check for shortages
-                day_shortage = max(0, EXPECTED_COVERAGE['DAY'] - day_count)
-                night_shortage = max(0, EXPECTED_COVERAGE['NIGHT'] - night_count)
+                # Check for unit-level gaps
+                day_gap = max(0, EXPECTED_COVERAGE['DAY'] - day_count)
+                night_gap = max(0, EXPECTED_COVERAGE['NIGHT'] - night_count)
                 
-                if day_shortage > 0 or night_shortage > 0:
-                    day_shortages.append({
+                if day_gap > 0 or night_gap > 0:
+                    unit_imbalances.append({
                         'unit': unit.name,
-                        'day_shortage': day_shortage,
-                        'night_shortage': night_shortage,
+                        'day_gap': day_gap,
+                        'night_gap': night_gap,
                         'day_current': day_count,
                         'night_current': night_count
                     })
             
-            if day_shortages or day_below_minimum or night_below_minimum:
+            # DECISION LOGIC:
+            # If below minimum (17 staff) = TRUE SHORTAGE
+            # If >= minimum but units unbalanced = REALLOCATION NEEDED
+            
+            if day_below_minimum or night_below_minimum:
+                # TRUE SHORTAGE - needs agency/OT/additional staff
                 day_info = {
                     'date': check_date,
                     'day_name': check_date.strftime('%A'),
-                    'shortages': day_shortages,
-                    'total_gaps': sum(s['day_shortage'] + s['night_shortage'] for s in day_shortages),
+                    'shortages': unit_imbalances,
+                    'total_gaps': sum(s['day_gap'] + s['night_gap'] for s in unit_imbalances),
                     'total_day_staff': total_day_staff,
                     'total_night_staff': total_night_staff,
                     'day_below_minimum': day_below_minimum,
                     'night_below_minimum': night_below_minimum,
-                    'critical': day_below_minimum or night_below_minimum
+                    'critical': True,
+                    'reason': 'Below minimum safe staffing'
                 }
                 shortage_days.append(day_info)
+                critical_below_minimum_days.append(day_info)
                 
-                # Track days that are CRITICALLY below minimum
-                if day_below_minimum or night_below_minimum:
-                    critical_below_minimum_days.append(day_info)
+            elif unit_imbalances and (total_day_staff >= MINIMUM_SAFE_STAFFING or total_night_staff >= MINIMUM_SAFE_STAFFING):
+                # REALLOCATION NEEDED - home has adequate staff but units unbalanced
+                realloc_info = {
+                    'date': check_date,
+                    'day_name': check_date.strftime('%A'),
+                    'imbalances': unit_imbalances,
+                    'total_day_staff': total_day_staff,
+                    'total_night_staff': total_night_staff,
+                    'reason': 'Staff reallocation needed between units'
+                }
+                reallocation_days.append(realloc_info)
         
-        # Calculate totals
+        # Calculate totals for TRUE shortages only
         total_shortage_days = len(shortage_days)
-        total_gaps = sum(day['total_gaps'] for day in shortage_days)
-        critical_days = [day for day in shortage_days if day['total_gaps'] >= 5]
+        total_critical_gaps = sum(day['total_gaps'] for day in shortage_days)
         
-        # Enhanced summary with minimum staffing alert
-        summary = f"Analyzing next {days} days: {total_shortage_days} days with staffing gaps. {total_gaps} total shifts need covering."
-        if critical_below_minimum_days:
-            summary += f" 🚨 CRITICAL: {len(critical_below_minimum_days)} days BELOW MINIMUM of {MINIMUM_SAFE_STAFFING} staff!"
-        elif critical_days:
-            summary += f" ⚠️ {len(critical_days)} critical days with 5+ gaps."
+        # Build summary
+        if shortage_days:
+            summary = f"🚨 CRITICAL: {total_shortage_days} days BELOW MINIMUM of {MINIMUM_SAFE_STAFFING} staff! "
+            summary += f"{total_critical_gaps} additional staff needed (agency/OT)."
+        elif reallocation_days:
+            summary = f"✅ Adequate staffing levels maintained. {len(reallocation_days)} days need staff reallocation between units."
+        else:
+            summary = f"✅ No shortages detected for next {days} days - all shifts fully covered with balanced distribution."
         
         return {
             'summary': summary,
             'days_analyzed': days,
-            'shortage_days': shortage_days,
+            'shortage_days': shortage_days,  # TRUE shortages (below 17)
+            'reallocation_days': reallocation_days,  # Adequate staff but imbalanced
             'total_shortage_days': total_shortage_days,
-            'total_gaps': total_gaps,
-            'critical_days': critical_days,
+            'total_gaps': total_critical_gaps,
             'critical_below_minimum_days': critical_below_minimum_days,
             'minimum_safe_staffing': MINIMUM_SAFE_STAFFING,
-            'expected_coverage': EXPECTED_COVERAGE
+            'expected_coverage': EXPECTED_COVERAGE,
+            'has_true_shortages': len(shortage_days) > 0,
+            'has_reallocation_needs': len(reallocation_days) > 0
         }
     
     @staticmethod
@@ -7542,68 +7570,60 @@ def ai_assistant_api(request):
             elif report_type == 'staffing_shortage':
                 answer = f"**Staffing Shortage Analysis**\n\n{report_data['summary']}\n\n"
                 
-                if report_data['shortage_days']:
-                    # Show critical days below minimum FIRST
-                    if report_data.get('critical_below_minimum_days'):
-                        answer += "🚨 **CRITICAL - Days Below Minimum of 17 Staff:**\n"
-                        for day in report_data['critical_below_minimum_days'][:7]:
-                            date_str = day['date'].strftime('%a %d %b')
-                            
-                            # Highlight which shifts are critical
-                            critical_shifts = []
-                            if day.get('day_below_minimum'):
-                                critical_shifts.append(f"DAY: {day['total_day_staff']}/17 staff ⚠️")
-                            if day.get('night_below_minimum'):
-                                critical_shifts.append(f"NIGHT: {day['total_night_staff']}/17 staff ⚠️")
-                            
-                            answer += f"\n📅 **{date_str}**"
-                            if critical_shifts:
-                                answer += f" - {' | '.join(critical_shifts)}\n"
-                            else:
-                                answer += f" - {day['total_gaps']} shifts needed\n"
-                            
-                            # Show unit breakdown
-                            for shortage in day['shortages'][:3]:
-                                if shortage['day_shortage'] > 0:
-                                    answer += f"  • {shortage['unit']}: {shortage['day_shortage']} day shift(s) (current: {shortage['day_current']})\n"
-                                if shortage['night_shortage'] > 0:
-                                    answer += f"  • {shortage['unit']}: {shortage['night_shortage']} night shift(s) (current: {shortage['night_current']})\n"
-                        
-                        answer += f"\n🚨 **URGENT:** {len(report_data['critical_below_minimum_days'])} days are below minimum safe staffing of 17. SMS alerts should be sent immediately!\n\n"
-                    
-                    # Show other shortage days
-                    answer += "**All Days with Shortages:**\n"
-                    for day in report_data['shortage_days'][:7]:  # Show first 7 days
+                # Show TRUE SHORTAGES (below minimum) if any exist
+                if report_data.get('shortage_days'):
+                    answer += "🚨 **CRITICAL SHORTAGES - Below Minimum Safe Staffing:**\n"
+                    for day in report_data['shortage_days'][:7]:
                         date_str = day['date'].strftime('%a %d %b')
                         
-                        # Show total staff on duty
-                        day_staff_info = f"(Day: {day.get('total_day_staff', 0)} staff"
-                        night_staff_info = f"Night: {day.get('total_night_staff', 0)} staff)"
-                        
-                        # Mark if below minimum
+                        # Highlight which shifts are critical
+                        critical_shifts = []
                         if day.get('day_below_minimum'):
-                            day_staff_info += " 🚨"
+                            critical_shifts.append(f"DAY: {day['total_day_staff']}/17 staff")
                         if day.get('night_below_minimum'):
-                            night_staff_info = night_staff_info.replace(')', ' 🚨)')
+                            critical_shifts.append(f"NIGHT: {day['total_night_staff']}/17 staff")
                         
-                        answer += f"\n📅 **{date_str}** - {day['total_gaps']} shifts needed {day_staff_info}, {night_staff_info}\n"
+                        answer += f"\n📅 **{date_str}** - {' | '.join(critical_shifts)} 🚨\n"
                         
-                        for shortage in day['shortages'][:3]:  # Max 3 units per day
-                            if shortage['day_shortage'] > 0:
-                                answer += f"  • {shortage['unit']}: {shortage['day_shortage']} day shift(s) (current: {shortage['day_current']})\n"
-                            if shortage['night_shortage'] > 0:
-                                answer += f"  • {shortage['unit']}: {shortage['night_shortage']} night shift(s) (current: {shortage['night_current']})\n"
+                        # Show unit breakdown for context
+                        for shortage in day['shortages'][:3]:
+                            if shortage.get('day_gap', 0) > 0:
+                                answer += f"  • {shortage['unit']}: needs {shortage['day_gap']} day staff (current: {shortage['day_current']})\n"
+                            if shortage.get('night_gap', 0) > 0:
+                                answer += f"  • {shortage['unit']}: needs {shortage['night_gap']} night staff (current: {shortage['night_current']})\n"
                     
-                    if report_data['critical_days']:
-                        answer += f"\n⚠️ **Critical Alert:** {len(report_data['critical_days'])} days with 5+ gaps need urgent attention!\n"
+                    answer += f"\n🚨 **ACTION REQUIRED:** Contact agency staff or arrange overtime immediately!\n"
+                    answer += f"\n💡 **Tip:** Ask me to 'generate text message for staff shortage' to alert all staff.\n"
+                
+                # Show REALLOCATION NEEDS (adequate staff but imbalanced) separately
+                elif report_data.get('reallocation_days'):
+                    answer += "ℹ️ **Staff Reallocation Needed:**\n\n"
+                    answer += f"✅ **Good news:** All days have adequate total staffing (17+ staff)\n"
+                    answer += f"📋 **Action needed:** Reallocate staff between units for better balance\n\n"
                     
-                    answer += f"\n💡 **Tip:** Ask me to 'generate text message for staff shortage' to create an alert for all staff."
+                    for day in report_data['reallocation_days'][:7]:
+                        date_str = day['date'].strftime('%a %d %b')
+                        answer += f"\n📅 **{date_str}** - {day['total_day_staff']} day staff, {day['total_night_staff']} night staff ✅\n"
+                        answer += f"  **Units needing reallocation:**\n"
+                        
+                        for imbalance in day['imbalances'][:5]:
+                            if imbalance.get('day_gap', 0) > 0:
+                                answer += f"  • {imbalance['unit']}: {imbalance['day_gap']} more day staff needed (current: {imbalance['day_current']})\n"
+                            if imbalance.get('night_gap', 0) > 0:
+                                answer += f"  • {imbalance['unit']}: {imbalance['night_gap']} more night staff needed (current: {imbalance['night_current']})\n"
+                    
+                    answer += f"\n💡 **Solution:** Use Staff Management → Team Management to reallocate staff between units.\n"
+                    answer += f"**No agency/OT required** - you have enough staff, just redistribute them!\n"
+                
                 else:
-                    answer += f"✅ No staffing shortages detected for the next {report_data.get('days_analyzed', 14)} days - all shifts are fully covered!"
+                    answer += f"✅ **No issues detected!**\n\n"
+                    answer += f"• All days have minimum 17 staff ✅\n"
+                    answer += f"• All units are properly balanced ✅\n"
+                    answer += f"• Next {report_data.get('days_analyzed', 14)} days fully covered!\n"
                 
                 return JsonResponse({
                     'answer': answer,
-                    'related': ['Generate Text Message', 'View Rota', 'Add Shifts', 'Contact Staff'],
+                    'related': ['Generate SMS Alert', 'View Rota', 'Team Management', 'Contact Agency'],
                     'category': 'report',
                     'report_type': report_type,
                     'report_data': report_data
