@@ -401,11 +401,14 @@
         showTyping();
 
         // Send to backend
+        const csrfToken = getCSRFToken();
+        console.log('Widget CSRF Token:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'NOT FOUND');
+        
         fetch('/api/ai-assistant/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ query: message })
         })
@@ -501,16 +504,25 @@
         return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    function getCookie(name) {
+    // Get CSRF token from Django template or cookie
+    function getCSRFToken() {
+        // Try to get from cookie first
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                if (cookie.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
                     break;
                 }
+            }
+        }
+        // If not in cookie, try to get from hidden input
+        if (!cookieValue) {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                cookieValue = csrfInput.value;
             }
         }
         return cookieValue;
