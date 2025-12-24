@@ -77,6 +77,10 @@ urlpatterns = [
     path('api/reports/daily-additional-staffing/', views.daily_additional_staffing_report, name='daily_additional_staffing_report'),
     path('api/reports/weekly-additional-staffing/', views.weekly_additional_staffing_report, name='weekly_additional_staffing_report'),
     
+    # OT and Agency Comprehensive Report
+    path('reports/ot-agency/', views.ot_agency_report, name='ot_agency_report'),
+    path('reports/ot-agency/export/', views.ot_agency_report_csv, name='ot_agency_report_csv'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

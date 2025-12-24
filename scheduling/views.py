@@ -1111,6 +1111,7 @@ def reports_dashboard(request):
     
     context = {
         'available_reports': [
+            {'name': 'Overtime & Agency Usage', 'description': 'Comprehensive OT and agency breakdown by home, role, hours, and costs', 'url': 'ot_agency_report', 'icon': 'fa-chart-line'},
             {'name': 'Leave Usage Targets', 'description': '40-week strategy dashboard showing staff progress against leave targets', 'url': 'leave_usage_targets', 'icon': 'fa-bullseye'},
             {'name': 'Staff Sickness Report', 'description': 'Shows sickness rates and trends'},
             {'name': 'Annual Leave Report', 'description': 'Summary of leave allowances, taken, and remaining'},
@@ -6630,6 +6631,283 @@ def weekly_additional_staffing_report(request):
     }
     
     return JsonResponse(report_data)
+
+
+@login_required
+def ot_agency_report(request):
+    """
+    Comprehensive Overtime and Agency Usage Report with breakdown by home, role, and reasons
+    """
+    from decimal import Decimal
+    
+    # Check permissions
+    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+        messages.error(request, 'You do not have permission to view this report.')
+        return redirect('manager_dashboard')
+    
+    # Get date range from query params
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    home_filter = request.GET.get('home_filter', '')
+    
+    # Default to current month if no dates provided
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = timezone.now().date().replace(day=1)
+    
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # Last day of current month
+        next_month = start_date.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+    
+    # Get all care homes
+    care_homes = CareHome.objects.all().order_by('name')
+    
+    # Initialize report data
+    report_data = None
+    
+    if start_date and end_date:
+        # Get all OT and Agency shifts in date range
+        ot_agency_shifts = Shift.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date,
+            shift_classification__in=['OVERTIME', 'AGENCY']
+        ).select_related('user', 'user__role', 'unit', 'unit__care_home', 'agency_company', 'shift_type')
+        
+        # Filter by home if specified
+        if home_filter:
+            ot_agency_shifts = ot_agency_shifts.filter(unit__care_home__name=home_filter)
+        
+        # Organize data by home
+        homes_data = []
+        grand_ot_hours = 0
+        grand_ot_cost = 0
+        grand_ot_shifts = 0
+        grand_agency_hours = 0
+        grand_agency_cost = 0
+        grand_agency_shifts = 0
+        
+        for home in care_homes:
+            # Filter by home if no home_filter, or include only selected home
+            if home_filter and home.name != home_filter:
+                continue
+                
+            home_shifts = [s for s in ot_agency_shifts if s.unit.care_home == home]
+            
+            if not home_shifts:
+                continue
+            
+            # Breakdown by role for this home
+            ot_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
+            agency_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
+            
+            for shift in home_shifts:
+                role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+                hours = shift.duration_hours or 12.5
+                
+                if shift.shift_classification == 'OVERTIME':
+                    # OT cost = 1.5x base rate
+                    base_rate = 15.0  # Average base rate
+                    cost = hours * base_rate * 1.5
+                    ot_by_role[role]['hours'] += hours
+                    ot_by_role[role]['count'] += 1
+                    ot_by_role[role]['cost'] += cost
+                    if shift.notes:
+                        ot_by_role[role]['reasons'].add(shift.notes[:50])  # Truncate long notes
+                
+                elif shift.shift_classification == 'AGENCY':
+                    # Agency cost from hourly rate
+                    rate = float(shift.agency_hourly_rate) if shift.agency_hourly_rate else 25.0
+                    cost = hours * rate
+                    agency_by_role[role]['hours'] += hours
+                    agency_by_role[role]['count'] += 1
+                    agency_by_role[role]['cost'] += cost
+                    if shift.notes:
+                        agency_by_role[role]['reasons'].add(shift.notes[:50])
+            
+            # Convert reasons sets to lists
+            for role_data in ot_by_role.values():
+                role_data['reasons'] = list(role_data['reasons'])[:3]  # Top 3 reasons
+            for role_data in agency_by_role.values():
+                role_data['reasons'] = list(role_data['reasons'])[:3]
+            
+            # Calculate home totals
+            ot_total_hours = sum(d['hours'] for d in ot_by_role.values())
+            ot_total_cost = sum(d['cost'] for d in ot_by_role.values())
+            ot_total_shifts = sum(d['count'] for d in ot_by_role.values())
+            
+            agency_total_hours = sum(d['hours'] for d in agency_by_role.values())
+            agency_total_cost = sum(d['cost'] for d in agency_by_role.values())
+            agency_total_shifts = sum(d['count'] for d in agency_by_role.values())
+            
+            # Add to grand totals
+            grand_ot_hours += ot_total_hours
+            grand_ot_cost += ot_total_cost
+            grand_ot_shifts += ot_total_shifts
+            grand_agency_hours += agency_total_hours
+            grand_agency_cost += agency_total_cost
+            grand_agency_shifts += agency_total_shifts
+            
+            homes_data.append({
+                'home_name': home.get_name_display(),
+                'home_code': home.name,
+                'overtime_by_role': dict(ot_by_role),
+                'agency_by_role': dict(agency_by_role),
+                'ot_total_hours': ot_total_hours,
+                'ot_total_cost': ot_total_cost,
+                'ot_total_shifts': ot_total_shifts,
+                'agency_total_hours': agency_total_hours,
+                'agency_total_cost': agency_total_cost,
+                'agency_total_shifts': agency_total_shifts,
+                'total_hours': ot_total_hours + agency_total_hours,
+                'total_cost': ot_total_cost + agency_total_cost,
+            })
+        
+        report_data = {
+            'by_home': homes_data,
+            'grand_totals': {
+                'total_ot_hours': grand_ot_hours,
+                'total_ot_cost': grand_ot_cost,
+                'total_ot_shifts': grand_ot_shifts,
+                'total_agency_hours': grand_agency_hours,
+                'total_agency_cost': grand_agency_cost,
+                'total_agency_shifts': grand_agency_shifts,
+                'combined_hours': grand_ot_hours + grand_agency_hours,
+                'combined_cost': grand_ot_cost + grand_agency_cost,
+                'combined_shifts': grand_ot_shifts + grand_agency_shifts,
+            }
+        }
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'selected_home': home_filter,
+        'care_homes': care_homes,
+        'report_data': report_data,
+    }
+    
+    return render(request, 'scheduling/ot_agency_report.html', context)
+
+
+@login_required
+def ot_agency_report_csv(request):
+    """Export OT and Agency report as CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    # Get same parameters as main report
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    home_filter = request.GET.get('home_filter', '')
+    
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = timezone.now().date().replace(day=1)
+    
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        next_month = start_date.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="ot_agency_report_{start_date}_{end_date}.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write header
+    writer.writerow(['Overtime and Agency Usage Report'])
+    writer.writerow([f'Period: {start_date.strftime("%d %B %Y")} - {end_date.strftime("%d %B %Y")}'])
+    writer.writerow([])
+    
+    # Get data (same logic as main report)
+    ot_agency_shifts = Shift.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        shift_classification__in=['OVERTIME', 'AGENCY']
+    ).select_related('user', 'user__role', 'unit', 'unit__care_home')
+    
+    if home_filter:
+        ot_agency_shifts = ot_agency_shifts.filter(unit__care_home__name=home_filter)
+    
+    care_homes = CareHome.objects.all().order_by('name')
+    
+    for home in care_homes:
+        if home_filter and home.name != home_filter:
+            continue
+            
+        home_shifts = [s for s in ot_agency_shifts if s.unit.care_home == home]
+        
+        if not home_shifts:
+            continue
+        
+        writer.writerow([])
+        writer.writerow([home.get_name_display()])
+        writer.writerow(['='] * 50)
+        
+        # Overtime section
+        writer.writerow([])
+        writer.writerow(['OVERTIME USAGE'])
+        writer.writerow(['Role', 'Shifts', 'Hours', 'Cost', 'Top Reasons'])
+        
+        ot_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
+        
+        for shift in home_shifts:
+            if shift.shift_classification == 'OVERTIME':
+                role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+                hours = shift.duration_hours or 12.5
+                cost = hours * 15.0 * 1.5
+                ot_by_role[role]['hours'] += hours
+                ot_by_role[role]['count'] += 1
+                ot_by_role[role]['cost'] += cost
+                if shift.notes:
+                    ot_by_role[role]['reasons'].add(shift.notes[:50])
+        
+        for role, data in sorted(ot_by_role.items()):
+            reasons = '; '.join(list(data['reasons'])[:3])
+            writer.writerow([
+                role,
+                data['count'],
+                f"{data['hours']:.1f}",
+                f"£{data['cost']:.2f}",
+                reasons
+            ])
+        
+        # Agency section
+        writer.writerow([])
+        writer.writerow(['AGENCY USAGE'])
+        writer.writerow(['Role', 'Shifts', 'Hours', 'Cost', 'Top Reasons'])
+        
+        agency_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
+        
+        for shift in home_shifts:
+            if shift.shift_classification == 'AGENCY':
+                role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+                hours = shift.duration_hours or 12.5
+                rate = float(shift.agency_hourly_rate) if shift.agency_hourly_rate else 25.0
+                cost = hours * rate
+                agency_by_role[role]['hours'] += hours
+                agency_by_role[role]['count'] += 1
+                agency_by_role[role]['cost'] += cost
+                if shift.notes:
+                    agency_by_role[role]['reasons'].add(shift.notes[:50])
+        
+        for role, data in sorted(agency_by_role.items()):
+            reasons = '; '.join(list(data['reasons'])[:3])
+            writer.writerow([
+                role,
+                data['count'],
+                f"{data['hours']:.1f}",
+                f"£{data['cost']:.2f}",
+                reasons
+            ])
+    
+    return response
 
 
 @login_required
