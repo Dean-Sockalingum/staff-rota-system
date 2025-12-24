@@ -276,7 +276,40 @@
             <div class="row">
                 <div class="col-md-8">
                     <h3><i class="fas fa-hospital"></i> {{ unit_data.unit.get_name_display }}</h3>
-                    <!-- Static SSCW Managers -->
+                    
+                    {% if unit_data.is_mgmt_unit %}
+                    <!-- MGMT Unit - Only show SM/OM (Day shift only) -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="sscw-manager" style="border-left: 4px solid #6c757d;">
+                                <strong><i class="fas fa-user-tie"></i> Management Staff (Supernumerary):</strong><br>
+                                <small class="text-muted">{{ unit_data.mgmt_staff.count }} shifts/week</small>
+                            </div>
+                            
+                            {% if unit_data.mgmt_staff %}
+                                <div class="night-staff-section mt-3">
+                                    {% for staff in unit_data.mgmt_staff %}
+                                    <div class="staff-member" style="background-color: #e9ecef; border-left: 4px solid #495057;">
+                                        <div class="staff-info">
+                                            <span class="staff-name"><strong>{{ staff.first_name }} {{ staff.last_name }}</strong> ({{ staff.role.get_name_display }})</span>
+                                            <span class="staff-sap">{{ staff.sap }}</span>
+                                        </div>
+                                        <div class="contracted-shifts">
+                                            {{ staff.shifts_per_week_override|default:staff.shifts_per_week|default:"5" }} shifts/week
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-staff mt-2">
+                                    <small class="text-muted">No management staff assigned to this unit</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Care Unit - Show SSCW Managers and Teams -->
                     <div class="row">
                         <div class="col-md-6">
                             {% if unit_data.static_sscw_managers.day_sscw %}
@@ -397,10 +430,15 @@
                             {% endif %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="col-md-4 text-right">
                     <h4>{{ unit_data.total_home_staff }} Home Staff</h4>
+                    {% if unit_data.is_mgmt_unit %}
+                    <p class="mb-0">Management (Supernumerary)</p>
+                    {% else %}
                     <p class="mb-0">Teams A, B, C Distribution</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

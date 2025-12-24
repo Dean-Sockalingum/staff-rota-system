@@ -2016,7 +2016,31 @@ def staff_management(request):
     units_with_home_staff = []
     
     for unit in care_units:
-        # Get static SSCW managers for this unit - 1 day and 1 night
+        # Check if this is a MGMT unit
+        is_mgmt_unit = 'MGMT' in unit.name
+        
+        # For MGMT units, only show SM/OM (no SSCW managers, no care staff)
+        if is_mgmt_unit:
+            # Get SM and OM staff for this unit
+            mgmt_staff = all_staff.filter(
+                home_unit=unit,
+                role__name__in=['SM', 'OM']
+            ).order_by('role__name')
+            
+            units_with_home_staff.append({
+                'unit': unit,
+                'is_mgmt_unit': True,
+                'mgmt_staff': mgmt_staff,
+                'static_sscw_managers': {'day_sscw': None, 'night_sscw': None},
+                'day_staff': {},
+                'night_staff': {},
+                'day_staff_count': 0,
+                'night_staff_count': 0,
+                'total_home_staff': mgmt_staff.count()
+            })
+            continue  # Skip normal processing for MGMT units
+        
+        # Normal processing for care units
         from datetime import timedelta
         today = timezone.now().date()
         six_weeks_ago = today - timedelta(weeks=6)
