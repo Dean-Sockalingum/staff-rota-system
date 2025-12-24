@@ -54,7 +54,7 @@ NIGHT SHIFT REALLOCATIONS:
 - MGMT permissions should ONLY apply to SM and OM roles
 - 1 × SM (Service Manager) per home
 - 2 × OM (Operations Manager) per home
-- **Exception:** Victoria Gardens has 1 × OM (smaller home)
+- **Exception:** Victoria Gardens has 1 × SM + 1 × OM (smaller home)
 
 ### Implementation
 Added `save()` method override to `Role` model:
