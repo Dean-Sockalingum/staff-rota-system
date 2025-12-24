@@ -104,6 +104,9 @@ ml_models/
 db_backup_*.sqlite3
 *.db-journal
 
+# Pandoc binaries
+pandoc-*/
+
 # Spyder project settings
 .spyderproject
 .spyproject
