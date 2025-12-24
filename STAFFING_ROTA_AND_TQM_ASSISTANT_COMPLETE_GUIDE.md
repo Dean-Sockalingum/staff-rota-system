@@ -331,6 +331,20 @@ The **Total Quality Management (TQM) Assistant** is an AI-powered query interfac
 "Calculate overtime expenses"
 ```
 
+#### Overtime and Agency Usage
+```
+"Show overtime usage between 1 Jan and 31 Jan 2026"
+"Which homes used most agency staff last month?"
+"What were the top reasons for overtime in February?"
+"Break down agency costs by staff type for Orchard Grove"
+"Compare OT hours across all homes in Q1 2026"
+"Show agency usage by company between any two dates"
+"What roles required most overtime at Riverside?"
+"Calculate total cost of agency and OT for January"
+"List all agency shifts with reasons for Meadowburn"
+"Which dates had highest OT usage across all homes?"
+```
+
 #### Reporting
 ```
 "Generate weekly staffing report for Orchard Grove"
@@ -338,6 +352,8 @@ The **Total Quality Management (TQM) Assistant** is an AI-powered query interfac
 "Compare shift coverage across all homes"
 "Export staff list with contact details"
 "Create leave usage summary"
+"Generate OT and Agency report between 1-15 January"
+"Show overtime breakdown by home and staff type"
 ```
 
 ### Query Response Format
@@ -443,12 +459,110 @@ python3 add_om_only.py
 
 ### Reports and Analytics
 
+#### Generate Overtime and Agency Usage Report
+```bash
+# Report between any two dates showing OT and Agency usage
+python3 manage.py shell -c "
+from scheduling.models import Shift, CareHome
+from datetime import date
+from collections import defaultdict
+
+start_date = date(2026, 1, 1)
+end_date = date(2026, 1, 31)
+
+print(f'OVERTIME AND AGENCY USAGE REPORT')
+print(f'{start_date.strftime(\"%d %B %Y\")} - {end_date.strftime(\"%d %B %Y\")}')
+print('='*80)
+
+# Get all OT and Agency shifts
+ot_agency_shifts = Shift.objects.filter(
+    date__gte=start_date,
+    date__lte=end_date,
+    shift_classification__in=['OVERTIME', 'AGENCY']
+).select_related('user', 'unit', 'unit__care_home', 'agency_company', 'shift_type')
+
+# Breakdown by home
+for home in CareHome.objects.all().order_by('name'):
+    home_shifts = [s for s in ot_agency_shifts if s.unit.care_home == home]
+    
+    if not home_shifts:
+        continue
+    
+    print(f'\n{home.name}')
+    print('-'*80)
+    
+    # Breakdown by type
+    ot_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': []})
+    agency_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': []})
+    
+    for shift in home_shifts:
+        role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+        hours = shift.duration_hours or 12.5
+        
+        if shift.shift_classification == 'OVERTIME':
+            # OT cost = 1.5x base rate
+            base_rate = 15.0  # Average
+            cost = hours * base_rate * 1.5
+            ot_by_role[role]['hours'] += hours
+            ot_by_role[role]['count'] += 1
+            ot_by_role[role]['cost'] += cost
+            if shift.notes:
+                ot_by_role[role]['reasons'].append(shift.notes)
+        
+        elif shift.shift_classification == 'AGENCY':
+            # Agency cost from hourly rate
+            rate = float(shift.agency_hourly_rate) if shift.agency_hourly_rate else 25.0
+            cost = hours * rate
+            agency_by_role[role]['hours'] += hours
+            agency_by_role[role]['count'] += 1
+            agency_by_role[role]['cost'] += cost
+            if shift.notes:
+                agency_by_role[role]['reasons'].append(shift.notes)
+    
+    # Display Overtime
+    if ot_by_role:
+        print('\nOVERTIME USAGE:')
+        print(f'{\"Role\":<15} {\"Shifts\":<10} {\"Hours\":<10} {\"Cost\":<15} Top Reasons')
+        for role, data in sorted(ot_by_role.items()):
+            reasons = ', '.join(list(set(data['reasons']))[:3]) if data['reasons'] else 'Not specified'
+            print(f'{role:<15} {data[\"count\"]:<10} {data[\"hours\"]:<10.1f} £{data[\"cost\"]:<13,.2f} {reasons[:40]}')
+        
+        total_ot_hours = sum(d['hours'] for d in ot_by_role.values())
+        total_ot_cost = sum(d['cost'] for d in ot_by_role.values())
+        print(f'{\"TOTAL OT\":<15} {sum(d[\"count\"] for d in ot_by_role.values()):<10} {total_ot_hours:<10.1f} £{total_ot_cost:,.2f}')
+    
+    # Display Agency
+    if agency_by_role:
+        print('\nAGENCY USAGE:')
+        print(f'{\"Role\":<15} {\"Shifts\":<10} {\"Hours\":<10} {\"Cost\":<15} Top Reasons')
+        for role, data in sorted(agency_by_role.items()):
+            reasons = ', '.join(list(set(data['reasons']))[:3]) if data['reasons'] else 'Not specified'
+            print(f'{role:<15} {data[\"count\"]:<10} {data[\"hours\"]:<10.1f} £{data[\"cost\"]:<13,.2f} {reasons[:40]}')
+        
+        total_agency_hours = sum(d['hours'] for d in agency_by_role.values())
+        total_agency_cost = sum(d['cost'] for d in agency_by_role.values())
+        print(f'{\"TOTAL AGENCY\":<15} {sum(d[\"count\"] for d in agency_by_role.values()):<10} {total_agency_hours:<10.1f} £{total_agency_cost:,.2f}')
+    
+    # Home totals
+    home_total_hours = sum(d['hours'] for d in ot_by_role.values()) + sum(d['hours'] for d in agency_by_role.values())
+    home_total_cost = sum(d['cost'] for d in ot_by_role.values()) + sum(d['cost'] for d in agency_by_role.values())
+    print(f'\n{home.name} TOTAL: {home_total_hours:.1f} hours, £{home_total_cost:,.2f}')
+
+# Grand totals
+all_ot = [s for s in ot_agency_shifts if s.shift_classification == 'OVERTIME']
+all_agency = [s for s in ot_agency_shifts if s.shift_classification == 'AGENCY']
+
+print(f'\n{\"=\"*80}')
+print(f'GRAND TOTAL - ALL HOMES')
+print(f'Overtime: {len(all_ot)} shifts')
+print(f'Agency: {len(all_agency)} shifts')
+print(f'Combined: {len(ot_agency_shifts)} shifts')
+"
+```
+
 #### Generate Weekly Staffing Report
 ```bash
-python3 manage.py shell -c "
-from scheduling.reports import generate_weekly_report
-generate_weekly_report('ORCHARD_GROVE', '2026-01-04')
-"
+python3 manage.py send_weekly_staffing_report --week 2026-01-04
 ```
 
 #### Check Compliance
