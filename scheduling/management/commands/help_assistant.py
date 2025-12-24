@@ -194,7 +194,58 @@ See: docs/staff_guidance/ANNUAL_LEAVE_GUIDE.md
                     'related': ['leave_balance', 'entitlement', 'time_off']
                 },
                 
-                'additional_staffing': {
+                                'staff_list': {
+                    'question': ['view staff list', 'show staff', 'list all staff', 'staff directory', 'all employees', 'staff management', 'view all staff'],
+                    'answer': """
+**View Staff List:**
+
+**Via Web UI (Recommended):**
+1. Login to http://127.0.0.1:8000
+2. Go to "Staff Management" from the menu
+3. View complete staff directory with:
+   - Staff name and SAP ID
+   - Role/grade
+   - Care home and unit
+   - Contact information
+   - Employment status
+
+**Filter Options:**
+- By care home
+- By role/grade
+- By employment status (active/inactive)
+- Search by name or SAP ID
+
+**Staff Details:**
+Click on any staff member to view:
+- Full profile information
+- Current shift schedule
+- Leave balance and history
+- Training records
+- Supervision records
+- Contact details
+
+**Quick Staff Queries:**
+Ask me:
+- "Show me all senior carers"
+- "List staff at Hawthorn House"
+- "Who works in the day shift?"
+- "Show me Jane Smith's details"
+
+**Staff Management Actions:**
+- Add new staff members
+- Update staff information
+- Manage team assignments
+- View staff rotas
+- Check leave balances
+
+**Access:** Login → Staff Management → View All Staff
+
+See: STAFFING_ROTA_AND_TQM_ASSISTANT_COMPLETE_GUIDE.md
+""",
+                    'related': ['staff_detail', 'team_management', 'add_staff', 'staff_search']
+                },
+                
+'additional_staffing': {
                     'question': ['overtime', 'agency staff', 'additional staffing', 'agency company', 'agency shift', 'ot', 'add agency', 'track agency'],
                     'answer': """
 **Additional Staffing Management (Overtime & Agency):**
