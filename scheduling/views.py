@@ -2019,12 +2019,12 @@ def staff_management(request):
         # Check if this is a MGMT unit
         is_mgmt_unit = 'MGMT' in unit.name
         
-        # For MGMT units, only show SM/OM (no SSCW managers, no care staff)
+        # For MGMT units, show SM/OM/SSCW/SSCWN (all supernumerary staff)
         if is_mgmt_unit:
-            # Get SM and OM staff for this unit
+            # Get SM, OM, SSCW, and SSCWN staff for this unit (all supernumerary)
             mgmt_staff = all_staff.filter(
                 home_unit=unit,
-                role__name__in=['SM', 'OM']
+                role__name__in=['SM', 'OM', 'SSCW', 'SSCWN']
             ).order_by('role__name')
             
             units_with_home_staff.append({
