@@ -255,6 +255,52 @@ See: ADDITIONAL_STAFFING_COMPLETE.md for full documentation
                     'related': ['add_shift', 'agency_reports', 'overtime_tracking', 'weekly_reports']
                 },
                 
+                'ot_agency_reports': {
+                    'question': ['ot agency report', 'overtime agency report', 'comprehensive ot report', 'detailed agency usage', 'ot cost breakdown', 'agency cost analysis', 'show ot and agency'],
+                    'answer': """
+**Comprehensive OT & Agency Usage Reports:**
+
+**Via Web UI (Recommended):**
+1. Login to http://127.0.0.1:8000
+2. Go to Reports → Overtime & Agency Usage
+3. Select date range (any two dates)
+4. Optionally filter by specific care home
+5. Click "Generate Report" to see summary
+6. Click "Export to CSV" for detailed breakdown
+
+**Report Features:**
+- Separate Overtime and Agency sections
+- Breakdown by care home and grade/role
+- Individual shift details showing:
+  * Date, staff name, SAP ID
+  * Grade/role, unit, shift type
+  * Hours worked, rates, costs
+  * Full reason/notes (not truncated)
+  * For OT: Base rate + 1.5x OT rate
+  * For Agency: Company name + hourly rate
+- Summary by grade for each home
+- Grand totals across all homes
+
+**CSV Export Includes:**
+- Every individual shift with complete details
+- Staff identification and role information
+- Rate calculations and cost breakdowns
+- Complete reasons from shift notes
+- Summaries by grade and home
+- Overall totals
+
+**Example Queries:**
+- "Show OT and Agency usage for December 2025"
+- "Generate detailed agency report for Hawthorn House"
+- "What were the OT costs last month?"
+
+**Access:** Login → Reports Dashboard → Overtime & Agency Usage
+
+See: STAFFING_ROTA_AND_TQM_ASSISTANT_COMPLETE_GUIDE.md (Reports section)
+""",
+                    'related': ['additional_staffing', 'reports_dashboard', 'cost_analysis', 'staffing_reports']
+                },
+                
                 'care_plan_reviews': {
                     'question': ['care plan', 'review due', 'resident review', 'when is review', 'care plan review', 'review status', 'compliance review', 'overdue review'],
                     'answer': """
