@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Help Assistant - Staff Rota System</title>
     {% load static %}
+    {% csrf_token %}
     <style>
         * {
             margin: 0;
@@ -391,6 +392,7 @@
         </div>
         
         <form id="ai-demo-form" class="ai-input-form">
+            {% csrf_token %}
             <input 
                 type="text" 
                 id="ai-demo-input" 
@@ -413,17 +415,25 @@
     const sendBtn = document.getElementById('ai-demo-send');
     const typingIndicator = document.getElementById('ai-demo-typing');
     
-    // Get CSRF token
-    function getCookie(name) {
+    // Get CSRF token from Django template or cookie
+    function getCSRFToken() {
+        // Try to get from cookie first
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                if (cookie.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
                     break;
                 }
+            }
+        }
+        // If not in cookie, try to get from hidden input
+        if (!cookieValue) {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                cookieValue = csrfInput.value;
             }
         }
         return cookieValue;
@@ -456,11 +466,14 @@
         sendBtn.disabled = true;
         
         // Send to API
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'NOT FOUND');
+        
         fetch('/api/ai-assistant/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ query: query })
         })
