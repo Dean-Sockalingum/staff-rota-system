@@ -6,7 +6,8 @@ from scheduling.views import (
     careplan_overview, careplan_unit_view, careplan_review_detail, careplan_compliance_report,
     careplan_manager_dashboard, careplan_approve_review,
     staffing_alert_respond, staffing_my_alerts, staffing_create_alert,
-    home_dashboard  # Home-specific dashboards with role-based access
+    home_dashboard,  # Home-specific dashboards with role-based access
+    ot_agency_report, ot_agency_report_csv  # OT and Agency reporting
 )  # Import from main views
 from scheduling.views_compliance import (
     my_training_dashboard, submit_training_record, training_compliance_dashboard, add_staff_training_record,
@@ -56,6 +57,11 @@ urlpatterns = [
     path('optimization/comparison/', optimization_comparison, name='optimization_comparison'),
     
     path('reports-dashboard/', views.reports_dashboard, name='reports_dashboard'),
+    
+    # OT and Agency Comprehensive Report
+    path('reports/ot-agency/', ot_agency_report, name='ot_agency_report'),
+    path('reports/ot-agency/export/', ot_agency_report_csv, name='ot_agency_report_csv'),
+    
     path('reports/annual-leave/', views.get_annual_leave_report, name='get_annual_leave_report'),
     path('reports/leave-targets/', leave_usage_targets, name='leave_usage_targets'),
     path('rota-view/', views.rota_view, name='rota_view'),

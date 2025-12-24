@@ -6794,7 +6794,7 @@ def ot_agency_report(request):
 
 @login_required
 def ot_agency_report_csv(request):
-    """Export OT and Agency report as CSV"""
+    """Export OT and Agency report as detailed CSV with shift-level breakdown"""
     import csv
     from django.http import HttpResponse
     
@@ -6802,6 +6802,7 @@ def ot_agency_report_csv(request):
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
     home_filter = request.GET.get('home_filter', '')
+    detail_level = request.GET.get('detail', 'detailed')  # 'summary' or 'detailed'
     
     if start_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -6816,26 +6817,33 @@ def ot_agency_report_csv(request):
     
     # Create CSV response
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="ot_agency_report_{start_date}_{end_date}.csv"'
+    filename_suffix = 'detailed' if detail_level == 'detailed' else 'summary'
+    response['Content-Disposition'] = f'attachment; filename="ot_agency_report_{filename_suffix}_{start_date}_{end_date}.csv"'
     
     writer = csv.writer(response)
     
     # Write header
-    writer.writerow(['Overtime and Agency Usage Report'])
+    writer.writerow(['Overtime and Agency Usage Report - Detailed Breakdown'])
     writer.writerow([f'Period: {start_date.strftime("%d %B %Y")} - {end_date.strftime("%d %B %Y")}'])
+    writer.writerow(['Generated: ' + timezone.now().strftime("%d %B %Y %H:%M")])
+    writer.writerow(['Generated: ' + timezone.now().strftime("%d %B %Y %H:%M")])
     writer.writerow([])
     
-    # Get data (same logic as main report)
+    # Get data
     ot_agency_shifts = Shift.objects.filter(
         date__gte=start_date,
         date__lte=end_date,
         shift_classification__in=['OVERTIME', 'AGENCY']
-    ).select_related('user', 'user__role', 'unit', 'unit__care_home')
+    ).select_related('user', 'user__role', 'unit', 'unit__care_home', 'shift_type', 'agency_company').order_by('unit__care_home__name', 'date', 'shift_classification')
     
     if home_filter:
         ot_agency_shifts = ot_agency_shifts.filter(unit__care_home__name=home_filter)
     
     care_homes = CareHome.objects.all().order_by('name')
+    
+    # Grand totals trackers
+    grand_ot_hours = grand_ot_cost = grand_ot_count = 0
+    grand_agency_hours = grand_agency_cost = grand_agency_count = 0
     
     for home in care_homes:
         if home_filter and home.name != home_filter:
@@ -6846,66 +6854,163 @@ def ot_agency_report_csv(request):
         if not home_shifts:
             continue
         
+        # Home header
         writer.writerow([])
-        writer.writerow([home.get_name_display()])
-        writer.writerow(['='] * 50)
-        
-        # Overtime section
+        writer.writerow([f'{'=' * 100}'])
+        writer.writerow([f'CARE HOME: {home.get_name_display()}'])
+        writer.writerow([f'{'=' * 100}'])
         writer.writerow([])
-        writer.writerow(['OVERTIME USAGE'])
-        writer.writerow(['Role', 'Shifts', 'Hours', 'Cost', 'Top Reasons'])
         
-        ot_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
+        # === OVERTIME SECTION ===
+        ot_shifts = [s for s in home_shifts if s.shift_classification == 'OVERTIME']
         
-        for shift in home_shifts:
-            if shift.shift_classification == 'OVERTIME':
+        if ot_shifts:
+            writer.writerow(['OVERTIME USAGE - DETAILED BREAKDOWN'])
+            writer.writerow(['-' * 100])
+            writer.writerow(['Date', 'Day', 'Staff Name', 'SAP ID', 'Grade/Role', 'Unit', 'Shift Type', 'Hours', 'Base Rate', 'OT Rate (1.5x)', 'Cost', 'Reason/Notes'])
+            
+            ot_total_hours = ot_total_cost = 0
+            ot_by_role = defaultdict(lambda: {'count': 0, 'hours': 0, 'cost': 0})
+            
+            for shift in ot_shifts:
+                staff_name = f"{shift.user.first_name} {shift.user.last_name}" if shift.user else 'Unknown'
+                sap_id = shift.user.sap_id if shift.user else 'N/A'
                 role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+                unit = shift.unit.name if shift.unit else 'N/A'
+                shift_type = shift.shift_type.name if shift.shift_type else 'N/A'
                 hours = shift.duration_hours or 12.5
-                cost = hours * 15.0 * 1.5
-                ot_by_role[role]['hours'] += hours
+                base_rate = 15.0  # Could be pulled from user profile if available
+                ot_rate = base_rate * 1.5
+                cost = hours * ot_rate
+                reason = (shift.notes or 'No reason provided').replace('\n', ' ').replace('\r', ' ')
+                day_name = shift.date.strftime('%A')
+                
+                writer.writerow([
+                    shift.date.strftime('%d/%m/%Y'),
+                    day_name,
+                    staff_name,
+                    sap_id,
+                    role,
+                    unit,
+                    shift_type,
+                    f'{hours:.1f}',
+                    f'£{base_rate:.2f}',
+                    f'£{ot_rate:.2f}',
+                    f'£{cost:.2f}',
+                    reason
+                ])
+                
+                ot_total_hours += hours
+                ot_total_cost += cost
                 ot_by_role[role]['count'] += 1
+                ot_by_role[role]['hours'] += hours
                 ot_by_role[role]['cost'] += cost
-                if shift.notes:
-                    ot_by_role[role]['reasons'].add(shift.notes[:50])
+            
+            # OT Summary for this home
+            writer.writerow([])
+            writer.writerow(['OVERTIME SUMMARY BY GRADE'])
+            writer.writerow(['Grade/Role', 'Number of Shifts', 'Total Hours', 'Total Cost'])
+            
+            for role in sorted(ot_by_role.keys()):
+                data = ot_by_role[role]
+                writer.writerow([
+                    role,
+                    data['count'],
+                    f"{data['hours']:.1f}",
+                    f"£{data['cost']:.2f}"
+                ])
+            
+            writer.writerow([])
+            writer.writerow(['OVERTIME TOTAL', len(ot_shifts), f'{ot_total_hours:.1f}', f'£{ot_total_cost:.2f}'])
+            writer.writerow([])
+            
+            grand_ot_hours += ot_total_hours
+            grand_ot_cost += ot_total_cost
+            grand_ot_count += len(ot_shifts)
+        else:
+            writer.writerow(['OVERTIME USAGE - No overtime shifts in this period'])
+            writer.writerow([])
         
-        for role, data in sorted(ot_by_role.items()):
-            reasons = '; '.join(list(data['reasons'])[:3])
-            writer.writerow([
-                role,
-                data['count'],
-                f"{data['hours']:.1f}",
-                f"£{data['cost']:.2f}",
-                reasons
-            ])
+        # === AGENCY SECTION ===
+        agency_shifts = [s for s in home_shifts if s.shift_classification == 'AGENCY']
         
-        # Agency section
-        writer.writerow([])
-        writer.writerow(['AGENCY USAGE'])
-        writer.writerow(['Role', 'Shifts', 'Hours', 'Cost', 'Top Reasons'])
-        
-        agency_by_role = defaultdict(lambda: {'hours': 0, 'count': 0, 'cost': 0, 'reasons': set()})
-        
-        for shift in home_shifts:
-            if shift.shift_classification == 'AGENCY':
+        if agency_shifts:
+            writer.writerow(['AGENCY USAGE - DETAILED BREAKDOWN'])
+            writer.writerow(['-' * 100])
+            writer.writerow(['Date', 'Day', 'Staff Name', 'SAP ID', 'Grade/Role', 'Unit', 'Shift Type', 'Agency Company', 'Hours', 'Hourly Rate', 'Cost', 'Reason/Notes'])
+            
+            agency_total_hours = agency_total_cost = 0
+            agency_by_role = defaultdict(lambda: {'count': 0, 'hours': 0, 'cost': 0})
+            
+            for shift in agency_shifts:
+                staff_name = f"{shift.user.first_name} {shift.user.last_name}" if shift.user else 'Unknown'
+                sap_id = shift.user.sap_id if shift.user else 'N/A'
                 role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
+                unit = shift.unit.name if shift.unit else 'N/A'
+                shift_type = shift.shift_type.name if shift.shift_type else 'N/A'
+                agency_name = shift.agency_company.name if shift.agency_company else 'Unknown Agency'
                 hours = shift.duration_hours or 12.5
-                rate = float(shift.agency_hourly_rate) if shift.agency_hourly_rate else 25.0
-                cost = hours * rate
-                agency_by_role[role]['hours'] += hours
+                hourly_rate = float(shift.agency_hourly_rate) if shift.agency_hourly_rate else 25.0
+                cost = hours * hourly_rate
+                reason = (shift.notes or 'No reason provided').replace('\n', ' ').replace('\r', ' ')
+                day_name = shift.date.strftime('%A')
+                
+                writer.writerow([
+                    shift.date.strftime('%d/%m/%Y'),
+                    day_name,
+                    staff_name,
+                    sap_id,
+                    role,
+                    unit,
+                    shift_type,
+                    agency_name,
+                    f'{hours:.1f}',
+                    f'£{hourly_rate:.2f}',
+                    f'£{cost:.2f}',
+                    reason
+                ])
+                
+                agency_total_hours += hours
+                agency_total_cost += cost
                 agency_by_role[role]['count'] += 1
+                agency_by_role[role]['hours'] += hours
                 agency_by_role[role]['cost'] += cost
-                if shift.notes:
-                    agency_by_role[role]['reasons'].add(shift.notes[:50])
-        
-        for role, data in sorted(agency_by_role.items()):
-            reasons = '; '.join(list(data['reasons'])[:3])
-            writer.writerow([
-                role,
-                data['count'],
-                f"{data['hours']:.1f}",
-                f"£{data['cost']:.2f}",
-                reasons
-            ])
+            
+            # Agency Summary for this home
+            writer.writerow([])
+            writer.writerow(['AGENCY SUMMARY BY GRADE'])
+            writer.writerow(['Grade/Role', 'Number of Shifts', 'Total Hours', 'Total Cost'])
+            
+            for role in sorted(agency_by_role.keys()):
+                data = agency_by_role[role]
+                writer.writerow([
+                    role,
+                    data['count'],
+                    f"{data['hours']:.1f}",
+                    f"£{data['cost']:.2f}"
+                ])
+            
+            writer.writerow([])
+            writer.writerow(['AGENCY TOTAL', len(agency_shifts), f'{agency_total_hours:.1f}', f'£{agency_total_cost:.2f}'])
+            writer.writerow([])
+            
+            grand_agency_hours += agency_total_hours
+            grand_agency_cost += agency_total_cost
+            grand_agency_count += len(agency_shifts)
+        else:
+            writer.writerow(['AGENCY USAGE - No agency shifts in this period'])
+            writer.writerow([])
+    
+    # Grand Total Summary
+    writer.writerow([])
+    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['GRAND TOTALS ACROSS ALL HOMES'])
+    writer.writerow([f'{'=' * 100}'])
+    writer.writerow([])
+    writer.writerow(['Category', 'Number of Shifts', 'Total Hours', 'Total Cost'])
+    writer.writerow(['Overtime', grand_ot_count, f'{grand_ot_hours:.1f}', f'£{grand_ot_cost:.2f}'])
+    writer.writerow(['Agency', grand_agency_count, f'{grand_agency_hours:.1f}', f'£{grand_agency_cost:.2f}'])
+    writer.writerow(['COMBINED TOTAL', grand_ot_count + grand_agency_count, f'{grand_ot_hours + grand_agency_hours:.1f}', f'£{grand_ot_cost + grand_agency_cost:.2f}'])
     
     return response
 
