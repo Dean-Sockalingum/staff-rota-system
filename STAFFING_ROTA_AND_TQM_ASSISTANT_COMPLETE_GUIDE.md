@@ -460,6 +460,27 @@ python3 add_om_only.py
 ### Reports and Analytics
 
 #### Generate Overtime and Agency Usage Report
+
+**Via Web UI (Recommended):**
+```
+1. Login to the system
+2. Click "Reports" in the navigation menu
+3. Click "Overtime & Agency Usage" report card
+4. Select date range (start and end dates)
+5. (Optional) Filter by specific care home
+6. Click "Generate Report"
+7. Click "Export CSV" to download data
+
+Features:
+- Breakdown by care home
+- Breakdown by staff type/role within each home
+- Hours, shifts, and costs calculated
+- Top reasons extracted from shift notes
+- Grand totals across all homes
+- Professional formatting and summary cards
+```
+
+**Via Command Line (Advanced):**
 ```bash
 # Report between any two dates showing OT and Agency usage
 python3 manage.py shell -c "
