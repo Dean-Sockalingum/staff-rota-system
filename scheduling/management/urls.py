@@ -15,7 +15,13 @@ from scheduling.views_compliance import (
     training_breakdown_report,
     my_induction_progress, induction_management, update_induction_progress,
     my_supervision_records, create_supervision_record, supervision_management, sign_supervision_record,
-    report_incident, my_incident_reports, incident_management, view_incident
+    report_incident, my_incident_reports, incident_management, view_incident,
+    # Task 6: Real-Time Compliance Monitor API endpoints
+    compliance_dashboard_api, staff_compliance_status_api, validate_assignment_api, staff_at_risk_api,
+    # Task 7: AI-Powered Payroll Validator API endpoints
+    payroll_validation_api, payroll_entry_check_api, fraud_risk_api,
+    # Task 8: Budget-Aware Smart Recommendations API endpoints
+    budget_optimization_api, budget_status_api, budget_forecast_api
 )
 from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export, custom_report_builder
 from scheduling.views_forecasting import (
@@ -140,4 +146,20 @@ urlpatterns = [
     path('staffing-alerts/dashboard/', staffing_my_alerts, name='staffing_alerts_dashboard'),
     path('staffing-alerts/create/', staffing_create_alert, name='staffing_create_alert'),
     path('staffing-alerts/respond/<str:token>/<str:action>/', staffing_alert_respond, name='staffing_alert_respond'),
+    
+    # Task 6: Real-Time Compliance Monitor - Phase 2 API Endpoints
+    path('api/compliance/dashboard/', compliance_dashboard_api, name='compliance_dashboard_api'),
+    path('api/compliance/staff/<int:user_id>/status/', staff_compliance_status_api, name='staff_compliance_status_api'),
+    path('api/compliance/validate-assignment/', validate_assignment_api, name='validate_assignment_api'),
+    path('api/compliance/at-risk/', staff_at_risk_api, name='staff_at_risk_api'),
+    
+    # Task 7: AI-Powered Payroll Validator - Phase 2 API Endpoints
+    path('api/payroll/validate/', payroll_validation_api, name='payroll_validation_api'),
+    path('api/payroll/check-entry/', payroll_entry_check_api, name='payroll_entry_check_api'),
+    path('api/payroll/fraud-risk/<int:user_id>/', fraud_risk_api, name='fraud_risk_api'),
+    
+    # Task 8: Budget-Aware Smart Recommendations - Phase 2 API Endpoints
+    path('api/budget/optimize/', budget_optimization_api, name='budget_optimization_api'),
+    path('api/budget/status/', budget_status_api, name='budget_status_api'),
+    path('api/budget/forecast/', budget_forecast_api, name='budget_forecast_api'),
 ]

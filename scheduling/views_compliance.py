@@ -796,7 +796,7 @@ def update_induction_progress(request, induction_id):
         induction.notes = request.POST.get('notes', '')
         induction.save()
         
-        messages.success(request, f'Induction progress updated for {induction.staff_member.get_full_name()}')
+        messages.success(request, f'Induction progress updated for {induction.staff_member.full_name}')
         return redirect('induction_management')
     
     context = {
@@ -1177,3 +1177,542 @@ def view_incident(request, incident_id):
     }
     
     return render(request, 'compliance/view_incident.html', context)
+
+
+# ============================================================================
+# REAL-TIME COMPLIANCE MONITOR - TASK 6 (Phase 2)
+# ============================================================================
+
+@login_required
+def compliance_dashboard_api(request):
+    """
+    API endpoint for real-time compliance dashboard
+    
+    Returns JSON with:
+    - Summary statistics (violations, compliance rate)
+    - Active violations
+    - Staff at risk of WTD violations
+    - Upcoming risks
+    - Weekly trends
+    
+    Usage:
+        GET /compliance/dashboard/
+        Response: {
+            'summary': {
+                'total_violations': int,
+                'compliance_rate': float,
+                ...
+            },
+            'active_violations': [...],
+            'at_risk_staff': [...],
+            ...
+        }
+    """
+    from .compliance_monitor import get_compliance_dashboard
+    
+    # Get date range from query params (default 7 days)
+    date_range_days = int(request.GET.get('days', 7))
+    
+    # Get dashboard data
+    dashboard_data = get_compliance_dashboard(date_range_days)
+    
+    return JsonResponse(dashboard_data, status=200)
+
+
+@login_required
+def staff_compliance_status_api(request, user_id):
+    """
+    API endpoint for individual staff compliance status
+    
+    Returns WTD status for specific staff member:
+    - Current weekly hours
+    - 17-week rolling average
+    - Upcoming shifts
+    - Risk level
+    
+    Usage:
+        GET /compliance/staff/123/status/
+        Response: {
+            'user_id': 123,
+            'full_name': 'John Smith',
+            'current_weekly_hours': 42.5,
+            'rolling_average': 38.2,
+            'risk_level': 'MEDIUM',
+            ...
+        }
+    """
+    from .compliance_monitor import ComplianceMonitor
+    from .wdt_compliance import (
+        calculate_weekly_hours,
+        calculate_rolling_average_hours
+    )
+    
+    # Get user
+    try:
+        staff_member = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    
+    # Calculate compliance metrics
+    today = timezone.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    
+    weekly_hours = calculate_weekly_hours(staff_member, week_start, weeks=1)
+    rolling_avg = calculate_rolling_average_hours(staff_member, weeks=17)
+    
+    # Determine risk level
+    monitor = ComplianceMonitor()
+    if weekly_hours >= monitor.WTD_WARNING_THRESHOLD:
+        risk_level = 'HIGH'
+    elif weekly_hours >= Decimal('40.0'):
+        risk_level = 'MEDIUM'
+    else:
+        risk_level = 'LOW'
+    
+    # Get upcoming shifts
+    upcoming_shifts = list(staff_member.shift_set.filter(
+        date__gte=today,
+        date__lte=today + timedelta(days=7),
+        status__in=['SCHEDULED', 'CONFIRMED']
+    ).values('date', 'shift_type__name', 'unit__name'))
+    
+    return JsonResponse({
+        'user_id': staff_member.id,
+        'full_name': staff_member.full_name,
+        'sap': staff_member.sap,
+        'current_weekly_hours': float(weekly_hours),
+        'rolling_average': float(rolling_avg),
+        'risk_level': risk_level,
+        'upcoming_shifts': upcoming_shifts,
+        'wdt_limit': float(monitor.WTD_MAX_WEEKLY_HOURS),
+        'hours_remaining': float(monitor.WTD_MAX_WEEKLY_HOURS - weekly_hours)
+    }, status=200)
+
+
+@login_required
+def validate_assignment_api(request):
+    """
+    API endpoint to pre-validate shift assignment
+    
+    Checks if a proposed shift assignment is WTD/CI compliant
+    before actually creating the shift
+    
+    Usage:
+        POST /compliance/validate-assignment/
+        Body: {
+            'user_id': 123,
+            'shift_date': '2025-12-28',
+            'shift_type_id': 5,
+            'proposed_hours': 12
+        }
+        
+        Response: {
+            'safe': bool,
+            'compliant': bool,
+            'violations': [...],
+            'warnings': [...],
+            'reason': str,
+            'alternative_staff': [...]
+        }
+    """
+    from .compliance_monitor import validate_shift_assignment
+    from .models import ShiftType
+    from datetime import datetime
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    # Parse request data
+    try:
+        import json
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        shift_date_str = data.get('shift_date')
+        shift_type_id = data.get('shift_type_id')
+        proposed_hours = data.get('proposed_hours', 12)
+        
+        # Validate inputs
+        if not all([user_id, shift_date_str, shift_type_id]):
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+        
+        # Get user and shift type
+        user = User.objects.get(pk=user_id)
+        shift_type = ShiftType.objects.get(pk=shift_type_id)
+        shift_date = datetime.strptime(shift_date_str, '%Y-%m-%d').date()
+        
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except ShiftType.DoesNotExist:
+        return JsonResponse({'error': 'Shift type not found'}, status=404)
+    
+    # Validate assignment
+    result = validate_shift_assignment(user, shift_date, shift_type, proposed_hours)
+    
+    return JsonResponse(result, status=200)
+
+
+@login_required
+def staff_at_risk_api(request):
+    """
+    API endpoint for staff approaching WTD limits
+    
+    Returns list of staff who are approaching weekly hours limits
+    
+    Usage:
+        GET /compliance/at-risk/?days=7&threshold=45
+        Response: [
+            {
+                'user': {...},
+                'full_name': str,
+                'current_weekly_hours': float,
+                'rolling_average': float,
+                'risk_level': 'HIGH'|'MEDIUM'|'LOW',
+                ...
+            },
+            ...
+        ]
+    """
+    from .compliance_monitor import get_staff_at_risk
+    
+    # Get query params
+    days_ahead = int(request.GET.get('days', 7))
+    threshold_hours = int(request.GET.get('threshold', 45))
+    
+    # Get at-risk staff
+    at_risk_staff = get_staff_at_risk(days_ahead, threshold_hours)
+    
+    return JsonResponse({
+        'count': len(at_risk_staff),
+        'staff': at_risk_staff
+    }, status=200)
+
+
+# ============================================================================
+# AI-POWERED PAYROLL VALIDATOR - TASK 7 (Phase 2)
+# ============================================================================
+
+@login_required
+def payroll_validation_api(request):
+    """
+    API endpoint for validating entire pay period
+    
+    Uses ML anomaly detection to flag discrepancies:
+    - WTD hours mismatches (Task 6 integration)
+    - Overtime anomalies
+    - Agency cost validation
+    - Fraud risk scoring
+    
+    Usage:
+        GET /payroll/validate/?period_start=2025-12-01&period_end=2025-12-31
+        Response: {
+            'summary': {
+                'total_entries': int,
+                'flagged_entries': int,
+                'total_discrepancy_amount': float,
+                ...
+            },
+            'discrepancies': [...],
+            'anomalies': [...],
+            'fraud_alerts': [...]
+        }
+    """
+    from .payroll_validator import validate_pay_period
+    from datetime import datetime
+    
+    # Parse query params
+    try:
+        period_start_str = request.GET.get('period_start')
+        period_end_str = request.GET.get('period_end')
+        
+        if not period_start_str or not period_end_str:
+            return JsonResponse({'error': 'Missing period_start or period_end'}, status=400)
+        
+        period_start = datetime.strptime(period_start_str, '%Y-%m-%d')
+        period_end = datetime.strptime(period_end_str, '%Y-%m-%d')
+        
+    except ValueError as e:
+        return JsonResponse({'error': f'Invalid date format: {str(e)}'}, status=400)
+    
+    # Validate pay period
+    results = validate_pay_period(period_start, period_end)
+    
+    return JsonResponse(results, status=200)
+
+
+@login_required
+def payroll_entry_check_api(request):
+    """
+    API endpoint to check individual payroll entry
+    
+    Quick validation of claimed hours/amount vs scheduled
+    
+    Usage:
+        POST /payroll/check-entry/
+        Body: {
+            'user_id': 123,
+            'period_start': '2025-12-01',
+            'period_end': '2025-12-31',
+            'claimed_hours': 80.0,
+            'claimed_amount': 920.00
+        }
+        
+        Response: {
+            'valid': bool,
+            'issues': [str],
+            'expected_hours': float,
+            'expected_amount': float,
+            'discrepancy': float
+        }
+    """
+    from .payroll_validator import check_payroll_entry
+    from datetime import datetime
+    from decimal import Decimal
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        user_id = data.get('user_id')
+        period_start_str = data.get('period_start')
+        period_end_str = data.get('period_end')
+        claimed_hours = Decimal(str(data.get('claimed_hours', 0)))
+        claimed_amount = Decimal(str(data.get('claimed_amount', 0)))
+        
+        # Get user
+        user = User.objects.get(pk=user_id)
+        period_start = datetime.strptime(period_start_str, '%Y-%m-%d')
+        period_end = datetime.strptime(period_end_str, '%Y-%m-%d')
+        
+    except (json.JSONDecodeError, ValueError, User.DoesNotExist) as e:
+        return JsonResponse({'error': f'Invalid request: {str(e)}'}, status=400)
+    
+    # Check entry
+    result = check_payroll_entry(user, period_start, period_end, claimed_hours, claimed_amount)
+    
+    return JsonResponse(result, status=200)
+
+
+@login_required
+def fraud_risk_api(request, user_id):
+    """
+    API endpoint for fraud risk scoring
+    
+    Calculates fraud risk score for specific user in pay period
+    
+    Usage:
+        GET /payroll/fraud-risk/123/?period_start=2025-12-01&period_end=2025-12-31
+        Response: {
+            'user_id': 123,
+            'risk_score': 0.75,
+            'risk_level': 'HIGH',
+            'risk_factors': [...],
+            'recommended_action': str
+        }
+    """
+    from .payroll_validator import get_fraud_risk_score
+    from datetime import datetime
+    
+    try:
+        user = User.objects.get(pk=user_id)
+        
+        period_start_str = request.GET.get('period_start')
+        period_end_str = request.GET.get('period_end')
+        
+        if not period_start_str or not period_end_str:
+            return JsonResponse({'error': 'Missing period_start or period_end'}, status=400)
+        
+        period_start = datetime.strptime(period_start_str, '%Y-%m-%d')
+        period_end = datetime.strptime(period_end_str, '%Y-%m-%d')
+        
+    except (ValueError, User.DoesNotExist) as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+    # Calculate risk
+    risk = get_fraud_risk_score(user, period_start, period_end)
+    
+    return JsonResponse(risk, status=200)
+
+
+# ==============================================================================
+# TASK 8: BUDGET-AWARE SMART RECOMMENDATIONS - Phase 2 API Endpoints
+# ==============================================================================
+
+@login_required
+def budget_optimization_api(request):
+    """
+    API endpoint for budget-aware staffing optimization
+    
+    Finds cheapest WTD-compliant solution for staffing need
+    Integrates ALL Tasks 1-7 with budget constraints
+    
+    Usage:
+        POST /api/budget/optimize/
+        Body: {
+            "shift_date": "2025-12-28",
+            "shift_type_id": 1,
+            "unit_id": 3,
+            "budget_limit": 200.00  // Optional
+        }
+        
+        Response: {
+            "recommended_option": "swap",  // or "overtime" or "agency"
+            "cost": 0.00,
+            "details": {...},
+            "alternatives": [{type, cost, summary}],
+            "budget_impact": {
+                "cost": 0.00,
+                "remaining_budget": 48240.50,
+                "percentage_used": 3.5,
+                "alert_level": "OK"
+            },
+            "compliance": {
+                "wdt_compliant": true,
+                "fraud_risk": "LOW"
+            }
+        }
+    """
+    from .budget_optimizer import get_optimal_staffing_solution
+    from datetime import datetime
+    from decimal import Decimal
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST request required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        shift_date_str = data.get('shift_date')
+        shift_type_id = data.get('shift_type_id')
+        unit_id = data.get('unit_id')
+        budget_limit_str = data.get('budget_limit')
+        
+        if not shift_date_str or not shift_type_id or not unit_id:
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+        
+        shift_date = datetime.strptime(shift_date_str, '%Y-%m-%d').date()
+        shift_type = ShiftType.objects.get(pk=shift_type_id)
+        unit = Unit.objects.get(pk=unit_id)
+        
+        budget_limit = Decimal(str(budget_limit_str)) if budget_limit_str else None
+        
+    except (ValueError, KeyError, ShiftType.DoesNotExist, Unit.DoesNotExist) as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+    # Get optimal solution (integrates Tasks 1-7)
+    solution = get_optimal_staffing_solution(shift_date, shift_type, unit, budget_limit)
+    
+    return JsonResponse(solution, status=200)
+
+
+@login_required
+def budget_status_api(request):
+    """
+    API endpoint for current budget status
+    
+    Shows real-time budget tracking with spending breakdown
+    
+    Usage:
+        GET /api/budget/status/?period_start=2025-12-01&period_end=2025-12-31
+        
+        Response: {
+            "period": {
+                "start": "2025-12-01",
+                "end": "2025-12-31",
+                "days_elapsed": 25,
+                "days_remaining": 6
+            },
+            "spending": {
+                "total": 38450.00,
+                "regular_shifts": 24000.00,
+                "overtime": 5400.00,
+                "agency": 9050.00,
+                "breakdown_percentage": {
+                    "regular": 62.4,
+                    "overtime": 14.0,
+                    "agency": 23.6
+                }
+            },
+            "budget": {
+                "allocated": 50000.00,
+                "spent": 38450.00,
+                "remaining": 11550.00,
+                "percentage_used": 76.9
+            },
+            "alerts": [
+                {"level": "WARNING", "message": "Budget 76.9% used - monitor closely"}
+            ],
+            "projections": {
+                "daily_burn_rate": 1538.00,
+                "end_of_month": 47678.00,
+                "overspend_risk": false,
+                "projected_overspend": 0
+            }
+        }
+    """
+    from .budget_optimizer import get_budget_status
+    from datetime import datetime
+    
+    period_start_str = request.GET.get('period_start')
+    period_end_str = request.GET.get('period_end')
+    
+    try:
+        period_start = datetime.strptime(period_start_str, '%Y-%m-%d').date() if period_start_str else None
+        period_end = datetime.strptime(period_end_str, '%Y-%m-%d').date() if period_end_str else None
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+    # Get budget status
+    status = get_budget_status(period_start, period_end)
+    
+    return JsonResponse(status, status=200)
+
+
+@login_required
+def budget_forecast_api(request):
+    """
+    API endpoint for budget forecast
+    
+    Predicts future budget needs using ML shortage predictions
+    Integrates with Task 5 (shortage_predictor)
+    
+    Usage:
+        GET /api/budget/forecast/?days_ahead=30
+        
+        Response: {
+            "forecast_period": {
+                "start": "2025-12-25",
+                "end": "2026-01-24",
+                "days": 30
+            },
+            "predicted_shortages": 18,
+            "estimated_costs": {
+                "optimistic": 972.00,    // 70% swaps, 30% OT
+                "realistic": 2484.00,    // 40% swaps, 40% OT, 20% agency
+                "pessimistic": 4032.00   // 20% swaps, 30% OT, 50% agency
+            },
+            "budget_recommendations": [
+                "💡 Optimize costs: Prioritize shift swaps (£0) over agency (£280/shift)."
+            ]
+        }
+    """
+    from .budget_optimizer import predict_budget_needs
+    
+    days_ahead_str = request.GET.get('days_ahead', '30')
+    
+    try:
+        days_ahead = int(days_ahead_str)
+        if days_ahead < 1 or days_ahead > 365:
+            raise ValueError('days_ahead must be between 1 and 365')
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+    # Get forecast (integrates with Task 5)
+    forecast = predict_budget_needs(days_ahead)
+    
+    return JsonResponse(forecast, status=200)
