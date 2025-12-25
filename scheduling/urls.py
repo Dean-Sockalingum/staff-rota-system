@@ -10,6 +10,10 @@ from .views_forecasting import (
     forecast_accuracy_view,
     unit_performance_view
 )
+from .ai_recommendations import (
+    approve_ai_recommendation,
+    reject_ai_recommendation
+)
 
 urlpatterns = [
     # Authentication
@@ -71,6 +75,8 @@ urlpatterns = [
     # AI Assistant API
     path('ai-assistant/', views.ai_assistant_page, name='ai_assistant_page'),
     path('api/ai-assistant/', views.ai_assistant_api, name='ai_assistant_api'),
+    path('api/ai-recommendations/approve/', approve_ai_recommendation, name='approve_ai_recommendation'),
+    path('api/ai-recommendations/reject/', reject_ai_recommendation, name='reject_ai_recommendation'),
     
     # Agency & Additional Staffing APIs
     path('api/agency-companies/', views.agency_companies_api, name='agency_companies_api'),

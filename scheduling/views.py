@@ -4102,7 +4102,7 @@ class ReportGenerator:
                             moves_for_unit.append({
                                 'from_unit': excess_unit,
                                 'to_unit': gap_unit,
-                                'staff_name': shift.user.get_full_name(),
+                                'staff_name': shift.user.full_name,
                                 'staff_sap': shift.user.sap,
                                 'role': shift.user.role.get_name_display() if shift.user.role else 'Staff',
                                 'shift_id': shift.id
@@ -7171,7 +7171,7 @@ def staff_vacancies_report(request):
     """
     Staff Vacancies Report showing current and upcoming vacancies by care home
     """
-    from scheduling.models import StaffProfile
+    from staff_records.models import StaffProfile
     
     # Check permissions
     if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
@@ -7236,8 +7236,7 @@ def staff_vacancies_report(request):
             'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
             'end_date': profile.end_date,
             'days_ago': days_ago,
-            'hours_per_week': hours,
-            'leaving_reason': profile.leaving_reason or 'Not specified'
+            'hours_per_week': hours
         }
         
         vacancies_by_home[home_name]['current'].append(vacancy_data)
@@ -7260,8 +7259,7 @@ def staff_vacancies_report(request):
             'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
             'end_date': profile.end_date,
             'days_until': days_until,
-            'hours_per_week': hours,
-            'leaving_reason': profile.leaving_reason or 'Not specified'
+            'hours_per_week': hours
         }
         
         vacancies_by_home[home_name]['upcoming'].append(vacancy_data)
@@ -7292,7 +7290,7 @@ def staff_vacancies_report_csv(request):
     """
     Export staff vacancies report to CSV
     """
-    from scheduling.models import StaffProfile
+    from staff_records.models import StaffProfile
     import csv
     
     # Check permissions
@@ -7692,6 +7690,11 @@ def ai_assistant_api(request):
             elif report_type == 'staffing_shortage':
                 answer = f"**Staffing Shortage Analysis**\n\n{report_data['summary']}\n\n"
                 
+                # Collect all recommendations for actionable buttons
+                all_recommendations = []
+                recommendation_date = None
+                recommendation_reason = None
+                
                 # Show TRUE SHORTAGES (below minimum) if any exist
                 if report_data.get('shortage_days'):
                     answer += "🚨 **CRITICAL SHORTAGES - Below Minimum Safe Staffing:**\n"
@@ -7730,6 +7733,16 @@ def ai_assistant_api(request):
                         # Show automated reallocation plan
                         realloc_plan = day.get('reallocation_plan', {})
                         
+                        # Collect moves for first day's recommendations (most urgent)
+                        if not all_recommendations and not recommendation_date:
+                            recommendation_date = day['date'].strftime('%Y-%m-%d')
+                            recommendation_reason = f"Balance staffing for {day['day_name']}"
+                            
+                            for move in realloc_plan.get('day', []):
+                                all_recommendations.append(move)
+                            for move in realloc_plan.get('night', []):
+                                all_recommendations.append(move)
+                        
                         if realloc_plan.get('day'):
                             answer += f"\n**DAY SHIFT REALLOCATIONS:**\n"
                             for move in realloc_plan['day']:
@@ -7749,23 +7762,37 @@ def ai_assistant_api(request):
                                     answer += f"  • {imbalance['unit']}: {imbalance['day_gap']} more day staff needed (current: {imbalance['day_current']})\n"
                                 if imbalance.get('night_gap', 0) > 0:
                                     answer += f"  • {imbalance['unit']}: {imbalance['night_gap']} more night staff needed (current: {imbalance['night_current']})\n"
-                    
-                    answer += f"\n💡 **How to apply:** Go to Rota View → Edit shifts to reassign staff as suggested above.\n"
-                    answer += f"**No agency/OT required** - you have enough staff, just redistribute them!\n"
                 
-                else:
-                    answer += f"✅ **No issues detected!**\n\n"
-                    answer += f"• All days have minimum 17 staff ✅\n"
-                    answer += f"• All units are properly balanced ✅\n"
-                    answer += f"• Next {report_data.get('days_analyzed', 14)} days fully covered!\n"
-                
-                return JsonResponse({
+                # Build response with actionable recommendations if available
+                response_data = {
                     'answer': answer,
-                    'related': ['Generate SMS Alert', 'View Rota', 'Team Management', 'Contact Agency'],
+                    'related': ['View Detailed Report', 'Generate Alert Message', 'View Rota'],
                     'category': 'report',
                     'report_type': report_type,
                     'report_data': report_data
-                })
+                }
+                
+                # Add recommendations if we have moves to suggest
+                if all_recommendations:
+                    import uuid
+                    response_data['recommendations'] = all_recommendations
+                    response_data['recommendation_id'] = str(uuid.uuid4())
+                    response_data['date'] = recommendation_date
+                    response_data['reason'] = recommendation_reason
+                else:
+                    # No recommendations but check if we need to add helpful tips
+                    if report_data.get('reallocation_days'):
+                        answer += f"\n💡 **How to apply:** Go to Rota View → Edit shifts to reassign staff as suggested above.\n"
+                        answer += f"**No agency/OT required** - you have enough staff, just redistribute them!\n"
+                        response_data['answer'] = answer
+                    elif not report_data.get('shortage_days'):
+                        answer += f"✅ **No issues detected!**\n\n"
+                        answer += f"• All days have minimum 17 staff ✅\n"
+                        answer += f"• All units are properly balanced ✅\n"
+                        answer += f"• Next {report_data.get('days_analyzed', 14)} days fully covered!\n"
+                        response_data['answer'] = answer
+                
+                return JsonResponse(response_data)
             
             elif report_type == 'incident_report':
                 answer = f"**Incident Report**\n\n{report_data['summary']}\n\n"
