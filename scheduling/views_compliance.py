@@ -16,7 +16,7 @@ import json
 
 from scheduling.models import (
     TrainingCourse, TrainingRecord, InductionProgress, 
-    SupervisionRecord, IncidentReport, User, CareHome, Unit
+    SupervisionRecord, IncidentReport, User, CareHome, Unit, ShiftType
 )
 
 

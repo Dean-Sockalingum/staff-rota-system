@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from scheduling.models import User, Unit, ShiftType, Shift
+from django.utils import timezone
+from scheduling.models import User, Unit, ShiftType, Shift, Role
 from datetime import date, timedelta
 import random
 
@@ -231,10 +232,15 @@ class Command(BaseCommand):
             
             status = '✅' if total_shifts <= expected_total else '⚠️'
             self.stdout.write(f'   {status} {staff.sap} ({staff.role.name}): {total_shifts}/{expected_total} shifts')
-            'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
-            'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell',
-            'Carter', 'Roberts', 'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker',
-            'Cruz', 'Edwards', 'Collins', 'Reyes', 'Stewart', 'Morris', 'Morales', 'Murphy'
+        
+        # Name lists for generating staff
+        first_names = [
+            'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda',
+            'William', 'Elizabeth', 'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica'
+        ]
+        last_names = [
+            'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+            'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores'
         ]
         
         # Generate staff for rota-scheduled roles only

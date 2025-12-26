@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -4233,8 +4234,8 @@ Management Team
             'sms_count': (len(full_message) // 160) + 1,  # SMS segments
             'email_message': email_message,
             'recipient_count': User.objects.filter(is_staff=False, is_active=True).count(),
-            'critical_dates': [day['date'].strftime('%Y-%m-%d') for day in next_week[:3]],
-            'total_gaps': total_gaps
+            # 'critical_dates': [day['date'].strftime('%Y-%m-%d') for day in next_week[:3]],
+            # 'total_gaps': total_gaps
         }
     
     @staticmethod
@@ -9761,75 +9762,6 @@ def auto_coordinate_agencies_api(request, cover_request_id):
         return JsonResponse({
             'success': False,
             'error': f'Error coordinating agencies: {str(e)}'
-        }, status=500)
-
-    """
-    API endpoint: Get smart staff recommendations for a shift
-    
-    GET /api/smart-matching/<shift_id>/
-    
-    Response:
-    {
-        "success": true,
-        "shift_id": 12345,
-        "shift_date": "2025-12-13",
-        "shift_time": "07:00:00 - 19:00:00",
-        "unit": "Orchard Grove",
-        "required_role": "SCW",
-        "recommendations": [
-            {
-                "staff_sap": "123456",
-                "staff_name": "John Doe",
-                "staff_role": "SCW",
-                "total_score": 87.5,
-                "distance_score": 95.0,
-                "overtime_score": 80.0,
-                "skill_score": 100.0,
-                "preference_score": 75.0,
-                "fatigue_score": 100.0,
-                "wdt_compliant": true,
-                "recommended": true,
-                "breakdown": {...}
-            },
-            ...
-        ],
-        "total_available": 45,
-        "timestamp": "2025-12-13T10:30:00Z"
-    }
-    """
-    from .staff_matching import get_smart_staff_recommendations
-    
-    try:
-        shift = get_object_or_404(Shift, id=shift_id)
-        
-        # Check permissions (managers/admins only)
-        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
-            return JsonResponse({
-                'success': False,
-                'error': 'Permission denied. Only managers can access staff matching.'
-            }, status=403)
-        
-        # Get recommendations
-        limit = int(request.GET.get('limit', 10))
-        recommendations = get_smart_staff_recommendations(shift, max_recommendations=limit)
-        
-        return JsonResponse({
-            'success': True,
-            **recommendations
-        })
-        
-    except Shift.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': f'Shift with ID {shift_id} not found'
-        }, status=404)
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Smart matching error for shift {shift_id}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': f'Error generating recommendations: {str(e)}'
         }, status=500)
 
 

@@ -321,11 +321,13 @@ class PayrollValidator:
         discrepancies = []
         
         # Get all agency assignments in period
-        agency_assignments = AgencyAssignment.objects.filter(
-            shift__date__gte=period_start.date(),
-            shift__date__lte=period_end.date(),
-            status__in=['CONFIRMED', 'COMPLETED']
-        ).select_related('agency_company', 'shift')
+        # TODO: Implement when AgencyAssignment model is created
+        # agency_assignments = AgencyAssignment.objects.filter(
+        #     shift__date__gte=period_start.date(),
+        #     shift__date__lte=period_end.date(),
+        #     status__in=['CONFIRMED', 'COMPLETED']
+        # ).select_related('agency_company', 'shift')
+        agency_assignments = []
         
         for assignment in agency_assignments:
             # Check hourly rate
@@ -426,11 +428,13 @@ class PayrollValidator:
                 risk_factors.append(f'Unusual pattern: {night_ratio*100:.0f}% night shifts')
         
         # Factor 3: Historical WTD violations (weight: 0.3)
-        violations = ComplianceViolation.objects.filter(
-            affected_user=user,
-            created_at__gte=period_start - timedelta(days=90),
-            rule__category='WORKING_TIME'
-        ).count()
+        # TODO: Implement when ComplianceViolation model is created
+        # violations = ComplianceViolation.objects.filter(
+        #     affected_user=user,
+        #     created_at__gte=period_start - timedelta(days=90),
+        #     rule__category='WORKING_TIME'
+        # ).count()
+        violations = 0  # Placeholder
         
         if violations > 3:
             risk_score += 0.3
