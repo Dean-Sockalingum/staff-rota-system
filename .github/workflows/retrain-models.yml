@@ -175,7 +175,7 @@ jobs:
         echo "📦 Archived old models to model_archives/${DATE}/"
     
     - name: Upload retrained models
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: prophet-models-retrained
         path: prophet_models/
@@ -231,7 +231,7 @@ jobs:
     
     - name: Upload retraining report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: retraining-report
         path: retraining_report_*.txt
