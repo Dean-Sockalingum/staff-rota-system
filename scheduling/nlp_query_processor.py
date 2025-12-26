@@ -694,19 +694,44 @@ class NLPQueryProcessor:
 
 # Convenience functions for API integration
 
-def process_natural_language_query(query: str, user_id: int = None) -> Dict:
+def process_natural_language_query(query: str, user_id: int = None, apply_personalization: bool = True) -> Dict:
     """
-    Process a natural language query
+    Process a natural language query with optional personalization
     
     Args:
         query: User's question in plain English
         user_id: ID of user making query
+        apply_personalization: Apply learned user preferences (default True)
     
     Returns:
         Response dict with intent, entities, response text, data, and suggestions
     """
     processor = NLPQueryProcessor()
-    return processor.process_query(query, user_id)
+    result = processor.process_query(query, user_id)
+    
+    # Apply personalization if user provided and enabled
+    if user_id and apply_personalization:
+        try:
+            from scheduling.models import User
+            from scheduling.feedback_learning import personalize_response
+            
+            user = User.objects.get(id=user_id)
+            personalized = personalize_response(
+                user,
+                result['response'],
+                result.get('data', {})
+            )
+            
+            result['response'] = personalized['response']
+            result['data'] = personalized['data']
+            result['personalization_applied'] = True
+            result['style'] = personalized['style']
+        except Exception as e:
+            # If personalization fails, continue with standard response
+            result['personalization_applied'] = False
+            result['personalization_error'] = str(e)
+    
+    return result
 
 
 def get_query_suggestions() -> List[str]:

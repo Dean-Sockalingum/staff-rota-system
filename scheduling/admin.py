@@ -295,6 +295,59 @@ class IncidentReportAdmin(admin.ModelAdmin):
     )
 
 
+# ============================================================================
+# TASK 11: AI ASSISTANT FEEDBACK & LEARNING SYSTEM
+# ============================================================================
+
+from .feedback_learning import AIQueryFeedback, UserPreference
+
+@admin.register(AIQueryFeedback)
+class AIQueryFeedbackAdmin(admin.ModelAdmin):
+    list_display = ['user', 'short_query', 'intent_detected', 'rating', 'feedback_type', 'is_positive', 'created_at']
+    list_filter = ['rating', 'feedback_type', 'intent_detected', 'created_at', 'learned_from']
+    search_fields = ['user__first_name', 'user__last_name', 'query_text', 'feedback_comment']
+    readonly_fields = ['created_at', 'learned_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Query Details', {'fields': ('user', 'query_text', 'intent_detected', 'confidence_score', 'session_id')}),
+        ('Response', {'fields': ('response_text', 'response_data')}),
+        ('Feedback', {'fields': ('rating', 'feedback_type', 'feedback_comment')}),
+        ('Refinement', {'fields': ('refinement_query', 'refinement_successful')}),
+        ('Learning', {'fields': ('learned_from', 'learned_at')}),
+        ('Metadata', {'fields': ('created_at',)}),
+    )
+    
+    def short_query(self, obj):
+        return obj.query_text[:50] + '...' if len(obj.query_text) > 50 else obj.query_text
+    short_query.short_description = 'Query'
+    
+    def is_positive(self, obj):
+        return '✅' if obj.is_positive else '⚠️' if obj.rating == 3 else '❌'
+    is_positive.short_description = 'Satisfaction'
+
+
+@admin.register(UserPreference)
+class UserPreferenceAdmin(admin.ModelAdmin):
+    list_display = ['user', 'preferred_detail_level', 'preferred_tone', 'avg_satisfaction_rating', 
+                    'total_queries', 'total_feedback_count', 'last_updated']
+    list_filter = ['preferred_detail_level', 'preferred_tone', 'prefers_examples', 
+                   'prefers_step_by_step', 'prefers_visualizations']
+    search_fields = ['user__first_name', 'user__last_name', 'most_common_intent']
+    readonly_fields = ['last_updated', 'total_queries', 'total_feedback_count', 
+                      'avg_satisfaction_rating', 'avg_queries_per_session', 'most_common_intent']
+    
+    fieldsets = (
+        ('User', {'fields': ('user',)}),
+        ('Learned Preferences', {'fields': ('preferred_detail_level', 'preferred_tone')}),
+        ('Interaction Patterns', {'fields': ('avg_queries_per_session', 'most_common_intent', 
+                                            'avg_satisfaction_rating')}),
+        ('Preference Flags', {'fields': ('prefers_examples', 'prefers_step_by_step', 'prefers_visualizations')}),
+        ('Statistics', {'fields': ('total_queries', 'total_feedback_count', 'last_updated')}),
+    )
+
+
 # Import automated workflow admin configurations
 from .admin_automated_workflow import *
+
 

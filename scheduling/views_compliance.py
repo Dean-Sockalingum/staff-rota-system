@@ -9,13 +9,16 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from datetime import date, timedelta
 from decimal import Decimal
+import json
 
 from scheduling.models import (
     TrainingCourse, TrainingRecord, InductionProgress, 
     SupervisionRecord, IncidentReport, User, CareHome, Unit
 )
+
 
 
 # ============================================================================
@@ -1814,3 +1817,204 @@ def ai_assistant_suggestions_api(request):
         'suggestions': suggestions,
         'count': len(suggestions)
     }, status=200)
+
+
+@login_required
+@require_http_methods(["POST"])
+def ai_assistant_feedback_api(request):
+    """
+    Task 11: Submit feedback for AI assistant query
+    
+    POST /api/ai-assistant/feedback/
+    
+    Body: {
+        "query_text": "Who can work tomorrow?",
+        "intent_detected": "STAFF_AVAILABILITY",
+        "confidence_score": 0.95,
+        "response_text": "3 staff members can work tomorrow...",
+        "response_data": {...},
+        "rating": 4,
+        "feedback_type": "HELPFUL",
+        "feedback_comment": "Clear and accurate"
+    }
+    
+    Response: {
+        "feedback_id": 123,
+        "preferences_updated": true,
+        "user_preferences": {
+            "detail_level": "STANDARD",
+            "tone": "FRIENDLY",
+            "avg_satisfaction": 4.2
+        }
+    }
+    """
+    from .feedback_learning import record_query_feedback, get_user_preferences
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        required_fields = ['query_text', 'intent_detected', 'confidence_score', 
+                          'response_text', 'rating']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({
+                    'error': f'Missing required field: {field}'
+                }, status=400)
+        
+        # Validate rating
+        rating = int(data['rating'])
+        if not 1 <= rating <= 5:
+            return JsonResponse({
+                'error': 'Rating must be between 1 and 5'
+            }, status=400)
+        
+        # Record feedback
+        feedback = record_query_feedback(
+            user=request.user,
+            query_text=data['query_text'],
+            intent_detected=data['intent_detected'],
+            confidence_score=float(data['confidence_score']),
+            response_text=data['response_text'],
+            response_data=data.get('response_data', {}),
+            rating=rating,
+            feedback_type=data.get('feedback_type'),
+            feedback_comment=data.get('feedback_comment', '')
+        )
+        
+        # Get updated preferences
+        preferences = get_user_preferences(request.user)
+        
+        return JsonResponse({
+            'feedback_id': feedback.id,
+            'preferences_updated': True,
+            'user_preferences': {
+                'detail_level': preferences.preferred_detail_level,
+                'tone': preferences.preferred_tone,
+                'avg_satisfaction': float(preferences.avg_satisfaction_rating or 0),
+                'total_queries': preferences.total_queries,
+                'total_feedback': preferences.total_feedback_count
+            }
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def ai_assistant_analytics_api(request):
+    """
+    Task 11: Get AI assistant performance analytics
+    
+    GET /api/ai-assistant/analytics/?days=30
+    
+    Response: {
+        "period_days": 30,
+        "total_queries": 150,
+        "total_feedback": 45,
+        "avg_rating": 4.2,
+        "satisfaction_rate": 0.78,
+        "positive_count": 35,
+        "negative_count": 5,
+        "by_intent": {
+            "STAFF_AVAILABILITY": {"count": 20, "avg_rating": 4.5},
+            "SHIFT_SEARCH": {"count": 15, "avg_rating": 4.0},
+            ...
+        },
+        "by_rating": {
+            "5": 20, "4": 15, "3": 5, "2": 3, "1": 2
+        },
+        "improvement_needed": [
+            {"intent": "LEAVE_BALANCE", "count": 10, "avg_rating": 2.5},
+            ...
+        ]
+    }
+    """
+    from .feedback_learning import get_feedback_analytics
+    
+    try:
+        # Get days parameter (default 30)
+        days = int(request.GET.get('days', 30))
+        if days < 1:
+            return JsonResponse({'error': 'days must be >= 1'}, status=400)
+        
+        # Get analytics (all users if senior, own data otherwise)
+        user = request.user if not request.user.groups.filter(
+            name__in=['Senior Staff', 'Admin']
+        ).exists() else None
+        
+        analytics = get_feedback_analytics(user=user, days=days)
+        
+        return JsonResponse({
+            'period_days': days,
+            **analytics
+        }, status=200)
+        
+    except ValueError:
+        return JsonResponse({'error': 'Invalid days parameter'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def ai_assistant_insights_api(request):
+    """
+    Task 11: Get AI assistant learning insights
+    
+    GET /api/ai-assistant/insights/?min_feedback=5
+    
+    Response: {
+        "high_performing_intents": [
+            {"intent": "STAFF_AVAILABILITY", "count": 50, "avg_rating": 4.5},
+            ...
+        ],
+        "low_performing_intents": [
+            {"intent": "LEAVE_BALANCE", "count": 20, "avg_rating": 2.3},
+            ...
+        ],
+        "common_misclassifications": [
+            {
+                "detected_intent": "SHIFT_SEARCH",
+                "common_feedback": "WRONG_INTENT",
+                "count": 8,
+                "sample_queries": ["find my shifts", "when do I work"]
+            },
+            ...
+        ],
+        "user_satisfaction_leaders": [
+            {"user_id": 5, "username": "john.smith", "avg_rating": 4.8, "total": 25},
+            ...
+        ],
+        "recommendations": [
+            "Improve LEAVE_BALANCE intent accuracy (avg rating: 2.3)",
+            "Review SHIFT_SEARCH misclassifications (8 reported)",
+            ...
+        ]
+    }
+    """
+    from .feedback_learning import get_learning_insights
+    
+    # Only senior staff and admin can view insights
+    if not request.user.groups.filter(name__in=['Senior Staff', 'Admin']).exists():
+        return JsonResponse({
+            'error': 'Insufficient permissions. Senior Staff or Admin access required.'
+        }, status=403)
+    
+    try:
+        # Get min_feedback parameter (default 5)
+        min_feedback = int(request.GET.get('min_feedback', 5))
+        if min_feedback < 1:
+            return JsonResponse({'error': 'min_feedback must be >= 1'}, status=400)
+        
+        insights = get_learning_insights(min_feedback_count=min_feedback)
+        
+        return JsonResponse(insights, status=200)
+        
+    except ValueError:
+        return JsonResponse({'error': 'Invalid min_feedback parameter'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

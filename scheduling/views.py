@@ -10311,3 +10311,17 @@ def get_feature_importance_api(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Feature importance error: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================================
+# TASK 11: AI ASSISTANT FEEDBACK & LEARNING SYSTEM
+# Import API endpoints from views_compliance
+# ============================================================================
+
+from .views_compliance import (
+    ai_assistant_suggestions_api,
+    ai_assistant_feedback_api,
+    ai_assistant_analytics_api,
+    ai_assistant_insights_api
+)
+

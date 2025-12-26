@@ -1976,3 +1976,12 @@ class ProphetModelMetrics(models.Model):
         if self.drift_score is None:
             return False
         return self.drift_score < 0.05
+
+
+# ============================================================================
+# TASK 11: AI ASSISTANT FEEDBACK & LEARNING SYSTEM
+# Import models from feedback_learning module
+# ============================================================================
+
+from .feedback_learning import AIQueryFeedback, UserPreference
+

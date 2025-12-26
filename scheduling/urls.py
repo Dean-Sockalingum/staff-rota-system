@@ -75,6 +75,13 @@ urlpatterns = [
     # AI Assistant API
     path('ai-assistant/', views.ai_assistant_page, name='ai_assistant_page'),
     path('api/ai-assistant/', views.ai_assistant_api, name='ai_assistant_api'),
+    path('api/ai-assistant/suggestions/', views.ai_assistant_suggestions_api, name='ai_assistant_suggestions_api'),
+    
+    # AI Assistant Feedback & Learning (Task 11 - Phase 3)
+    path('api/ai-assistant/feedback/', views.ai_assistant_feedback_api, name='ai_assistant_feedback_api'),
+    path('api/ai-assistant/analytics/', views.ai_assistant_analytics_api, name='ai_assistant_analytics_api'),
+    path('api/ai-assistant/insights/', views.ai_assistant_insights_api, name='ai_assistant_insights_api'),
+    
     path('api/ai-recommendations/approve/', approve_ai_recommendation, name='approve_ai_recommendation'),
     path('api/ai-recommendations/reject/', reject_ai_recommendation, name='reject_ai_recommendation'),
     
