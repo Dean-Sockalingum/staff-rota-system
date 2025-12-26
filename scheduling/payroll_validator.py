@@ -37,8 +37,8 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
 from .models import (
-    Shift, User, PayrollEntry, AgencyAssignment, 
-    ActivityLog, ComplianceViolation
+    Shift, User, 
+    
 )
 from .wdt_compliance import calculate_weekly_hours, calculate_rolling_average_hours
 
