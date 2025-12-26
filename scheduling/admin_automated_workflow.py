@@ -277,7 +277,7 @@ def view_cover_request_status(modeladmin, request, queryset):
             status = get_workflow_status(cover_request)
             
             status_msg = (
-                f"Absence #{absence.id} - {absence.staff_member.get_full_name()} "
+                f"Absence #{absence.id} - {absence.staff_member.full_name} "
                 f"({absence.start_date} to {absence.end_date or 'TBD'}) - "
                 f"Status: {status['status']}, "
                 f"Cost: £{status.get('total_cost', 0):.2f}"

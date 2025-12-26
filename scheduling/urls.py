@@ -78,6 +78,28 @@ urlpatterns = [
     path('api/ai-recommendations/approve/', approve_ai_recommendation, name='approve_ai_recommendation'),
     path('api/ai-recommendations/reject/', reject_ai_recommendation, name='reject_ai_recommendation'),
     
+    # Smart Staff Matching (Task 1 - Phase 1)
+    path('smart-matching/test/', views.smart_matching_test_page, name='smart_matching_test'),
+    path('api/smart-matching/<int:shift_id>/', views.smart_staff_matching_api, name='smart_staff_matching'),
+    path('api/smart-matching/<int:shift_id>/send-offers/', views.auto_send_smart_offers_api, name='auto_send_smart_offers'),
+    
+    # Enhanced Agency Coordination (Task 2 - Phase 1)
+    path('agency-coordination/test/', views.agency_coordination_test_page, name='agency_coordination_test'),
+    path('api/agency-coordination/<int:shift_id>/', views.agency_recommendations_api, name='agency_recommendations'),
+    path('api/agency-coordination/<int:cover_request_id>/auto-coordinate/', views.auto_coordinate_agencies_api, name='auto_coordinate_agencies'),
+    
+    # Intelligent Shift Swap Auto-Approval (Task 3 - Phase 1)
+    path('shift-swaps/test/', views.shift_swap_test_page, name='shift_swap_test'),
+    path('api/shift-swaps/request/', views.request_shift_swap_api, name='request_shift_swap'),
+    path('api/shift-swaps/<int:shift_id>/recommendations/', views.get_swap_recommendations_api, name='get_swap_recommendations'),
+    path('api/shift-swaps/<int:swap_id>/status/', views.get_swap_status_api, name='get_swap_status'),
+    
+    # Predictive Shortage Alert System (ML) - Task 5, Phase 2
+    path('shortage-predictor/test/', views.shortage_predictor_test_page, name='shortage_predictor_test'),
+    path('api/shortage-predictor/train/', views.train_shortage_model_api, name='train_shortage_model'),
+    path('api/shortage-predictor/alerts/', views.get_shortage_alerts_api, name='get_shortage_alerts'),
+    path('api/shortage-predictor/features/', views.get_feature_importance_api, name='get_feature_importance'),
+    
     # Agency & Additional Staffing APIs
     path('api/agency-companies/', views.agency_companies_api, name='agency_companies_api'),
     path('api/reports/daily-additional-staffing/', views.daily_additional_staffing_report, name='daily_additional_staffing_report'),

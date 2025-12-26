@@ -158,7 +158,7 @@ def _check_reallocation_eligibility(staff_member, shift, source_care_home, max_t
     eligibility = {
         'eligible': False,
         'staff_member': staff_member,
-        'staff_name': staff_member.get_full_name(),
+        'staff_name': staff_member.full_name,
         'staff_role': staff_member.role.name if hasattr(staff_member, 'role') and staff_member.role else 'Unknown',
         'from_home': None,
         'from_unit': None,

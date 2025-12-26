@@ -9460,3 +9460,854 @@ def submit_feature_request(request):
         'form': form,
         'page_title': 'Request a Feature'
     })
+
+
+# ============================================================================
+# SMART STAFF MATCHING API (Task 1 - Phase 1)
+# ============================================================================
+
+@login_required
+def smart_matching_test_page(request):
+    """Render the Smart Staff Matching test interface"""
+    return render(request, 'scheduling/smart_matching_test.html', {
+        'page_title': 'Smart Staff Matching Test'
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def smart_staff_matching_api(request, shift_id):
+    """
+    API endpoint: Get smart staff recommendations for a shift
+    
+    GET /api/smart-matching/<shift_id>/
+    
+    Response:
+    {
+        "success": true,
+        "shift_id": 12345,
+        "shift_date": "2025-12-13",
+        "shift_time": "07:00:00 - 19:00:00",
+        "unit": "Orchard Grove",
+        "required_role": "SCW",
+        "recommendations": [
+            {
+                "staff_sap": "123456",
+                "staff_name": "John Doe",
+                "staff_role": "SCW",
+                "total_score": 87.5,
+                "distance_score": 95.0,
+                "overtime_score": 80.0,
+                "skill_score": 100.0,
+                "preference_score": 75.0,
+                "fatigue_score": 100.0,
+                "wdt_compliant": true,
+                "recommended": true,
+                "breakdown": {...}
+            },
+            ...
+        ],
+        "total_available": 45,
+        "timestamp": "2025-12-13T10:30:00Z"
+    }
+    """
+    from .staff_matching import get_smart_staff_recommendations
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions (managers/admins only)
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can access staff matching.'
+            }, status=403)
+        
+        # Get recommendations
+        limit = int(request.GET.get('limit', 10))
+        recommendations = get_smart_staff_recommendations(shift, max_recommendations=limit)
+        
+        return JsonResponse({
+            'success': True,
+            **recommendations
+        })
+        
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Shift with ID {shift_id} not found'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Smart matching error for shift {shift_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generating recommendations: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def auto_send_smart_offers_api(request, shift_id):
+    """
+    API endpoint: Automatically send OT offers to top-matched staff
+    
+    POST /api/smart-matching/<shift_id>/send-offers/
+    
+    Body:
+    {
+        "auto_send_count": 3  // Optional, default 3
+    }
+    
+    Response:
+    {
+        "success": true,
+        "offers_sent": 3,
+        "batch_id": 456,
+        "deadline": "2025-12-13T11:00:00Z",
+        "top_recommendations": [...]
+    }
+    """
+    from .staff_matching import auto_send_smart_offers
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions (managers/admins only)
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can send OT offers.'
+            }, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body) if request.body else {}
+        auto_send_count = int(data.get('auto_send_count', 3))
+        
+        # Validate count
+        if auto_send_count < 1 or auto_send_count > 20:
+            return JsonResponse({
+                'success': False,
+                'error': 'auto_send_count must be between 1 and 20'
+            }, status=400)
+        
+        # Auto-send offers
+        result = auto_send_smart_offers(shift, auto_send_count=auto_send_count)
+        
+        return JsonResponse(result)
+        
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Shift with ID {shift_id} not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Auto-send error for shift {shift_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error sending offers: {str(e)}'
+        }, status=500)
+
+
+# ============================================================================
+# ENHANCED AGENCY COORDINATION API (Task 2 - Phase 1)
+# ============================================================================
+
+@login_required
+def agency_coordination_test_page(request):
+    """Render the Agency Coordination test interface"""
+    return render(request, 'scheduling/agency_coordination_test.html', {
+        'page_title': 'Enhanced Agency Coordination Test'
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def agency_recommendations_api(request, shift_id):
+    """
+    API endpoint: Get scored agency recommendations for a shift
+    
+    GET /api/agency-coordination/<shift_id>/
+    
+    Response:
+    {
+        "success": true,
+        "shift_id": 12345,
+        "recommendations": [
+            {
+                "agency_name": "Premier Care",
+                "total_score": 85.2,
+                "cost_score": 78.0,
+                "response_time_score": 92.0,
+                "availability_score": 85.0,
+                "quality_score": 88.0,
+                "relationship_score": 80.0,
+                "estimated_cost": 168.50,
+                "breakdown": {...}
+            },
+            ...
+        ]
+    }
+    """
+    from .agency_coordinator import get_agency_recommendations
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can access agency coordination.'
+            }, status=403)
+        
+        # Get recommendations
+        limit = int(request.GET.get('limit', 5))
+        recommendations = get_agency_recommendations(shift, max_recommendations=limit)
+        
+        return JsonResponse({
+            'success': True,
+            **recommendations
+        })
+        
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Shift with ID {shift_id} not found'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Agency recommendations error for shift {shift_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generating agency recommendations: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def auto_coordinate_agencies_api(request, cover_request_id):
+    """
+    API endpoint: Auto-coordinate multi-agency outreach
+    
+    POST /api/agency-coordination/<cover_request_id>/auto-coordinate/
+    
+    Body:
+    {
+        "max_agencies": 5  // Optional, default 5
+    }
+    
+    Response:
+    {
+        "success": true,
+        "tier_1_agencies": [...],
+        "escalation_plan": [...],
+        "total_tiers": 3,
+        "estimated_resolution_time": 20
+    }
+    """
+    from .agency_coordinator import auto_coordinate_agencies
+    from .models_automated_workflow import StaffingCoverRequest
+    
+    try:
+        cover_request = get_object_or_404(StaffingCoverRequest, id=cover_request_id)
+        
+        # Check permissions
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can coordinate agencies.'
+            }, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body) if request.body else {}
+        max_agencies = int(data.get('max_agencies', 5))
+        
+        # Validate
+        if max_agencies < 1 or max_agencies > 10:
+            return JsonResponse({
+                'success': False,
+                'error': 'max_agencies must be between 1 and 10'
+            }, status=400)
+        
+        # Auto-coordinate
+        result = auto_coordinate_agencies(cover_request, max_agencies=max_agencies)
+        
+        return JsonResponse(result)
+        
+    except StaffingCoverRequest.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Cover request with ID {cover_request_id} not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Auto-coordinate error for cover request {cover_request_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error coordinating agencies: {str(e)}'
+        }, status=500)
+
+    """
+    API endpoint: Get smart staff recommendations for a shift
+    
+    GET /api/smart-matching/<shift_id>/
+    
+    Response:
+    {
+        "success": true,
+        "shift_id": 12345,
+        "shift_date": "2025-12-13",
+        "shift_time": "07:00:00 - 19:00:00",
+        "unit": "Orchard Grove",
+        "required_role": "SCW",
+        "recommendations": [
+            {
+                "staff_sap": "123456",
+                "staff_name": "John Doe",
+                "staff_role": "SCW",
+                "total_score": 87.5,
+                "distance_score": 95.0,
+                "overtime_score": 80.0,
+                "skill_score": 100.0,
+                "preference_score": 75.0,
+                "fatigue_score": 100.0,
+                "wdt_compliant": true,
+                "recommended": true,
+                "breakdown": {...}
+            },
+            ...
+        ],
+        "total_available": 45,
+        "timestamp": "2025-12-13T10:30:00Z"
+    }
+    """
+    from .staff_matching import get_smart_staff_recommendations
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions (managers/admins only)
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can access staff matching.'
+            }, status=403)
+        
+        # Get recommendations
+        limit = int(request.GET.get('limit', 10))
+        recommendations = get_smart_staff_recommendations(shift, max_recommendations=limit)
+        
+        return JsonResponse({
+            'success': True,
+            **recommendations
+        })
+        
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Shift with ID {shift_id} not found'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Smart matching error for shift {shift_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generating recommendations: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def auto_send_smart_offers_api(request, shift_id):
+    """
+    API endpoint: Automatically send OT offers to top-matched staff
+    
+    POST /api/smart-matching/<shift_id>/send-offers/
+    
+    Body:
+    {
+        "auto_send_count": 3  // Optional, default 3
+    }
+    
+    Response:
+    {
+        "success": true,
+        "offers_sent": 3,
+        "batch_id": 456,
+        "deadline": "2025-12-13T11:00:00Z",
+        "top_recommendations": [...]
+    }
+    """
+    from .staff_matching import auto_send_smart_offers
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions (managers/admins only)
+        if not (request.user.is_superuser or request.user.is_operational_manager or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied. Only managers can send OT offers.'
+            }, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body) if request.body else {}
+        auto_send_count = int(data.get('auto_send_count', 3))
+        
+        # Validate count
+        if auto_send_count < 1 or auto_send_count > 20:
+            return JsonResponse({
+                'success': False,
+                'error': 'auto_send_count must be between 1 and 20'
+            }, status=400)
+        
+        # Auto-send offers
+        result = auto_send_smart_offers(shift, auto_send_count=auto_send_count)
+        
+        return JsonResponse(result)
+        
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Shift with ID {shift_id} not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Auto-send error for shift {shift_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error sending offers: {str(e)}'
+        }, status=500)
+
+
+# ============================================================================
+# INTELLIGENT SHIFT SWAP AUTO-APPROVAL API (Task 3 - Phase 1)
+# ============================================================================
+
+@login_required
+def shift_swap_test_page(request):
+    """Render Shift Swap Auto-Approval test interface"""
+    return render(request, 'scheduling/shift_swap_test.html', {
+        'page_title': 'Intelligent Shift Swap Auto-Approval Test'
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def request_shift_swap_api(request):
+    """
+    API endpoint: Create a new shift swap request with auto-approval evaluation
+    
+    POST /api/shift-swaps/request/
+    
+    Body:
+    {
+        "requesting_shift_id": 123,
+        "target_shift_id": 456,
+        "reason": "Family emergency"
+    }
+    
+    Response:
+    {
+        "success": true,
+        "swap_request_id": 789,
+        "status": "AUTO_APPROVED" or "MANUAL_REVIEW",
+        "auto_approved": true/false,
+        "approval_notes": "...",
+        "qualification_score": 95.5
+    }
+    """
+    from .models import ShiftSwapRequest, Shift
+    from .swap_intelligence import auto_approve_if_eligible
+    
+    try:
+        # Parse request body
+        data = json.loads(request.body)
+        requesting_shift_id = data.get('requesting_shift_id')
+        target_shift_id = data.get('target_shift_id')
+        reason = data.get('reason', '')
+        
+        if not requesting_shift_id or not target_shift_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'requesting_shift_id and target_shift_id are required'
+            }, status=400)
+        
+        # Get shifts
+        requesting_shift = get_object_or_404(Shift, id=requesting_shift_id)
+        target_shift = get_object_or_404(Shift, id=target_shift_id)
+        
+        # Verify requesting user owns the requesting shift
+        if requesting_shift.user != request.user and not request.user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'error': 'You can only swap your own shifts'
+            }, status=403)
+        
+        # Create swap request
+        swap_request = ShiftSwapRequest.objects.create(
+            requesting_user=requesting_shift.user,
+            target_user=target_shift.user,
+            requesting_shift=requesting_shift,
+            target_shift=target_shift,
+            reason=reason,
+            status='PENDING'
+        )
+        
+        # Evaluate auto-approval
+        result = auto_approve_if_eligible(swap_request, acting_user=request.user)
+        
+        # Refresh to get updated fields
+        swap_request.refresh_from_db()
+        
+        return JsonResponse({
+            'success': True,
+            'swap_request_id': swap_request.id,
+            'status': swap_request.status,
+            'auto_approved': result['auto_approved'],
+            'approval_notes': result['approval_notes'],
+            'qualification_score': float(swap_request.qualification_match_score),
+            'created_at': swap_request.created_at.isoformat()
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Shift.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'One or both shifts not found'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Shift swap request error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error creating swap request: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_swap_recommendations_api(request, shift_id):
+    """
+    API endpoint: Get recommended staff for swapping with a shift
+    
+    GET /api/shift-swaps/<shift_id>/recommendations/
+    """
+    from .swap_intelligence import get_swap_recommendations
+    
+    try:
+        shift = get_object_or_404(Shift, id=shift_id)
+        
+        # Check permissions
+        if shift.user != request.user and not (request.user.is_staff or request.user.is_operational_manager):
+            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+        
+        limit = int(request.GET.get('limit', 5))
+        recommendations = get_swap_recommendations(shift, max_recommendations=limit)
+        
+        return JsonResponse({'success': True, 'shift_id': shift_id, **recommendations})
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Swap recommendations error: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_swap_status_api(request, swap_id):
+    """
+    API endpoint: Get status of a shift swap request
+    
+    GET /api/shift-swaps/<swap_id>/status/
+    """
+    from .models import ShiftSwapRequest
+    
+    try:
+        swap = get_object_or_404(ShiftSwapRequest, id=swap_id)
+        
+        # Check permissions
+        if (swap.requesting_user != request.user and 
+            swap.target_user != request.user and 
+            not (request.user.is_staff or request.user.is_operational_manager)):
+            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+        
+        return JsonResponse({
+            'success': True,
+            'swap_id': swap.id,
+            'status': swap.status,
+            'requesting_user': swap.requesting_user.full_name,
+            'target_user': swap.target_user.full_name,
+            'requesting_shift_date': swap.requesting_shift.date.isoformat(),
+            'target_shift_date': swap.target_shift.date.isoformat(),
+            'automated_decision': swap.automated_decision,
+            'qualification_score': float(swap.qualification_match_score),
+            'approval_notes': swap.approval_notes,
+            'created_at': swap.created_at.isoformat(),
+            'approval_date': swap.approval_date.isoformat() if swap.approval_date else None
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Swap status error: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ==============================================================================
+# PREDICTIVE SHORTAGE ALERT SYSTEM (ML) - Task 5, Phase 2
+# ==============================================================================
+
+@login_required
+def shortage_predictor_test_page(request):
+    """Render Predictive Shortage Alerts test interface"""
+    from .models import Unit
+    
+    context = {
+        'page_title': 'Predictive Shortage Alert System (ML)',
+        'units': Unit.objects.filter(is_active=True)
+    }
+    
+    return render(request, 'scheduling/shortage_predictor_test.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def train_shortage_model_api(request):
+    """
+    API endpoint: Train shortage predictor model on historical data
+    
+    POST /api/shortage-predictor/train/
+    Body: {"months_back": 6, "save_model": true}
+    
+    Response: {
+        "success": true,
+        "metrics": {
+            "accuracy": 0.87,
+            "roc_auc": 0.92,
+            "cv_accuracy": 0.85,
+            "train_size": 450,
+            "test_size": 112
+        },
+        "feature_importance": {
+            "historical_sickness_avg": 0.35,
+            "day_of_week": 0.25,
+            "scheduled_leave_count": 0.20,
+            ...
+        }
+    }
+    
+    Permissions: Manager/Admin only
+    """
+    # Check permissions
+    if not (request.user.is_staff or request.user.is_operational_manager or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Manager/Admin permission required'}, status=403)
+    
+    try:
+        import json
+        from .shortage_predictor import train_shortage_predictor
+        
+        # Parse request body
+        body = json.loads(request.body.decode('utf-8'))
+        months_back = body.get('months_back', 6)
+        save_model = body.get('save_model', True)
+        
+        # Train model
+        predictor = train_shortage_predictor(months_back=months_back, save_model=save_model)
+        
+        # Log activity
+        from .models import ActivityLog
+        ActivityLog.objects.create(
+            user=request.user,
+            action_type='ML_MODEL_TRAINED',
+            description=f'Trained shortage predictor model ({months_back} months historical data)',
+            details=json.dumps(predictor.train_metrics)
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Model trained successfully on {months_back} months of data',
+            'metrics': predictor.train_metrics,
+            'feature_importance': predictor.feature_importance,
+            'model_saved': save_model
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Shortage predictor training error: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_shortage_alerts_api(request):
+    """
+    API endpoint: Get predicted shortage alerts for upcoming days
+    
+    GET /api/shortage-predictor/alerts/?days_ahead=7&min_probability=0.5
+    
+    Response: {
+        "success": true,
+        "alerts": [
+            {
+                "date": "2025-12-28",
+                "day_name": "Saturday",
+                "unit": "OG Mulberry",
+                "probability": 0.78,
+                "confidence": 0.85,
+                "predicted_gap": 2,
+                "days_ahead": 3,
+                "top_factors": [
+                    {
+                        "factor": "day_of_week",
+                        "weight": 0.30,
+                        "description": "Saturday (high risk)"
+                    },
+                    ...
+                ]
+            },
+            ...
+        ],
+        "summary": "Found 3 high-risk shortage alerts in next 7 days"
+    }
+    
+    Permissions: All staff (read-only)
+    """
+    try:
+        from .shortage_predictor import get_shortage_alerts
+        
+        # Parse query parameters
+        days_ahead = int(request.GET.get('days_ahead', 7))
+        min_probability = float(request.GET.get('min_probability', 0.5))
+        
+        # Validate parameters
+        if days_ahead < 1 or days_ahead > 30:
+            return JsonResponse({'success': False, 'error': 'days_ahead must be 1-30'}, status=400)
+        
+        if min_probability < 0.0 or min_probability > 1.0:
+            return JsonResponse({'success': False, 'error': 'min_probability must be 0.0-1.0'}, status=400)
+        
+        # Get predictions
+        alerts = get_shortage_alerts(
+            days_ahead=days_ahead,
+            min_probability=min_probability,
+            load_saved_model=True
+        )
+        
+        # Create summary
+        if len(alerts) == 0:
+            summary = f"✅ No shortage alerts predicted for next {days_ahead} days"
+        else:
+            high_risk = len([a for a in alerts if a['probability'] >= 0.7])
+            summary = f"⚠️ Found {len(alerts)} shortage alert(s) in next {days_ahead} days ({high_risk} high-risk ≥70%)"
+        
+        return JsonResponse({
+            'success': True,
+            'alerts': alerts,
+            'alert_count': len(alerts),
+            'high_risk_count': len([a for a in alerts if a['probability'] >= 0.7]),
+            'summary': summary,
+            'days_ahead': days_ahead,
+            'min_probability': min_probability
+        })
+        
+    except FileNotFoundError:
+        return JsonResponse({
+            'success': False, 
+            'error': 'Model not trained yet. Please train the model first using /api/shortage-predictor/train/',
+            'trained': False
+        }, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Shortage alerts error: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_feature_importance_api(request):
+    """
+    API endpoint: Get ML feature importance scores
+    
+    GET /api/shortage-predictor/features/
+    
+    Response: {
+        "success": true,
+        "feature_importance": {
+            "historical_sickness_avg": 0.35,
+            "day_of_week": 0.25,
+            "scheduled_leave_count": 0.20,
+            "month": 0.10,
+            "is_school_holiday": 0.05,
+            ...
+        },
+        "top_3_factors": [
+            {"feature": "historical_sickness_avg", "importance": 0.35},
+            {"feature": "day_of_week", "importance": 0.25},
+            {"feature": "scheduled_leave_count", "importance": 0.20}
+        ]
+    }
+    """
+    try:
+        from .shortage_predictor import get_feature_importance
+        
+        # Get feature importance
+        importance = get_feature_importance()
+        
+        # Sort by importance
+        sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+        
+        top_3 = [
+            {'feature': name, 'importance': round(score, 3)}
+            for name, score in sorted_features[:3]
+        ]
+        
+        return JsonResponse({
+            'success': True,
+            'feature_importance': importance,
+            'top_3_factors': top_3,
+            'total_features': len(importance)
+        })
+        
+    except FileNotFoundError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Model not trained yet. Please train the model first.',
+            'trained': False
+        }, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Feature importance error: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

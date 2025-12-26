@@ -509,6 +509,7 @@ class LeaveRequest(models.Model):
 class ShiftSwapRequest(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
+        ('AUTO_APPROVED', 'Auto-Approved'),  # Task 3: Auto-approval status
         ('APPROVED', 'Approved'),
         ('DENIED', 'Denied'),
         ('CANCELLED', 'Cancelled'),
@@ -529,6 +530,12 @@ class ShiftSwapRequest(models.Model):
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_swaps')
     approval_date = models.DateTimeField(blank=True, null=True)
     approval_notes = models.TextField(blank=True, null=True)
+    
+    # Auto-approval fields (Task 3 - Intelligent Shift Swap Auto-Approval)
+    automated_decision = models.BooleanField(default=False, help_text="True if auto-approved by system")
+    qualification_match_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="0-100 score for qualification match")
+    wdt_compliance_check = models.BooleanField(default=False, help_text="WTD compliance verified")
+    role_mismatch = models.BooleanField(default=False, help_text="Flags different roles requiring manual review")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

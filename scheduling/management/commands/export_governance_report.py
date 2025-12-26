@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 output.write(f'  Detected: {violation.detected_at.strftime("%d/%m/%Y %H:%M")}\n')
                 output.write(f'  Description: {violation.description[:200]}\n')
                 if violation.affected_user:
-                    output.write(f'  Affected Staff: {violation.affected_user.get_full_name()} ({violation.affected_user.sap})\n')
+                    output.write(f'  Affected Staff: {violation.affected_user.full_name} ({violation.affected_user.sap})\n')
                 output.write('\n')
         
         # Governance Statement

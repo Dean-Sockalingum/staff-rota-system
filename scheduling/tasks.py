@@ -40,7 +40,7 @@ def monitor_ot_offer_deadlines():
     expired_count = 0
     
     for offer in expired_offers:
-        logger.info(f"⏰ Expiring OT offer #{offer.id} for {offer.staff_member.get_full_name()}")
+        logger.info(f"⏰ Expiring OT offer #{offer.id} for {offer.staff_member.full_name}")
         offer.status = 'EXPIRED'
         offer.save()
         expired_count += 1
@@ -155,7 +155,7 @@ def monitor_reallocation_deadlines():
     expired_count = 0
     
     for request in expired_requests:
-        logger.info(f"⏰ Expiring reallocation request #{request.id} for {request.staff_member.get_full_name()}")
+        logger.info(f"⏰ Expiring reallocation request #{request.id} for {request.staff_member.full_name}")
         request.status = 'EXPIRED'
         request.save()
         expired_count += 1
@@ -308,7 +308,7 @@ def review_long_term_absences():
     )
     
     for plan in active_plans:
-        logger.info(f"📋 Reviewing long-term plan #{plan.id} for {plan.cover_request.absence.staff_member.get_full_name()}")
+        logger.info(f"📋 Reviewing long-term plan #{plan.id} for {plan.cover_request.absence.staff_member.full_name}")
         
         # Calculate actual costs to date
         resolved_requests = plan.cover_request.absence.staffingcoverrequest_set.filter(
@@ -356,15 +356,15 @@ def monitor_wdt_compliance():
         weekly_hours = calculate_weekly_hours(staff, today, weeks=1)
         
         if weekly_hours > Decimal('45'):  # Approaching 48hr limit
-            warnings.append(f"{staff.get_full_name()}: {weekly_hours}hrs this week (approaching limit)")
-            logger.warning(f"⚠️  {staff.get_full_name()} has {weekly_hours} hours this week")
+            warnings.append(f"{staff.full_name}: {weekly_hours}hrs this week (approaching limit)")
+            logger.warning(f"⚠️  {staff.full_name} has {weekly_hours} hours this week")
         
         # Check 17-week rolling average
         rolling_avg = calculate_rolling_average_hours(staff, weeks=17)
         
         if rolling_avg > Decimal('46'):  # Approaching 48hr average
-            warnings.append(f"{staff.get_full_name()}: {rolling_avg}hrs rolling average (approaching limit)")
-            logger.warning(f"⚠️  {staff.get_full_name()} has {rolling_avg} hours rolling average")
+            warnings.append(f"{staff.full_name}: {rolling_avg}hrs rolling average (approaching limit)")
+            logger.warning(f"⚠️  {staff.full_name} has {rolling_avg} hours rolling average")
     
     if warnings:
         logger.info(f"📊 WTD Compliance: {len(warnings)} staff approaching limits")

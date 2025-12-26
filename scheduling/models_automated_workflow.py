@@ -805,7 +805,7 @@ class OvertimeOffer(models.Model):
         verbose_name_plural = 'Overtime Offers'
     
     def __str__(self):
-        return f"OT Offer: {self.staff_member.get_full_name()} - Rank {self.priority_rank} - {self.status}"
+        return f"OT Offer: {self.staff_member.full_name} - Rank {self.priority_rank} - {self.status}"
     
     def accept(self):
         """Staff accepts OT offer"""
@@ -1140,7 +1140,7 @@ class LongTermCoverPlan(models.Model):
         verbose_name_plural = 'Long-Term Cover Plans'
     
     def __str__(self):
-        return f"Long-Term Plan: {self.absence.staff_member.get_full_name()} - {self.total_shifts_affected} shifts"
+        return f"Long-Term Plan: {self.absence.staff_member.full_name} - {self.total_shifts_affected} shifts"
     
     def generate_cover_strategy(self):
         """
@@ -1223,7 +1223,7 @@ class LongTermCoverPlan(models.Model):
         message = f"""
 LONG-TERM ABSENCE DETECTED
 
-Staff Member: {self.absence.staff_member.get_full_name()}
+Staff Member: {self.absence.staff_member.full_name}
 Duration: {(self.expected_end_date - self.start_date).days} days
 Shifts Affected: {self.total_shifts_affected}
 
@@ -1235,7 +1235,7 @@ View Strategy: {settings.SITE_URL}/staffing/long-term-plan/{self.id}/
         
         send_email(
             to=manager.email,
-            subject=f"Long-Term Absence Planning: {self.absence.staff_member.get_full_name()}",
+            subject=f"Long-Term Absence Planning: {self.absence.staff_member.full_name}",
             message=message
         )
 

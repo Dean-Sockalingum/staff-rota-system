@@ -383,3 +383,63 @@ def send_escalation_summary(cover_request, steps_attempted):
         context,
         html_template='escalation_summary'
     )
+
+
+def notify_agency_booking_request(agency, shift, agency_request):
+    """
+    Notify agency of booking request (Task 2 - Enhanced Coordination)
+    
+    Args:
+        agency: AgencyCompany instance
+        shift: Shift instance needing coverage
+        agency_request: AgencyRequest instance
+    """
+    if not agency.contact_email:
+        logger.warning(f"Agency {agency.name} has no contact email - cannot send booking request")
+        return
+    
+    context = {
+        'agency_name': agency.name,
+        'shift_date': shift.date,
+        'shift_time': f"{shift.start_time} - {shift.end_time}",
+        'shift_type': shift.shift_type,
+        'unit': shift.unit.name,
+        'role': shift.role,
+        'estimated_cost': agency_request.estimated_cost,
+        'request_id': agency_request.id,
+        'response_url': f"{settings.BASE_URL}/api/agency-booking/{agency_request.id}/respond/"
+    }
+    
+    message = f"""
+╔══════════════════════════════════════════════════════╗
+║  STAFF BOOKING REQUEST - {shift.unit.name}           ║
+╚══════════════════════════════════════════════════════╝
+
+Shift Details:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Date: {shift.date}
+Time: {shift.start_time} - {shift.end_time}
+Type: {shift.shift_type}
+Unit: {shift.unit.name}
+Role Required: {shift.role}
+
+Estimated Payment: £{agency_request.estimated_cost}
+
+Request ID: #{agency_request.id}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please confirm availability and staff assignment by replying to this email
+or calling the Unit Manager.
+
+Thank you,
+{shift.unit.name} Staffing Team
+"""
+    
+    send_email(
+        agency.contact_email,
+        f"Booking Request: {shift.date} - {shift.unit.name}",
+        message
+    )
+    
+    logger.info(f"✉️ Sent booking request to {agency.name} for shift {shift.id}")

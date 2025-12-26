@@ -229,7 +229,7 @@
                     <tbody>
                         {% for category, count in violations_by_category.items %}
                         <tr>
-                            <td>{{ category|title|replace:"_":" " }}</td>
+                            <td>{{ category|title }}</td>
                             <td><strong>{{ count }}</strong></td>
                             <td>
                                 {% if count > 5 %}

@@ -359,7 +359,7 @@ def generate_wdt_compliance_report(staff_member, weeks=4):
     rolling_avg = calculate_rolling_average_hours(staff_member, 17)
     
     return {
-        'staff_member': staff_member.get_full_name(),
+        'staff_member': staff_member.full_name,
         'period_start': start_date,
         'period_end': end_date,
         'weekly_breakdown': weekly_hours,

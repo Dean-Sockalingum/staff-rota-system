@@ -162,7 +162,7 @@ class Command(BaseCommand):
                     
                     if sap_number not in self.STAFF_PATTERNS:
                         self.stdout.write(
-                            self.style.WARNING(f"No pattern found for {sap_number} ({staff.get_full_name()})")
+                            self.style.WARNING(f"No pattern found for {sap_number} ({staff.full_name})")
                         )
                         continue
 
