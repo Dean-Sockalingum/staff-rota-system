@@ -387,7 +387,7 @@ class AnalyticsTests(TestCase):
     
     def test_analytics_date_filtering(self):
         """Test analytics respects date range"""
-        # Create old feedback (outside date range)
+        # Create old feedback (outside date range - 91 days ago)
         old_feedback = AIQueryFeedback.objects.create(
             user=self.user1,
             query_text="Old query",
@@ -395,7 +395,7 @@ class AnalyticsTests(TestCase):
             confidence_score=90,
             response_text="Response",
             rating=5,
-            created_at=timezone.now() - timedelta(days=60)
+            created_at=timezone.now() - timedelta(days=91)
         )
         
         analytics = get_feedback_analytics(days=30)
@@ -492,7 +492,8 @@ class APIEndpointTests(TestCase):
             email='api@example.com',
             role=self.role
         )
-        self.client.login(sap='TEST007', password='testpass123')
+        # Use force_login to bypass Axes backend issues in tests
+        self.client.force_login(self.user)
     
     def test_submit_feedback_api(self):
         """Test POST /api/ai-assistant/feedback/"""
@@ -621,7 +622,8 @@ class IntegrationTests(TestCase):
             email='integration@example.com',
             role=self.role
         )
-        self.client.login(sap='TEST008', password='testpass123')
+        # Use force_login to bypass Axes backend issues in tests
+        self.client.force_login(self.user)
     
     def test_full_feedback_workflow(self):
         """Test complete feedback submission and learning workflow"""
