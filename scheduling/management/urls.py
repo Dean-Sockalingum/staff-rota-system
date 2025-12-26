@@ -21,7 +21,9 @@ from scheduling.views_compliance import (
     # Task 7: AI-Powered Payroll Validator API endpoints
     payroll_validation_api, payroll_entry_check_api, fraud_risk_api,
     # Task 8: Budget-Aware Smart Recommendations API endpoints
-    budget_optimization_api, budget_status_api, budget_forecast_api
+    budget_optimization_api, budget_status_api, budget_forecast_api,
+    # Task 10: Natural Language Query Interface API endpoints
+    ai_assistant_query_api, ai_assistant_suggestions_api
 )
 from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export, custom_report_builder
 from scheduling.views_forecasting import (
@@ -162,4 +164,8 @@ urlpatterns = [
     path('api/budget/optimize/', budget_optimization_api, name='budget_optimization_api'),
     path('api/budget/status/', budget_status_api, name='budget_status_api'),
     path('api/budget/forecast/', budget_forecast_api, name='budget_forecast_api'),
+    
+    # Task 10: Natural Language Query Interface - Phase 3 API Endpoints
+    path('api/ai-assistant/query/', ai_assistant_query_api, name='ai_assistant_query_api'),
+    path('api/ai-assistant/suggestions/', ai_assistant_suggestions_api, name='ai_assistant_suggestions_api'),
 ]

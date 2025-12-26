@@ -1716,3 +1716,101 @@ def budget_forecast_api(request):
     forecast = predict_budget_needs(days_ahead)
     
     return JsonResponse(forecast, status=200)
+
+
+# ==============================================================================
+# TASK 10: NATURAL LANGUAGE QUERY INTERFACE - Phase 3 API Endpoints
+# ==============================================================================
+
+@login_required
+def ai_assistant_query_api(request):
+    """
+    API endpoint for natural language AI assistant queries
+    
+    Processes plain English questions and routes to appropriate AI systems
+    
+    Usage:
+        POST /api/ai-assistant/query/
+        Body: {
+            "query": "Who can work tomorrow?",
+            "user_id": 123  // Optional
+        }
+        
+        Response: {
+            "query": "Who can work tomorrow?",
+            "intent": "staffing_shortage",
+            "confidence": 0.9,
+            "entities": {
+                "date": "2025-12-27",
+                "shift_type": null,
+                "staff_name": null,
+                "unit_name": null
+            },
+            "response": "**Found 5 available staff for Friday, December 27:**...",
+            "data": {...},
+            "suggestions": [
+                "Send offers to top 3 matches",
+                "Check budget impact",
+                "View full availability report"
+            ]
+        }
+    """
+    from .nlp_query_processor import process_natural_language_query
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST request required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        query = data.get('query')
+        user_id = data.get('user_id') or request.user.id
+        
+        if not query:
+            return JsonResponse({'error': 'query field is required'}, status=400)
+        
+        if not isinstance(query, str) or len(query) < 3:
+            return JsonResponse({'error': 'query must be at least 3 characters'}, status=400)
+        
+        # Process natural language query
+        result = process_natural_language_query(query, user_id)
+        
+        # Add original query to response
+        result['query'] = query
+        
+        return JsonResponse(result, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def ai_assistant_suggestions_api(request):
+    """
+    API endpoint for getting example queries
+    
+    Returns list of example queries users can try
+    
+    Usage:
+        GET /api/ai-assistant/suggestions/
+        
+        Response: {
+            "suggestions": [
+                "Who can work tomorrow?",
+                "Show me the budget status",
+                "Is John Smith WTD compliant?",
+                ...
+            ],
+            "count": 10
+        }
+    """
+    from .nlp_query_processor import get_query_suggestions
+    
+    suggestions = get_query_suggestions()
+    
+    return JsonResponse({
+        'suggestions': suggestions,
+        'count': len(suggestions)
+    }, status=200)
