@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     environment: production
-    if: ${{ secrets.PRODUCTION_HOST != '' }}
+    # Note: Job will run but deployment steps check for secrets
     
     steps:
     - name: Checkout code
@@ -73,7 +73,19 @@ jobs:
       with:
         name: production-release
     
+    - name: Check production secrets
+      id: check-secrets
+      run: |
+        if [ -z "${{ secrets.PRODUCTION_HOST }}" ]; then
+          echo "⏭️  Production secrets not configured - skipping deployment"
+          echo "skip_deploy=true" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Production secrets found - proceeding with deployment"
+          echo "skip_deploy=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Deploy to production server
+      if: steps.check-secrets.outputs.skip_deploy != 'true'
       env:
         PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
         PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
@@ -93,10 +105,19 @@ jobs:
         # 8. Run smoke tests
     
     - name: Deployment summary
+      if: always()
       run: |
-        echo "✅ Production deployment job completed"
-        echo "📋 Manual verification steps required:"
-        echo "   1. Verify application health"
-        echo "   2. Check database migrations"
-        echo "   3. Monitor logs for errors"
-        echo "   4. Run smoke tests"
+        if [ "${{ steps.check-secrets.outputs.skip_deploy }}" = "true" ]; then
+          echo "⏭️  Deployment skipped - production secrets not configured"
+          echo "💡 To enable production deployment, add these secrets:"
+          echo "   - PRODUCTION_HOST"
+          echo "   - PRODUCTION_USER"
+          echo "   - PRODUCTION_SSH_KEY"
+        else
+          echo "✅ Production deployment job completed"
+          echo "📋 Manual verification steps required:"
+          echo "   1. Verify application health"
+          echo "   2. Check database migrations"
+          echo "   3. Monitor logs for errors"
+          echo "   4. Run smoke tests"
+        fi
