@@ -1027,10 +1027,10 @@ td.calendar-day .shift-card.role-scan {
                         <div class="col text-center">
                             <strong>{{ date|date:"D M j" }}</strong><br>
                             <small>
-                                Day: <span class="status-{{ summary.day_status }}">SSCW {{ summary.day_sscw }} · Care {{ summary.day_care }}/{{ summary.day_required }}</span>
+                                Day: <span class="status-{{ summary.day_status }}">SSCW {{ summary.day_sscw }}/{{ summary.day_sscw_required }} · Care {{ summary.day_care }}/{{ summary.day_required }}</span>
                             </small><br>
                             <small>
-                                Night: <span class="status-{{ summary.night_status }}">SSCW {{ summary.night_sscw }} · Care {{ summary.night_care }}/{{ summary.night_required }}</span>
+                                Night: <span class="status-{{ summary.night_status }}">SSCW {{ summary.night_sscw }}/{{ summary.night_sscw_required }} · Care {{ summary.night_care }}/{{ summary.night_required }}</span>
                             </small>
                         </div>
                     {% endfor %}

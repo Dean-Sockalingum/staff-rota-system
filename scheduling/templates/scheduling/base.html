@@ -26,11 +26,11 @@
     {% load static %}
     <!-- Performance: Use minified CSS in production -->
     {% if not debug %}
-    <link href="{% static 'css/mobile-responsive.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/ui-polish.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/mobile-responsive.min.css' %}?v=2" rel="stylesheet">
+    <link href="{% static 'css/ui-polish.min.css' %}?v=2" rel="stylesheet">
     {% else %}
-    <link href="{% static 'css/mobile-responsive.css' %}" rel="stylesheet">
-    <link href="{% static 'css/ui-polish.css' %}" rel="stylesheet">
+    <link href="{% static 'css/mobile-responsive.css' %}?v=2" rel="stylesheet">
+    <link href="{% static 'css/ui-polish.css' %}?v=2" rel="stylesheet">
     {% endif %}
     <style>
         .shift-card {

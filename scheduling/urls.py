@@ -14,12 +14,32 @@ from .ai_recommendations import (
     approve_ai_recommendation,
     reject_ai_recommendation
 )
+from .views_onboarding import (
+    onboarding_welcome,
+    onboarding_complete,
+    onboarding_skip,
+    onboarding_resume,
+    update_onboarding_progress,
+    get_onboarding_progress,
+    mark_onboarding_step_complete,
+    get_user_tips
+)
 
 urlpatterns = [
     # Authentication
     path('', views.login_view, name='login'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    
+    # Onboarding Wizard (Pitch Demo - Step 5)
+    path('onboarding/', onboarding_welcome, name='onboarding_welcome'),
+    path('onboarding/complete/', onboarding_complete, name='onboarding_complete'),
+    path('onboarding/skip/', onboarding_skip, name='onboarding_skip'),
+    path('onboarding/resume/', onboarding_resume, name='onboarding_resume'),
+    path('api/onboarding/progress/', update_onboarding_progress, name='update_onboarding_progress'),
+    path('api/onboarding/progress/get/', get_onboarding_progress, name='get_onboarding_progress'),
+    path('api/onboarding/step/complete/', mark_onboarding_step_complete, name='mark_onboarding_step_complete'),
+    path('api/onboarding/tips/', get_user_tips, name='get_user_tips'),
     
     # Manager/Admin Views
     path('dashboard/', views.manager_dashboard, name='manager_dashboard'),

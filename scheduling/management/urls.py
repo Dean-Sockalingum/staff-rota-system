@@ -10,6 +10,19 @@ from scheduling.views import (
     ot_agency_report, ot_agency_report_csv,  # OT and Agency reporting
     staff_vacancies_report, staff_vacancies_report_csv  # Staff Vacancies reporting
 )  # Import from main views
+from scheduling.views_onboarding import (
+    onboarding_welcome,
+    onboarding_dashboard_tour,
+    onboarding_rota_tour,
+    onboarding_staff_tour,
+    onboarding_ai_intro,
+    onboarding_mobile_tips,
+    onboarding_complete,
+    onboarding_skip,
+    onboarding_reset,
+    onboarding_mark_step_complete,
+    get_contextual_tips
+)
 from scheduling.views_compliance import (
     my_training_dashboard, submit_training_record, training_compliance_dashboard, add_staff_training_record,
     training_breakdown_report,
@@ -39,6 +52,19 @@ from scheduling.views_optimization import (
 )
 
 urlpatterns = [
+    # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)
+    path('onboarding/', onboarding_welcome, name='onboarding_welcome'),
+    path('onboarding/dashboard-tour/', onboarding_dashboard_tour, name='onboarding_dashboard_tour'),
+    path('onboarding/rota-tour/', onboarding_rota_tour, name='onboarding_rota_tour'),
+    path('onboarding/staff-tour/', onboarding_staff_tour, name='onboarding_staff_tour'),
+    path('onboarding/ai-intro/', onboarding_ai_intro, name='onboarding_ai_intro'),
+    path('onboarding/mobile-tips/', onboarding_mobile_tips, name='onboarding_mobile_tips'),
+    path('onboarding/complete/', onboarding_complete, name='onboarding_complete'),
+    path('onboarding/skip/', onboarding_skip, name='onboarding_skip'),
+    path('onboarding/reset/', onboarding_reset, name='onboarding_reset'),
+    path('api/onboarding/mark-step/', onboarding_mark_step_complete, name='onboarding_mark_step_complete'),
+    path('api/onboarding/tips/', get_contextual_tips, name='get_contextual_tips'),
+    
     path('', views.home, name='home'),
     path('team-management/', views.team_management, name='team_management'),
     path('staff-management/', views.staff_management, name='staff_management'),

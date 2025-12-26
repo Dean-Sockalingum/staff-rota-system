@@ -1,0 +1,144 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Mobile Tips{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/onboarding.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="tour-overlay" id="tourOverlay">
+        <div class="tour-content">
+            <div class="tour-header">
+                <h2><i class="fas fa-mobile-alt"></i> Mobile Tips</h2>
+                <button class="btn-skip" onclick="skipTour()">Skip Tour</button>
+            </div>
+            
+            <div class="tour-step active" id="step-1">
+                <div class="tour-step-content">
+                    <h3>Mobile-First Design</h3>
+                    <p>The Staff Rota System is fully optimized for mobile devices.</p>
+                    <p>Access everything you need on the go - from any smartphone or tablet.</p>
+                    <div class="mobile-demo-icon">
+                        <i class="fas fa-mobile-alt fa-5x text-success"></i>
+                    </div>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-2">
+                <div class="tour-step-content">
+                    <h3>Add to Home Screen</h3>
+                    <p>For the best mobile experience, add this app to your home screen:</p>
+                    <ul class="feature-list">
+                        <li><strong>iPhone/iPad:</strong> Tap <i class="fas fa-share"></i> then "Add to Home Screen"</li>
+                        <li><strong>Android:</strong> Tap <i class="fas fa-ellipsis-v"></i> menu then "Add to Home screen"</li>
+                    </ul>
+                    <p class="text-muted mt-3"><small>This creates an app icon and enables full-screen mode.</small></p>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-3">
+                <div class="tour-step-content">
+                    <h3>Mobile Features</h3>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-hand-pointer"></i> Touch-optimized interface</li>
+                        <li><i class="fas fa-expand"></i> Swipe gestures for navigation</li>
+                        <li><i class="fas fa-bell"></i> Push notifications for updates</li>
+                        <li><i class="fas fa-wifi"></i> Works offline with sync when online</li>
+                        <li><i class="fas fa-camera"></i> Upload photos (e.g., sick notes)</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-4">
+                <div class="tour-step-content">
+                    <h3>Quick Actions</h3>
+                    <p>Common tasks are just a tap away:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-calendar-check"></i> View today's shifts</li>
+                        <li><i class="fas fa-exchange-alt"></i> Request shift swaps</li>
+                        <li><i class="fas fa-umbrella-beach"></i> Submit leave requests</li>
+                        <li><i class="fas fa-comment"></i> Message your team</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-success" onclick="completeTour()">Finish Tour! <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function showStep(stepNumber) {
+    document.querySelectorAll('.tour-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.getElementById('step-' + stepNumber).classList.add('active');
+    currentStep = stepNumber;
+}
+
+function nextStep() {
+    if (currentStep < totalSteps) {
+        showStep(currentStep + 1);
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        showStep(currentStep - 1);
+    }
+}
+
+function skipTour() {
+    if (confirm('Are you sure you want to skip this tour?')) {
+        window.location.href = "{% url 'onboarding_complete' %}";
+    }
+}
+
+function completeTour() {
+    fetch('{% url "onboarding_mark_step_complete" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            step: 'mobile_tips'
+        })
+    }).then(response => {
+        window.location.href = "{% url 'onboarding_complete' %}";
+    });
+}
+</script>
+
+<style>
+.mobile-demo-icon {
+    text-align: center;
+    margin: 2rem 0;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+</style>
+{% endblock %}

@@ -1012,18 +1012,24 @@ def rota_view(request):
         # Determine staffing requirements based on selected filters
         if selected_home != 'all':
             # Use home-specific thresholds
-            requirements = home_staffing_config.get(selected_home, {'day_ideal': 17, 'night_ideal': 17})
+            requirements = home_staffing_config.get(selected_home, {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2})
             required_day = requirements['day_ideal']
             required_night = requirements['night_ideal']
+            required_day_sscw = requirements['day_sscw']
+            required_night_sscw = requirements['night_sscw']
         elif selected_unit != 'all':
             # For individual units, use their specific requirements
             unit = units.get(name=selected_unit)
             required_day = unit.min_day_staff if unit else 17
             required_night = unit.min_night_staff if unit else 17
+            required_day_sscw = 2
+            required_night_sscw = 2
         else:
-            # For facility-wide view (all homes)
-            required_day = 17
-            required_night = 17
+            # For facility-wide view (all homes) - sum up all home requirements
+            required_day = sum(config['day_ideal'] for config in home_staffing_config.values())
+            required_night = sum(config['night_ideal'] for config in home_staffing_config.values())
+            required_day_sscw = sum(config['day_sscw'] for config in home_staffing_config.values())
+            required_night_sscw = sum(config['night_sscw'] for config in home_staffing_config.values())
 
         # Check for staffing shortages
         day_shortage = day_care < required_day
@@ -1049,9 +1055,11 @@ def rota_view(request):
 
         daily_summary[current_date] = {
             'day_sscw': day_sscw,
+            'day_sscw_required': required_day_sscw,
             'day_care': day_care,
             'day_required': required_day,
             'night_sscw': night_sscw,
+            'night_sscw_required': required_night_sscw,
             'night_care': night_care,
             'night_required': required_night,
             'day_status': 'good' if not day_shortage else 'shortage',

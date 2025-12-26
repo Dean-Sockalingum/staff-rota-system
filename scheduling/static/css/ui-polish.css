@@ -98,7 +98,7 @@
     --z-tooltip: 1070;
 }
 
-/* Dark mode variables (future enhancement) */
+/* Dark mode disabled for now - light mode only for demo
 @media (prefers-color-scheme: dark) {
     :root {
         --bg-body: #1a1a1a;
@@ -109,6 +109,7 @@
         --border-color: #404040;
     }
 }
+*/
 
 /* ==============================================
    ENHANCED CARD STYLES
