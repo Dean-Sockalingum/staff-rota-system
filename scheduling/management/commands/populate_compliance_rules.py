@@ -97,19 +97,7 @@ class Command(BaseCommand):
                 'remediation_steps': 'Immediately arrange night cover. Activate on-call procedures if necessary.',
                 'is_active': True,
             },
-            {
-                'code': 'SKILL_MIX_RATIO',
-                'name': 'Senior to Junior Staff Ratio',
-                'category': 'STAFFING_LEVELS',
-                'description': 'Maintain appropriate ratio of senior care workers (SCW/SCWN) to care assistants (SCA/SCAN) for effective supervision.',
-                'severity': 'HIGH',
-                'parameters': {
-                    'min_ratio': 0.6,  # At least 60% senior staff
-                    'max_ratio': 1.5
-                },
-                'remediation_steps': 'Review skill mix. Adjust allocations to balance senior and junior staff.',
-                'is_active': True,
-            },
+            # SKILL_MIX_RATIO rule removed - ratio was unattainable and did not reflect home needs
             {
                 'code': 'WEEKEND_STAFFING',
                 'name': 'Weekend Staffing Levels',
