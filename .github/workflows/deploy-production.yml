@@ -15,6 +15,7 @@ jobs:
   validate:
     name: Pre-deployment Validation
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     
     steps:
     - name: Checkout code
@@ -32,17 +33,20 @@ jobs:
     
     - name: Syntax check
       run: |
+        echo "🔍 Running syntax validation..."
         python -m py_compile scheduling/*.py || true
         echo "✅ Syntax validation complete"
     
     - name: Build production package
       run: |
+        echo "📦 Building production release package..."
         mkdir -p deploy
         cp -r scheduling deploy/
         cp -r rotasystems deploy/
         cp manage.py deploy/
         cp requirements.txt deploy/
         cd deploy && tar -czf ../production-release.tar.gz *
+        ls -lh ../production-release.tar.gz
         echo "✅ Production package built successfully"
     
     - name: Upload release artifacts
@@ -63,11 +67,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    - name: Download release package
-      uses: actions/download-artifact@v3
-      with:
-        name: production-release
     
     - name: Download release package
       uses: actions/download-artifact@v3
