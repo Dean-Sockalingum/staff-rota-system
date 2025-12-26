@@ -7008,9 +7008,9 @@ def ot_agency_report_csv(request):
         
         # Home header
         writer.writerow([])
-        writer.writerow([f'{'=' * 100}'])
+        writer.writerow(['=' * 100])
         writer.writerow([f'CARE HOME: {home.get_name_display()}'])
-        writer.writerow([f'{'=' * 100}'])
+        writer.writerow(['=' * 100])
         writer.writerow([])
         
         # === OVERTIME SECTION ===
@@ -7155,9 +7155,9 @@ def ot_agency_report_csv(request):
     
     # Grand Total Summary
     writer.writerow([])
-    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['=' * 100])
     writer.writerow(['GRAND TOTALS ACROSS ALL HOMES'])
-    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['=' * 100])
     writer.writerow([])
     writer.writerow(['Category', 'Number of Shifts', 'Total Hours', 'Total Cost'])
     writer.writerow(['Overtime', grand_ot_count, f'{grand_ot_hours:.1f}', f'£{grand_ot_cost:.2f}'])
@@ -7353,9 +7353,9 @@ def staff_vacancies_report_csv(request):
     for home_name in sorted(homes_dict.keys()):
         home_data = homes_dict[home_name]
         
-        writer.writerow([f'{'=' * 100}'])
+        writer.writerow(['=' * 100])
         writer.writerow([home_name.replace('_', ' ').title()])
-        writer.writerow([f'{'=' * 100}'])
+        writer.writerow(['=' * 100])
         writer.writerow([])
         
         # Current vacancies
@@ -7421,9 +7421,9 @@ def staff_vacancies_report_csv(request):
         writer.writerow([])
     
     # Grand totals
-    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['=' * 100])
     writer.writerow(['GRAND TOTALS ACROSS ALL HOMES'])
-    writer.writerow([f'{'=' * 100}'])
+    writer.writerow(['=' * 100])
     writer.writerow([])
     writer.writerow(['Category', 'Number of Positions', 'Total Hours/Week'])
     writer.writerow(['Current Vacancies', grand_current, f'{sum(getattr(p.user, "hours_per_week", 37.5) for p in current_vacancies):.1f}'])
