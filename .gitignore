@@ -78,6 +78,7 @@ celerybeat-schedule
 .env
 .env.*
 !.env.example
+!.env.production.template
 .venv
 env/
 venv/
@@ -92,6 +93,11 @@ venv.bak/
 *.pfx
 fieldkeys.txt
 secrets.txt
+
+# Production security files (Dec 2025)
+.env.production
+PRODUCTION_SECRET_KEYS.txt
+*.sock
 
 # ML models and data
 ml_data/
