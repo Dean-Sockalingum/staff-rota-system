@@ -445,14 +445,17 @@ def get_learning_insights(min_feedback_count=5):
         avg_rating=Avg('rating')
     ).filter(count__gte=min_feedback_count).order_by('-avg_rating')
     
-    for stat in intent_stats[:5]:
+    # Convert to list for slicing
+    intent_stats_list = list(intent_stats)
+    
+    for stat in intent_stats_list[:5]:
         insights['high_performing_intents'].append({
             'intent': stat['intent_detected'],
             'avg_rating': round(stat['avg_rating'], 2),
             'count': stat['count']
         })
     
-    for stat in intent_stats[-5:]:
+    for stat in intent_stats_list[-5:]:
         insights['low_performing_intents'].append({
             'intent': stat['intent_detected'],
             'avg_rating': round(stat['avg_rating'], 2),
