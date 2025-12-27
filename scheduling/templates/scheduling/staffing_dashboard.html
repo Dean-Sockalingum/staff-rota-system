@@ -40,8 +40,9 @@
             </a>
             <button class="btn btn-outline-secondary" onclick="location.reload()">
                 <i class="fas fa-sync"></i> Refresh
-            </button>
-        </div>
+            </button>            <button class="btn btn-outline-primary" id="pauseRefreshBtn" onclick="toggleAutoRefresh()">
+                <i class="fas fa-pause"></i> Pause Auto-Refresh
+            </button>        </div>
     </div>
 
     {% if messages %}
@@ -283,10 +284,39 @@
 </div>
 
 <script>
-// Auto-refresh every 2 minutes
-setTimeout(function() {
-    location.reload();
-}, 120000);
+// Auto-refresh control
+let autoRefreshEnabled = true;
+let refreshTimeout = null;
+let countdownInterval = null;
+
+function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    const btn = document.getElementById('pauseRefreshBtn');
+    
+    if (autoRefreshEnabled) {
+        btn.innerHTML = '<i class="fas fa-pause"></i> Pause Auto-Refresh';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-primary');
+        scheduleRefresh();
+        startCountdowns();
+    } else {
+        btn.innerHTML = '<i class="fas fa-play"></i> Resume Auto-Refresh';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-success');
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        if (countdownInterval) clearInterval(countdownInterval);
+    }
+}
+
+function scheduleRefresh() {
+    if (autoRefreshEnabled) {
+        refreshTimeout = setTimeout(function() {
+            if (autoRefreshEnabled) {
+                location.reload();
+            }
+        }, 120000); // 2 minutes
+    }
+}
 
 // Update time remaining
 function updateCountdowns() {
@@ -307,7 +337,15 @@ function updateCountdowns() {
     });
 }
 
-setInterval(updateCountdowns, 60000);
-updateCountdowns();
+function startCountdowns() {
+    if (autoRefreshEnabled) {
+        countdownInterval = setInterval(updateCountdowns, 60000);
+        updateCountdowns();
+    }
+}
+
+// Initialize on page load
+scheduleRefresh();
+startCountdowns();
 </script>
 {% endblock %}

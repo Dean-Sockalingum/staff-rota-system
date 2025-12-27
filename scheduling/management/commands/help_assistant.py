@@ -133,29 +133,30 @@ python3 manage.py runserver 0.0.0.0:8000
                 'setup': {
                     'question': ['first time', 'initial setup', 'getting started', 'installation'],
                     'answer': """
-**First-time setup is easy!**
+**Welcome! Let's get you started!** 👋
 
-Use the interactive setup wizard:
+Click the button below to start the interactive setup wizard:
+
+<a href="/onboarding/" class="btn btn-primary btn-lg" style="display: inline-block; margin: 15px 0; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s, box-shadow 0.2s;">
+    <i class="fas fa-magic" style="margin-right: 8px;"></i>Start Setup Wizard
+</a>
+
+The wizard will guide you through:
+1. ✓ Dashboard overview and navigation
+2. ✓ Viewing your rota schedule
+3. ✓ Managing your leave requests
+4. ✓ Using the AI assistant (that's me! 🤖)
+5. ✓ Mobile app features
+
+**For administrators:** If you need to set up the system from the command line:
 ```bash
 cd rotasystems
 python3 manage.py setup_wizard
 ```
 
-This will guide you through:
-1. ✓ Creating admin account
-2. ✓ Setting up roles and units
-3. ✓ Configuring shift types
-4. ✓ Importing staff (optional)
-5. ✓ Generating initial rotas (optional)
-
-**Quick setup (uses defaults):**
-```bash
-python3 manage.py setup_wizard --quick
-```
-
-See: FIRST_TIME_SETUP.md for detailed instructions.
+See: FIRST_TIME_SETUP.md for detailed technical instructions.
 """,
-                    'related': ['wizard', 'configuration', 'admin']
+                    'related': ['wizard', 'configuration', 'admin', 'onboarding']
                 },
                 
                 'annual_leave': {
