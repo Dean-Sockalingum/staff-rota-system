@@ -10,6 +10,12 @@ from scheduling.views import (
     ot_agency_report, ot_agency_report_csv,  # OT and Agency reporting
     staff_vacancies_report, staff_vacancies_report_csv  # Staff Vacancies reporting
 )  # Import from main views
+from scheduling.views_cost_analysis import (
+    rota_cost_analysis,
+    export_cost_analysis_pdf,
+    export_cost_analysis_excel,
+    export_cost_analysis_csv
+)
 from scheduling.views_onboarding import (
     onboarding_welcome,
     onboarding_dashboard_tour,
@@ -101,6 +107,12 @@ urlpatterns = [
     # Staff Vacancies Report
     path('reports/vacancies/', staff_vacancies_report, name='staff_vacancies_report'),
     path('reports/vacancies/export/', staff_vacancies_report_csv, name='staff_vacancies_report_csv'),
+    
+    # Rota Cost Analysis
+    path('reports/cost-analysis/', rota_cost_analysis, name='rota_cost_analysis'),
+    path('reports/cost-analysis/export/pdf/', export_cost_analysis_pdf, name='export_cost_analysis_pdf'),
+    path('reports/cost-analysis/export/excel/', export_cost_analysis_excel, name='export_cost_analysis_excel'),
+    path('reports/cost-analysis/export/csv/', export_cost_analysis_csv, name='export_cost_analysis_csv'),
     
     path('reports/annual-leave/', views.get_annual_leave_report, name='get_annual_leave_report'),
     path('reports/leave-targets/', leave_usage_targets, name='leave_usage_targets'),
