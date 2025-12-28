@@ -153,7 +153,7 @@ class GroupTrainingOptimizer:
             details.append(f"{uncovered_shifts} shifts already uncovered")
         
         # Best case: No shifts, weekday, no existing shortages = score of 0
-        # Worst case: Multiple RN shifts on weekend with shortages = score 100+
+        # Worst case: Multiple SSCW shifts on weekend with shortages = score 100+
         
         return {
             'score': score,

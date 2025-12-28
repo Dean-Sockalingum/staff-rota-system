@@ -1,8 +1,16 @@
 """
-Predictive Budget Management & ROI Calculator
-==============================================
+Predictive Budget Management & ROI Calculator (ENHANCED)
+=========================================================
 
 Strategic financial planning tools for care home operations.
+
+ENHANCED FEATURES:
+- Scenario visualization (side-by-side comparisons)
+- Interactive what-if analysis (test multiple variables)
+- Budget optimization recommendations with charts
+- ROI sensitivity analysis (best/worst case ranges)
+- Executive financial dashboard
+- Automated monthly budget reports
 
 Purpose:
 - ROI calculator for hiring decisions
@@ -33,6 +41,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 import logging
 import math
+import json
 
 # Import models
 from .models import Unit, Shift, User
@@ -56,7 +65,7 @@ class PredictiveBudgetManager:
     
     # Cost constants (annual per staff)
     COST_ANNUAL_SALARY_RN = Decimal('35000.00')
-    COST_ANNUAL_SALARY_HCA = Decimal('22000.00')
+    COST_ANNUAL_SALARY_SCA = Decimal('22000.00')
     COST_RECRUITMENT = Decimal('3000.00')
     COST_TRAINING_INDUCTION = Decimal('1500.00')
     COST_TURNOVER = Decimal('5000.00')  # Total cost to replace one staff
@@ -85,7 +94,7 @@ class PredictiveBudgetManager:
         Calculate ROI for hiring a new staff member.
         
         Args:
-            role_code: Role to hire (RN, HCA, etc.)
+            role_code: Role to hire (SSCW, SCA, SCW, etc.)
             annual_salary: Annual salary cost
             expected_reduction_agency_shifts: Annual agency shifts saved
             expected_reduction_ot_shifts: Annual OT shifts saved
@@ -530,6 +539,341 @@ class PredictiveBudgetManager:
             ],
             'confidence': 'Medium'
         }
+
+
+# ===== ENHANCED EXECUTIVE FEATURES =====
+
+def get_financial_dashboard(care_home: Unit, monthly_budget: Decimal) -> Dict:
+    """
+    Executive financial dashboard with KPIs and scenario comparisons.
+    
+    Args:
+        care_home: Care home to analyze
+        monthly_budget: Monthly budget allocation
+    
+    Returns:
+        dict: Comprehensive financial dashboard
+    """
+    manager = PredictiveBudgetManager(care_home)
+    
+    # Current forecast
+    forecast = manager.forecast_next_quarter()
+    
+    # Multiple scenario analysis
+    scenarios = {
+        'baseline': manager.scenario_analysis("Current Trajectory", {}),
+        'best_case': manager.scenario_analysis(
+            "Best Case: 50% less sickness, reduce agency by 30%",
+            {'sickness_multiplier': 0.5, 'agency_reduction_pct': 30}
+        ),
+        'worst_case': manager.scenario_analysis(
+            "Worst Case: Double sickness + 5 leavers",
+            {'sickness_multiplier': 2.0, 'turnover_increase': 5}
+        ),
+        'optimization': manager.scenario_analysis(
+            "Optimization: Hire 2 SCAs, reduce agency 40%",
+            {'additional_hires': 2, 'agency_reduction_pct': 40}
+        )
+    }
+    
+    # Budget allocation
+    allocation = manager.recommend_budget_allocation(monthly_budget)
+    
+    # Hiring ROI opportunities
+    hiring_opportunities = _analyze_hiring_opportunities(manager)
+    
+    return {
+        'summary': {
+            'monthly_budget': float(monthly_budget),
+            'current_spend': float(forecast['current_monthly_avg']),
+            'budget_variance': float(monthly_budget - forecast['current_monthly_avg']),
+            'variance_percentage': float((monthly_budget - forecast['current_monthly_avg']) / monthly_budget * 100) if monthly_budget > 0 else 0
+        },
+        'forecast': forecast,
+        'scenarios': scenarios,
+        'allocation': allocation,
+        'hiring_opportunities': hiring_opportunities,
+        'generated_at': timezone.now().isoformat()
+    }
+
+
+def _analyze_hiring_opportunities(manager: PredictiveBudgetManager) -> List[Dict]:
+    """
+    Identify and analyze potential hiring opportunities.
+    
+    Returns ROI analysis for different hiring scenarios.
+    """
+    opportunities = []
+    
+    # Scenario 1: Hire 1 SCA (reduces agency usage)
+    sca_roi = manager.calculate_hiring_roi(
+        role_code='SCA',
+        annual_salary=manager.COST_ANNUAL_SALARY_SCA,
+        expected_reduction_agency_shifts=52,  # 1 shift/week
+        expected_reduction_ot_shifts=26  # 0.5 shifts/week
+    )
+    
+    opportunities.append({
+        'role': 'SCA',
+        'scenario': 'Hire 1 SCA to reduce agency usage',
+        'annual_cost': float(manager.COST_ANNUAL_SALARY_SCA),
+        'annual_savings': float(sca_roi['annual_savings']),
+        'net_benefit': float(sca_roi['net_annual_benefit']),
+        'payback_months': sca_roi['payback_months'],
+        'recommendation': sca_roi['recommendation']
+    })
+    
+    # Scenario 2: Hire 1 SSCW (reduces premium costs)
+    sscw_roi = manager.calculate_hiring_roi(
+        role_code='SSCW',
+        annual_salary=manager.COST_ANNUAL_SALARY_RN,
+        expected_reduction_agency_shifts=40,
+        expected_reduction_ot_shifts=20
+    )
+    
+    opportunities.append({
+        'role': 'SSCW',
+        'scenario': 'Hire 1 SSCW to reduce agency/OT',
+        'annual_cost': float(manager.COST_ANNUAL_SALARY_RN),
+        'annual_savings': float(sscw_roi['annual_savings']),
+        'net_benefit': float(sscw_roi['net_annual_benefit']),
+        'payback_months': sscw_roi['payback_months'],
+        'recommendation': sscw_roi['recommendation']
+    })
+    
+    # Sort by net benefit (best first)
+    opportunities.sort(key=lambda x: x['net_benefit'], reverse=True)
+    
+    return opportunities
+
+
+def generate_scenario_comparison_chart(scenarios: Dict) -> Dict:
+    """
+    Generate Chart.js compatible data for scenario comparison visualization.
+    
+    Args:
+        scenarios: Dict of scenario results from get_financial_dashboard()
+    
+    Returns:
+        dict: Chart data ready for frontend rendering
+    """
+    labels = []
+    total_costs = []
+    colors = []
+    
+    # Color mapping
+    color_map = {
+        'baseline': '#6c757d',  # Grey
+        'best_case': '#28a745',  # Green
+        'worst_case': '#dc3545',  # Red
+        'optimization': '#17a2b8'  # Blue
+    }
+    
+    for scenario_name, scenario_data in scenarios.items():
+        labels.append(scenario_data['scenario'])
+        total_costs.append(float(scenario_data['projected_total_cost']))
+        colors.append(color_map.get(scenario_name, '#6c757d'))
+    
+    return {
+        'type': 'bar',
+        'data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Projected Total Cost (£)',
+                'data': total_costs,
+                'backgroundColor': colors
+            }]
+        },
+        'options': {
+            'responsive': True,
+            'scales': {
+                'y': {
+                    'beginAtZero': True,
+                    'title': {'display': True, 'text': 'Cost (£)'}
+                }
+            }
+        }
+    }
+
+
+def interactive_what_if_analysis(
+    care_home: Unit,
+    **variables
+) -> Dict:
+    """
+    Interactive what-if analysis - test multiple variables simultaneously.
+    
+    Usage:
+        what_if_analysis(
+            care_home=home,
+            additional_hires=2,
+            sickness_multiplier=1.5,
+            agency_reduction_pct=25,
+            ot_reduction_pct=15
+        )
+    
+    Args:
+        care_home: Care home to analyze
+        **variables: Any combination of scenario variables
+    
+    Returns:
+        dict: Detailed impact analysis
+    """
+    manager = PredictiveBudgetManager(care_home)
+    
+    # Build scenario description from variables
+    scenario_parts = []
+    for var, value in variables.items():
+        if var == 'additional_hires':
+            scenario_parts.append(f"Hire {value} staff")
+        elif var == 'sickness_multiplier':
+            scenario_parts.append(f"Sickness ×{value}")
+        elif var == 'agency_reduction_pct':
+            scenario_parts.append(f"Reduce agency by {value}%")
+        elif var == 'ot_reduction_pct':
+            scenario_parts.append(f"Reduce OT by {value}%")
+        elif var == 'turnover_increase':
+            scenario_parts.append(f"+{value} leavers")
+        elif var == 'turnover_decrease':
+            scenario_parts.append(f"-{value} leavers")
+    
+    scenario_name = "What-If: " + ", ".join(scenario_parts) if scenario_parts else "Baseline"
+    
+    # Run scenario
+    result = manager.scenario_analysis(scenario_name, variables)
+    
+    # Compare to baseline
+    baseline = manager.scenario_analysis("Baseline", {})
+    
+    cost_difference = result['projected_total_cost'] - baseline['projected_total_cost']
+    percentage_change = (cost_difference / baseline['projected_total_cost'] * 100) if baseline['projected_total_cost'] > 0 else 0
+    
+    return {
+        'scenario': scenario_name,
+        'variables': variables,
+        'result': result,
+        'baseline': baseline,
+        'comparison': {
+            'cost_difference': float(cost_difference),
+            'percentage_change': round(float(percentage_change), 2),
+            'direction': 'INCREASE' if cost_difference > 0 else 'DECREASE' if cost_difference < 0 else 'UNCHANGED',
+            'color': '#dc3545' if cost_difference > 0 else '#28a745' if cost_difference < 0 else '#6c757d'
+        },
+        'generated_at': timezone.now().isoformat()
+    }
+
+
+def send_monthly_budget_report(
+    care_home: Unit,
+    monthly_budget: Decimal,
+    recipient_emails: List[str]
+) -> bool:
+    """
+    Send automated monthly budget report to executives.
+    
+    Args:
+        care_home: Care home to report on
+        monthly_budget: Monthly budget allocation
+        recipient_emails: List of email addresses
+    
+    Returns:
+        bool: Success status
+    """
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    dashboard = get_financial_dashboard(care_home, monthly_budget)
+    summary = dashboard['summary']
+    forecast = dashboard['forecast']
+    
+    # Format scenarios
+    scenarios_text = ""
+    for name, scenario in dashboard['scenarios'].items():
+        cost = float(scenario['projected_total_cost'])
+        scenarios_text += f"  {name.replace('_', ' ').title()}: £{cost:,.2f}\n"
+    
+    # Format hiring opportunities
+    opportunities_text = "\n".join(
+        f"  • {opp['scenario']}: Net benefit £{opp['net_benefit']:,.2f}/year (Payback: {opp['payback_months']} months)"
+        for opp in dashboard['hiring_opportunities']
+    )
+    
+    # Variance emoji
+    variance_emoji = '🟢' if summary['budget_variance'] >= 0 else '🔴'
+    
+    subject = f"📊 Monthly Budget Report - {care_home.name}"
+    
+    message = f"""
+MONTHLY BUDGET REPORT
+{'='*70}
+
+Care Home: {care_home.name}
+Period: {timezone.now().strftime('%B %Y')}
+Generated: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+
+BUDGET SUMMARY
+{'='*70}
+
+Monthly Budget:       £{summary['monthly_budget']:,.2f}
+Current Spend:        £{summary['current_spend']:,.2f}
+Variance:             {variance_emoji} £{summary['budget_variance']:,.2f} ({summary['variance_percentage']:+.1f}%)
+
+NEXT QUARTER FORECAST
+{'='*70}
+
+Quarter: {forecast['quarter']}
+Current Monthly Avg:  £{float(forecast['current_monthly_avg']):,.2f}
+
+Projected:
+  Month 1: £{float(forecast['forecast']['month_1']):,.2f}
+  Month 2: £{float(forecast['forecast']['month_2']):,.2f}
+  Month 3: £{float(forecast['forecast']['month_3']):,.2f}
+  Total:   £{float(forecast['forecast']['quarter_total']):,.2f}
+
+SCENARIO ANALYSIS
+{'='*70}
+
+{scenarios_text}
+
+HIRING OPPORTUNITIES
+{'='*70}
+
+{opportunities_text}
+
+BUDGET ALLOCATION RECOMMENDATION
+{'='*70}
+
+Regular Staff:  £{float(dashboard['allocation']['recommended_allocation']['regular_staff_budget']):,.2f} ({dashboard['allocation']['recommended_allocation']['regular_percentage']:.0f}%)
+Overtime:       £{float(dashboard['allocation']['recommended_allocation']['ot_budget']):,.2f} ({dashboard['allocation']['recommended_allocation']['ot_percentage']:.0f}%)
+Agency:         £{float(dashboard['allocation']['recommended_allocation']['agency_budget']):,.2f} ({dashboard['allocation']['recommended_allocation']['agency_percentage']:.0f}%)
+
+RECOMMENDATIONS
+{'='*70}
+
+{chr(10).join(f"  {i+1}. {rec}" for i, rec in enumerate(dashboard['allocation']['optimization_suggestions']))}
+
+{'='*70}
+
+View full dashboard: [URL would be here]
+
+---
+Staff Rota System - Strategic Budget Planning
+    """
+    
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipient_emails,
+            fail_silently=False
+        )
+        logger.info(f"Sent monthly budget report to {len(recipient_emails)} recipients")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Failed to send budget report: {str(e)}")
+        return False
 
 
 def run_quarterly_budget_review(care_home: Unit):

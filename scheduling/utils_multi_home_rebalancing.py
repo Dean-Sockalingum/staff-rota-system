@@ -15,7 +15,7 @@ Key Features:
 2. Travel distance calculation and willingness matching
 3. Auto-suggest rebalancing with financial incentives
 4. Fair rotation (don't overuse same staff for travel)
-5. Skills matching (RN surplus → RN shortage only)
+5. Skills matching (SSCW surplus → SSCW shortage only)
 
 Rebalancing Logic:
 - Identify homes with predicted surpluses (>10% overstaffed)

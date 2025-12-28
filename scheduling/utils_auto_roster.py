@@ -1,6 +1,14 @@
 """
-Auto-Rostering from Forecasts - Quick Win 5
+Auto-Rostering from Forecasts - Quick Win 5 (ENHANCED)
 One-click draft rota generation from Prophet ML predictions
+
+ENHANCED FEATURES:
+- Quality scoring (0-100) for each roster
+- Confidence metrics per shift
+- Roster preview with issues highlighted
+- Optimization suggestions
+- Fairness analysis (shift distribution equity)
+- Email digest with quality report
 
 Business Impact:
 - Time savings: 20+ hours/week (manual rota creation eliminated)
@@ -14,6 +22,7 @@ from decimal import Decimal
 from django.db.models import Count, Q
 from scheduling.models import Shift, User, ShiftType, Unit, Role
 from scheduling.shortage_predictor import ShortagePredictor
+from typing import Dict, List, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -212,23 +221,22 @@ class AutoRosterGenerator:
         
         # Get roles
         roles = {
-            'RN': Role.objects.filter(name='RN').first(),
             'SSW': Role.objects.filter(name='SSW').first(),
             'SCW': Role.objects.filter(name='SCW').first(),
             'SCA': Role.objects.filter(name='SCA').first(),
         }
         
         # Create day shifts
-        for i in range(forecast.get('day_rn', 1)):
-            assigned_staff = self._find_available_staff(unit, date, shift_types['Early'], roles['RN'])
+        for i in range(forecast.get('day_ssw', 1)):
+            assigned_staff = self._find_available_staff(unit, date, shift_types['Early'], roles['SSW'])
             shifts.append({
                 'date': date,
                 'unit_obj': unit,
                 'unit': unit.get_name_display(),
                 'shift_type_obj': shift_types['Early'],
                 'shift_type': 'Early',
-                'role_obj': roles['RN'],
-                'role': 'RN',
+                'role_obj': roles['SSW'],
+                'role': 'SSW',
                 'assigned_user': assigned_staff,
                 'confidence': forecast['confidence']
             })
@@ -248,16 +256,16 @@ class AutoRosterGenerator:
             })
         
         # Create night shifts
-        for i in range(forecast.get('night_rn', 1)):
-            assigned_staff = self._find_available_staff(unit, date, shift_types['Night'], roles['RN'])
+        for i in range(forecast.get('night_ssw', 1)):
+            assigned_staff = self._find_available_staff(unit, date, shift_types['Night'], roles['SSW'])
             shifts.append({
                 'date': date,
                 'unit_obj': unit,
                 'unit': unit.get_name_display(),
                 'shift_type_obj': shift_types['Night'],
                 'shift_type': 'Night',
-                'role_obj': roles['RN'],
-                'role': 'RN',
+                'role_obj': roles['SSW'],
+                'role': 'SSW',
                 'assigned_user': assigned_staff,
                 'confidence': forecast['confidence']
             })
@@ -309,6 +317,486 @@ class AutoRosterGenerator:
         
         # No available staff found
         return None
+    
+    
+    # ===== ENHANCED EXECUTIVE FEATURES =====
+    
+    def get_roster_quality_report(self, draft_shifts: List[Dict]) -> Dict:
+        """
+        Comprehensive quality analysis of generated roster.
+        
+        Args:
+            draft_shifts: List of shift dictionaries from generate_draft_rota()
+        
+        Returns:
+            dict: Quality metrics, scores, and issues
+        """
+        total_shifts = len(draft_shifts)
+        assigned_shifts = sum(1 for s in draft_shifts if s.get('assigned_user'))
+        unassigned_shifts = total_shifts - assigned_shifts
+        
+        # Calculate quality score components
+        assignment_score = (assigned_shifts / total_shifts * 100) if total_shifts > 0 else 0
+        
+        # Analyze fairness (shift distribution equity)
+        fairness_analysis = self._analyze_shift_fairness(draft_shifts)
+        
+        # Identify roster issues
+        issues = self._identify_roster_issues(draft_shifts)
+        
+        # Calculate confidence distribution
+        confidence_dist = self._analyze_confidence_distribution(draft_shifts)
+        
+        # Calculate overall quality score (0-100)
+        quality_score = self._calculate_overall_quality_score(
+            assignment_score,
+            fairness_analysis['equity_score'],
+            len(issues['critical']),
+            len(issues['warnings']),
+            confidence_dist['avg_confidence']
+        )
+        
+        return {
+            'summary': {
+                'overall_quality_score': quality_score,
+                'status': self._get_quality_status(quality_score),
+                'status_color': self._get_quality_color(quality_score),
+                'total_shifts': total_shifts,
+                'assigned': assigned_shifts,
+                'unassigned': unassigned_shifts,
+                'assignment_rate': round(assignment_score, 1)
+            },
+            'confidence': confidence_dist,
+            'fairness': fairness_analysis,
+            'issues': issues,
+            'optimization_suggestions': self._generate_optimization_suggestions(
+                draft_shifts, issues, fairness_analysis
+            ),
+            'generated_at': timezone.now().isoformat()
+        }
+    
+    
+    def _analyze_shift_fairness(self, draft_shifts: List[Dict]) -> Dict:
+        """
+        Analyze equity of shift distribution among staff.
+        
+        Perfect fairness = everyone gets equal shifts.
+        """
+        from collections import Counter
+        
+        # Count shifts per staff member
+        staff_shift_counts = Counter()
+        for shift in draft_shifts:
+            user = shift.get('assigned_user')
+            if user:
+                staff_shift_counts[user.id] += 1
+        
+        if not staff_shift_counts:
+            return {
+                'equity_score': 0,
+                'status': 'NO_ASSIGNMENTS',
+                'avg_shifts_per_staff': 0,
+                'min_shifts': 0,
+                'max_shifts': 0,
+                'distribution': []
+            }
+        
+        counts = list(staff_shift_counts.values())
+        avg_shifts = sum(counts) / len(counts)
+        min_shifts = min(counts)
+        max_shifts = max(counts)
+        
+        # Calculate equity score (0-100)
+        # Perfect equity = 100, high variance = lower score
+        if max_shifts > 0:
+            equity_score = (1 - (max_shifts - min_shifts) / max_shifts) * 100
+        else:
+            equity_score = 100
+        
+        return {
+            'equity_score': round(equity_score, 1),
+            'status': 'EXCELLENT' if equity_score >= 90 else 'GOOD' if equity_score >= 75 else 'FAIR' if equity_score >= 60 else 'POOR',
+            'avg_shifts_per_staff': round(avg_shifts, 1),
+            'min_shifts': min_shifts,
+            'max_shifts': max_shifts,
+            'distribution': [
+                {
+                    'staff_id': staff_id,
+                    'shift_count': count,
+                    'vs_average': round(count - avg_shifts, 1)
+                }
+                for staff_id, count in staff_shift_counts.most_common()
+            ]
+        }
+    
+    
+    def _identify_roster_issues(self, draft_shifts: List[Dict]) -> Dict:
+        """
+        Identify critical issues and warnings in roster.
+        """
+        critical = []
+        warnings = []
+        info = []
+        
+        # Group shifts by date and staff
+        from collections import defaultdict
+        shifts_by_date_staff = defaultdict(list)
+        
+        for shift in draft_shifts:
+            user = shift.get('assigned_user')
+            if user:
+                key = (shift['date'], user.id)
+                shifts_by_date_staff[key].append(shift)
+        
+        # Check for double-bookings
+        for (date, staff_id), shifts in shifts_by_date_staff.items():
+            if len(shifts) > 1:
+                critical.append({
+                    'type': 'DOUBLE_BOOKING',
+                    'message': f"Staff ID {staff_id} assigned {len(shifts)} shifts on {date}",
+                    'severity': 'CRITICAL',
+                    'date': date.isoformat(),
+                    'staff_id': staff_id
+                })
+        
+        # Check for low confidence shifts
+        low_confidence = [s for s in draft_shifts if s.get('confidence', 1.0) < 0.7]
+        if low_confidence:
+            warnings.append({
+                'type': 'LOW_CONFIDENCE',
+                'message': f"{len(low_confidence)} shifts have low ML confidence (<70%)",
+                'severity': 'WARNING',
+                'count': len(low_confidence)
+            })
+        
+        # Check for unassigned shifts
+        unassigned = [s for s in draft_shifts if not s.get('assigned_user')]
+        if unassigned:
+            if len(unassigned) > len(draft_shifts) * 0.2:  # >20% unassigned
+                critical.append({
+                    'type': 'HIGH_UNASSIGNED_RATE',
+                    'message': f"{len(unassigned)} shifts unassigned ({len(unassigned)/len(draft_shifts)*100:.1f}%)",
+                    'severity': 'CRITICAL',
+                    'count': len(unassigned)
+                })
+            else:
+                warnings.append({
+                    'type': 'SOME_UNASSIGNED',
+                    'message': f"{len(unassigned)} shifts need manual assignment",
+                    'severity': 'WARNING',
+                    'count': len(unassigned)
+                })
+        
+        return {
+            'critical': critical,
+            'warnings': warnings,
+            'info': info,
+            'total_issues': len(critical) + len(warnings)
+        }
+    
+    
+    def _analyze_confidence_distribution(self, draft_shifts: List[Dict]) -> Dict:
+        """
+        Analyze ML confidence distribution across all shifts.
+        """
+        confidences = [s.get('confidence', 1.0) for s in draft_shifts]
+        
+        if not confidences:
+            return {
+                'avg_confidence': 0.0,
+                'min_confidence': 0.0,
+                'max_confidence': 0.0,
+                'high_confidence_count': 0,
+                'medium_confidence_count': 0,
+                'low_confidence_count': 0
+            }
+        
+        avg_conf = sum(confidences) / len(confidences)
+        
+        # Categorize
+        high = sum(1 for c in confidences if c >= 0.8)
+        medium = sum(1 for c in confidences if 0.6 <= c < 0.8)
+        low = sum(1 for c in confidences if c < 0.6)
+        
+        return {
+            'avg_confidence': round(avg_conf, 2),
+            'min_confidence': round(min(confidences), 2),
+            'max_confidence': round(max(confidences), 2),
+            'high_confidence_count': high,
+            'medium_confidence_count': medium,
+            'low_confidence_count': low,
+            'high_confidence_percentage': round(high / len(confidences) * 100, 1)
+        }
+    
+    
+    def _calculate_overall_quality_score(self, assignment_score: float, equity_score: float,
+                                         critical_count: int, warning_count: int,
+                                         avg_confidence: float) -> int:
+        """
+        Calculate overall roster quality score (0-100).
+        
+        Components:
+        - Assignment rate (40% weight)
+        - Equity score (30% weight)
+        - Confidence (20% weight)
+        - Issues penalty (10% weight)
+        """
+        # Base score from components
+        score = (
+            (assignment_score * 0.4) +  # 40% weight
+            (equity_score * 0.3) +      # 30% weight
+            (avg_confidence * 100 * 0.2)  # 20% weight (confidence is 0-1)
+        )
+        
+        # Penalties for issues
+        issue_penalty = (critical_count * 10) + (warning_count * 5)
+        score -= issue_penalty
+        
+        # Clamp to 0-100
+        return max(0, min(100, round(score)))
+    
+    
+    def _get_quality_status(self, score: int) -> str:
+        """Get quality status label"""
+        if score >= 90:
+            return 'EXCELLENT'
+        elif score >= 75:
+            return 'GOOD'
+        elif score >= 60:
+            return 'ACCEPTABLE'
+        elif score >= 40:
+            return 'NEEDS_IMPROVEMENT'
+        else:
+            return 'POOR'
+    
+    
+    def _get_quality_color(self, score: int) -> str:
+        """Get traffic light color"""
+        if score >= 90:
+            return '#28a745'  # Green
+        elif score >= 75:
+            return '#17a2b8'  # Blue
+        elif score >= 60:
+            return '#ffc107'  # Amber
+        else:
+            return '#dc3545'  # Red
+    
+    
+    def _generate_optimization_suggestions(self, draft_shifts: List[Dict],
+                                           issues: Dict, fairness: Dict) -> List[str]:
+        """
+        Generate specific suggestions to improve roster quality.
+        """
+        suggestions = []
+        
+        # Unassigned shifts
+        unassigned_count = sum(1 for s in draft_shifts if not s.get('assigned_user'))
+        if unassigned_count > 0:
+            suggestions.append(
+                f"📋 Manually assign {unassigned_count} unassigned shifts or recruit additional staff"
+            )
+        
+        # Critical issues
+        if issues['critical']:
+            for issue in issues['critical']:
+                if issue['type'] == 'DOUBLE_BOOKING':
+                    suggestions.append(
+                        f"⚠️ Resolve double-booking for staff ID {issue['staff_id']} on {issue['date']}"
+                    )
+                elif issue['type'] == 'HIGH_UNASSIGNED_RATE':
+                    suggestions.append(
+                        "🚨 High unassigned rate indicates staff shortage - consider agency or bank staff"
+                    )
+        
+        # Fairness issues
+        if fairness['equity_score'] < 75:
+            if fairness['max_shifts'] - fairness['min_shifts'] > 5:
+                suggestions.append(
+                    f"⚖️ Improve shift distribution fairness - max({fairness['max_shifts']}) vs min({fairness['min_shifts']}) spread too wide"
+                )
+        
+        # Low confidence
+        low_conf_count = sum(1 for s in draft_shifts if s.get('confidence', 1.0) < 0.7)
+        if low_conf_count > len(draft_shifts) * 0.2:  # >20%
+            suggestions.append(
+                f"🔍 Review {low_conf_count} low-confidence shifts - may need manual adjustment"
+            )
+        
+        if not suggestions:
+            suggestions.append("✅ Roster quality is good - ready to publish after review")
+        
+        return suggestions
+    
+    
+    def generate_roster_preview_html(self, draft_shifts: List[Dict], quality_report: Dict) -> str:
+        """
+        Generate HTML preview of roster for manager review.
+        
+        Color-coded by quality and issues.
+        """
+        # Group shifts by date
+        from collections import defaultdict
+        shifts_by_date = defaultdict(list)
+        
+        for shift in draft_shifts:
+            shifts_by_date[shift['date']].append(shift)
+        
+        html_parts = [
+            f"<h2>Roster Preview - Quality Score: {quality_report['summary']['overall_quality_score']}/100</h2>",
+            f"<p style='color: {quality_report['summary']['status_color']}'>Status: {quality_report['summary']['status']}</p>",
+            "<table border='1' style='border-collapse: collapse; width: 100%;'>",
+            "<tr><th>Date</th><th>Unit</th><th>Shift</th><th>Role</th><th>Assigned</th><th>Confidence</th></tr>"
+        ]
+        
+        for date in sorted(shifts_by_date.keys()):
+            day_shifts = shifts_by_date[date]
+            
+            for shift in day_shifts:
+                user = shift.get('assigned_user')
+                confidence = shift.get('confidence', 1.0)
+                
+                # Color code by status
+                if not user:
+                    row_color = '#ffcccc'  # Light red - unassigned
+                elif confidence < 0.7:
+                    row_color = '#fff3cd'  # Light yellow - low confidence
+                else:
+                    row_color = '#d4edda'  # Light green - good
+                
+                html_parts.append(
+                    f"<tr style='background-color: {row_color}'>"
+                    f"<td>{shift['date']}</td>"
+                    f"<td>{shift['unit']}</td>"
+                    f"<td>{shift['shift_type']}</td>"
+                    f"<td>{shift['role']}</td>"
+                    f"<td>{user.get_full_name() if user else '❌ UNASSIGNED'}</td>"
+                    f"<td>{confidence:.0%}</td>"
+                    "</tr>"
+                )
+        
+        html_parts.append("</table>")
+        
+        return "\n".join(html_parts)
+    
+    
+    def send_quality_report_email(self, recipient_emails: List[str], 
+                                  quality_report: Dict, period: Dict) -> bool:
+        """
+        Email quality report to managers for review.
+        """
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        summary = quality_report['summary']
+        
+        # Status emoji
+        status_emoji = {
+            'EXCELLENT': '🟢',
+            'GOOD': '🔵',
+            'ACCEPTABLE': '🟡',
+            'NEEDS_IMPROVEMENT': '🟠',
+            'POOR': '🔴'
+        }.get(summary['status'], '⚪')
+        
+        # Format issues
+        issues_text = ""
+        if quality_report['issues']['critical']:
+            issues_text += "\n🚨 CRITICAL ISSUES:\n"
+            for issue in quality_report['issues']['critical']:
+                issues_text += f"  • {issue['message']}\n"
+        
+        if quality_report['issues']['warnings']:
+            issues_text += "\n⚠️ WARNINGS:\n"
+            for issue in quality_report['issues']['warnings']:
+                issues_text += f"  • {issue['message']}\n"
+        
+        if not issues_text:
+            issues_text = "\n✅ No issues detected\n"
+        
+        # Format suggestions
+        suggestions_text = "\n".join(
+            f"  {i+1}. {suggestion}"
+            for i, suggestion in enumerate(quality_report['optimization_suggestions'])
+        )
+        
+        subject = f"📊 Auto-Roster Quality Report - {period['start']} to {period['end']}"
+        
+        message = f"""
+AUTO-ROSTER QUALITY REPORT
+{'='*70}
+
+Period: {period['start']} to {period['end']} ({period['days']} days)
+Generated: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+
+OVERALL QUALITY
+{'='*70}
+
+Quality Score:    {status_emoji} {summary['overall_quality_score']}/100
+Status:           {summary['status']}
+Assignment Rate:  {summary['assignment_rate']:.1f}%
+
+ROSTER STATISTICS
+{'='*70}
+
+Total Shifts:     {summary['total_shifts']}
+Assigned:         {summary['assigned']}
+Unassigned:       {summary['unassigned']}
+
+CONFIDENCE ANALYSIS
+{'='*70}
+
+Average:          {quality_report['confidence']['avg_confidence']:.0%}
+High Confidence:  {quality_report['confidence']['high_confidence_count']} ({quality_report['confidence']['high_confidence_percentage']:.1f}%)
+Medium:           {quality_report['confidence']['medium_confidence_count']}
+Low:              {quality_report['confidence']['low_confidence_count']}
+
+FAIRNESS ANALYSIS
+{'='*70}
+
+Equity Score:     {quality_report['fairness']['equity_score']:.1f}/100
+Status:           {quality_report['fairness']['status']}
+Avg Shifts/Staff: {quality_report['fairness']['avg_shifts_per_staff']:.1f}
+Min-Max Range:    {quality_report['fairness']['min_shifts']} - {quality_report['fairness']['max_shifts']}
+
+ISSUES DETECTED
+{'='*70}
+{issues_text}
+
+OPTIMIZATION SUGGESTIONS
+{'='*70}
+
+{suggestions_text}
+
+NEXT STEPS
+{'='*70}
+
+1. Review roster preview (attached or via system)
+2. Manually assign {summary['unassigned']} unassigned shifts
+3. Resolve any critical issues
+4. Publish roster once approved
+
+{'='*70}
+
+View full roster: [URL would be here]
+
+---
+Staff Rota System - Intelligent Auto-Rostering
+        """
+        
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_emails,
+                fail_silently=False
+            )
+            logger.info(f"Sent roster quality report to {len(recipient_emails)} recipients")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Failed to send quality report: {str(e)}")
+            return False
 
 
 def generate_auto_rota(start_date, end_date, care_home=None, save_to_db=False, review_mode=True):

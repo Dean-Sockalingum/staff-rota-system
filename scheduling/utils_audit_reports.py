@@ -15,7 +15,7 @@ Report Sections:
 2. Training Compliance (by course, by staff)
 3. Supervision Records (completion rates)
 4. Incident Log (falls, medication errors, complaints)
-5. Staffing Levels (RN ratio, coverage %, turnover)
+5. Staffing Levels (SSCW ratio, coverage %, turnover)
 6. WTD Compliance (violations, rest periods)
 7. Rota Health Scores (trend analysis)
 
