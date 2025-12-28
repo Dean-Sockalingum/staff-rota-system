@@ -347,3 +347,4 @@ class OvertimeCoverageResponse(models.Model):
     
     def __str__(self):
         return f"{self.staff.name} - {self.response} ({self.request})"
+

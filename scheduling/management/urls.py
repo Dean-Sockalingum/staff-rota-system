@@ -74,6 +74,12 @@ from scheduling.views_ai_dashboards import (
     rota_health_dashboard,
     rota_health_api,
 )
+from scheduling.views_ot_matching_api import (
+    find_ot_matches,
+    send_ot_offers,
+    get_batch_status,
+    respond_to_offer,
+)
 
 urlpatterns = [
     # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)
@@ -218,6 +224,12 @@ urlpatterns = [
     path('api/overtime/rankings/', api_overtime_rankings, name='api_overtime_rankings'),
     path('api/overtime/response/<int:response_id>/', api_overtime_response_record, name='api_overtime_response_record'),
     path('api/overtime/coverage/<int:request_id>/remind/', api_overtime_coverage_remind, name='api_overtime_coverage_remind'),
+    
+    # Task 1: Auto-Send OT Offers with Escalation (NEW)
+    path('api/ot-matching/find-matches/', find_ot_matches, name='find_ot_matches'),
+    path('api/ot-matching/send-offers/', send_ot_offers, name='send_ot_offers'),
+    path('api/ot-matching/batch/<int:batch_id>/status/', get_batch_status, name='get_batch_status'),
+    path('api/ot-matching/offer/<int:offer_id>/respond/', respond_to_offer, name='respond_to_offer'),
     
     # AI Dashboards - Quick Win Features
     path('ai/suggestions/', proactive_suggestions_dashboard, name='proactive_suggestions_dashboard'),
