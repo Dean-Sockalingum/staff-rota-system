@@ -1,8 +1,7 @@
 from django.urls import path
 from . import views
-from scheduling.views import (
 from scheduling.views.ai_assistant_api import (
-    ai_assistant_page, ai_assistant_api, proactive_suggestions_api, leave_usage_targets, 
+    ai_assistant_api, proactive_suggestions_api, leave_usage_targets, 
     agency_companies_api, daily_additional_staffing_report, weekly_additional_staffing_report,
     careplan_overview, careplan_unit_view, careplan_review_detail, careplan_compliance_report,
     careplan_manager_dashboard, careplan_approve_review,
@@ -10,7 +9,7 @@ from scheduling.views.ai_assistant_api import (
     home_dashboard,  # Home-specific dashboards with role-based access
     ot_agency_report, ot_agency_report_csv,  # OT and Agency reporting
     staff_vacancies_report, staff_vacancies_report_csv  # Staff Vacancies reporting
-)  # Import from main views
+)
 from scheduling.views_cost_analysis import (
     rota_cost_analysis,
     export_cost_analysis_pdf,

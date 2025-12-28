@@ -9,11 +9,11 @@ from datetime import timedelta, date
 import logging
 
 from scheduling.models import (
-    User, Shift, LeaveRequest, Unit, ShiftType
+    User, Shift, LeaveRequest, Unit, ShiftType, TrainingRecord
 )
 from scheduling.models_overtime import OvertimeCoverageRequest
 from scheduling.models_multi_home import CareHome
-from staff_records.models import SicknessRecord, Training, StaffProfile
+from staff_records.models import SicknessRecord, StaffProfile
 
 logger = logging.getLogger(__name__)
 
@@ -212,22 +212,22 @@ class ProactiveSuggestionEngine:
         suggestions = []
         
         # Find training expiring soon (within 30 days)
-        expiring_soon = Training.objects.filter(
+        expiring_soon = TrainingRecord.objects.filter(
             expiry_date__lte=self.today + timedelta(days=30),
             expiry_date__gte=self.today
-        ).select_related('profile__user')
+        ).select_related('staff_member')
         
         # Group by urgency
-        expired = Training.objects.filter(
+        expired = TrainingRecord.objects.filter(
             expiry_date__lt=self.today
-        ).select_related('profile__user')
+        ).select_related('staff_member')
         
         if expired.exists():
             expired_list = [
                 {
-                    'name': t.profile.user.full_name,
-                    'sap': t.profile.user.sap,
-                    'training': t.name,
+                    'name': t.staff_member.full_name,
+                    'sap': t.staff_member.sap,
+                    'training': t.course.name if hasattr(t, 'course') else 'Training',
                     'expired': (self.today - t.expiry_date).days
                 }
                 for t in expired[:10]
@@ -235,22 +235,20 @@ class ProactiveSuggestionEngine:
             
             suggestions.append({
                 'priority': 'high',
-                'category': 'compliance',
+                'category': 'training',
                 'title': f'{expired.count()} Expired Training Records',
                 'description': f'{expired.count()} training records have expired. This may impact compliance.',
-                'action': 'Review and renew expired training',
-                'action_url': '/staff-records/training/',
-                'details': expired_list,
-                'icon': 'exclamation-circle',
-                'color': 'danger'
+                'recommendation': 'Review and renew expired training immediately',
+                'action_url': '/management/training/compliance/',
+                'affected_staff': [User.objects.get(sap=t.staff_member.sap) for t in expired[:5]],
             })
         
         if expiring_soon.exists():
             expiring_list = [
                 {
-                    'name': t.profile.user.full_name,
-                    'sap': t.profile.user.sap,
-                    'training': t.name,
+                    'name': t.staff_member.full_name,
+                    'sap': t.staff_member.sap,
+                    'training': t.course.name if hasattr(t, 'course') else 'Training',
                     'days_until_expiry': (t.expiry_date - self.today).days
                 }
                 for t in expiring_soon[:10]
@@ -258,14 +256,12 @@ class ProactiveSuggestionEngine:
             
             suggestions.append({
                 'priority': 'medium',
-                'category': 'compliance',
+                'category': 'training',
                 'title': f'{expiring_soon.count()} Training Records Expiring Soon',
                 'description': f'{expiring_soon.count()} training records expire within 30 days. Book renewals now.',
-                'action': 'Schedule training renewals',
-                'action_url': '/staff-records/training/',
-                'details': expiring_list,
-                'icon': 'certificate',
-                'color': 'warning'
+                'recommendation': 'Schedule training renewals to maintain compliance',
+                'action_url': '/management/training/compliance/',
+                'affected_staff': [User.objects.get(sap=t.staff_member.sap) for t in expiring_soon[:5]],
             })
         
         return suggestions
