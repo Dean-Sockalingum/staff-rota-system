@@ -87,6 +87,13 @@ from scheduling.views_agency_coordination_api import (
     manual_book_agency,
     list_active_blasts,
 )
+from scheduling.views_shift_swap_api import (
+    create_swap_request,
+    get_swap_status,
+    list_my_swaps,
+    manual_approve_swap,
+    deny_swap,
+)
     respond_to_offer,
 )
 
@@ -246,6 +253,13 @@ urlpatterns = [
     path('api/agency-coordination/response/<int:response_id>/<str:action>/', agency_response_webhook, name='agency_response_webhook'),
     path('api/agency-coordination/response/<int:response_id>/manual-book/', manual_book_agency, name='manual_book_agency'),
     path('api/agency-coordination/active-blasts/', list_active_blasts, name='list_active_blasts'),
+    
+    # Task 3: Intelligent Shift Swap Auto-Approval (NEW)
+    path('api/shift-swaps/create/', create_swap_request, name='create_swap_request'),
+    path('api/shift-swaps/<int:swap_request_id>/status/', get_swap_status, name='get_swap_status'),
+    path('api/shift-swaps/my-swaps/', list_my_swaps, name='list_my_swaps'),
+    path('api/shift-swaps/<int:swap_request_id>/manual-approve/', manual_approve_swap, name='manual_approve_swap'),
+    path('api/shift-swaps/<int:swap_request_id>/deny/', deny_swap, name='deny_swap'),
     
     # AI Dashboards - Quick Win Features
     path('ai/suggestions/', proactive_suggestions_dashboard, name='proactive_suggestions_dashboard'),
