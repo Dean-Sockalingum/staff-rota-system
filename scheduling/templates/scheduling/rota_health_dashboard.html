@@ -1,0 +1,408 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Rota Health Score - {{ care_home.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .score-gauge {
+        position: relative;
+        width: 250px;
+        height: 250px;
+        margin: 0 auto;
+    }
+    .grade-badge {
+        font-size: 6rem;
+        font-weight: 700;
+        line-height: 1;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .component-bar {
+        height: 30px;
+        background: #e9ecef;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+    }
+    .component-bar-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 10px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    .component-bar-fill.excellent {
+        background: linear-gradient(90deg, #28a745, #20c997);
+    }
+    .component-bar-fill.good {
+        background: linear-gradient(90deg, #20c997, #17a2b8);
+    }
+    .component-bar-fill.fair {
+        background: linear-gradient(90deg, #ffc107, #fd7e14);
+    }
+    .component-bar-fill.poor {
+        background: linear-gradient(90deg, #fd7e14, #dc3545);
+    }
+    .issue-card {
+        border-left: 4px solid;
+        margin-bottom: 0.75rem;
+    }
+    .issue-card.critical {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+    }
+    .issue-card.warning {
+        border-left-color: #ffc107;
+        background: #fffef5;
+    }
+    .issue-card.info {
+        border-left-color: #17a2b8;
+        background: #f5fbfd;
+    }
+    .trend-chart {
+        height: 300px;
+    }
+    .metadata-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f8f9fa;
+        display: inline-block;
+        margin: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js for trends -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="fas fa-heartbeat text-danger"></i> Rota Health Score
+            </h1>
+            <p class="text-muted mb-0">Quality assessment for {{ care_home.name }}</p>
+        </div>
+        <div>
+            <a href="{% url 'management_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="care_home" class="form-label"><strong>Care Home</strong></label>
+                        <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                            {% for home in all_care_homes %}
+                            <option value="{{ home.id }}" {% if home.id == care_home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="period" class="form-label"><strong>Period</strong></label>
+                        <select name="period" id="period" class="form-select" onchange="handlePeriodChange()">
+                            <option value="current_week" {% if view_period == 'current_week' %}selected{% endif %}>Current Week</option>
+                            <option value="next_week" {% if view_period == 'next_week' %}selected{% endif %}>Next Week</option>
+                            <option value="custom" {% if view_period == 'custom' %}selected{% endif %}>Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="startDateDiv" style="display: {% if view_period == 'custom' %}block{% else %}none{% endif %};">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-2" id="endDateDiv" style="display: {% if view_period == 'custom' %}block{% else %}none{% endif %};">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <div class="mt-2">
+                <small class="text-muted">
+                    Analyzing: {{ start_date|date:"D, j M Y" }} - {{ end_date|date:"D, j M Y" }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Overall Score -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-{{ grade_color }} text-white">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> Overall Health</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="score-gauge mb-3">
+                        <div class="grade-badge text-{{ grade_color }}">
+                            {{ grade }}
+                        </div>
+                    </div>
+                    <div class="display-4 text-{{ grade_color }} mb-2">
+                        {{ overall_score|floatformat:0 }}<small class="text-muted">/100</small>
+                    </div>
+                    <p class="text-muted">
+                        {% if overall_score >= 90 %}
+                            Excellent rota quality
+                        {% elif overall_score >= 80 %}
+                            Good rota quality
+                        {% elif overall_score >= 70 %}
+                            Acceptable rota quality
+                        {% elif overall_score >= 60 %}
+                            Below average - needs improvement
+                        {% else %}
+                            Poor quality - immediate action required
+                        {% endif %}
+                    </p>
+
+                    <!-- Metadata -->
+                    <div class="mt-4 text-start">
+                        <h6 class="text-muted mb-3">Rota Statistics</h6>
+                        <div class="metadata-badge">
+                            <i class="fas fa-calendar-day"></i> {{ metadata.total_shifts }} shifts
+                        </div>
+                        <div class="metadata-badge">
+                            <i class="fas fa-users"></i> {{ metadata.unique_staff }} staff
+                        </div>
+                        <div class="metadata-badge">
+                            <i class="fas fa-clock"></i> {{ metadata.total_hours }} hours
+                        </div>
+                        <div class="metadata-badge">
+                            <i class="fas fa-pound-sign"></i> £{{ metadata.total_cost|floatformat:0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component Scores -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Component Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    {% for component in components %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold">{{ component.name }}</span>
+                            <span class="badge bg-secondary">{{ component.score|floatformat:0 }}/100</span>
+                        </div>
+                        <div class="component-bar">
+                            <div class="component-bar-fill {% if component.score >= 80 %}excellent{% elif component.score >= 70 %}good{% elif component.score >= 60 %}fair{% else %}poor{% endif %}" 
+                                 style="width: {{ component.score }}%;">
+                                {% if component.score >= 20 %}{{ component.score|floatformat:0 }}%{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="alert alert-info mt-4 mb-0">
+                        <small>
+                            <strong>Scoring:</strong> 
+                            Excellent (80-100), Good (70-79), Fair (60-69), Poor (0-59)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Issues & Warnings -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle text-warning"></i> 
+                        Issues Detected ({{ issues|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if issues %}
+                        {% for issue in issues %}
+                        <div class="issue-card {{ issue.severity }} card">
+                            <div class="card-body py-2">
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3">
+                                        {% if issue.severity == 'critical' %}
+                                            <i class="fas fa-times-circle text-danger fa-lg"></i>
+                                        {% elif issue.severity == 'warning' %}
+                                            <i class="fas fa-exclamation-triangle text-warning fa-lg"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle text-info fa-lg"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <strong>{{ issue.component|title }}</strong>
+                                        <p class="mb-0 small">{{ issue.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                            <p class="mb-0">No issues detected. Excellent work!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning"></i> 
+                        Improvement Suggestions ({{ suggestions|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if suggestions %}
+                        <div class="list-group">
+                            {% for suggestion in suggestions %}
+                            <div class="list-group-item">
+                                <div class="d-flex align-items-start">
+                                    <span class="badge bg-primary me-2">{{ forloop.counter }}</span>
+                                    <div>
+                                        <strong>{{ suggestion.component|title }}</strong>
+                                        <p class="mb-0 small text-muted">{{ suggestion.suggestion }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-thumbs-up text-success fa-3x mb-3"></i>
+                            <p class="mb-0">No suggestions - rota is optimized!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Trend -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> 8-Week Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" class="trend-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Period selector handler
+    function handlePeriodChange() {
+        const period = document.getElementById('period').value;
+        const startDateDiv = document.getElementById('startDateDiv');
+        const endDateDiv = document.getElementById('endDateDiv');
+        
+        if (period === 'custom') {
+            startDateDiv.style.display = 'block';
+            endDateDiv.style.display = 'block';
+        } else {
+            startDateDiv.style.display = 'none';
+            endDateDiv.style.display = 'none';
+            document.getElementById('filterForm').submit();
+        }
+    }
+
+    // Historical trend chart
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const historicalData = {{ historical_scores|safe|default:'[]' }};
+    
+    const chartData = {
+        labels: historicalData.map(item => {
+            const date = new Date(item.week_start);
+            return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+        }),
+        datasets: [{
+            label: 'Health Score',
+            data: historicalData.map(item => item.score),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const dataIndex = context.dataIndex;
+                            const score = context.parsed.y.toFixed(0);
+                            const grade = historicalData[dataIndex].grade;
+                            return `Score: ${score}/100 (Grade ${grade})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Grade color mapping for chart annotations
+    const gradeColors = {
+        'A': '#28a745',
+        'B': '#17a2b8',
+        'C': '#ffc107',
+        'D': '#fd7e14',
+        'F': '#dc3545'
+    };
+</script>
+{% endblock %}

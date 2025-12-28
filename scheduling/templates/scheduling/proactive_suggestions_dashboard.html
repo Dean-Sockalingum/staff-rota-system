@@ -1,0 +1,267 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}AI Proactive Suggestions - {{ care_home.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .suggestion-card {
+        border-left: 4px solid #dee2e6;
+        margin-bottom: 1rem;
+        transition: all 0.2s;
+    }
+    .suggestion-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .suggestion-card.priority-high {
+        border-left-color: #dc3545;
+    }
+    .suggestion-card.priority-medium {
+        border-left-color: #ffc107;
+    }
+    .suggestion-card.priority-low {
+        border-left-color: #17a2b8;
+    }
+    .priority-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+    }
+    .category-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .stats-card {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .stats-card.high {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .stats-card.medium {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        color: #333;
+    }
+    .stats-card.low {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+    }
+    .filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="fas fa-brain text-primary"></i> AI Proactive Suggestions
+            </h1>
+            <p class="text-muted mb-0">Intelligent recommendations to optimize your rota</p>
+        </div>
+        <div>
+            <a href="{% url 'management_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card high">
+                <div class="display-4 mb-2">{{ high_count }}</div>
+                <div class="text-uppercase" style="letter-spacing: 1px;">High Priority</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card medium">
+                <div class="display-4 mb-2">{{ medium_count }}</div>
+                <div class="text-uppercase" style="letter-spacing: 1px;">Medium Priority</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card low">
+                <div class="display-4 mb-2">{{ low_count }}</div>
+                <div class="text-uppercase" style="letter-spacing: 1px;">Low Priority</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="display-4 mb-2">{{ total_count }}</div>
+                <div class="text-uppercase" style="letter-spacing: 1px;">Total Suggestions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="care_home" class="form-label"><strong>Care Home</strong></label>
+                    <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                        {% for home in all_care_homes %}
+                        <option value="{{ home.id }}" {% if home.id == care_home.id %}selected{% endif %}>
+                            {{ home.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="priority" class="form-label"><strong>Priority</strong></label>
+                    <select name="priority" id="priority" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if priority_filter == 'all' %}selected{% endif %}>All Priorities</option>
+                        <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High Only</option>
+                        <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium Only</option>
+                        <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low Only</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="category" class="form-label"><strong>Category</strong></label>
+                    <select name="category" id="category" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if category_filter == 'all' %}selected{% endif %}>All Categories</option>
+                        {% for cat_id, cat_name in categories %}
+                        <option value="{{ cat_id }}" {% if category_filter == cat_id %}selected{% endif %}>
+                            {{ cat_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="days_ahead" class="form-label"><strong>Look Ahead (Days)</strong></label>
+                    <select name="days_ahead" id="days_ahead" class="form-select" onchange="this.form.submit()">
+                        <option value="7" {% if days_ahead == 7 %}selected{% endif %}>7 days</option>
+                        <option value="14" {% if days_ahead == 14 %}selected{% endif %}>14 days</option>
+                        <option value="21" {% if days_ahead == 21 %}selected{% endif %}>21 days</option>
+                        <option value="30" {% if days_ahead == 30 %}selected{% endif %}>30 days</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Suggestions List -->
+    <div class="row">
+        <div class="col-12">
+            {% if suggestions %}
+                <p class="text-muted mb-3">
+                    Showing {{ filtered_count }} of {{ total_count }} suggestion{% if total_count != 1 %}s{% endif %}
+                </p>
+
+                {% for suggestion in suggestions %}
+                <div class="card suggestion-card priority-{{ suggestion.priority }}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <!-- Category Icon -->
+                            <div class="col-auto">
+                                <div class="category-icon bg-{{ suggestion.priority }}-subtle">
+                                    {% if suggestion.category == 'staffing' %}
+                                        <i class="fas fa-users text-primary"></i>
+                                    {% elif suggestion.category == 'leave' %}
+                                        <i class="fas fa-calendar-alt text-info"></i>
+                                    {% elif suggestion.category == 'training' %}
+                                        <i class="fas fa-graduation-cap text-success"></i>
+                                    {% elif suggestion.category == 'sickness' %}
+                                        <i class="fas fa-heartbeat text-warning"></i>
+                                    {% elif suggestion.category == 'overtime_budget' %}
+                                        <i class="fas fa-pound-sign text-danger"></i>
+                                    {% elif suggestion.category == 'fairness' %}
+                                        <i class="fas fa-balance-scale text-purple"></i>
+                                    {% elif suggestion.category == 'compliance' %}
+                                        <i class="fas fa-shield-alt text-dark"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="col">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="mb-0">{{ suggestion.title }}</h5>
+                                    <span class="badge bg-{{ suggestion.priority }} priority-badge">
+                                        {{ suggestion.priority }}
+                                    </span>
+                                </div>
+                                <p class="text-muted mb-2">{{ suggestion.description }}</p>
+                                
+                                {% if suggestion.affected_dates %}
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar"></i>
+                                        {% for date in suggestion.affected_dates %}
+                                            {{ date|date:"D, j M" }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                </div>
+                                {% endif %}
+
+                                {% if suggestion.affected_staff %}
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i>
+                                        {% for staff in suggestion.affected_staff %}
+                                            {{ staff.full_name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-3">
+                                    <strong class="text-success"><i class="fas fa-lightbulb"></i> Recommendation:</strong>
+                                    <p class="mb-0">{{ suggestion.recommendation }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="col-auto">
+                                {% if suggestion.action_url %}
+                                <a href="{{ suggestion.action_url }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-arrow-right"></i> Take Action
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        <h3 class="mt-3">All Clear!</h3>
+                        <p class="text-muted">
+                            No suggestions at this time. Your rota is looking good for the next {{ days_ahead }} days.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 5 minutes
+    setTimeout(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

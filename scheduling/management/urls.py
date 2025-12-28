@@ -67,6 +67,11 @@ from scheduling.views_overtime_management import (
     api_overtime_response_record,
     api_overtime_coverage_remind,
 )
+from scheduling.views_ai_dashboards import (
+    proactive_suggestions_dashboard,
+    rota_health_dashboard,
+    rota_health_api,
+)
 
 urlpatterns = [
     # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)
@@ -211,6 +216,11 @@ urlpatterns = [
     path('api/overtime/rankings/', api_overtime_rankings, name='api_overtime_rankings'),
     path('api/overtime/response/<int:response_id>/', api_overtime_response_record, name='api_overtime_response_record'),
     path('api/overtime/coverage/<int:request_id>/remind/', api_overtime_coverage_remind, name='api_overtime_coverage_remind'),
+    
+    # AI Dashboards - Quick Win Features
+    path('ai/suggestions/', proactive_suggestions_dashboard, name='proactive_suggestions_dashboard'),
+    path('ai/rota-health/', rota_health_dashboard, name='rota_health_dashboard'),
+    path('api/rota-health/', rota_health_api, name='rota_health_api'),
     
     # Task 6: Real-Time Compliance Monitor - Phase 2 API Endpoints
     path('api/compliance/dashboard/', compliance_dashboard_api, name='compliance_dashboard_api'),

@@ -543,6 +543,77 @@
     </div>
 </div>
 
+<!-- AI-Powered Quick Win Features -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain"></i> AI-Powered Intelligence
+                    <span class="badge bg-light text-primary ms-2">NEW</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Proactive Suggestions -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-lightbulb fa-3x text-warning"></i>
+                                </div>
+                                <h6 class="card-title">Proactive Suggestions</h6>
+                                <p class="card-text small text-muted">
+                                    AI-generated recommendations for staffing, leave, training & compliance
+                                </p>
+                                <a href="{% url 'proactive_suggestions_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-right"></i> View Suggestions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rota Health Score -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-heartbeat fa-3x text-danger"></i>
+                                </div>
+                                <h6 class="card-title">Rota Health Score</h6>
+                                <p class="card-text small text-muted">
+                                    Quality assessment with component scores, trends & improvement tips
+                                </p>
+                                <a href="{% url 'rota_health_dashboard' %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-chart-line"></i> Check Health
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Intelligent OT -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-user-clock fa-3x text-success"></i>
+                                </div>
+                                <h6 class="card-title">Intelligent Overtime</h6>
+                                <p class="card-text small text-muted">
+                                    Smart ranking & automated coverage requests based on preferences
+                                </p>
+                                <a href="{% url 'overtime_preferences_list' %}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-cogs"></i> Manage OT
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Quick Actions -->
 <div class="row">
     <div class="col-12">
