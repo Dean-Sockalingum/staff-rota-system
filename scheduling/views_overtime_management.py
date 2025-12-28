@@ -5,11 +5,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from django.http import JsonResponse
 
-from .models import User
+from .models import User, Shift
 from .models_overtime import StaffOvertimePreference
 from .models_multi_home import CareHome
 from scheduling.models import Unit
+from .utils_overtime_intelligence import OvertimeRanker, auto_request_ot_coverage, rank_staff_for_coverage
 
 
 @login_required
@@ -197,3 +199,122 @@ def overtime_preference_delete(request, preference_id):
         return redirect('overtime_preferences_list')
     
     return redirect('overtime_preferences_list')
+
+
+@login_required
+def overtime_coverage_request(request, shift_id):
+    """
+    Intelligent OT coverage request for a specific shift
+    Uses smart ranking to contact best candidates
+    """
+    # Check permissions
+    if not (request.user.role and request.user.role.is_management):
+        messages.error(request, 'You do not have permission to request OT coverage.')
+        return redirect('staff_dashboard')
+    
+    shift = get_object_or_404(Shift, id=shift_id)
+    
+    if request.method == 'POST':
+        # Number of staff to contact
+        top_n = int(request.POST.get('top_n', 5))
+        
+        # Trigger automated OT request
+        result = auto_request_ot_coverage(shift, top_n=top_n)
+        
+        messages.success(
+            request, 
+            f'OT coverage request created! Contacted {result["total_contacted"]} staff members in priority order.'
+        )
+        
+        # Redirect to coverage tracking
+        return redirect('overtime_coverage_detail', request_id=result['coverage_request'].id)
+    
+    # GET: Show preview of ranked candidates
+    ranked_candidates = rank_staff_for_coverage(shift)[:10]  # Top 10
+    
+    context = {
+        'shift': shift,
+        'ranked_candidates': ranked_candidates,
+    }
+    
+    return render(request, 'scheduling/overtime_coverage_request.html', context)
+
+
+@login_required
+def overtime_coverage_detail(request, request_id):
+    """
+    View details of an OT coverage request and track responses
+    """
+    from .models_overtime import OvertimeCoverageRequest
+    
+    # Check permissions
+    if not (request.user.role and request.user.role.is_management):
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('staff_dashboard')
+    
+    coverage_request = get_object_or_404(OvertimeCoverageRequest, id=request_id)
+    
+    # Get all responses
+    responses = coverage_request.responses.select_related('staff').order_by('-reliability_score_when_sent')
+    
+    context = {
+        'coverage_request': coverage_request,
+        'responses': responses,
+    }
+    
+    return render(request, 'scheduling/overtime_coverage_detail.html', context)
+
+
+@login_required
+def api_overtime_rankings(request):
+    """
+    API endpoint: Get ranked staff for OT coverage
+    Query params: shift_date, shift_type, care_home_name
+    """
+    from datetime import datetime
+    from .utils_overtime_intelligence import OvertimeRanker
+    
+    try:
+        shift_date_str = request.GET.get('shift_date')
+        shift_type = request.GET.get('shift_type', 'DAY')
+        care_home_name = request.GET.get('care_home')
+        
+        if not all([shift_date_str, care_home_name]):
+            return JsonResponse({'error': 'Missing required parameters'}, status=400)
+        
+        shift_date = datetime.strptime(shift_date_str, '%Y-%m-%d').date()
+        care_home = CareHome.objects.get(name=care_home_name)
+        
+        # Create ranker
+        ranker = OvertimeRanker(
+            shift_date=shift_date,
+            shift_type=shift_type,
+            care_home=care_home
+        )
+        
+        # Get rankings
+        ranked = ranker.rank_all_available_staff()
+        
+        # Convert to JSON-serializable format
+        results = []
+        for candidate in ranked:
+            results.append({
+                'staff_name': candidate['staff'].full_name,
+                'staff_sap': candidate['staff'].sap,
+                'total_score': candidate['total_score'],
+                'breakdown': candidate['breakdown'],
+                'phone': candidate['phone'],
+                'contact_method': candidate['contact_method'],
+            })
+        
+        return JsonResponse({
+            'shift_date': shift_date_str,
+            'shift_type': shift_type,
+            'care_home': care_home.get_name_display(),
+            'total_candidates': len(results),
+            'rankings': results
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

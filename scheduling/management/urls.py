@@ -1,7 +1,8 @@
 from django.urls import path
 from . import views
 from scheduling.views import (
-    ai_assistant_page, ai_assistant_api, leave_usage_targets, 
+from scheduling.views.ai_assistant_api import (
+    ai_assistant_page, ai_assistant_api, proactive_suggestions_api, leave_usage_targets, 
     agency_companies_api, daily_additional_staffing_report, weekly_additional_staffing_report,
     careplan_overview, careplan_unit_view, careplan_review_detail, careplan_compliance_report,
     careplan_manager_dashboard, careplan_approve_review,
@@ -59,7 +60,10 @@ from scheduling.views_optimization import (
 from scheduling.views_overtime_management import (
     overtime_preferences_list,
     overtime_preference_form,
-    overtime_preference_delete
+    overtime_preference_delete,
+    overtime_coverage_request,
+    overtime_coverage_detail,
+    api_overtime_rankings,
 )
 
 urlpatterns = [
@@ -148,6 +152,7 @@ urlpatterns = [
     # AI Assistant API
     path('ai-assistant/', ai_assistant_page, name='ai_assistant_page'),
     path('api/ai-assistant/', ai_assistant_api, name='ai_assistant_api'),
+    path('api/proactive-suggestions/', proactive_suggestions_api, name='proactive_suggestions_api'),
     
     # Agency & Additional Staffing APIs
     path('api/agency-companies/', agency_companies_api, name='agency_companies_api'),
@@ -197,6 +202,11 @@ urlpatterns = [
     path('overtime/preferences/add/', overtime_preference_form, name='overtime_preference_add'),
     path('overtime/preferences/edit/<int:preference_id>/', overtime_preference_form, name='overtime_preference_edit'),
     path('overtime/preferences/delete/<int:preference_id>/', overtime_preference_delete, name='overtime_preference_delete'),
+    
+    # Intelligent OT Coverage
+    path('overtime/coverage/request/<int:shift_id>/', overtime_coverage_request, name='overtime_coverage_request'),
+    path('overtime/coverage/<int:request_id>/', overtime_coverage_detail, name='overtime_coverage_detail'),
+    path('api/overtime/rankings/', api_overtime_rankings, name='api_overtime_rankings'),
     
     # Task 6: Real-Time Compliance Monitor - Phase 2 API Endpoints
     path('api/compliance/dashboard/', compliance_dashboard_api, name='compliance_dashboard_api'),

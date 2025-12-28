@@ -19,6 +19,9 @@ from scheduling.models import (
 from scheduling.models_multi_home import CareHome
 from staff_records.models import SicknessRecord, StaffProfile
 
+# Import proactive suggestions engine
+from scheduling.utils_proactive_suggestions import get_proactive_suggestions, get_high_priority_suggestions
+
 # Import the HelpAssistant from the management command
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'management', 'commands'))
 from help_assistant import HelpAssistant
@@ -609,4 +612,61 @@ Ask about forecasts, shortages, sickness, or incidents for instant ML-powered in
     except Exception as e:
         return JsonResponse({
             'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def proactive_suggestions_api(request):
+    """
+    API endpoint for proactive AI suggestions
+    Returns intelligent, contextual suggestions for managers
+    """
+    try:
+        # Get optional parameters
+        care_home_id = request.GET.get('care_home')
+        priority_filter = request.GET.get('priority')  # high, medium, low
+        category_filter = request.GET.get('category')  # staffing, leave, compliance, etc.
+        days_ahead = int(request.GET.get('days_ahead', 14))
+        
+        # Get care home if specified
+        care_home = None
+        if care_home_id:
+            try:
+                care_home = CareHome.objects.get(id=care_home_id)
+            except CareHome.DoesNotExist:
+                pass
+        
+        # Get all suggestions
+        suggestions = get_proactive_suggestions(care_home=care_home, days_ahead=days_ahead)
+        
+        # Apply filters
+        if priority_filter:
+            suggestions = [s for s in suggestions if s['priority'] == priority_filter]
+        
+        if category_filter:
+            suggestions = [s for s in suggestions if s['category'] == category_filter]
+        
+        # Calculate summary statistics
+        summary = {
+            'total_count': len(suggestions),
+            'high_priority': len([s for s in suggestions if s['priority'] == 'high']),
+            'medium_priority': len([s for s in suggestions if s['priority'] == 'medium']),
+            'low_priority': len([s for s in suggestions if s['priority'] == 'low']),
+            'by_category': {}
+        }
+        
+        for suggestion in suggestions:
+            category = suggestion['category']
+            summary['by_category'][category] = summary['by_category'].get(category, 0) + 1
+        
+        return JsonResponse({
+            'success': True,
+            'suggestions': suggestions,
+            'summary': summary
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generating suggestions: {str(e)}'
         }, status=500)

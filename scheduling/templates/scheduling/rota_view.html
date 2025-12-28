@@ -653,6 +653,9 @@ td.calendar-day .shift-card.role-scan {
                             <button class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#staffSearchModal">
                                 <i class="fas fa-search"></i> Search Staff
                             </button>
+                            <button class="btn btn-warning me-2" onclick="window.location.href='{% url 'manage_overtime_preferences' %}'">
+                                <i class="fas fa-robot"></i> Intelligent OT
+                            </button>
                         {% endif %}
                         <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addShiftModal">
                             <i class="fas fa-plus"></i> Add Shift
