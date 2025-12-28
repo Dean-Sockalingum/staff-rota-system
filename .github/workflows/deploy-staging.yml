@@ -2,11 +2,11 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.14'
 
 jobs:
   deploy-staging:
@@ -48,22 +48,69 @@ jobs:
         STAGING_HOST: ${{ secrets.STAGING_HOST }}
         STAGING_USER: ${{ secrets.STAGING_USER }}
         STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        STAGING_PATH: ${{ secrets.STAGING_PATH }}
       run: |
         echo "🚀 Deploying to staging environment..."
-        echo "Note: Configure SSH deployment or use your preferred deployment method"
-        # Example deployment commands (customize for your infrastructure):
-        # - Upload staging-release.tar.gz to staging server
-        # - Extract and restart application
-        # - Run migrations
-        # - Collect static files
+        
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$STAGING_SSH_KEY" > ~/.ssh/staging_key
+        chmod 600 ~/.ssh/staging_key
+        ssh-keyscan -H $STAGING_HOST >> ~/.ssh/known_hosts
+        
+        # Upload release package
+        scp -i ~/.ssh/staging_key staging-release.tar.gz $STAGING_USER@$STAGING_HOST:$STAGING_PATH/
+        
+        # Deploy on server
+        ssh -i ~/.ssh/staging_key $STAGING_USER@$STAGING_HOST << 'ENDSSH'
+          cd $STAGING_PATH
+          
+          # Backup current version
+          if [ -d "current" ]; then
+            cp -r current backup_$(date +%Y%m%d_%H%M%S)
+          fi
+          
+          # Extract new version
+          mkdir -p releases/$(date +%Y%m%d_%H%M%S)
+          tar -xzf staging-release.tar.gz -C releases/$(date +%Y%m%d_%H%M%S)
+          
+          # Update symlink to new release
+          ln -sfn releases/$(date +%Y%m%d_%H%M%S) current
+          
+          # Activate virtual environment and run migrations
+          cd current
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py migrate --noinput
+          python manage.py collectstatic --noinput
+          
+          # Restart application (adjust for your setup: gunicorn, uwsgi, etc.)
+          sudo systemctl restart staff-rota-staging
+          
+          echo "✅ Deployment complete"
+        ENDSSH
     
     - name: Run staging smoke tests
       env:
         STAGING_URL: ${{ secrets.STAGING_URL }}
       run: |
         echo "🧪 Running smoke tests on staging..."
-        # Add smoke test commands here
-        # Example: curl -f ${STAGING_URL}/health/ || exit 1
+        
+        # Wait for application to start
+        sleep 10
+        
+        # Health check
+        curl -f ${STAGING_URL}/admin/ || exit 1
+        echo "✅ Admin page accessible"
+        
+        # Test critical endpoints
+        curl -f ${STAGING_URL}/management/ || exit 1
+        echo "✅ Management dashboard accessible"
+        
+        # Test API endpoints
+        curl -f ${STAGING_URL}/management/api/ai-assistant/ -X POST -H "Content-Type: application/json" -d '{"query":"test"}' || echo "⚠️ AI endpoint needs authentication"
+        
+        echo "✅ Smoke tests passed"
     
     - name: Notify deployment status
       if: always()
