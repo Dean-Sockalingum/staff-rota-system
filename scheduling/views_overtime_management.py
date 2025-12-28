@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 
 from .models import User, Shift
 from .models_overtime import StaffOvertimePreference
