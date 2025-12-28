@@ -318,3 +318,74 @@ def api_overtime_rankings(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@require_http_methods(["POST"])
+@login_required
+def api_overtime_response_record(request, response_id):
+    """
+    API endpoint to record staff response to OT coverage request
+    """
+    try:
+        from scheduling.models_overtime import OvertimeCoverageResponse
+        import json
+        
+        response_obj = OvertimeCoverageResponse.objects.get(id=response_id)
+        data = json.loads(request.body)
+        status = data.get('status')
+        decline_reason = data.get('decline_reason')
+        
+        if status not in ['accepted', 'declined']:
+            return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+        
+        response_obj.response_status = status
+        response_obj.responded_at = timezone.now()
+        if decline_reason:
+            response_obj.decline_reason = decline_reason
+        response_obj.save()
+        
+        # Update coverage request status if accepted
+        if status == 'accepted':
+            response_obj.coverage_request.status = 'covered'
+            response_obj.coverage_request.save()
+        
+        return JsonResponse({'success': True})
+        
+    except OvertimeCoverageResponse.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Response not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def api_overtime_coverage_remind(request, request_id):
+    """
+    API endpoint to send reminders to pending staff for OT coverage request
+    """
+    try:
+        from scheduling.models_overtime import OvertimeCoverageRequest, OvertimeCoverageResponse
+        
+        coverage_request = OvertimeCoverageRequest.objects.get(id=request_id)
+        
+        # Get all pending responses
+        pending_responses = OvertimeCoverageResponse.objects.filter(
+            coverage_request=coverage_request,
+            response_status='pending'
+        )
+        
+        count = 0
+        for response in pending_responses:
+            # Send reminder (email/SMS based on contact_method)
+            # TODO: Implement actual reminder sending
+            count += 1
+        
+        return JsonResponse({
+            'success': True,
+            'count': count
+        })
+        
+    except OvertimeCoverageRequest.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Coverage request not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+

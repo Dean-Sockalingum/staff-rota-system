@@ -64,6 +64,8 @@ from scheduling.views_overtime_management import (
     overtime_coverage_request,
     overtime_coverage_detail,
     api_overtime_rankings,
+    api_overtime_response_record,
+    api_overtime_coverage_remind,
 )
 
 urlpatterns = [
@@ -207,6 +209,8 @@ urlpatterns = [
     path('overtime/coverage/request/<int:shift_id>/', overtime_coverage_request, name='overtime_coverage_request'),
     path('overtime/coverage/<int:request_id>/', overtime_coverage_detail, name='overtime_coverage_detail'),
     path('api/overtime/rankings/', api_overtime_rankings, name='api_overtime_rankings'),
+    path('api/overtime/response/<int:response_id>/', api_overtime_response_record, name='api_overtime_response_record'),
+    path('api/overtime/coverage/<int:request_id>/remind/', api_overtime_coverage_remind, name='api_overtime_coverage_remind'),
     
     # Task 6: Real-Time Compliance Monitor - Phase 2 API Endpoints
     path('api/compliance/dashboard/', compliance_dashboard_api, name='compliance_dashboard_api'),
