@@ -1,7 +1,10 @@
 from django.urls import path
 from . import views
-from scheduling.views.ai_assistant_api import (
-    ai_assistant_api, proactive_suggestions_api, leave_usage_targets, 
+from scheduling.views_ai_assistant import (
+    ai_assistant_page, ai_assistant_api, proactive_suggestions_api
+)
+from scheduling.views import (
+    leave_usage_targets, 
     agency_companies_api, daily_additional_staffing_report, weekly_additional_staffing_report,
     careplan_overview, careplan_unit_view, careplan_review_detail, careplan_compliance_report,
     careplan_manager_dashboard, careplan_approve_review,

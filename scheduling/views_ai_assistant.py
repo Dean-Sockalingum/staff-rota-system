@@ -4,6 +4,8 @@ Provides web-based access to the AI help assistant with enhanced reporting capab
 """
 
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
@@ -23,8 +25,21 @@ from staff_records.models import SicknessRecord, StaffProfile
 from scheduling.utils_proactive_suggestions import get_proactive_suggestions, get_high_priority_suggestions
 
 # Import the HelpAssistant from the management command
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'management', 'commands'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'management', 'commands'))
 from help_assistant import HelpAssistant
+
+
+@login_required
+def ai_assistant_page(request):
+    """
+    Main landing page for the AI Assistant interface.
+    Displays the chat interface and quick access to AI features.
+    """
+    context = {
+        'page_title': 'AI Help Assistant',
+        'user': request.user,
+    }
+    return render(request, 'scheduling/ai_assistant_page.html', context)
 
 
 class ReportGenerator:
