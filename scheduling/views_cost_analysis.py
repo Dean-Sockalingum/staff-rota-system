@@ -21,7 +21,7 @@ except ImportError:
     PDF_AVAILABLE = False
 
 from scheduling.models import Shift, Unit
-from overtime_preference.models import OvertimeCoverageRequest
+from scheduling.models_overtime import OvertimeCoverageRequest
 
 
 def rota_cost_analysis(request):
@@ -42,8 +42,9 @@ def rota_cost_analysis(request):
     else:
         start_date = end_date - timedelta(days=30)
     
-    # Get unit filter
-    unit_id = request.GET.get('unit')
+    # Get care home filter
+    from scheduling.models_multi_home import CareHome
+    care_home_id = request.GET.get('care_home')
     
     # Get shifts in date range
     shifts = Shift.objects.filter(
@@ -51,8 +52,8 @@ def rota_cost_analysis(request):
         date__lte=end_date
     )
     
-    if unit_id:
-        shifts = shifts.filter(unit_id=unit_id)
+    if care_home_id:
+        shifts = shifts.filter(unit__care_home__name=care_home_id)
     
     # Calculate cost metrics
     total_shifts = shifts.count()
@@ -149,8 +150,13 @@ def rota_cost_analysis(request):
             home_costs.append({
                 'name': unit.name,
                 'shifts': unit_shifts.count(),
-                'cost': unit_cost
+                'cost': float(unit_cost),
+                'cost_per_shift': float(unit_cost / unit_shifts.count()) if unit_shifts.count() > 0 else 0
             })
+    
+    # Calculate percentage for each home
+    for home in home_costs:
+        home['percentage'] = (home['cost'] / float(actual_cost) * 100) if actual_cost > 0 else 0
     
     # Sort by cost descending
     home_costs.sort(key=lambda x: x['cost'], reverse=True)
@@ -161,8 +167,8 @@ def rota_cost_analysis(request):
         shift_date__lte=end_date
     )
     
-    if unit_id:
-        ot_requests = ot_requests.filter(unit_id=unit_id)
+    if care_home_id:
+        ot_requests = ot_requests.filter(unit__care_home__name=care_home_id)
     
     ot_requests_total = ot_requests.count()
     ot_filled = ot_requests.filter(status='FILLED').count()
@@ -175,8 +181,8 @@ def rota_cost_analysis(request):
     context = {
         'start_date': start_date,
         'end_date': end_date,
-        'selected_unit': unit_id,
-        'units': Unit.objects.all(),
+        'selected_care_home': care_home_id,
+        'care_homes': CareHome.objects.filter(is_active=True).order_by('name'),
         'total_shifts': total_shifts,
         'total_staff_cost': total_staff_cost,
         'agency_cost': agency_cost,

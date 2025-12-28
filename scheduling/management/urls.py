@@ -56,6 +56,11 @@ from scheduling.views_optimization import (
     apply_optimization,
     optimization_comparison
 )
+from scheduling.views_overtime_management import (
+    overtime_preferences_list,
+    overtime_preference_form,
+    overtime_preference_delete
+)
 
 urlpatterns = [
     # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)
@@ -186,6 +191,12 @@ urlpatterns = [
     path('staffing-alerts/dashboard/', staffing_my_alerts, name='staffing_alerts_dashboard'),
     path('staffing-alerts/create/', staffing_create_alert, name='staffing_create_alert'),
     path('staffing-alerts/respond/<str:token>/<str:action>/', staffing_alert_respond, name='staffing_alert_respond'),
+    
+    # Overtime Preferences Management
+    path('overtime/preferences/', overtime_preferences_list, name='overtime_preferences_list'),
+    path('overtime/preferences/add/', overtime_preference_form, name='overtime_preference_add'),
+    path('overtime/preferences/edit/<int:preference_id>/', overtime_preference_form, name='overtime_preference_edit'),
+    path('overtime/preferences/delete/<int:preference_id>/', overtime_preference_delete, name='overtime_preference_delete'),
     
     # Task 6: Real-Time Compliance Monitor - Phase 2 API Endpoints
     path('api/compliance/dashboard/', compliance_dashboard_api, name='compliance_dashboard_api'),

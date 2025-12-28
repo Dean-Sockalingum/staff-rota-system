@@ -1123,20 +1123,27 @@ def reports_dashboard(request):
         start_date__lte=today
     ).aggregate(total_days=models.Sum('days_requested'))['total_days'] or 0
     
+    # Get all units for filters
+    from .models_multi_home import CareHome
+    units = Unit.objects.filter(is_active=True).select_related('care_home').order_by('care_home__name', 'name')
+    care_homes = CareHome.objects.filter(is_active=True).order_by('name')
+    
     context = {
         'available_reports': [
             {'name': 'Overtime & Agency Usage', 'description': 'Comprehensive OT and agency breakdown by home, role, hours, and costs', 'url': 'ot_agency_report', 'icon': 'fa-chart-line'},
             {'name': 'Staff Vacancies', 'description': 'Current and upcoming staff vacancies by care home with leaving reasons', 'url': 'staff_vacancies_report', 'icon': 'fa-user-times'},
             {'name': 'Leave Usage Targets', 'description': '40-week strategy dashboard showing staff progress against leave targets', 'url': 'leave_usage_targets', 'icon': 'fa-bullseye'},
+            {'name': 'Rota Cost Analysis', 'description': 'Financial report on wage costs by care home with trend charts and export', 'url': 'rota_cost_analysis', 'icon': 'fa-pound-sign'},
             {'name': 'Staff Sickness Report', 'description': 'Shows sickness rates and trends'},
             {'name': 'Annual Leave Report', 'description': 'Summary of leave allowances, taken, and remaining'},
-            {'name': 'Rota Cost Analysis', 'description': 'Financial report on wage costs'},
             {'name': 'Staff Reallocation Report', 'description': 'Fairness report showing which staff are moved most often'},
         ],
         'total_staff': total_staff,
         'on_duty_today': on_duty_today,
         'pending_requests': pending_requests,
         'month_leave_days': month_leave_days,
+        'units': units,
+        'care_homes': care_homes,
     }
     
     return render(request, 'scheduling/reports_dashboard.html', context)

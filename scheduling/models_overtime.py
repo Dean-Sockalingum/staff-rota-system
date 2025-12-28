@@ -20,7 +20,7 @@ class StaffOvertimePreference(models.Model):
     """
     
     staff = models.OneToOneField(
-        'scheduling.Staff',
+        'scheduling.User',
         on_delete=models.CASCADE,
         related_name='overtime_preference'
     )
@@ -216,7 +216,7 @@ class OvertimeCoverageRequest(models.Model):
     
     # Who was contacted
     staff_contacted = models.ManyToManyField(
-        'scheduling.Staff',
+        'scheduling.User',
         through='OvertimeCoverageResponse',
         related_name='overtime_requests_received'
     )
@@ -234,7 +234,7 @@ class OvertimeCoverageRequest(models.Model):
     )
     
     filled_by = models.ForeignKey(
-        'scheduling.Staff',
+        'scheduling.User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -290,7 +290,7 @@ class OvertimeCoverageResponse(models.Model):
     )
     
     staff = models.ForeignKey(
-        'scheduling.Staff',
+        'scheduling.User',
         on_delete=models.CASCADE,
         related_name='overtime_responses'
     )

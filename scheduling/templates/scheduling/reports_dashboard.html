@@ -114,14 +114,12 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="unit_filter" class="form-label">Unit</label>
-                            <select class="form-select" id="unit_filter" name="unit">
-                                <option value="">All Units</option>
-                                <option value="DEMENTIA">Dementia Unit</option>
-                                <option value="RESIDENTIAL">Residential Unit</option>
-                                <option value="NURSING">Nursing Unit</option>
-                                <option value="GENERAL">General Care</option>
-                                <option value="ADMIN">Administration</option>
+                            <label for="care_home_filter" class="form-label">Care Home</label>
+                            <select class="form-select" id="care_home_filter" name="care_home">
+                                <option value="">All Homes</option>
+                                {% for home in care_homes %}
+                                    <option value="{{ home.name }}">{{ home.get_name_display }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'scheduling/base.html' %}
 {% load static %}
 
 {% block title %}Rota Cost Analysis{% endblock %}
@@ -263,18 +263,18 @@
             <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
         </div>
         <div class="filter-group">
-            <label for="unit">Care Home</label>
-            <select id="unit" name="unit">
+            <label for="care_home">Care Home</label>
+            <select id="care_home" name="care_home">
                 <option value="">All Homes</option>
-                {% for unit in units %}
-                <option value="{{ unit.id }}" {% if selected_unit == unit.id|stringformat:"s" %}selected{% endif %}>
-                    {{ unit.name }}
+                {% for home in care_homes %}
+                <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                    {{ home.get_name_display }}
                 </option>
                 {% endfor %}
             </select>
         </div>
         <button type="submit" class="btn-filter">Apply Filters</button>
-    </form>
+    </form>>
     
     <!-- Key Metrics -->
     <div class="metrics-grid">
@@ -406,8 +406,8 @@
                     <td><strong>{{ home.name }}</strong></td>
                     <td>{{ home.shifts }}</td>
                     <td>£{{ home.cost|floatformat:0 }}</td>
-                    <td>£{{ home.cost|floatformat:0|divisibleby:home.shifts|floatformat:2 }}</td>
-                    <td>{{ home.cost|floatformat:0|divisibleby:total_staff_cost|multiply:100|floatformat:1 }}%</td>
+                    <td>£{{ home.cost_per_shift|floatformat:2 }}</td>
+                    <td>{{ home.percentage|floatformat:1 }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>
