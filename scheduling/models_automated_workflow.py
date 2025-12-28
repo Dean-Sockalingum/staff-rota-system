@@ -1353,3 +1353,162 @@ class PostShiftAdministration(models.Model):
         # TODO: Implement payroll integration
         self.payroll_updated = True
         self.save(update_fields=['payroll_updated'])
+
+
+# ============================================================================
+# ENHANCED AGENCY COORDINATION - TASK 2
+# ============================================================================
+
+class AgencyBlastBatch(models.Model):
+    """
+    Multi-agency blast request with response tracking (Task 2)
+    Sends simultaneous requests to multiple agencies
+    """
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Responses'),
+        ('PARTIAL', 'Partial Responses Received'),
+        ('BOOKED', 'Booked with Agency'),
+        ('TIMEOUT', 'Deadline Expired'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    
+    agency_request = models.ForeignKey(
+        AgencyRequest,
+        on_delete=models.CASCADE,
+        related_name='blast_batches'
+    )
+    
+    response_deadline = models.DateTimeField(
+        help_text="Deadline for agency responses (default 30 min)"
+    )
+    
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default='PENDING'
+    )
+    
+    budget_limit = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        help_text="Maximum acceptable rate for auto-booking"
+    )
+    
+    # Booking details (when filled)
+    booked_agency = models.ForeignKey(
+        'AgencyCompany',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='booked_blasts'
+    )
+    
+    final_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Final agreed rate"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Agency Blast Batch'
+        verbose_name_plural = 'Agency Blast Batches'
+        indexes = [
+            models.Index(fields=['status', 'response_deadline']),
+        ]
+    
+    def __str__(self):
+        return f"Agency Blast: {self.agency_request.shift} - {self.status}"
+    
+    def get_response_summary(self):
+        """Get summary of all agency responses"""
+        
+        responses = self.agency_responses.all()
+        
+        return {
+            'total': responses.count(),
+            'pending': responses.filter(status='SENT').count(),
+            'accepted': responses.filter(status='ACCEPTED').count(),
+            'quoted': responses.filter(status='QUOTED').count(),
+            'declined': responses.filter(status='DECLINED').count(),
+            'booked': responses.filter(status='BOOKED').count(),
+        }
+
+
+class AgencyResponse(models.Model):
+    """
+    Individual agency response to blast request
+    """
+    
+    STATUS_CHOICES = [
+        ('SENT', 'Email Sent'),
+        ('EMAIL_FAILED', 'Email Delivery Failed'),
+        ('OPENED', 'Email Opened'),
+        ('ACCEPTED', 'Accepted at Budget Rate'),
+        ('QUOTED', 'Custom Quote Provided'),
+        ('DECLINED', 'Declined'),
+        ('BOOKED', 'Booking Confirmed'),
+        ('CANCELLED', 'Cancelled - Filled by Another'),
+    ]
+    
+    blast_batch = models.ForeignKey(
+        AgencyBlastBatch,
+        on_delete=models.CASCADE,
+        related_name='agency_responses'
+    )
+    
+    agency = models.ForeignKey(
+        'AgencyCompany',
+        on_delete=models.CASCADE,
+        related_name='agency_responses'
+    )
+    
+    rank = models.IntegerField(
+        help_text="Priority rank (1=highest)"
+    )
+    
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default='SENT'
+    )
+    
+    quoted_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Rate quoted by agency (if provided)"
+    )
+    
+    sent_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    
+    response_time_minutes = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Minutes between sent and response"
+    )
+    
+    class Meta:
+        ordering = ['rank']
+        verbose_name = 'Agency Response'
+        verbose_name_plural = 'Agency Responses'
+        unique_together = [['blast_batch', 'agency']]
+    
+    def __str__(self):
+        return f"{self.agency.name} - Rank {self.rank} - {self.status}"
+    
+    def save(self, *args, **kwargs):
+        """Calculate response time on save"""
+        
+        if self.responded_at and not self.response_time_minutes:
+            delta = self.responded_at - self.sent_at
+            self.response_time_minutes = int(delta.total_seconds() / 60)
+        
+        super().save(*args, **kwargs)

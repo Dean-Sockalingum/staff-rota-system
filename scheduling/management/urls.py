@@ -80,6 +80,15 @@ from scheduling.views_ot_matching_api import (
     get_batch_status,
     respond_to_offer,
 )
+from scheduling.views_agency_coordination_api import (
+    send_agency_blast,
+    get_blast_status,
+    agency_response_webhook,
+    manual_book_agency,
+    list_active_blasts,
+)
+    respond_to_offer,
+)
 
 urlpatterns = [
     # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)
@@ -230,6 +239,13 @@ urlpatterns = [
     path('api/ot-matching/send-offers/', send_ot_offers, name='send_ot_offers'),
     path('api/ot-matching/batch/<int:batch_id>/status/', get_batch_status, name='get_batch_status'),
     path('api/ot-matching/offer/<int:offer_id>/respond/', respond_to_offer, name='respond_to_offer'),
+    
+    # Task 2: Enhanced Agency Coordination (NEW)
+    path('api/agency-coordination/send-blast/', send_agency_blast, name='send_agency_blast'),
+    path('api/agency-coordination/blast/<int:blast_batch_id>/status/', get_blast_status, name='get_agency_blast_status'),
+    path('api/agency-coordination/response/<int:response_id>/<str:action>/', agency_response_webhook, name='agency_response_webhook'),
+    path('api/agency-coordination/response/<int:response_id>/manual-book/', manual_book_agency, name='manual_book_agency'),
+    path('api/agency-coordination/active-blasts/', list_active_blasts, name='list_active_blasts'),
     
     # AI Dashboards - Quick Win Features
     path('ai/suggestions/', proactive_suggestions_dashboard, name='proactive_suggestions_dashboard'),
