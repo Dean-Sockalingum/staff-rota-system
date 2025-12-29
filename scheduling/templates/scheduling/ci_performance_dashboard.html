@@ -77,6 +77,7 @@
                             <tr>
                                 <th>Rank</th>
                                 <th>Care Home</th>
+                                <th>CS Number</th>
                                 <th>CI Rating</th>
                                 <th>Care & Support</th>
                                 <th>Environment</th>
@@ -94,6 +95,13 @@
                                         <strong>{{ selected_care_home.name }}</strong>
                                     {% else %}
                                         {{ peer.home_name }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if peer.cs_number %}
+                                        <small class="text-muted">{{ peer.cs_number }}</small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
                                     {% endif %}
                                 </td>
                                 <td>

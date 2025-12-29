@@ -1209,6 +1209,8 @@ def _get_latest_ci_scores_for_home(care_home):
             'theme3_staffing': theme3_grade,
             'theme4_management': theme4_grade,
             'inspection_date': latest_report.inspection_date,
+            'cs_number': latest_report.cs_number,
+            'report_type': latest_report.get_report_type_display(),
             'overall_rating': latest_report.overall_rating
         }
     except Exception as e:
@@ -1225,6 +1227,9 @@ def _generate_peer_benchmarking(care_home, current_score):
     peer_data = []
     for home in all_homes:
         inspection_date = None
+        cs_number = None
+        report_type = None
+        
         if home.id == care_home.id:
             # For current home, try to get actual CI scores first, fallback to predicted
             actual_scores = _get_latest_ci_scores_for_home(home)
@@ -1235,6 +1240,8 @@ def _generate_peer_benchmarking(care_home, current_score):
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
                 inspection_date = actual_scores['inspection_date']
+                cs_number = actual_scores['cs_number']
+                report_type = actual_scores['report_type']
             else:
                 # Convert predicted score to rating (1-6)
                 if current_score >= 90:
@@ -1264,6 +1271,8 @@ def _generate_peer_benchmarking(care_home, current_score):
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
                 inspection_date = actual_scores['inspection_date']
+                cs_number = actual_scores['cs_number']
+                report_type = actual_scores['report_type']
             else:
                 # If no inspection data, calculate predicted score and convert to rating
                 try:
@@ -1302,7 +1311,9 @@ def _generate_peer_benchmarking(care_home, current_score):
             'theme2_environment': theme2,
             'theme3_staffing': theme3,
             'theme4_management': theme4,
-            'inspection_date': inspection_date
+            'inspection_date': inspection_date,
+            'cs_number': cs_number,
+            'report_type': report_type
         })
     
     # Sort by CI rating descending
