@@ -173,7 +173,16 @@ urlpatterns = [
     path('calendar/add-shift/<int:shift_id>/', views.add_shift_to_calendar, name='add_shift_to_calendar'),
     path('calendar/google/<int:shift_id>/', views.google_calendar_redirect, name='google_calendar_redirect'),
     path('calendar/outlook/<int:shift_id>/', views.outlook_calendar_redirect, name='outlook_calendar_redirect'),
-    path('sms/opt-in-report/', views.sms_opt_in_report, name='sms_opt_in_report'),
+    
+    # Bulk Operations (Phase 2 - Task 24)
+    path('bulk/', views.bulk_operations_menu, name='bulk_operations_menu'),
+    path('bulk/assign/', views.bulk_assign_shifts, name='bulk_assign_shifts'),
+    path('bulk/delete/', views.bulk_delete_shifts, name='bulk_delete_shifts'),
+    path('bulk/copy-week/', views.bulk_copy_week, name='bulk_copy_week'),
+    path('bulk/swap/', views.bulk_swap_staff, name='bulk_swap_staff'),
+    path('bulk/undo/', views.undo_last_bulk_operation, name='undo_last_bulk_operation'),
+    path('bulk/ajax/units/', views.get_units_for_home_ajax, name='get_units_for_home_ajax'),
+    path('bulk/ajax/staff/', views.get_staff_for_home_ajax, name='get_staff_for_home_ajax'),
     
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),

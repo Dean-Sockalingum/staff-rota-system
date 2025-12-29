@@ -1,0 +1,121 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Bulk Delete Shifts - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-trash-alt text-danger"></i> Bulk Delete Shifts</h2>
+                <a href="{% url 'bulk_operations_menu' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> 
+                This operation cannot be undone permanently. Use with caution!
+            </div>
+
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Delete Shifts by Criteria</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="bulkDeleteForm">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="care_home"><strong>Care Home:</strong> <span class="text-danger">*</span></label>
+                            <select class="form-control" id="care_home" name="care_home" required>
+                                <option value="">Select Care Home</option>
+                                {% for home in care_homes %}
+                                <option value="{{ home.id }}">{{ home.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="unit"><strong>Unit (Optional):</strong></label>
+                            <select class="form-control" id="unit" name="unit">
+                                <option value="">All Units</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="start_date"><strong>Start Date:</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="end_date"><strong>End Date:</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><strong>Staff (Optional):</strong></label>
+                            <div id="staff_selection" class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">
+                                <p class="text-muted">Leave unselected to delete for all staff</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-danger btn-lg btn-block">
+                                <i class="fas fa-trash-alt"></i> Delete Shifts
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('care_home').addEventListener('change', function() {
+    const careHomeId = this.value;
+    if (careHomeId) {
+        fetch(`/scheduling/bulk/ajax/units/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const unitSelect = document.getElementById('unit');
+                unitSelect.innerHTML = '<option value="">All Units</option>';
+                data.units.forEach(unit => {
+                    unitSelect.innerHTML += `<option value="${unit.id}">${unit.name}</option>`;
+                });
+            });
+        
+        fetch(`/scheduling/bulk/ajax/staff/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const staffDiv = document.getElementById('staff_selection');
+                if (data.staff.length === 0) {
+                    staffDiv.innerHTML = '<p class="text-muted">No staff found</p>';
+                    return;
+                }
+                staffDiv.innerHTML = data.staff.map(staff => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="staff" value="${staff.id}" id="staff_${staff.id}">
+                        <label class="form-check-label" for="staff_${staff.id}">${staff.name}</label>
+                    </div>
+                `).join('');
+            });
+    }
+});
+
+document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+    if (!confirm('⚠️ WARNING: This will permanently delete the selected shifts!\n\nAre you absolutely sure?')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -11418,3 +11418,454 @@ def my_calendar_feed_info(request):
     }
     
     return render(request, 'scheduling/calendar_feed_info.html', context)
+
+
+# ============================================
+# TASK 24: BULK OPERATIONS
+# ============================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def bulk_operations_menu(request):
+    """
+    Main menu for bulk operations
+    """
+    context = {
+        'care_homes': CareHome.objects.all(),
+    }
+    return render(request, 'scheduling/bulk_operations_menu.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def bulk_assign_shifts(request):
+    """
+    Bulk assign shifts to multiple staff across date range
+    """
+    from scheduling.bulk_operations import (
+        bulk_assign_shifts as do_bulk_assign,
+        validate_bulk_operation,
+        get_bulk_operation_preview,
+        BulkOperationHistory,
+        BulkOperationError
+    )
+    
+    if request.method == 'POST':
+        # Get form data
+        care_home_id = request.POST.get('care_home')
+        unit_id = request.POST.get('unit')
+        shift_type_id = request.POST.get('shift_type')
+        staff_ids = request.POST.getlist('staff')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        # Parse dates
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date format")
+            return redirect('bulk_assign_shifts')
+        
+        # Get objects
+        try:
+            care_home = CareHome.objects.get(id=care_home_id)
+            unit = Unit.objects.get(id=unit_id)
+            shift_type = ShiftType.objects.get(id=shift_type_id)
+            staff_list = User.objects.filter(id__in=staff_ids)
+        except (CareHome.DoesNotExist, Unit.DoesNotExist, ShiftType.DoesNotExist):
+            messages.error(request, "Invalid selection")
+            return redirect('bulk_assign_shifts')
+        
+        # Validate
+        try:
+            validation = validate_bulk_operation(
+                'assign',
+                staff_list=staff_list,
+                date_range=(start_date, end_date)
+            )
+            
+            # Show warnings
+            for warning in validation.get('warnings', []):
+                messages.warning(request, warning)
+        
+        except ValidationError as e:
+            messages.error(request, str(e))
+            return redirect('bulk_assign_shifts')
+        
+        # Execute bulk assign
+        try:
+            result = do_bulk_assign(
+                staff_list=staff_list,
+                date_range=(start_date, end_date),
+                shift_type=shift_type,
+                unit=unit,
+                care_home=care_home,
+                created_by=request.user
+            )
+            
+            # Save to history for undo
+            history = BulkOperationHistory(request.session)
+            history.add_operation(
+                operation_type='assign',
+                affected_shifts=result['shift_ids'],
+                rollback_data=result['shift_ids']
+            )
+            
+            # Success message
+            messages.success(
+                request,
+                f"Created {result['created']} shifts. "
+                f"Skipped {result['skipped']} duplicates."
+            )
+            
+            # Show errors if any
+            for error in result['errors']:
+                messages.warning(request, error)
+        
+        except BulkOperationError as e:
+            messages.error(request, f"Bulk assign failed: {str(e)}")
+        
+        return redirect('bulk_operations_menu')
+    
+    # GET request - show form
+    context = {
+        'care_homes': CareHome.objects.all(),
+        'shift_types': ShiftType.objects.all(),
+    }
+    return render(request, 'scheduling/bulk_assign_form.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def bulk_delete_shifts(request):
+    """
+    Bulk delete shifts by criteria
+    """
+    from scheduling.bulk_operations import (
+        bulk_delete_shifts as do_bulk_delete,
+        validate_bulk_operation,
+        BulkOperationHistory,
+        BulkOperationError
+    )
+    
+    if request.method == 'POST':
+        # Get criteria
+        care_home_id = request.POST.get('care_home')
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        staff_ids = request.POST.getlist('staff')
+        
+        # Parse dates
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date format")
+            return redirect('bulk_delete_shifts')
+        
+        # Build queryset
+        shifts = Shift.objects.filter(
+            care_home_id=care_home_id,
+            date__range=[start_date, end_date]
+        )
+        
+        if unit_id:
+            shifts = shifts.filter(unit_id=unit_id)
+        
+        if staff_ids:
+            shifts = shifts.filter(staff_id__in=staff_ids)
+        
+        # Validate
+        try:
+            validation = validate_bulk_operation(
+                'delete',
+                shift_queryset=shifts
+            )
+            
+            for warning in validation.get('warnings', []):
+                messages.warning(request, warning)
+        
+        except ValidationError as e:
+            messages.error(request, str(e))
+            return redirect('bulk_delete_shifts')
+        
+        # Execute delete
+        try:
+            result = do_bulk_delete(
+                shift_queryset=shifts,
+                deleted_by=request.user
+            )
+            
+            # Save to history
+            history = BulkOperationHistory(request.session)
+            history.add_operation(
+                operation_type='delete',
+                affected_shifts=[],
+                rollback_data=result['rollback_data']
+            )
+            
+            messages.success(request, f"Deleted {result['deleted']} shifts")
+        
+        except BulkOperationError as e:
+            messages.error(request, f"Bulk delete failed: {str(e)}")
+        
+        return redirect('bulk_operations_menu')
+    
+    # GET request
+    context = {
+        'care_homes': CareHome.objects.all(),
+    }
+    return render(request, 'scheduling/bulk_delete_form.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def bulk_copy_week(request):
+    """
+    Copy entire week's schedule to another week
+    """
+    from scheduling.bulk_operations import (
+        bulk_copy_week as do_bulk_copy,
+        validate_bulk_operation,
+        BulkOperationHistory,
+        BulkOperationError
+    )
+    
+    if request.method == 'POST':
+        care_home_id = request.POST.get('care_home')
+        source_week = request.POST.get('source_week')
+        target_week = request.POST.get('target_week')
+        unit_ids = request.POST.getlist('units')
+        staff_ids = request.POST.getlist('staff')
+        
+        # Parse weeks (expecting YYYY-MM-DD for Monday)
+        try:
+            source_week_start = datetime.strptime(source_week, '%Y-%m-%d').date()
+            target_week_start = datetime.strptime(target_week, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid week format")
+            return redirect('bulk_copy_week')
+        
+        # Get objects
+        try:
+            care_home = CareHome.objects.get(id=care_home_id)
+            units = Unit.objects.filter(id__in=unit_ids) if unit_ids else None
+            staff_list = User.objects.filter(id__in=staff_ids) if staff_ids else None
+        except CareHome.DoesNotExist:
+            messages.error(request, "Invalid care home")
+            return redirect('bulk_copy_week')
+        
+        # Validate
+        try:
+            validation = validate_bulk_operation(
+                'copy',
+                source_week_start=source_week_start,
+                target_week_start=target_week_start
+            )
+        
+        except ValidationError as e:
+            messages.error(request, str(e))
+            return redirect('bulk_copy_week')
+        
+        # Execute copy
+        try:
+            result = do_bulk_copy(
+                source_week_start=source_week_start,
+                target_week_start=target_week_start,
+                care_home=care_home,
+                units=units,
+                staff_list=staff_list,
+                created_by=request.user
+            )
+            
+            # Save to history
+            history = BulkOperationHistory(request.session)
+            history.add_operation(
+                operation_type='copy',
+                affected_shifts=result['shift_ids'],
+                rollback_data=result['shift_ids']
+            )
+            
+            messages.success(
+                request,
+                f"Copied {result['copied']} shifts. "
+                f"Skipped {result['skipped']} duplicates."
+            )
+        
+        except BulkOperationError as e:
+            messages.error(request, f"Bulk copy failed: {str(e)}")
+        
+        return redirect('bulk_operations_menu')
+    
+    # GET request
+    context = {
+        'care_homes': CareHome.objects.all(),
+    }
+    return render(request, 'scheduling/bulk_copy_form.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def bulk_swap_staff(request):
+    """
+    Swap shifts between two staff members
+    """
+    from scheduling.bulk_operations import (
+        bulk_swap_staff as do_bulk_swap,
+        validate_bulk_operation,
+        BulkOperationHistory,
+        BulkOperationError
+    )
+    
+    if request.method == 'POST':
+        care_home_id = request.POST.get('care_home')
+        staff_a_id = request.POST.get('staff_a')
+        staff_b_id = request.POST.get('staff_b')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        unit_ids = request.POST.getlist('units')
+        
+        # Parse dates
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid date format")
+            return redirect('bulk_swap_staff')
+        
+        # Get objects
+        try:
+            care_home = CareHome.objects.get(id=care_home_id)
+            staff_a = User.objects.get(id=staff_a_id)
+            staff_b = User.objects.get(id=staff_b_id)
+            units = Unit.objects.filter(id__in=unit_ids) if unit_ids else None
+        except (CareHome.DoesNotExist, User.DoesNotExist):
+            messages.error(request, "Invalid selection")
+            return redirect('bulk_swap_staff')
+        
+        # Validate
+        try:
+            validation = validate_bulk_operation(
+                'swap',
+                staff_a=staff_a,
+                staff_b=staff_b
+            )
+        
+        except ValidationError as e:
+            messages.error(request, str(e))
+            return redirect('bulk_swap_staff')
+        
+        # Execute swap
+        try:
+            result = do_bulk_swap(
+                staff_a=staff_a,
+                staff_b=staff_b,
+                date_range=(start_date, end_date),
+                care_home=care_home,
+                units=units
+            )
+            
+            messages.success(
+                request,
+                f"Swapped {result['swapped']} shifts between "
+                f"{staff_a.get_full_name()} and {staff_b.get_full_name()}"
+            )
+        
+        except BulkOperationError as e:
+            messages.error(request, f"Bulk swap failed: {str(e)}")
+        
+        return redirect('bulk_operations_menu')
+    
+    # GET request
+    context = {
+        'care_homes': CareHome.objects.all(),
+    }
+    return render(request, 'scheduling/bulk_swap_form.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def undo_last_bulk_operation(request):
+    """
+    Undo the last bulk operation
+    """
+    from scheduling.bulk_operations import (
+        undo_bulk_operation,
+        BulkOperationHistory,
+        BulkOperationError
+    )
+    
+    history = BulkOperationHistory(request.session)
+    last_operation = history.get_last_operation()
+    
+    if not last_operation:
+        messages.warning(request, "No operations to undo")
+        return redirect('bulk_operations_menu')
+    
+    try:
+        result = undo_bulk_operation(last_operation)
+        
+        messages.success(
+            request,
+            f"Undone {result['undone']} changes from {last_operation['type']} operation"
+        )
+        
+        # Remove from history after successful undo
+        history_list = request.session.get('bulk_operation_history', [])
+        if history_list:
+            history_list.pop()
+            request.session['bulk_operation_history'] = history_list
+            request.session.modified = True
+    
+    except BulkOperationError as e:
+        messages.error(request, f"Undo failed: {str(e)}")
+    
+    return redirect('bulk_operations_menu')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def get_units_for_home_ajax(request):
+    """
+    AJAX endpoint to get units for a care home
+    """
+    care_home_id = request.GET.get('care_home_id')
+    
+    if not care_home_id:
+        return JsonResponse({'units': []})
+    
+    units = Unit.objects.filter(care_home_id=care_home_id).values('id', 'name')
+    return JsonResponse({'units': list(units)})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def get_staff_for_home_ajax(request):
+    """
+    AJAX endpoint to get staff for a care home
+    """
+    care_home_id = request.GET.get('care_home_id')
+    unit_id = request.GET.get('unit_id')
+    
+    if not care_home_id:
+        return JsonResponse({'staff': []})
+    
+    staff = User.objects.filter(care_home_id=care_home_id, is_active=True)
+    
+    if unit_id:
+        staff = staff.filter(unit_id=unit_id)
+    
+    staff_data = staff.values('id', 'first_name', 'last_name', 'sap').order_by('last_name', 'first_name')
+    
+    # Format names
+    staff_list = [
+        {
+            'id': s['id'],
+            'name': f"{s['last_name']}, {s['first_name']} ({s['sap']})"
+        }
+        for s in staff_data
+    ]
+    
+    return JsonResponse({'staff': staff_list})
