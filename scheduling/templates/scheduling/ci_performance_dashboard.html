@@ -73,8 +73,10 @@
                                 <th>Rank</th>
                                 <th>Care Home</th>
                                 <th>CI Score</th>
+                                <th>Care & Support</th>
+                                <th>Environment</th>
                                 <th>Staffing</th>
-                                <th>Quality</th>
+                                <th>Management</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -88,9 +90,11 @@
                                         {{ peer.home_name }}
                                     {% endif %}
                                 </td>
-                                <td>{{ peer.ci_score }}</td>
-                                <td>{{ peer.staffing_score }}</td>
-                                <td>{{ peer.quality_score }}</td>
+                                <td><strong>{{ peer.ci_score }}</strong></td>
+                                <td>{{ peer.theme1_care_support|default:"-" }}</td>
+                                <td>{{ peer.theme2_environment|default:"-" }}</td>
+                                <td>{{ peer.theme3_staffing|default:"-" }}</td>
+                                <td>{{ peer.theme4_management|default:"-" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
