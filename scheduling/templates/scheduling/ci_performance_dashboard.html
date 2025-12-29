@@ -56,7 +56,7 @@
 
     <!-- Peer Benchmarking -->
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-trophy"></i> Peer Benchmarking</h5>
@@ -72,63 +72,67 @@
                         <i class="fas fa-info-circle"></i> <strong>Note:</strong> Overall CI Rating is the <strong>lowest</strong> theme rating (as per Care Inspectorate methodology)
                     </div>
                     
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Care Home</th>
-                                <th>CS Number</th>
-                                <th>CI Rating</th>
-                                <th>Care & Support</th>
-                                <th>Environment</th>
-                                <th>Staffing</th>
-                                <th>Management</th>
-                                <th>Last Inspection</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for peer in ci_data.peer_benchmarking %}
-                            <tr {% if peer.home_name == 'This Home' %}class="table-primary"{% endif %}>
-                                <td>{{ peer.rank }}</td>
-                                <td>
-                                    {% if peer.home_name == 'This Home' %}
-                                        <strong>{{ selected_care_home.name }}</strong>
-                                    {% else %}
-                                        {{ peer.home_name }}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if peer.cs_number %}
-                                        <small class="text-muted">{{ peer.cs_number }}</small>
-                                    {% else %}
-                                        <small class="text-muted">-</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <strong class="badge {% if peer.ci_rating == 6 %}bg-success{% elif peer.ci_rating == 5 %}bg-info{% elif peer.ci_rating == 4 %}bg-primary{% elif peer.ci_rating == 3 %}bg-warning{% else %}bg-danger{% endif %}">
-                                        {{ peer.ci_rating }}
-                                    </strong>
-                                </td>
-                                <td>{{ peer.theme1_care_support|default:"-" }}</td>
-                                <td>{{ peer.theme2_environment|default:"-" }}</td>
-                                <td>{{ peer.theme3_staffing|default:"-" }}</td>
-                                <td>{{ peer.theme4_management|default:"-" }}</td>
-                                <td>
-                                    {% if peer.inspection_date %}
-                                        <small>{{ peer.inspection_date|date:"d M Y" }}</small>
-                                    {% else %}
-                                        <small class="text-muted">Predicted</small>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">Rank</th>
+                                    <th style="width: 18%;">Care Home</th>
+                                    <th style="width: 12%;">CS Number</th>
+                                    <th style="width: 8%;">CI Rating</th>
+                                    <th style="width: 10%;">Care & Support</th>
+                                    <th style="width: 10%;">Environment</th>
+                                    <th style="width: 10%;">Staffing</th>
+                                    <th style="width: 10%;">Management</th>
+                                    <th style="width: 12%;">Last Inspection</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for peer in ci_data.peer_benchmarking %}
+                                <tr {% if peer.home_name == 'This Home' %}class="table-primary"{% endif %}>
+                                    <td>{{ peer.rank }}</td>
+                                    <td>
+                                        {% if peer.home_name == 'This Home' %}
+                                            <strong>{{ selected_care_home.name }}</strong>
+                                        {% else %}
+                                            {{ peer.home_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if peer.cs_number %}
+                                            <small class="text-muted">{{ peer.cs_number }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="badge {% if peer.ci_rating == 6 %}bg-success{% elif peer.ci_rating == 5 %}bg-info{% elif peer.ci_rating == 4 %}bg-primary{% elif peer.ci_rating == 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ peer.ci_rating }}
+                                        </strong>
+                                    </td>
+                                    <td class="text-center">{{ peer.theme1_care_support|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme2_environment|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme3_staffing|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme4_management|default:"-" }}</td>
+                                    <td>
+                                        {% if peer.inspection_date %}
+                                            <small>{{ peer.inspection_date|date:"d M Y" }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Predicted</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- 6-Month Trend -->
+    <!-- 6-Month Trend -->
+    <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
@@ -158,6 +162,43 @@
                     <div class="trend-indicator">
                         <i class="fas fa-arrow-up text-success"></i> Improving trend
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Key Contributing Factors -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list-check"></i> Key Contributing Factors</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Factor</th>
+                                <th>Impact Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for factor, score in ci_data.key_factors %}
+                            <tr>
+                                <td>{{ factor|title|replace:"_":" " }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                             style="width: {{ score }}%;" 
+                                             aria-valuenow="{{ score }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ score|floatformat:0 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -351,6 +392,59 @@
 }
 .rec-content p {
     margin: 0 0 5px 0;
+}
+
+/* Table responsive fixes */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-sm th,
+.table-sm td {
+    padding: 0.5rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.02);
+}
+
+/* Ensure cards don't overlap */
+.card {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08);
+}
+
+.card-body {
+    overflow-x: auto;
+}
+
+/* Better spacing for peer benchmarking table */
+.peer-ranking {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1400px) {
+    .table-sm th,
+    .table-sm td {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .table-sm th,
+    .table-sm td {
+        font-size: 0.75rem;
+        padding: 0.3rem;
+    }
+    
+    .table-sm th:nth-child(3),
+    .table-sm td:nth-child(3) {
+        min-width: 100px;
+    }
 }
 </style>
 
