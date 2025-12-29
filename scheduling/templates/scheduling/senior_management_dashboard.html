@@ -448,6 +448,29 @@
         border: 1px solid #1f2937;
         box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
+    
+    /* Executive Dashboard Links Hover Effects */
+    a.summary-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    }
+    
+    a.summary-card h3 {
+        transition: color 0.2s ease;
+    }
+    
+    a.summary-card:hover h3 {
+        color: #667eea;
+    }
+    
+    a.summary-card i {
+        transition: transform 0.3s ease;
+    }
+    
+    a.summary-card:hover i {
+        transform: scale(1.1);
+    }
 </style>
 {% endblock %}
 
@@ -574,6 +597,134 @@
             </div>
         </div>
     </form>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- EXECUTIVE DASHBOARDS QUICK ACCESS -->
+<!-- ============================================= -->
+<div class="collapsible-section">
+    <div class="collapsible-header">
+        <div class="collapsible-title">
+            <h2>📊 Executive Dashboards</h2>
+            <span class="section-badge">Strategic Insights</span>
+        </div>
+        <div class="collapsible-toggle">
+            <div class="header-stats">
+                <span class="header-stat">
+                    <i class="fas fa-chart-line"></i> <span>7 Dashboards</span>
+                </span>
+            </div>
+            <div class="toggle-icon">
+                <i class="fas fa-chevron-up"></i>
+            </div>
+        </div>
+    </div>
+    <div class="collapsible-content">
+        <div class="alert alert-info mb-3" style="background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 0.75rem;">
+            <i class="fas fa-info-circle" style="color: #0284c7;"></i>
+            <strong style="color: #0c4a6e;">Strategic Decision Support Tools:</strong> Advanced analytics and predictive dashboards for executive oversight and planning across all care homes.
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            
+            <!-- Budget Dashboard -->
+            <a href="{% url 'budget_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #10b981; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #10b981;">
+                        <i class="fas fa-pound-sign"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Budget Dashboard</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Multi-home budget tracking, variance analysis, and spending patterns</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Early Warning System -->
+            <a href="{% url 'early_warning_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #f59e0b; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #f59e0b;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Early Warning System</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Predictive staffing shortage alerts and proactive planning tools</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Retention Predictor -->
+            <a href="{% url 'retention_predictor_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #8b5cf6; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #8b5cf6;">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Retention Predictor</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Staff retention analysis and turnover risk predictions</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Auto-Roster Quality -->
+            <a href="{% url 'auto_roster_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #3b82f6; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #3b82f6;">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Auto-Roster Quality</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Roster optimization metrics and scheduling efficiency analysis</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- CI Performance -->
+            <a href="{% url 'ci_performance_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #ec4899; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #ec4899;">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Care Inspectorate Performance</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Regulatory compliance, quality indicators, and peer benchmarking</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Predictive Budget -->
+            <a href="{% url 'predictive_budget_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #06b6d4; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #06b6d4;">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Predictive Budget Forecast</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">ML-powered budget forecasting and scenario planning</div>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Training Compliance -->
+            <a href="{% url 'training_compliance_dashboard' %}" class="summary-card" style="text-decoration: none; transition: all 0.3s; border-left: 4px solid #ef4444; cursor: pointer;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: #ef4444;">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0; color: #111827; font-size: 1rem;">Training Compliance</h3>
+                        <div class="subtext" style="margin: 0; font-size: 0.85rem;">Training matrix, expiry tracking, and compliance management</div>
+                    </div>
+                </div>
+            </a>
+            
+        </div>
+        
+        <div class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.75rem; margin-top: 1rem;">
+            <i class="fas fa-lightbulb" style="color: #d97706;"></i>
+            <strong style="color: #78350f;">Pro Tip:</strong> <span style="color: #78350f;">Click any dashboard above to access advanced analytics and predictive insights for strategic planning.</span>
+        </div>
     </div>
 </div>
 
