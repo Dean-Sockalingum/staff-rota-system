@@ -1140,7 +1140,7 @@ def get_ci_performance_executive_dashboard(care_home):
         },
         'peer_benchmarking': peer_data,
         'trend_6month': trend,
-        'key_factors': list(prediction['factor_scores'].items())[:5],
+        'key_factors': [(name.replace('_', ' ').title(), score) for name, score in list(prediction['factor_scores'].items())[:5]],
         'improvement_areas': _identify_improvement_areas(prediction),
         'recommendations': [{'priority': 'HIGH', 'icon': '📊', 'title': 'Maintain excellence in key metrics', 'action': 'Continue current practices, monitor trends monthly', 'impact': 'Sustain high CI rating'}],
     }
