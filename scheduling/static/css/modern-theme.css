@@ -129,17 +129,32 @@ a:hover {
     padding: var(--spacing-6);  /* 24px - increased from 12px */
     margin-bottom: var(--spacing-10);  /* 40px - increased from 20px */
     transition: all var(--duration-base) var(--ease-in-out);
+    border: 1px solid var(--color-neutral-200);
 }
 
 .widget-card:hover {
-    box-shadow: var(--shadow-hover);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    border-left-color: var(--color-primary-600);
+    border-color: var(--color-neutral-300);
+}
+
+.widget-card:active {
     transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .widget-card .card-header,
 .widget-card h3,
 .widget-card h4 {
     margin-bottom: var(--spacing-4);  /* 16px - better header spacing */
+    transition: color var(--duration-fast) var(--ease-in-out);
+}
+
+.widget-card:hover .card-header,
+.widget-card:hover h3,
+.widget-card:hover h4 {
+    color: var(--color-primary-700);
 }
 
 /* ===== Alert Styles ===== */
@@ -287,10 +302,40 @@ a:hover {
     box-shadow: var(--shadow-base);
     margin-bottom: var(--spacing-6);  /* 24px - consistent card spacing */
     transition: all var(--duration-base) var(--ease-in-out);
+    background: white;
+    overflow: hidden;  /* Clean rounded corners */
 }
 
 .card:hover {
     box-shadow: var(--shadow-hover);
+    transform: translateY(-4px);
+    border-color: var(--color-neutral-300);
+}
+
+/* Interactive cards (clickable) - enhanced hover */
+.card.clickable,
+a.card,
+.card[onclick],
+.card.card-link {
+    cursor: pointer;
+    transition: all var(--duration-base) var(--ease-out);
+}
+
+.card.clickable:hover,
+a.card:hover,
+.card[onclick]:hover,
+.card.card-link:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-6px);
+    border-color: var(--color-primary-300);
+}
+
+.card.clickable:active,
+a.card:active,
+.card[onclick]:active,
+.card.card-link:active {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .card-header {
@@ -299,6 +344,11 @@ a:hover {
     font-weight: 600;
     color: var(--color-neutral-900);
     padding: var(--spacing-4) var(--spacing-6);  /* 16px 24px - increased padding */
+    transition: background var(--duration-fast) var(--ease-in-out);
+}
+
+.card:hover .card-header {
+    background: linear-gradient(135deg, var(--color-neutral-100), var(--color-neutral-200));
 }
 
 .card-body {
@@ -324,6 +374,7 @@ a:hover {
 .table {
     border-radius: var(--radius-md);
     overflow: hidden;
+    box-shadow: var(--shadow-xs);
 }
 
 .table thead th {
@@ -331,15 +382,45 @@ a:hover {
     color: var(--color-neutral-900);
     font-weight: 600;
     border-bottom: 2px solid var(--color-neutral-300);
+    transition: background var(--duration-fast) var(--ease-in-out);
+}
+
+.table thead th:hover {
+    background: var(--color-neutral-200);
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
     background-color: var(--color-neutral-50);
 }
 
+.table-hover tbody tr {
+    transition: all var(--duration-fast) var(--ease-in-out);
+    cursor: pointer;
+}
+
 .table-hover tbody tr:hover {
     background-color: var(--color-primary-50);
-    transition: background-color var(--duration-fast) var(--ease-in-out);
+    transform: scale(1.01);
+    box-shadow: var(--shadow-xs);
+}
+
+/* Table row active state */
+.table tbody tr:active {
+    background-color: var(--color-primary-100);
+}
+
+/* Table cells with links */
+.table td a,
+.table th a {
+    color: var(--color-primary-500);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-in-out);
+}
+
+.table td a:hover,
+.table th a:hover {
+    color: var(--color-primary-700);
+    text-decoration: underline;
 }
 
 /* ===== Calendar Styles ===== */
@@ -595,4 +676,349 @@ hr {
     font-size: var(--font-size-sm);
     text-transform: uppercase;
     letter-spacing: var(--letter-spacing-wide);
+}
+
+/* ===== ENHANCED HOVER & INTERACTIVE EFFECTS ===== */
+
+/* List group items */
+.list-group-item {
+    transition: all var(--duration-fast) var(--ease-in-out);
+    border-left: 3px solid transparent;
+}
+
+.list-group-item:hover {
+    background-color: var(--color-primary-50);
+    border-left-color: var(--color-primary-500);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+.list-group-item:active {
+    background-color: var(--color-primary-100);
+}
+
+.list-group-item-action {
+    cursor: pointer;
+}
+
+.list-group-item-action:focus {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+/* Dropdown menus */
+.dropdown-menu {
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    animation: dropdown-fade-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes dropdown-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    transition: all var(--duration-fast) var(--ease-in-out);
+    border-left: 3px solid transparent;
+}
+
+.dropdown-item:hover {
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-700);
+    border-left-color: var(--color-primary-500);
+    transform: translateX(4px);
+}
+
+.dropdown-item:active {
+    background-color: var(--color-primary-100);
+}
+
+/* Buttons - enhanced states */
+.btn {
+    box-shadow: var(--shadow-xs);
+    transition: all var(--duration-base) var(--ease-in-out);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width var(--duration-slow) var(--ease-out), height var(--duration-slow) var(--ease-out);
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+    box-shadow: var(--shadow-xs);
+    transform: scale(0.98);
+}
+
+.btn:focus {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
+/* Pagination */
+.page-link {
+    transition: all var(--duration-fast) var(--ease-in-out);
+    border: 1px solid var(--color-neutral-300);
+}
+
+.page-link:hover {
+    background-color: var(--color-primary-50);
+    border-color: var(--color-primary-500);
+    color: var(--color-primary-700);
+    transform: scale(1.05);
+    box-shadow: var(--shadow-xs);
+}
+
+.page-item.active .page-link {
+    background-color: var(--color-primary-500);
+    border-color: var(--color-primary-500);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Alerts - subtle hover for dismissible */
+.alert-dismissible {
+    transition: all var(--duration-base) var(--ease-in-out);
+}
+
+.alert-dismissible:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.alert .btn-close {
+    transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.alert .btn-close:hover {
+    transform: rotate(90deg) scale(1.1);
+}
+
+/* Badges - subtle hover */
+.badge {
+    transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+a.badge:hover,
+button.badge:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-xs);
+}
+
+/* Tabs */
+.nav-tabs .nav-link {
+    transition: all var(--duration-fast) var(--ease-in-out);
+    border: 1px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: var(--color-neutral-300);
+    background-color: var(--color-neutral-50);
+    transform: translateY(-2px);
+}
+
+.nav-tabs .nav-link.active {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Accordions */
+.accordion-button {
+    transition: all var(--duration-base) var(--ease-in-out);
+}
+
+.accordion-button:hover {
+    background-color: var(--color-primary-50);
+    box-shadow: var(--shadow-xs);
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Progress bars */
+.progress {
+    box-shadow: var(--shadow-inner);
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width var(--duration-slow) var(--ease-out);
+}
+
+/* Tooltips trigger */
+[data-bs-toggle="tooltip"],
+[title] {
+    cursor: help;
+    transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+[data-bs-toggle="tooltip"]:hover,
+[title]:hover {
+    transform: scale(1.02);
+}
+
+/* Modal animations */
+.modal.fade .modal-dialog {
+    transition: transform var(--duration-base) var(--ease-out);
+    transform: scale(0.9);
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+}
+
+.modal-content {
+    box-shadow: var(--shadow-2xl);
+    border: none;
+}
+
+/* Toast notifications */
+.toast {
+    box-shadow: var(--shadow-lg);
+    transition: all var(--duration-base) var(--ease-in-out);
+}
+
+.toast:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateX(-4px);
+}
+
+/* Popovers */
+.popover {
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-neutral-200);
+}
+
+/* Form controls focus states */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: var(--shadow-focus);
+    border-color: var(--color-primary-500);
+    transform: scale(1.01);
+}
+
+/* Input groups */
+.input-group .form-control:hover,
+.input-group .form-select:hover {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Images - subtle hover */
+img {
+    transition: all var(--duration-base) var(--ease-in-out);
+}
+
+a img:hover,
+.img-hover:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+/* Icon buttons */
+.btn-icon,
+button[class*="icon"] {
+    transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.btn-icon:hover,
+button[class*="icon"]:hover {
+    transform: rotate(15deg) scale(1.1);
+}
+
+/* Stat cards hover */
+.stat-card {
+    transition: all var(--duration-base) var(--ease-in-out);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-4px);
+}
+
+.stat-card:hover .stat-value {
+    color: var(--color-primary-600);
+    transform: scale(1.05);
+}
+
+/* Dashboard widgets - interactive */
+.dashboard-widget {
+    transition: all var(--duration-base) var(--ease-in-out);
+    box-shadow: var(--shadow-base);
+}
+
+.dashboard-widget:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+}
+
+/* Links - enhanced states */
+a:not(.btn):not(.nav-link) {
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-in-out);
+}
+
+a:not(.btn):not(.nav-link)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--color-primary-500);
+    transition: width var(--duration-base) var(--ease-out);
+}
+
+a:not(.btn):not(.nav-link):hover::after {
+    width: 100%;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+    outline: 3px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection styling */
+::selection {
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
+}
+
+::-moz-selection {
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
 }
