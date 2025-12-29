@@ -505,6 +505,12 @@ COMPLIANCE_NOTIFICATION_EMAILS = [
 # Used in email links - update when deploying to production
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
 
+# ===== Task 21: Email Notification Settings =====
+# Frequency for automated email tasks
+EMAIL_SHIFT_REMINDER_HOURS = 24  # Send reminders X hours before shift
+EMAIL_WEEKLY_ROTA_DAY = 6  # 0=Monday, 6=Sunday
+EMAIL_WEEKLY_ROTA_HOUR = 18  # 18:00 (6 PM)
+
 # ===== Security Settings =====
 # Production security settings - configured via environment variables
 
@@ -688,6 +694,16 @@ if CELERY_AVAILABLE:
         'wdt-compliance-monitoring': {
             'task': 'scheduling.tasks.monitor_wdt_compliance',
             'schedule': crontab(day_of_week=0, hour=20, minute=0),  # Sundays at 20:00
+        },
+        # Task 21: Email Notification Schedules
+        'send-shift-reminders': {
+            'task': 'scheduling.tasks.send_shift_reminders',
+            'schedule': 3600.0,  # Every hour
+            'options': {'expires': 3500}
+        },
+        'send-weekly-rotas': {
+            'task': 'scheduling.tasks.send_weekly_rotas',
+            'schedule': crontab(day_of_week=6, hour=18, minute=0),  # Sundays at 18:00
         },
         'weekly-workflow-report': {
             'task': 'scheduling.tasks.generate_weekly_workflow_report',

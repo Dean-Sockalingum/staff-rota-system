@@ -10910,3 +10910,108 @@ def export_weekly_rota_excel(request, home_id):
     
     return response
 
+
+# ============================================================================
+# TASK 21: EMAIL NOTIFICATIONS - Automated Email Alerts
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def send_test_email(request):
+    """
+    Send a test email to verify configuration (managers only)
+    """
+    from scheduling.email_notifications import send_shift_reminder_email
+    from django.contrib import messages
+    
+    # Get a future shift for the current user or create test data
+    test_shift = Shift.objects.filter(
+        date__gte=date.today()
+    ).select_related('staff', 'shift_type', 'unit', 'care_home').first()
+    
+    if test_shift:
+        success = send_shift_reminder_email(test_shift)
+        if success:
+            messages.success(request, f"Test email sent to {test_shift.staff.email}")
+        else:
+            messages.error(request, "Failed to send test email. Check email configuration.")
+    else:
+        messages.warning(request, "No shifts found to send test email.")
+    
+    return redirect('scheduling:dashboard')
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def trigger_weekly_rotas(request):
+    """
+    Manually trigger weekly rota emails (managers only)
+    """
+    from scheduling.tasks import send_weekly_rotas
+    from django.contrib import messages
+    
+    try:
+        result = send_weekly_rotas()
+        messages.success(request, f"Weekly rotas triggered: {result}")
+    except Exception as e:
+        messages.error(request, f"Failed to trigger weekly rotas: {str(e)}")
+    
+    return redirect('scheduling:dashboard')
+
+
+# Integrate email notifications with leave request approval/rejection
+# (These would be called from existing leave approval views)
+
+def approve_leave_request_with_email(leave_request, approved_by, manager_notes=''):
+    """
+    Approve leave request and send confirmation email
+    Helper function to be called from existing approval views
+    """
+    from scheduling.email_notifications import send_leave_approved_email
+    
+    leave_request.status = 'APPROVED'
+    leave_request.approved_by = approved_by
+    leave_request.save()
+    
+    # Send approval email
+    send_leave_approved_email(leave_request, approved_by, manager_notes)
+    
+    return True
+
+
+def reject_leave_request_with_email(leave_request, rejected_by, manager_notes=''):
+    """
+    Reject leave request and send notification email
+    Helper function to be called from existing rejection views
+    """
+    from scheduling.email_notifications import send_leave_rejected_email
+    
+    leave_request.status = 'REJECTED'
+    leave_request.rejected_by = rejected_by
+    leave_request.save()
+    
+    # Send rejection email
+    send_leave_rejected_email(leave_request, rejected_by, manager_notes)
+    
+    return True
+
+
+def process_shift_swap_with_email(staff_member, original_shift, swap_with, new_shift=None):
+    """
+    Process shift swap and send confirmation emails to both parties
+    Helper function to be called from existing swap views
+    """
+    from scheduling.email_notifications import send_shift_swap_email
+    
+    # Send email to first staff member
+    send_shift_swap_email(staff_member, original_shift, swap_with, new_shift)
+    
+    # Send email to second staff member (reversed)
+    if new_shift:
+        send_shift_swap_email(swap_with, new_shift, staff_member, original_shift)
+    else:
+        send_shift_swap_email(swap_with, original_shift, staff_member, None)
+    
+    return True
+
+

@@ -155,6 +155,10 @@ urlpatterns = [
     path('export/my-shifts/excel/', views.export_my_shifts_excel, name='export_my_shifts_excel'),
     path('export/rota/weekly/<int:home_id>/excel/', views.export_weekly_rota_excel, name='export_weekly_rota_excel'),
     
+    # Email Notifications (Phase 2 - Task 21)
+    path('email/test/', views.send_test_email, name='send_test_email'),
+    path('email/weekly-rotas/', views.trigger_weekly_rotas, name='trigger_weekly_rotas'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

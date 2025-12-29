@@ -415,3 +415,93 @@ def generate_weekly_workflow_report():
         'summary': summary,
         'timestamp': timezone.now().isoformat()
     }
+
+
+# ==================== TASK 21: Email Notification Tasks ====================
+
+@shared_task
+def send_shift_reminders():
+    """
+    Send reminder emails for shifts starting in 24 hours
+    Scheduled to run every hour via Celery Beat
+    """
+    from scheduling.models import Shift
+    from scheduling.email_notifications import send_shift_reminder_email
+    
+    logger.info("Starting shift reminder task")
+    
+    # Get tomorrow's date (24 hours from now)
+    tomorrow = timezone.now() + timedelta(hours=24)
+    tomorrow_date = tomorrow.date()
+    
+    # Get all shifts for tomorrow
+    shifts = Shift.objects.filter(
+        date=tomorrow_date
+    ).select_related('staff', 'shift_type', 'unit', 'care_home')
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for shift in shifts:
+        if shift.staff and shift.staff.email:
+            try:
+                if send_shift_reminder_email(shift):
+                    sent_count += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                logger.error(f"Error sending reminder for shift {shift.id}: {str(e)}")
+                failed_count += 1
+    
+    logger.info(f"Shift reminder task complete: {sent_count} sent, {failed_count} failed")
+    return f"Sent {sent_count} reminders, {failed_count} failed"
+
+
+@shared_task
+def send_weekly_rotas():
+    """
+    Send weekly schedule emails to all staff
+    Scheduled to run every Sunday at 18:00 via Celery Beat
+    """
+    from scheduling.models import Shift, User
+    from scheduling.email_notifications import send_weekly_rota_email
+    
+    logger.info("Starting weekly rota email task")
+    
+    # Get next Monday
+    today = timezone.now().date()
+    days_until_monday = (7 - today.weekday()) % 7
+    if days_until_monday == 0:
+        days_until_monday = 7
+    
+    week_start = today + timedelta(days=days_until_monday)
+    week_end = week_start + timedelta(days=6)
+    
+    # Get all active staff with email
+    staff_members = User.objects.filter(
+        is_active=True,
+        email__isnull=False
+    ).exclude(email='')
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for staff in staff_members:
+        # Get their shifts for the week
+        shifts = Shift.objects.filter(
+            staff=staff,
+            date__range=[week_start, week_end]
+        ).select_related('shift_type', 'unit', 'care_home').order_by('date', 'start_time')
+        
+        try:
+            if send_weekly_rota_email(staff, week_start, shifts):
+                sent_count += 1
+            else:
+                failed_count += 1
+        except Exception as e:
+            logger.error(f"Error sending weekly rota to {staff.email}: {str(e)}")
+            failed_count += 1
+    
+    logger.info(f"Weekly rota task complete: {sent_count} sent, {failed_count} failed")
+    return f"Sent {sent_count} weekly rotas, {failed_count} failed"
+
