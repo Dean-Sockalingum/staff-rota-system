@@ -1,0 +1,591 @@
+/**
+ * Print Stylesheet - Staff Rota Management System
+ * December 2025
+ * 
+ * Optimizes pages for printing:
+ * - Hides navigation, buttons, and UI chrome
+ * - Black/white color scheme (saves ink)
+ * - Page break controls
+ * - Print-friendly fonts and spacing
+ * - Professional printed documents
+ * 
+ * Usage: Automatically applied when user prints (Ctrl+P / Cmd+P)
+ */
+
+@media print {
+  /* ========================================
+     PAGE SETUP
+     ======================================== */
+  
+  @page {
+    size: A4;
+    margin: 1.5cm 1cm 1.5cm 1cm; /* top, right, bottom, left */
+    
+    /* Print header with page numbers */
+    @top-center {
+      content: "Glasgow HSCP - Staff Rota System";
+      font-size: 10pt;
+      font-weight: 600;
+      color: #000;
+    }
+    
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
+    
+    @bottom-left {
+      content: "Printed: " string(print-date);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  
+  /* ========================================
+     GLOBAL PRINT STYLES
+     ======================================== */
+  
+  * {
+    /* Force colors to black/white */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  html, body {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.4;
+    font-family: 'Times New Roman', Times, serif; /* Print-friendly serif font */
+  }
+  
+  /* ========================================
+     HIDE NON-PRINTABLE ELEMENTS
+     ======================================== */
+  
+  /* Navigation and header */
+  nav,
+  .navbar,
+  .nav,
+  header,
+  .sidebar,
+  .menu,
+  #main-navigation,
+  .breadcrumb {
+    display: none !important;
+  }
+  
+  /* Footer */
+  footer,
+  #footer,
+  .footer {
+    display: none !important;
+  }
+  
+  /* Buttons and interactive elements */
+  button,
+  .btn,
+  .button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  .form-actions,
+  .action-buttons {
+    display: none !important;
+  }
+  
+  /* Forms (except printed values) */
+  form,
+  .form-group,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+  
+  /* Skip links and accessibility helpers */
+  .skip-link,
+  .sr-only,
+  .visually-hidden {
+    display: none !important;
+  }
+  
+  /* Alerts and toasts */
+  .alert,
+  .toast,
+  .notification,
+  .flash-message {
+    display: none !important;
+  }
+  
+  /* Modals and overlays */
+  .modal,
+  .modal-backdrop,
+  .overlay,
+  .popup {
+    display: none !important;
+  }
+  
+  /* Ads and non-content */
+  .advertisement,
+  .social-share,
+  .comments,
+  .feedback {
+    display: none !important;
+  }
+  
+  /* Loading spinners */
+  .spinner,
+  .loading,
+  #global-spinner {
+    display: none !important;
+  }
+  
+  /* Service worker notifications */
+  .sw-update-notification {
+    display: none !important;
+  }
+  
+  /* ========================================
+     SHOW PRINTABLE CONTENT
+     ======================================== */
+  
+  main,
+  #main-content,
+  .content,
+  .printable {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  
+  /* ========================================
+     TYPOGRAPHY FOR PRINT
+     ======================================== */
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+    background: none !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+    font-weight: bold;
+    margin-top: 0.5em;
+    margin-bottom: 0.3em;
+  }
+  
+  h1 {
+    font-size: 18pt;
+    border-bottom: 2pt solid black;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.5em;
+  }
+  
+  h2 {
+    font-size: 16pt;
+    border-bottom: 1pt solid #666;
+    padding-bottom: 0.1em;
+  }
+  
+  h3 {
+    font-size: 14pt;
+  }
+  
+  h4 {
+    font-size: 12pt;
+  }
+  
+  p {
+    color: black !important;
+    margin: 0.3em 0;
+    orphans: 3; /* Minimum lines at bottom of page */
+    widows: 3;  /* Minimum lines at top of page */
+  }
+  
+  /* Links - show URL after link text */
+  a {
+    color: black !important;
+    text-decoration: underline;
+  }
+  
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+  }
+  
+  /* Don't show URL for internal links */
+  a[href^="#"]:after,
+  a[href^="javascript:"]:after {
+    content: "";
+  }
+  
+  /* ========================================
+     TABLES FOR PRINT
+     ======================================== */
+  
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+    background: white !important;
+    margin: 0.5em 0;
+  }
+  
+  thead {
+    display: table-header-group; /* Repeat header on each page */
+    background: white !important;
+  }
+  
+  tfoot {
+    display: table-footer-group;
+  }
+  
+  tbody {
+    background: white !important;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  th, td {
+    border: 1pt solid #333 !important;
+    padding: 0.3em 0.5em !important;
+    color: black !important;
+    background: white !important;
+    font-size: 10pt;
+  }
+  
+  th {
+    background: #f0f0f0 !important;
+    font-weight: bold;
+    text-align: left;
+  }
+  
+  /* Zebra striping with subtle gray (saves ink) */
+  tbody tr:nth-child(even) td {
+    background: #f8f8f8 !important;
+  }
+  
+  /* ========================================
+     SHIFT ROTA SPECIFIC STYLES
+     ======================================== */
+  
+  .shift-card,
+  .rota-card {
+    border: 1pt solid #333 !important;
+    margin: 0.5em 0;
+    padding: 0.5em;
+    page-break-inside: avoid;
+    background: white !important;
+  }
+  
+  .shift-header,
+  .rota-header {
+    font-weight: bold;
+    border-bottom: 1pt solid #666;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.3em;
+  }
+  
+  .shift-time,
+  .shift-date {
+    font-weight: bold;
+    font-size: 11pt;
+  }
+  
+  .staff-name {
+    font-weight: bold;
+    font-size: 10pt;
+  }
+  
+  .shift-type {
+    font-style: italic;
+  }
+  
+  /* Calendar view */
+  .calendar {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+  }
+  
+  .calendar-day {
+    border: 1pt solid #333 !important;
+    padding: 0.3em !important;
+    vertical-align: top;
+    min-height: 2em;
+    background: white !important;
+  }
+  
+  .calendar-day.today {
+    background: #f0f0f0 !important;
+    font-weight: bold;
+  }
+  
+  .calendar-day.weekend {
+    background: #f5f5f5 !important;
+  }
+  
+  /* ========================================
+     CHARTS AND VISUALIZATIONS
+     ======================================== */
+  
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+  }
+  
+  .chart-container {
+    page-break-inside: avoid;
+    margin: 1em 0;
+  }
+  
+  /* Hide interactive chart controls */
+  .chart-controls,
+  .chart-legend-interactive {
+    display: none !important;
+  }
+  
+  /* ========================================
+     PAGE BREAKS
+     ======================================== */
+  
+  /* Force page break before these elements */
+  .page-break-before,
+  .new-page {
+    page-break-before: always;
+  }
+  
+  /* Force page break after */
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  /* Avoid page breaks inside */
+  .page-break-avoid,
+  .card,
+  .panel,
+  .section {
+    page-break-inside: avoid;
+  }
+  
+  /* Section breaks */
+  .section {
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
+  
+  /* ========================================
+     BADGES AND LABELS
+     ======================================== */
+  
+  .badge,
+  .label,
+  .tag {
+    border: 1pt solid black !important;
+    background: white !important;
+    color: black !important;
+    padding: 0.1em 0.3em;
+    font-size: 9pt;
+    display: inline-block;
+  }
+  
+  /* Status badges */
+  .badge-success,
+  .status-approved {
+    border-color: #333 !important;
+  }
+  
+  .badge-warning,
+  .status-pending {
+    border-color: #666 !important;
+  }
+  
+  .badge-danger,
+  .status-rejected {
+    border-color: #000 !important;
+    font-weight: bold;
+  }
+  
+  /* ========================================
+     LISTS
+     ======================================== */
+  
+  ul, ol {
+    margin: 0.3em 0;
+    padding-left: 1.5em;
+  }
+  
+  li {
+    margin: 0.2em 0;
+    color: black !important;
+  }
+  
+  /* ========================================
+     IMAGES
+     ======================================== */
+  
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+    display: block;
+    margin: 0.5em 0;
+  }
+  
+  /* Hide decorative images */
+  .logo,
+  .icon,
+  .avatar,
+  .decorative {
+    display: none !important;
+  }
+  
+  /* Keep important images like QR codes */
+  img.printable,
+  img.qr-code {
+    display: block !important;
+  }
+  
+  /* ========================================
+     UTILITY CLASSES
+     ======================================== */
+  
+  /* Force show elements marked for print */
+  .print-only {
+    display: block !important;
+  }
+  
+  /* Hide elements marked as no-print */
+  .no-print,
+  .screen-only {
+    display: none !important;
+  }
+  
+  /* Print info block */
+  .print-info {
+    border: 1pt solid #333;
+    padding: 0.5em;
+    margin: 0.5em 0;
+    background: #f8f8f8 !important;
+    page-break-inside: avoid;
+  }
+  
+  /* ========================================
+     SPECIFIC PAGE TYPES
+     ======================================== */
+  
+  /* Dashboard - hide charts, show data */
+  .dashboard .chart-container {
+    display: none !important;
+  }
+  
+  .dashboard .data-table {
+    display: table !important;
+  }
+  
+  /* Leave requests */
+  .leave-request {
+    border: 1pt solid #333;
+    padding: 0.5em;
+    margin: 0.5em 0;
+    page-break-inside: avoid;
+  }
+  
+  /* Staff profiles */
+  .staff-profile {
+    page-break-inside: avoid;
+    border-bottom: 1pt solid #ccc;
+    padding-bottom: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  
+  /* ========================================
+     ACCESSIBILITY FOR PRINT
+     ======================================== */
+  
+  /* Ensure sufficient contrast (black on white) */
+  * {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Exception: slight gray for zebra striping */
+  tr:nth-child(even),
+  .alternate-row {
+    background: #f5f5f5 !important;
+  }
+  
+  /* ========================================
+     FOOTER CONTENT (shown on print)
+     ======================================== */
+  
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1pt solid #ccc;
+    padding-top: 0.3em;
+    margin-top: 1em;
+    font-size: 9pt;
+    color: #666 !important;
+    text-align: center;
+  }
+  
+  /* ========================================
+     CUSTOM PRINT TITLE
+     ======================================== */
+  
+  .print-title {
+    display: block !important;
+    font-size: 20pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 0.5em;
+    padding-bottom: 0.3em;
+    border-bottom: 2pt solid black;
+    page-break-after: avoid;
+  }
+  
+  .print-date {
+    display: block !important;
+    font-size: 10pt;
+    text-align: right;
+    margin-bottom: 1em;
+    color: #666 !important;
+  }
+}
+
+/* ========================================
+   PRINT PREVIEW MODE (for testing)
+   ======================================== */
+
+body.print-preview {
+  /* Apply print styles to screen for testing */
+  background: white;
+  max-width: 21cm; /* A4 width */
+  margin: 0 auto;
+  padding: 1cm;
+  box-shadow: 0 0 1cm rgba(0,0,0,0.3);
+}
+
+body.print-preview nav,
+body.print-preview footer,
+body.print-preview .btn,
+body.print-preview button {
+  opacity: 0.3;
+  pointer-events: none;
+}
