@@ -3,9 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="theme-color" content="#0d6efd">
+    <meta name="theme-color" content="#0066FF">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Staff Rota">
+    <meta name="application-name" content="Staff Rota System">
+    <meta name="description" content="Multi-home care staff scheduling and management system for Glasgow HSCP">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- iOS App Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/icon-180x180.png' %}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'images/icon-152x152.png' %}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{% static 'images/icon-144x144.png' %}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{% static 'images/icon-120x120.png' %}">
+    
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
     
     <!-- Performance: DNS Prefetch for external resources -->
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
@@ -306,6 +323,133 @@
                 });
             }
         });
+    </script>
+    
+    <!-- PWA Install Prompt -->
+    <script>
+        // PWA Install Prompt Functionality
+        let deferredPrompt;
+        const pwaInstallKey = 'pwa-install-dismissed';
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            
+            // Check if user has dismissed the prompt before
+            if (localStorage.getItem(pwaInstallKey)) {
+                return;
+            }
+            
+            // Show custom install button/banner after 5 seconds
+            setTimeout(() => {
+                showPWAInstallBanner();
+            }, 5000);
+        });
+        
+        function showPWAInstallBanner() {
+            // Create install banner
+            const banner = document.createElement('div');
+            banner.id = 'pwa-install-banner';
+            banner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, var(--primary-color, #0066FF) 0%, var(--secondary-color, #00C853) 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 102, 255, 0.3);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                max-width: 90%;
+                animation: slideUp 0.3s ease-out;
+            `;
+            
+            banner.innerHTML = `
+                <i class="fas fa-mobile-alt" style="font-size: 1.5rem;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Install Staff Rota App</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">Add to home screen for quick access</div>
+                </div>
+                <button id="pwa-install-btn" style="
+                    background: white;
+                    color: var(--primary-color, #0066FF);
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                ">Install</button>
+                <button id="pwa-dismiss-btn" style="
+                    background: transparent;
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    cursor: pointer;
+                    opacity: 0.8;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Add animation keyframes
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideUp {
+                    from {
+                        transform: translateX(-50%) translateY(100px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(-50%) translateY(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(banner);
+            
+            // Install button click
+            document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+                banner.remove();
+                if (!deferredPrompt) return;
+                
+                // Show the install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for the user to respond to the prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`PWA install prompt outcome: ${outcome}`);
+                
+                // Clear the deferredPrompt
+                deferredPrompt = null;
+            });
+            
+            // Dismiss button click
+            document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+                banner.remove();
+                localStorage.setItem(pwaInstallKey, 'true');
+            });
+        }
+        
+        // Log when PWA is installed
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA installed successfully');
+            localStorage.setItem(pwaInstallKey, 'true');
+        });
+        
+        // Detect if running as PWA
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            console.log('Running as PWA');
+            document.documentElement.classList.add('pwa-mode');
+        }
     </script>
     
     <!-- Skeleton Loader Utility -->
