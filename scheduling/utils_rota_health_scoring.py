@@ -66,7 +66,7 @@ class RotaHealthScorer:
         if unit:
             self.shifts = self.shifts.filter(unit=unit)
         
-        self.shifts = self.shifts.select_related('user', 'role', 'shift_type', 'unit')
+        self.shifts = self.shifts.select_related('user', 'user__role', 'shift_type', 'unit')
         
         # Component scores (calculated lazily)
         self._scores = {}

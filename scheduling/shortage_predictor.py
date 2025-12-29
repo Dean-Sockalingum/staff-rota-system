@@ -42,7 +42,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score
 
 # Import models
-from .models import Shift, User, Unit, ShiftType, LeaveRequest, SicknessRecord, CareHome
+from .models import Shift, User, Unit, ShiftType, LeaveRequest, CareHome
 from staff_records.models import SicknessRecord as StaffSicknessRecord
 
 

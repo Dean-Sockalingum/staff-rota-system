@@ -24,6 +24,13 @@ from staff_records.models import SicknessRecord, StaffProfile
 # Import proactive suggestions engine
 from scheduling.utils_proactive_suggestions import get_proactive_suggestions, get_high_priority_suggestions
 
+# Import leave predictor
+from scheduling.utils_leave_predictor import (
+    predict_leave_approval_likelihood,
+    find_better_leave_dates,
+    get_optimal_leave_period
+)
+
 # Import the HelpAssistant from the management command
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'management', 'commands'))
 from help_assistant import HelpAssistant
@@ -40,6 +47,148 @@ def ai_assistant_page(request):
         'user': request.user,
     }
     return render(request, 'scheduling/ai_assistant_page.html', context)
+
+
+def extract_dates_from_query(query):
+    """
+    Extract dates from natural language query.
+    Supports formats like:
+    - "Dec 25 to Dec 27"
+    - "from 2025-01-10 to 2025-01-15"
+    - "January 10-15"
+    - "next week", "next Monday"
+    """
+    import re
+    from dateutil import parser
+    from datetime import timedelta
+    
+    today = timezone.now().date()
+    dates = []
+    
+    # Try explicit date ranges
+    date_range_patterns = [
+        r'(?:from |)(\d{4}-\d{2}-\d{2}).*?(?:to |until |-).*?(\d{4}-\d{2}-\d{2})',
+        r'(?:from |)([A-Za-z]+\s+\d{1,2}).*?(?:to |until |-).*?([A-Za-z]+\s+\d{1,2})',
+        r'(\d{1,2}\s+[A-Za-z]+).*?(?:to |until |-).*?(\d{1,2}\s+[A-Za-z]+)',
+    ]
+    
+    for pattern in date_range_patterns:
+        match = re.search(pattern, query, re.IGNORECASE)
+        if match:
+            try:
+                start = parser.parse(match.group(1), default=today.replace(day=1))
+                end = parser.parse(match.group(2), default=today.replace(day=1))
+                
+                # If parsed year is in the past, assume next year
+                if start.date() < today:
+                    start = start.replace(year=today.year + 1)
+                if end.date() < today:
+                    end = end.replace(year=today.year + 1)
+                
+                return [start.date(), end.date()]
+            except:
+                continue
+    
+    # Try relative dates
+    if 'next week' in query.lower():
+        # Next Monday to Friday
+        days_ahead = (7 - today.weekday()) % 7
+        if days_ahead == 0:
+            days_ahead = 7
+        next_monday = today + timedelta(days=days_ahead)
+        next_friday = next_monday + timedelta(days=4)
+        return [next_monday, next_friday]
+    
+    if 'this week' in query.lower():
+        # This Monday to Friday
+        days_back = today.weekday()
+        this_monday = today - timedelta(days=days_back)
+        this_friday = this_monday + timedelta(days=4)
+        if this_friday < today:
+            # Week already passed, assume next week
+            this_monday += timedelta(days=7)
+            this_friday += timedelta(days=7)
+        return [this_monday, this_friday]
+    
+    # Try single date mentions and assume 5-day duration
+    single_date_patterns = [
+        r'on ([A-Za-z]+\s+\d{1,2})',
+        r'(\d{4}-\d{2}-\d{2})',
+    ]
+    
+    for pattern in single_date_patterns:
+        match = re.search(pattern, query, re.IGNORECASE)
+        if match:
+            try:
+                start = parser.parse(match.group(1), default=today.replace(day=1))
+                if start.date() < today:
+                    start = start.replace(year=today.year + 1)
+                # Assume 5-day leave
+                end = start + timedelta(days=4)
+                return [start.date(), end.date()]
+            except:
+                continue
+    
+    return []
+
+
+def format_leave_prediction_response(prediction, start_date, end_date, user):
+    """Format the prediction result as a user-friendly response"""
+    
+    duration = (end_date - start_date).days + 1
+    
+    # Header with emoji based on likelihood
+    if prediction['likelihood_score'] >= 85:
+        emoji = "✅"
+        status_text = "EXCELLENT"
+    elif prediction['likelihood_score'] >= 60:
+        emoji = "⚠️"
+        status_text = "GOOD"
+    elif prediction['likelihood_score'] >= 40:
+        emoji = "⚠️"
+        status_text = "MODERATE"
+    else:
+        emoji = "❌"
+        status_text = "LOW"
+    
+    answer = f"{emoji} **Leave Approval Prediction**\n\n"
+    answer += f"**Requested:** {start_date.strftime('%A, %B %d')} - {end_date.strftime('%A, %B %d, %Y')}\n"
+    answer += f"**Duration:** {duration} days\n\n"
+    answer += f"**Approval Likelihood:** {prediction['likelihood_score']}% ({status_text})\n\n"
+    
+    # Add factors
+    if prediction['factors']:
+        answer += "**Analysis:**\n"
+        for factor in prediction['factors']:
+            answer += f"{factor}\n"
+        answer += "\n"
+    
+    # Add recommendations
+    if prediction['recommendations']:
+        answer += "**Recommendations:**\n"
+        for rec in prediction['recommendations']:
+            answer += f"{rec}\n"
+        answer += "\n"
+    
+    # Add alternative dates if provided
+    if prediction.get('alternative_dates') and len(prediction['alternative_dates']) > 0:
+        answer += "**Better Alternative Dates:**\n"
+        for alt in prediction['alternative_dates']:
+            answer += f"• {alt['description']}\n"
+        answer += "\n"
+    
+    # Add action guidance
+    if prediction['can_proceed']:
+        if prediction['likelihood_score'] >= 85:
+            answer += "✅ **You can proceed with confidence!** Click the button below to submit your request."
+        elif prediction['likelihood_score'] >= 60:
+            answer += "⚠️ **Proceed with caution.** Your request will likely need manager review but has a good chance of approval."
+        else:
+            answer += "⚠️ **Consider alternative dates.** While you can still request these dates, approval is uncertain."
+    else:
+        answer += "❌ **Cannot proceed.** Please resolve the issues mentioned above before submitting a request."
+    
+    return answer
 
 
 class ReportGenerator:
@@ -452,7 +601,113 @@ def ai_assistant_api(request):
         # Initialize the assistant
         assistant = HelpAssistant()
         
-        # First, check if this is a report generation query
+        # First, check if this is a leave availability query
+        import re
+        leave_patterns = [
+            r'can i (take|request|get|have) (leave|holiday|vacation|time off)',
+            r'(leave|holiday) (availability|approval|chances)',
+            r'what are my chances.*(leave|holiday|vacation)',
+            r'when (can|should) i (take|request|book) (leave|holiday)',
+            r'(is|are) (these |those )?dates?.*(available|good|likely)',
+            r'leave (on|from|for|between)',
+            r'check.*(leave|holiday|vacation)',
+            r'best time.*(leave|holiday|vacation)',
+            r'predict.*(leave|approval)',
+        ]
+        
+        leave_query_match = any(re.search(pattern, query.lower()) for pattern in leave_patterns)
+        
+        if leave_query_match:
+            # Extract dates from query
+            dates_extracted = extract_dates_from_query(query)
+            
+            if dates_extracted and len(dates_extracted) >= 2:
+                start_date, end_date = dates_extracted[0], dates_extracted[1]
+                
+                # Get prediction
+                prediction = predict_leave_approval_likelihood(request.user, start_date, end_date)
+                
+                # Format response
+                answer = format_leave_prediction_response(prediction, start_date, end_date, request.user)
+                
+                return JsonResponse({
+                    'answer': answer,
+                    'related': ['Request Leave', 'View Leave Balance', 'Leave Calendar'],
+                    'category': 'leave_prediction',
+                    'prediction_data': prediction,
+                    'action_button': {
+                        'text': '📝 Submit Leave Request',
+                        'url': f'/request-leave/?start={start_date.isoformat()}&end={end_date.isoformat()}',
+                        'visible': prediction['can_proceed']
+                    }
+                })
+            
+            elif 'best time' in query.lower() or 'when should' in query.lower():
+                # Find optimal dates
+                month_match = re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december)', query.lower())
+                month = None
+                if month_match:
+                    months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                             'july', 'august', 'september', 'october', 'november', 'december']
+                    month = months.index(month_match.group(1).lower()) + 1
+                
+                # Extract duration
+                duration_match = re.search(r'(\d+)\s*(day|week)', query.lower())
+                duration_days = 5  # default
+                if duration_match:
+                    num = int(duration_match.group(1))
+                    if 'week' in duration_match.group(2):
+                        duration_days = num * 7
+                    else:
+                        duration_days = num
+                
+                optimal = get_optimal_leave_period(request.user, month, duration_days)
+                
+                if optimal:
+                    answer = f"**🎯 Optimal Leave Period Found!**\n\n"
+                    answer += f"**Best dates:** {optimal['start_date'].strftime('%A, %B %d')} - {optimal['end_date'].strftime('%A, %B %d, %Y')}\n\n"
+                    answer += f"**Approval likelihood:** {optimal['score']}% ✅\n\n"
+                    answer += "This period has the best staffing coverage and highest chance of approval.\n\n"
+                    answer += "Would you like to check detailed factors or submit a request for these dates?"
+                    
+                    return JsonResponse({
+                        'answer': answer,
+                        'related': ['Request Leave', 'Check Other Dates'],
+                        'category': 'leave_optimization',
+                        'action_button': {
+                            'text': '📝 Request These Dates',
+                            'url': f'/request-leave/?start={optimal["start_date"].isoformat()}&end={optimal["end_date"].isoformat()}'
+                        }
+                    })
+                else:
+                    answer = "I couldn't find optimal leave dates. Please specify:\n"
+                    answer += "• Which month? (e.g., 'January', 'next month')\n"
+                    answer += "• How many days? (e.g., '5 days', '1 week')\n\n"
+                    answer += "Example: 'When is the best time for 5 days leave in March?'"
+                    
+                    return JsonResponse({
+                        'answer': answer,
+                        'related': ['Leave Calendar', 'Check Specific Dates'],
+                        'category': 'leave_help'
+                    })
+            
+            else:
+                # No dates specified - provide guidance
+                answer = "I can help you check leave availability! 📅\n\n"
+                answer += "**Examples:**\n"
+                answer += "• 'Can I take leave from Dec 25 to Dec 27?'\n"
+                answer += "• 'Are dates Jan 10-15 good for holiday?'\n"
+                answer += "• 'When is the best time for leave in March?'\n"
+                answer += "• 'What are my chances for next week?'\n\n"
+                answer += "I'll analyze staffing levels, your leave balance, and coverage to predict approval likelihood!"
+                
+                return JsonResponse({
+                    'answer': answer,
+                    'related': ['Leave Balance', 'Team Calendar'],
+                    'category': 'leave_help'
+                })
+        
+        # Second, check if this is a report generation query
         report_result = ReportGenerator.interpret_query(query)
         
         if report_result:

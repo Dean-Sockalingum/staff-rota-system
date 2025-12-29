@@ -113,46 +113,78 @@ def rota_cost_analysis(request):
     
     cost_per_shift = actual_cost / total_shifts if total_shifts > 0 else 0
     
-    # Weekly breakdown for chart
+    # Time series breakdown for chart
+    # Use monthly aggregation for date ranges > 90 days, weekly otherwise
+    days_in_range = (end_date - start_date).days
     weekly_data = []
-    current_date = start_date
     
-    while current_date <= end_date:
-        week_end = current_date + timedelta(days=6)
-        if week_end > end_date:
-            week_end = end_date
+    if days_in_range > 90:
+        # Monthly aggregation for long date ranges
+        from django.db.models.functions import TruncMonth
         
-        week_shifts = shifts.filter(date__gte=current_date, date__lte=week_end)
-        week_regular = week_shifts.filter(shift_classification='REGULAR').count() * SHIFT_HOURS * HOURLY_RATES['REGULAR']
-        week_overtime = week_shifts.filter(shift_classification='OVERTIME').count() * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
-        week_agency = week_shifts.filter(shift_classification='AGENCY').count() * SHIFT_HOURS * HOURLY_RATES['AGENCY']
-        week_cost = week_regular + week_overtime + week_agency
+        monthly_shifts = shifts.annotate(month=TruncMonth('date')).values('month').annotate(
+            regular_count=Count('id', filter=Q(shift_classification='REGULAR')),
+            overtime_count=Count('id', filter=Q(shift_classification='OVERTIME')),
+            agency_count=Count('id', filter=Q(shift_classification='AGENCY'))
+        ).order_by('month')
         
-        weekly_data.append({
-            'week_start': current_date.strftime('%b %d'),
-            'cost': float(week_cost)
-        })
-        
-        current_date = week_end + timedelta(days=1)
-    
-    # Cost by home
-    home_costs = []
-    units = Unit.objects.all()
-    
-    for unit in units:
-        unit_shifts = shifts.filter(unit=unit)
-        unit_regular = unit_shifts.filter(shift_classification='REGULAR').count() * SHIFT_HOURS * HOURLY_RATES['REGULAR']
-        unit_overtime = unit_shifts.filter(shift_classification='OVERTIME').count() * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
-        unit_agency = unit_shifts.filter(shift_classification='AGENCY').count() * SHIFT_HOURS * HOURLY_RATES['AGENCY']
-        unit_cost = unit_regular + unit_overtime + unit_agency
-        
-        if unit_cost > 0:
-            home_costs.append({
-                'name': unit.name,
-                'shifts': unit_shifts.count(),
-                'cost': float(unit_cost),
-                'cost_per_shift': float(unit_cost / unit_shifts.count()) if unit_shifts.count() > 0 else 0
+        for month_data in monthly_shifts:
+            month_regular = month_data['regular_count'] * SHIFT_HOURS * HOURLY_RATES['REGULAR']
+            month_overtime = month_data['overtime_count'] * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
+            month_agency = month_data['agency_count'] * SHIFT_HOURS * HOURLY_RATES['AGENCY']
+            month_cost = month_regular + month_overtime + month_agency
+            
+            weekly_data.append({
+                'week_start': month_data['month'].strftime('%b %Y'),
+                'cost': float(month_cost)
             })
+    else:
+        # Weekly aggregation for shorter date ranges
+        current_date = start_date
+        
+        while current_date <= end_date:
+            week_end = current_date + timedelta(days=6)
+            if week_end > end_date:
+                week_end = end_date
+            
+            week_shifts = shifts.filter(date__gte=current_date, date__lte=week_end)
+            week_regular = week_shifts.filter(shift_classification='REGULAR').count() * SHIFT_HOURS * HOURLY_RATES['REGULAR']
+            week_overtime = week_shifts.filter(shift_classification='OVERTIME').count() * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
+            week_agency = week_shifts.filter(shift_classification='AGENCY').count() * SHIFT_HOURS * HOURLY_RATES['AGENCY']
+            week_cost = week_regular + week_overtime + week_agency
+            
+            weekly_data.append({
+                'week_start': current_date.strftime('%b %d'),
+                'cost': float(week_cost)
+            })
+            
+            current_date = week_end + timedelta(days=1)
+    
+    # Cost by home - use aggregation instead of loop
+    home_costs = []
+    
+    # Group shifts by care home and calculate costs in one query
+    from django.db.models import Sum, Case, When, IntegerField
+    
+    home_aggregates = shifts.values('unit__care_home__name', 'unit__care_home_id').annotate(
+        total_shifts=Count('id'),
+        regular_count=Count('id', filter=Q(shift_classification='REGULAR')),
+        overtime_count=Count('id', filter=Q(shift_classification='OVERTIME')),
+        agency_count=Count('id', filter=Q(shift_classification='AGENCY'))
+    ).filter(total_shifts__gt=0)
+    
+    for home_data in home_aggregates:
+        home_regular = home_data['regular_count'] * SHIFT_HOURS * HOURLY_RATES['REGULAR']
+        home_overtime = home_data['overtime_count'] * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
+        home_agency = home_data['agency_count'] * SHIFT_HOURS * HOURLY_RATES['AGENCY']
+        home_cost = home_regular + home_overtime + home_agency
+        
+        home_costs.append({
+            'name': home_data['unit__care_home__name'] or 'Unknown',
+            'shifts': home_data['total_shifts'],
+            'cost': float(home_cost),
+            'cost_per_shift': float(home_cost / home_data['total_shifts']) if home_data['total_shifts'] > 0 else 0
+        })
     
     # Calculate percentage for each home
     for home in home_costs:

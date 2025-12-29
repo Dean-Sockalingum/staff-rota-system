@@ -137,6 +137,13 @@
         margin-bottom: 30px;
     }
     
+    .chart-container {
+        position: relative;
+        height: 400px;
+        max-height: 400px;
+        width: 100%;
+    }
+    
     .chart-header {
         display: flex;
         justify-content: space-between;
@@ -322,18 +329,20 @@
         <div class="chart-header">
             <h2 class="chart-title">Weekly Cost Trend</h2>
             <div class="export-buttons">
-                <a href="?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}export=pdf" class="btn-export">
+                <a href="{% url 'export_cost_analysis_pdf' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
                     📄 PDF
                 </a>
-                <a href="?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}export=excel" class="btn-export">
+                <a href="{% url 'export_cost_analysis_excel' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
                     📊 Excel
                 </a>
-                <a href="?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}export=csv" class="btn-export">
+                <a href="{% url 'export_cost_analysis_csv' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
                     📋 CSV
                 </a>
             </div>
         </div>
-        <canvas id="weeklyCostChart" width="400" height="100"></canvas>
+        <div class="chart-container">
+            <canvas id="weeklyCostChart"></canvas>
+        </div>
     </div>
     
     <!-- Cost Breakdown -->

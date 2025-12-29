@@ -24,9 +24,28 @@
                     <p class="card-text">{{ report.description }}</p>
                     <div class="mt-auto">
                         {% if report.url %}
-                            <a href="{% url report.url %}" class="btn btn-primary btn-sm">
+                            <a href="{% url report.url %}" class="btn btn-primary btn-sm mb-2 d-block">
                                 <i class="fas fa-chart-line"></i> View Dashboard
                             </a>
+                            {% if report.export_pdf or report.export_excel or report.export_csv %}
+                            <div class="btn-group btn-group-sm d-flex" role="group">
+                                {% if report.export_pdf %}
+                                <a href="{% url report.export_pdf %}" class="btn btn-outline-secondary flex-fill" title="Export PDF">
+                                    📄 PDF
+                                </a>
+                                {% endif %}
+                                {% if report.export_excel %}
+                                <a href="{% url report.export_excel %}" class="btn btn-outline-secondary flex-fill" title="Export Excel">
+                                    📊 Excel
+                                </a>
+                                {% endif %}
+                                {% if report.export_csv %}
+                                <a href="{% url report.export_csv %}" class="btn btn-outline-secondary flex-fill" title="Export CSV">
+                                    📋 CSV
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         {% else %}
                             <button class="btn btn-primary btn-sm" onclick="generateReport('{{ report.name|slugify }}')">
                                 <i class="fas fa-play"></i> Generate Report

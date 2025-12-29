@@ -574,6 +574,16 @@
             </ul>
         </div>
         
+        <div class="demo-card" style="border: 2px solid #28a745;">
+            <h3><span class="icon">🎯</span> AI Leave Predictions <span style="font-size: 0.7em; color: #28a745;">NEW!</span></h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Can I take leave from Dec 25 to Dec 27?')">Can I take leave from Dec 25 to Dec 27?</li>
+                <li onclick="askQuestion('When is the best time for leave in March?')">When is the best time for leave in March?</li>
+                <li onclick="askQuestion('What are my chances for next week?')">What are my chances for next week?</li>
+                <li onclick="askQuestion('Check leave availability for Jan 10-15')">Check leave availability for Jan 10-15</li>
+            </ul>
+        </div>
+        
         <div class="demo-card">
             <h3><span class="icon">💰</span> Staffing & Costs</h3>
             <ul class="example-queries">
@@ -732,7 +742,25 @@
                         response: message,
                         data: data
                     };
+                    
+                    // Add action button if present (for leave prediction)
                     addMessage(message, 'ai', confidence, queryData);
+                    
+                    if (data.action_button && data.action_button.visible) {
+                        const buttonDiv = document.createElement('div');
+                        buttonDiv.className = 'action-button-container';
+                        buttonDiv.style.marginTop = '15px';
+                        buttonDiv.style.marginLeft = '10px';
+                        buttonDiv.innerHTML = `
+                            <a href="${data.action_button.url}" 
+                               class="btn btn-primary" 
+                               style="background-color: #28a745; border: none; padding: 10px 20px; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                ${data.action_button.text}
+                            </a>
+                        `;
+                        messagesContainer.appendChild(buttonDiv);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
                 }
             }
         })

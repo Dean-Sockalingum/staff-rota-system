@@ -1130,13 +1130,63 @@ def reports_dashboard(request):
     
     context = {
         'available_reports': [
-            {'name': 'Overtime & Agency Usage', 'description': 'Comprehensive OT and agency breakdown by home, role, hours, and costs', 'url': 'ot_agency_report', 'icon': 'fa-chart-line'},
-            {'name': 'Staff Vacancies', 'description': 'Current and upcoming staff vacancies by care home with leaving reasons', 'url': 'staff_vacancies_report', 'icon': 'fa-user-times'},
-            {'name': 'Leave Usage Targets', 'description': '40-week strategy dashboard showing staff progress against leave targets', 'url': 'leave_usage_targets', 'icon': 'fa-bullseye'},
-            {'name': 'Rota Cost Analysis', 'description': 'Financial report on wage costs by care home with trend charts and export', 'url': 'rota_cost_analysis', 'icon': 'fa-pound-sign'},
-            {'name': 'Staff Sickness Report', 'description': 'Shows sickness rates and trends'},
-            {'name': 'Annual Leave Report', 'description': 'Summary of leave allowances, taken, and remaining'},
-            {'name': 'Staff Reallocation Report', 'description': 'Fairness report showing which staff are moved most often'},
+            {
+                'name': 'Overtime & Agency Usage', 
+                'description': 'Comprehensive OT and agency breakdown by home, role, hours, and costs', 
+                'url': 'ot_agency_report', 
+                'icon': 'fa-chart-line',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
+            {
+                'name': 'Staff Vacancies', 
+                'description': 'Current and upcoming staff vacancies by care home with leaving reasons', 
+                'url': 'staff_vacancies_report', 
+                'icon': 'fa-user-times',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
+            {
+                'name': 'Leave Usage Targets', 
+                'description': '40-week strategy dashboard showing staff progress against leave targets', 
+                'url': 'leave_usage_targets', 
+                'icon': 'fa-bullseye',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
+            {
+                'name': 'Rota Cost Analysis', 
+                'description': 'Financial report on wage costs by care home with trend charts and export', 
+                'url': 'rota_cost_analysis', 
+                'icon': 'fa-pound-sign',
+                'export_pdf': 'export_cost_analysis_pdf',
+                'export_excel': 'export_cost_analysis_excel',
+                'export_csv': 'export_cost_analysis_csv'
+            },
+            {
+                'name': 'Staff Sickness Report', 
+                'description': 'Shows sickness rates and trends',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
+            {
+                'name': 'Annual Leave Report', 
+                'description': 'Summary of leave allowances, taken, and remaining',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
+            {
+                'name': 'Staff Reallocation Report', 
+                'description': 'Fairness report showing which staff are moved most often',
+                'export_pdf': None,
+                'export_excel': None,
+                'export_csv': None
+            },
         ],
         'total_staff': total_staff,
         'on_duty_today': on_duty_today,

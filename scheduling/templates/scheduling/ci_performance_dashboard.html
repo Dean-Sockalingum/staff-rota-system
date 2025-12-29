@@ -1,0 +1,334 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}CI Performance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="dashboard-header mb-4">
+        <h1><i class="fas fa-chart-line"></i> Care Inspectorate Performance Dashboard</h1>
+        <p class="text-muted">Predicted rating and peer benchmarking analysis</p>
+        
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Care Home:</label>
+                <select id="care_home_filter" class="form-control" onchange="updateFilters()">
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}" {% if selected_care_home and selected_care_home.id == home.id %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 offset-md-6">
+                <label>&nbsp;</label>
+                <a href="?care_home={{ selected_care_home.id }}&export=csv" class="btn btn-success btn-block">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CI Rating Display -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="ci-rating-card">
+                <div class="rating-header">
+                    <h2>Predicted CI Rating</h2>
+                </div>
+                <div class="rating-display">
+                    <div class="rating-score {{ ci_data.executive_summary.status_text|lower }}">
+                        {{ ci_data.executive_summary.ci_rating_score }}
+                    </div>
+                    <div class="rating-status">
+                        <span class="status-icon">{{ ci_data.executive_summary.status_light }}</span>
+                        <span class="status-text">{{ ci_data.executive_summary.status_text }}</span>
+                    </div>
+                    <div class="rating-grade">
+                        Grade: {{ ci_data.executive_summary.predicted_grade }}
+                    </div>
+                    <div class="rating-confidence">
+                        Confidence: {{ ci_data.executive_summary.confidence|floatformat:0 }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peer Benchmarking -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-trophy"></i> Peer Benchmarking</h5>
+                </div>
+                <div class="card-body">
+                    <div class="peer-ranking mb-3">
+                        <div class="ranking-label">Your Ranking:</div>
+                        <div class="ranking-value">#{{ ci_data.executive_summary.peer_rank }} of {{ ci_data.executive_summary.total_homes }}</div>
+                    </div>
+                    
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Care Home</th>
+                                <th>CI Score</th>
+                                <th>Staffing</th>
+                                <th>Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for peer in ci_data.peer_benchmarking %}
+                            <tr {% if peer.home_name == 'This Home' %}class="table-primary"{% endif %}>
+                                <td>{{ peer.rank }}</td>
+                                <td>
+                                    {% if peer.home_name == 'This Home' %}
+                                        <strong>{{ selected_care_home.name }}</strong>
+                                    {% else %}
+                                        {{ peer.home_name }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ peer.ci_score }}</td>
+                                <td>{{ peer.staffing_score }}</td>
+                                <td>{{ peer.quality_score }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6-Month Trend -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-area"></i> 6-Month Trend</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>CI Score</th>
+                                <th>Staffing</th>
+                                <th>Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month in ci_data.trend_6month %}
+                            <tr>
+                                <td>{{ month.month }}</td>
+                                <td>{{ month.ci_score }}</td>
+                                <td>{{ month.staffing }}</td>
+                                <td>{{ month.quality }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="trend-indicator">
+                        <i class="fas fa-arrow-up text-success"></i> Improving trend
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Improvement Areas -->
+    {% if ci_data.improvement_areas %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bullseye"></i> Improvement Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for area in ci_data.improvement_areas %}
+                        <div class="col-md-4">
+                            <div class="improvement-card priority-{{ area.priority|lower }}">
+                                <h6>{{ area.area }}</h6>
+                                <div class="improvement-metric">
+                                    Current Impact: <strong>{{ area.current_impact|floatformat:1 }}%</strong>
+                                </div>
+                                <div class="improvement-target">
+                                    Target: {{ area.target_improvement }}
+                                </div>
+                                <span class="priority-badge">{{ area.priority }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="recommendations-list">
+                        {% for rec in ci_data.recommendations %}
+                        <li class="recommendation-item priority-{{ rec.priority|lower }}">
+                            <span class="rec-icon">{{ rec.icon }}</span>
+                            <div class="rec-content">
+                                <strong>{{ rec.title }}</strong>
+                                <p>{{ rec.action }}</p>
+                                <small class="text-muted">Impact: {{ rec.impact }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.ci-rating-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 40px;
+    color: white;
+    text-align: center;
+}
+.rating-header h2 {
+    color: white;
+    margin-bottom: 20px;
+}
+.rating-display {
+    margin-top: 20px;
+}
+.rating-score {
+    font-size: 72px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.rating-score.excellent { color: #00ff88; }
+.rating-score.good { color: #88ddff; }
+.rating-score.adequate { color: #ffee88; }
+.rating-score.weak { color: #ff8888; }
+.rating-status {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+.status-icon {
+    font-size: 32px;
+    margin-right: 10px;
+}
+.rating-grade {
+    font-size: 20px;
+    margin-top: 15px;
+    opacity: 0.9;
+}
+.rating-confidence {
+    font-size: 16px;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+.peer-ranking {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.ranking-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+.ranking-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+.trend-indicator {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 16px;
+}
+.improvement-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+}
+.improvement-card.priority-high {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+.improvement-card.priority-medium {
+    border-color: #ffc107;
+    background: #fffef5;
+}
+.improvement-card h6 {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.improvement-metric {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+.improvement-target {
+    font-size: 12px;
+    color: #666;
+}
+.priority-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #333;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+}
+.recommendation-item {
+    display: flex;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ccc;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+.recommendation-item.priority-high {
+    border-left-color: #dc3545;
+}
+.recommendation-item.priority-medium {
+    border-left-color: #ffc107;
+}
+.rec-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+.rec-content {
+    flex: 1;
+}
+.rec-content strong {
+    display: block;
+    margin-bottom: 5px;
+}
+.rec-content p {
+    margin: 0 0 5px 0;
+}
+</style>
+
+<script>
+function updateFilters() {
+    const careHome = document.getElementById('care_home_filter').value;
+    window.location.href = `?care_home=${careHome}`;
+}
+</script>
+{% endblock %}

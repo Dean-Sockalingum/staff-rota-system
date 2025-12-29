@@ -73,14 +73,25 @@ class PredictiveBudgetManager:
     # Revenue constants
     REVENUE_PER_RESIDENT_WEEK = Decimal('800.00')
     
-    def __init__(self, care_home: Unit):
+    def __init__(self, care_home):
         """
         Initialize budget manager.
         
         Args:
-            care_home: Care home unit
+            care_home: Care home (CareHome model) or unit (Unit model)
         """
-        self.care_home = care_home
+        from .models import CareHome
+        
+        # If it's a CareHome, store it and we'll aggregate across units
+        # If it's a Unit, use it directly (for backwards compatibility)
+        if isinstance(care_home, CareHome):
+            self.is_care_home = True
+            self.care_home_obj = care_home
+            self.care_home = care_home  # For now, use in queries that support care_home
+        else:
+            self.is_care_home = False
+            self.care_home = care_home
+            self.care_home_obj = getattr(care_home, 'care_home', None)
     
     
     def calculate_hiring_roi(
@@ -261,22 +272,25 @@ class PredictiveBudgetManager:
         """
         cutoff = timezone.now() - timedelta(days=90)
         
+        # Build filter based on whether we have CareHome or Unit
+        if self.is_care_home:
+            shift_filter = {'unit__care_home': self.care_home, 'date__gte': cutoff}
+        else:
+            shift_filter = {'unit': self.care_home, 'date__gte': cutoff}
+        
         # Count shifts by type
         regular_shifts = Shift.objects.filter(
-            unit=self.care_home,
-            date__gte=cutoff,
+            **shift_filter,
             shift_classification='REGULAR'
         ).count()
         
         ot_shifts = Shift.objects.filter(
-            unit=self.care_home,
-            date__gte=cutoff,
+            **shift_filter,
             shift_classification='OT'
         ).count()
         
         agency_shifts = Shift.objects.filter(
-            unit=self.care_home,
-            date__gte=cutoff,
+            **shift_filter,
             shift_classification='AGENCY'
         ).count()
         
@@ -286,11 +300,18 @@ class PredictiveBudgetManager:
         agency_cost = agency_shifts * self.COST_AGENCY_SHIFT
         
         # Turnover (last 90 days)
-        leavers = User.objects.filter(
-            profile__units=self.care_home,
-            profile__leaving_date__gte=cutoff,
-            profile__leaving_date__isnull=False
-        ).count()
+        if self.is_care_home:
+            leavers = User.objects.filter(
+                unit__care_home=self.care_home,
+                staff_profile__end_date__gte=cutoff,
+                staff_profile__end_date__isnull=False
+            ).count()
+        else:
+            leavers = User.objects.filter(
+                unit=self.care_home,
+                staff_profile__end_date__gte=cutoff,
+                staff_profile__end_date__isnull=False
+            ).count()
         
         turnover_cost = leavers * self.COST_TURNOVER
         
@@ -941,10 +962,13 @@ def get_predictive_budget_executive_dashboard(care_home):
     # ROI analysis
     roi_metrics = _calculate_roi_metrics(forecast)
     
+    # Extract quarter total from forecast
+    quarter_total = float(forecast['forecast']['quarter_total'])
+    
     return {
-        'executive_summary': {'forecast_accuracy': round(accuracy_score, 1), 'status_light': status_light, 'status_text': status_text, 'next_quarter_projection': forecast['total_cost'], 'variance_from_budget': forecast.get('budget_variance', 0)},
+        'executive_summary': {'forecast_accuracy': round(accuracy_score, 1), 'status_light': status_light, 'status_text': status_text, 'next_quarter_projection': quarter_total, 'variance_from_budget': 0},
         'scenario_analysis': scenarios,
-        'cost_projections': {'q1_forecast': forecast['total_cost'], 'q2_forecast': forecast['total_cost'] * 1.02, 'q3_forecast': forecast['total_cost'] * 1.01, 'q4_forecast': forecast['total_cost'] * 0.98},
+        'cost_projections': {'q1_forecast': quarter_total, 'q2_forecast': quarter_total * 1.02, 'q3_forecast': quarter_total * 1.01, 'q4_forecast': quarter_total * 0.98},
         'roi_metrics': roi_metrics,
         'recommendations': [{'priority': 'MEDIUM', 'icon': '💰', 'title': 'Budget optimization opportunity', 'action': 'Review agency usage patterns for Q2', 'impact': 'Potential £12K savings'}],
     }
@@ -959,7 +983,7 @@ def _calculate_scenario(care_home, factors):
         multiplier *= Decimal('1.05')
     if 'turnover_reduction' in factors:
         multiplier *= Decimal('0.95')
-    return {'total_cost': float(base_cost * multiplier), 'regular': float(base_cost * 0.6 * multiplier), 'overtime': float(base_cost * 0.25 * multiplier), 'agency': float(base_cost * 0.15 * multiplier)}
+    return {'total_cost': float(base_cost * multiplier), 'regular': float(base_cost * Decimal('0.6') * multiplier), 'overtime': float(base_cost * Decimal('0.25') * multiplier), 'agency': float(base_cost * Decimal('0.15') * multiplier)}
 
 def _calculate_roi_metrics(forecast):
     """Calculate ROI from predictive analytics"""

@@ -59,6 +59,20 @@ from scheduling.views_optimization import (
     apply_optimization,
     optimization_comparison
 )
+from scheduling.views_executive_dashboards import (
+    budget_dashboard,
+    early_warning_dashboard,
+    retention_predictor_dashboard,
+    export_budget_excel,
+    export_early_warning,
+    export_retention_csv,
+    auto_roster_dashboard,
+    ci_performance_dashboard,
+    predictive_budget_dashboard,
+    export_auto_roster,
+    export_ci_performance,
+    export_predictive_budget
+)
 from scheduling.views_overtime_management import (
     overtime_preferences_list,
     overtime_preference_form,
@@ -135,6 +149,20 @@ urlpatterns = [
     path('optimization/run/', run_optimization, name='run_optimization'),
     path('optimization/apply/', apply_optimization, name='apply_optimization'),
     path('optimization/comparison/', optimization_comparison, name='optimization_comparison'),
+    
+    # Executive Dashboards (Advanced Analytics for Senior Leadership)
+    path('executive/budget/', budget_dashboard, name='budget_dashboard'),
+    path('executive/budget/export/', export_budget_excel, name='export_budget_excel'),
+    path('executive/early-warning/', early_warning_dashboard, name='early_warning_dashboard'),
+    path('executive/early-warning/export/', export_early_warning, name='export_early_warning'),
+    path('executive/retention/', retention_predictor_dashboard, name='retention_predictor_dashboard'),
+    path('executive/retention/export/', export_retention_csv, name='export_retention_csv'),
+    path('executive/auto-roster/', auto_roster_dashboard, name='auto_roster_dashboard'),
+    path('executive/auto-roster/export/', export_auto_roster, name='export_auto_roster'),
+    path('executive/ci-performance/', ci_performance_dashboard, name='ci_performance_dashboard'),
+    path('executive/ci-performance/export/', export_ci_performance, name='export_ci_performance'),
+    path('executive/predictive-budget/', predictive_budget_dashboard, name='predictive_budget_dashboard'),
+    path('executive/predictive-budget/export/', export_predictive_budget, name='export_predictive_budget'),
     
     path('reports-dashboard/', views.reports_dashboard, name='reports_dashboard'),
     

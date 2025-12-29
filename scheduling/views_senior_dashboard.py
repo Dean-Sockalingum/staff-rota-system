@@ -79,6 +79,11 @@ def senior_management_dashboard(request):
     if start_date > end_date:
         start_date, end_date = end_date, start_date
     
+    # Check if export is requested
+    export_format = request.GET.get('export')
+    if export_format == 'csv':
+        return senior_dashboard_export(request)
+    
     days_in_range = (end_date - start_date).days + 1
     
     current_month_start = today.replace(day=1)
@@ -1021,8 +1026,8 @@ def senior_dashboard_export(request):
                 shift.shift_type.name,
                 shift.shift_classification,
                 shift.status,
-                shift.custom_start_time or shift.shift_type.default_start_time,
-                shift.custom_end_time or shift.shift_type.default_end_time
+                shift.custom_start_time or shift.shift_type.start_time,
+                shift.custom_end_time or shift.shift_type.end_time
             ])
     
     return response

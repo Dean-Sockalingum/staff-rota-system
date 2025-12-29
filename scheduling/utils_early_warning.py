@@ -18,6 +18,7 @@ Business Impact:
 
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.db.models import Q
 from datetime import timedelta
 from scheduling.models import Shift, User
 from scheduling.shortage_predictor import ShortagePredictor
@@ -804,7 +805,7 @@ def _generate_14day_heatmap(care_home):
         target_date = today + timedelta(days=day_offset)
         
         # Get shortage predictions for this day
-        predictions = ews.predict_shortages(target_date)
+        predictions = ews._get_predicted_shortages(target_date, care_home)
         
         # Calculate shortage risk (0-100)
         total_shifts = 30  # Simplified

@@ -131,13 +131,13 @@ class StaffRetentionPredictor:
         cutoff_date = self.today - timedelta(days=self.lookback_days)
         
         sickness_records = SicknessRecord.objects.filter(
-            user=staff,
-            sickness_start__gte=cutoff_date
+            profile__user=staff,
+            first_working_day__gte=cutoff_date
         )
         
         total_days = sum(
-            (min(record.sickness_end or self.today, self.today) - 
-             max(record.sickness_start, cutoff_date)).days + 1
+            (min(record.actual_last_working_day or self.today, self.today) - 
+             max(record.first_working_day, cutoff_date)).days + 1
             for record in sickness_records
         )
         

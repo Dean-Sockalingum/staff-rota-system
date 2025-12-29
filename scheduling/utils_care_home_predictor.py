@@ -54,7 +54,7 @@ import json
 # Import models
 from .models import (
     Unit, Shift, User, TrainingRecord, TrainingCourse,
-    ComplianceViolation, Incident
+    ComplianceViolation, IncidentReport
 )
 
 logger = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ class CareHomePerformancePredictor:
         
         # Get all active staff
         active_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True
         ).count()
         
@@ -195,12 +195,12 @@ class CareHomePerformancePredictor:
         
         # Count staff with ALL mandatory training current
         compliant_staff = 0
-        for staff in User.objects.filter(profile__units=self.care_home, is_active=True):
+        for staff in User.objects.filter(unit__care_home=self.care_home, is_active=True):
             staff_compliant = True
             for course in mandatory_courses:
                 # Check if staff has current training for this course
                 has_current = TrainingRecord.objects.filter(
-                    staff=staff,
+                    staff_member=staff,
                     course=course,
                     expiry_date__gte=date.today()
                 ).exists()
@@ -236,7 +236,7 @@ class CareHomePerformancePredictor:
         """
         # Get active staff
         active_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True
         ).count()
         
@@ -247,9 +247,9 @@ class CareHomePerformancePredictor:
         cutoff_date = timezone.now() - timedelta(weeks=8)
         
         supervised_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True,
-            supervision_records__supervision_date__gte=cutoff_date
+            supervision_sessions__session_date__gte=cutoff_date
         ).distinct().count()
         
         # Calculate supervision rate
@@ -278,8 +278,8 @@ class CareHomePerformancePredictor:
         # Get incidents in analysis period
         cutoff_date = timezone.now() - timedelta(days=self.analysis_period_days)
         
-        incident_count = Incident.objects.filter(
-            unit=self.care_home,
+        incident_count = IncidentReport.objects.filter(
+            manager__unit__care_home=self.care_home,
             incident_date__gte=cutoff_date
         ).count()
         
@@ -323,7 +323,7 @@ class CareHomePerformancePredictor:
         """
         # Get current active staff
         current_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True
         ).count()
         
@@ -331,9 +331,9 @@ class CareHomePerformancePredictor:
         cutoff_date = timezone.now() - timedelta(days=365)
         
         leavers = User.objects.filter(
-            profile__units=self.care_home,
-            profile__leaving_date__gte=cutoff_date,
-            profile__leaving_date__isnull=False
+            unit__care_home=self.care_home,
+            staff_profile__end_date__gte=cutoff_date,
+            staff_profile__end_date__isnull=False
         ).count()
         
         if current_staff == 0:
@@ -377,7 +377,7 @@ class CareHomePerformancePredictor:
         """
         # Get active staff by role
         total_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True
         ).count()
         
@@ -385,9 +385,9 @@ class CareHomePerformancePredictor:
             return 0
         
         rn_staff = User.objects.filter(
-            profile__units=self.care_home,
+            unit__care_home=self.care_home,
             is_active=True,
-            profile__role__code='RN'
+            role__name='SSCW'
         ).count()
         
         # Calculate RN ratio
@@ -429,7 +429,7 @@ class CareHomePerformancePredictor:
         cutoff_date = timezone.now() - timedelta(days=self.analysis_period_days)
         
         total_shifts = Shift.objects.filter(
-            unit=self.care_home,
+            unit__care_home=self.care_home,
             date__gte=cutoff_date
         ).count()
         
@@ -438,7 +438,7 @@ class CareHomePerformancePredictor:
         
         # Count OT shifts
         ot_shifts = Shift.objects.filter(
-            unit=self.care_home,
+            unit__care_home=self.care_home,
             date__gte=cutoff_date,
             shift_classification='OT'
         ).count()
@@ -641,7 +641,7 @@ class CareHomePerformancePredictor:
         
         # Get managers
         managers = User.objects.filter(
-            profile__role__code__in=['MANAGER', 'HEAD_OF_SERVICE'],
+            role__name='OPERATIONS_MANAGER',
             is_active=True
         )
         
@@ -1106,14 +1106,14 @@ def get_ci_performance_executive_dashboard(care_home):
     predictor = CareHomePerformancePredictor(care_home)
     prediction = predictor.predict_rating()
     
-    # Convert 1-6 rating to 0-100 score
-    ci_score = ((prediction['predicted_rating'] - 1) / 5) * 100
+    # Use total_score directly (already 0-100)
+    ci_score = prediction['total_score']
     
     status_light = "🔵" if ci_score >= 85 else "🟢" if ci_score >= 70 else "🟡" if ci_score >= 55 else "🔴"
     status_text = "Excellent" if ci_score >= 85 else "Good" if ci_score >= 70 else "Adequate" if ci_score >= 55 else "Weak"
     
     # Peer comparison (simplified)
-    peer_data = _generate_peer_benchmarking()
+    peer_data = _generate_peer_benchmarking(care_home, ci_score)
     
     # Trend analysis
     trend = _generate_ci_trend_data(care_home)
@@ -1122,18 +1122,53 @@ def get_ci_performance_executive_dashboard(care_home):
         'executive_summary': {'ci_rating_score': round(ci_score, 1), 'predicted_grade': prediction['predicted_rating'], 'status_light': status_light, 'status_text': status_text, 'confidence': prediction['confidence'], 'peer_rank': 3, 'total_homes': 8},
         'peer_benchmarking': peer_data,
         'trend_6month': trend,
-        'key_factors': prediction['factors'][:5],
+        'key_factors': list(prediction['factor_scores'].items())[:5],
         'improvement_areas': _identify_improvement_areas(prediction),
         'recommendations': [{'priority': 'HIGH', 'icon': '📊', 'title': 'Maintain excellence in key metrics', 'action': 'Continue current practices, monitor trends monthly', 'impact': 'Sustain high CI rating'}],
     }
 
-def _generate_peer_benchmarking():
-    """Generate peer comparison data"""
-    return [
-        {'rank': 1, 'home_name': 'Orchard Care', 'ci_score': 88.0, 'staffing_score': 92.0, 'quality_score': 87.0},
-        {'rank': 2, 'home_name': 'Viewfield Gardens', 'ci_score': 84.0, 'staffing_score': 86.0, 'quality_score': 85.0},
-        {'rank': 3, 'home_name': 'This Home', 'ci_score': 82.0, 'staffing_score': 85.0, 'quality_score': 83.0},
-    ]
+def _generate_peer_benchmarking(care_home, current_score):
+    """Generate peer comparison data for all care homes"""
+    from .models import CareHome
+    
+    # Get all care homes
+    all_homes = CareHome.objects.all()
+    
+    peer_data = []
+    for home in all_homes:
+        if home.id == care_home.id:
+            # Use the actual calculated score for current home
+            ci_score = round(current_score, 1)
+            staffing_score = round(current_score + 3, 1)
+            quality_score = round(current_score + 1, 1)
+        else:
+            # Generate placeholder scores for other homes (in real implementation, calculate these)
+            # Base score varies by home - you can adjust these
+            base_scores = {
+                'Orchard Care': 88.0,
+                'Viewfield Gardens': 84.0,
+                'Millview Care Home': 81.0,
+                'Rosebank House': 79.0,
+            }
+            ci_score = base_scores.get(home.name, 80.0)
+            staffing_score = ci_score + 4
+            quality_score = ci_score - 1
+        
+        peer_data.append({
+            'home_name': home.name.upper() if home.id == care_home.id else home.name,
+            'ci_score': ci_score,
+            'staffing_score': staffing_score,
+            'quality_score': quality_score
+        })
+    
+    # Sort by CI score descending
+    peer_data.sort(key=lambda x: x['ci_score'], reverse=True)
+    
+    # Add rankings
+    for idx, home_data in enumerate(peer_data, 1):
+        home_data['rank'] = idx
+    
+    return peer_data
 
 def _generate_ci_trend_data(care_home):
     """Generate 6-month CI performance trend"""
@@ -1150,8 +1185,9 @@ def _generate_ci_trend_data(care_home):
 def _identify_improvement_areas(prediction):
     """Identify areas needing improvement"""
     areas = []
-    for factor in prediction['factors']:
-        if factor['contribution'] < -0.1:
-            areas.append({'area': factor['name'], 'current_impact': factor['contribution'], 'target_improvement': '+10%', 'priority': 'HIGH' if factor['contribution'] < -0.2 else 'MEDIUM'})
+    for factor_name, score in prediction['factor_scores'].items():
+        # Scores below 15 (out of 20) are considered needing improvement
+        if score < 15:
+            areas.append({'area': factor_name.replace('_', ' ').title(), 'current_score': score, 'target_improvement': '18/20', 'priority': 'HIGH' if score < 10 else 'MEDIUM'})
     return areas[:3]
 
