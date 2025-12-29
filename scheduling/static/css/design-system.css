@@ -271,6 +271,20 @@
   --toast-width: 320px;
   --toast-padding: var(--spacing-4);
   --toast-border-radius: var(--radius-lg);
+  
+  /* ========================================
+     TOUCH TARGET SIZES - WCAG 2.1 AAA
+     ======================================== */
+  
+  /* WCAG 2.5.5 Level AAA - Minimum 44x44px */
+  --touch-target-min: 44px;           /* Minimum accessible touch target */
+  --touch-target-comfortable: 48px;   /* Comfortable touch target */
+  --touch-target-spacious: 56px;      /* Extra spacious for primary actions */
+  
+  /* Touch spacing */
+  --touch-spacing-min: 8px;           /* Minimum space between touch targets */
+  --touch-spacing-comfortable: 12px;  /* Comfortable spacing */
+  --touch-spacing-spacious: 16px;     /* Extra spacing for clarity */
 }
 
 /* ========================================
