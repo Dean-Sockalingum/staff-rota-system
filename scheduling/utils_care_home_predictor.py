@@ -1103,6 +1103,8 @@ def run_prediction_for_all_homes():
 
 def get_ci_performance_executive_dashboard(care_home):
     """Executive CI performance dashboard with rating (0-100), peer benchmarking, trend analysis - Returns ci_rating_score, status_light, peer_ranking, trend_6month, improvement_areas"""
+    from .models import CareHome
+    
     predictor = CareHomePerformancePredictor(care_home)
     prediction = predictor.predict_rating()
     
@@ -1112,14 +1114,30 @@ def get_ci_performance_executive_dashboard(care_home):
     status_light = "🔵" if ci_score >= 85 else "🟢" if ci_score >= 70 else "🟡" if ci_score >= 55 else "🔴"
     status_text = "Excellent" if ci_score >= 85 else "Good" if ci_score >= 70 else "Adequate" if ci_score >= 55 else "Weak"
     
-    # Peer comparison (simplified)
+    # Peer comparison with actual CI scores
     peer_data = _generate_peer_benchmarking(care_home, ci_score)
+    
+    # Calculate actual ranking based on peer data
+    current_home_rank = 1
+    total_homes = len(peer_data)
+    for peer in peer_data:
+        if care_home.name.upper() == peer['home_name'].upper():
+            current_home_rank = peer['rank']
+            break
     
     # Trend analysis
     trend = _generate_ci_trend_data(care_home)
     
     return {
-        'executive_summary': {'ci_rating_score': round(ci_score, 1), 'predicted_grade': prediction['predicted_rating'], 'status_light': status_light, 'status_text': status_text, 'confidence': prediction['confidence'], 'peer_rank': 3, 'total_homes': 8},
+        'executive_summary': {
+            'ci_rating_score': round(ci_score, 1), 
+            'predicted_grade': prediction['predicted_rating'], 
+            'status_light': status_light, 
+            'status_text': status_text, 
+            'confidence': prediction['confidence'], 
+            'peer_rank': current_home_rank, 
+            'total_homes': total_homes
+        },
         'peer_benchmarking': peer_data,
         'trend_6month': trend,
         'key_factors': list(prediction['factor_scores'].items())[:5],
@@ -1127,8 +1145,71 @@ def get_ci_performance_executive_dashboard(care_home):
         'recommendations': [{'priority': 'HIGH', 'icon': '📊', 'title': 'Maintain excellence in key metrics', 'action': 'Continue current practices, monitor trends monthly', 'impact': 'Sustain high CI rating'}],
     }
 
+def _convert_ci_rating_to_score(rating_choice):
+    """Convert CI rating choice to numeric score (0-100)"""
+    rating_scores = {
+        'EXCELLENT': 95,
+        'VERY_GOOD': 85,
+        'GOOD': 75,
+        'ADEQUATE': 60,
+        'WEAK': 45,
+        'UNSATISFACTORY': 25,
+    }
+    return rating_scores.get(rating_choice, 75)  # Default to Good if unknown
+
+def _get_latest_ci_scores_for_home(care_home):
+    """Get actual CI scores from latest inspection report"""
+    from .models_improvement import CareInspectorateReport
+    from .models import Unit
+    
+    try:
+        # Find the Unit for this CareHome
+        unit = Unit.objects.filter(care_home=care_home).first()
+        if not unit:
+            return None
+            
+        # Get latest inspection report
+        latest_report = CareInspectorateReport.objects.filter(
+            home=unit
+        ).order_by('-inspection_date').first()
+        
+        if not latest_report:
+            return None
+            
+        # Convert ratings to scores and calculate average
+        theme_scores = []
+        if latest_report.theme1_rating:
+            theme_scores.append(_convert_ci_rating_to_score(latest_report.theme1_rating))
+        if latest_report.theme2_rating:
+            theme_scores.append(_convert_ci_rating_to_score(latest_report.theme2_rating))
+        if latest_report.theme3_rating:
+            theme_scores.append(_convert_ci_rating_to_score(latest_report.theme3_rating))
+        if latest_report.theme4_rating:
+            theme_scores.append(_convert_ci_rating_to_score(latest_report.theme4_rating))
+            
+        if not theme_scores:
+            return None
+            
+        # Calculate scores
+        ci_score = sum(theme_scores) / len(theme_scores)
+        
+        # Extract specific theme scores for display
+        staffing_score = _convert_ci_rating_to_score(latest_report.theme3_rating) if latest_report.theme3_rating else ci_score
+        quality_score = _convert_ci_rating_to_score(latest_report.theme1_rating) if latest_report.theme1_rating else ci_score
+        
+        return {
+            'ci_score': round(ci_score, 1),
+            'staffing_score': round(staffing_score, 1),
+            'quality_score': round(quality_score, 1),
+            'inspection_date': latest_report.inspection_date,
+            'overall_rating': latest_report.overall_rating
+        }
+    except Exception as e:
+        logger.warning(f"Could not fetch CI scores for {care_home.name}: {e}")
+        return None
+
 def _generate_peer_benchmarking(care_home, current_score):
-    """Generate peer comparison data for all care homes"""
+    """Generate peer comparison data for all care homes using actual CI inspection scores"""
     from .models import CareHome
     
     # Get all care homes
@@ -1137,22 +1218,38 @@ def _generate_peer_benchmarking(care_home, current_score):
     peer_data = []
     for home in all_homes:
         if home.id == care_home.id:
-            # Use the actual calculated score for current home
-            ci_score = round(current_score, 1)
-            staffing_score = round(current_score + 3, 1)
-            quality_score = round(current_score + 1, 1)
+            # For current home, try to get actual CI scores first, fallback to predicted
+            actual_scores = _get_latest_ci_scores_for_home(home)
+            if actual_scores:
+                ci_score = actual_scores['ci_score']
+                staffing_score = actual_scores['staffing_score']
+                quality_score = actual_scores['quality_score']
+            else:
+                # Use predicted score if no inspection data
+                ci_score = round(current_score, 1)
+                staffing_score = round(current_score + 3, 1)
+                quality_score = round(current_score + 1, 1)
         else:
-            # Generate placeholder scores for other homes (in real implementation, calculate these)
-            # Base score varies by home - you can adjust these
-            base_scores = {
-                'Orchard Care': 88.0,
-                'Viewfield Gardens': 84.0,
-                'Millview Care Home': 81.0,
-                'Rosebank House': 79.0,
-            }
-            ci_score = base_scores.get(home.name, 80.0)
-            staffing_score = ci_score + 4
-            quality_score = ci_score - 1
+            # For other homes, use actual CI scores from their latest inspection
+            actual_scores = _get_latest_ci_scores_for_home(home)
+            if actual_scores:
+                ci_score = actual_scores['ci_score']
+                staffing_score = actual_scores['staffing_score']
+                quality_score = actual_scores['quality_score']
+            else:
+                # If no inspection data, calculate predicted score
+                try:
+                    other_predictor = CareHomePerformancePredictor(home)
+                    other_prediction = other_predictor.predict_rating()
+                    ci_score = round(other_prediction['total_score'], 1)
+                    staffing_score = round(ci_score + 3, 1)
+                    quality_score = round(ci_score - 1, 1)
+                except Exception as e:
+                    logger.warning(f"Could not predict for {home.name}: {e}")
+                    # Fallback to default scores
+                    ci_score = 75.0
+                    staffing_score = 78.0
+                    quality_score = 74.0
         
         peer_data.append({
             'home_name': home.name.upper() if home.id == care_home.id else home.name,
