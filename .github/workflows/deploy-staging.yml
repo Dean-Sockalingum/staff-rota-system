@@ -1,8 +1,9 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [ main ]
+  # Disabled automatic deployment - run manually only
+  # push:
+  #   branches: [ main ]
   workflow_dispatch:
 
 env:
