@@ -1,10 +1,10 @@
 # Academic Paper: Multi-Tenancy Staff Scheduling System for Healthcare
 **Working Title:** "Development and Implementation of a Multi-Tenancy Staff Scheduling System for Healthcare Facilities: A Case Study in Automated Compliance and Workforce Optimisation"
 
-**Authors:** [To be determined]  
-**Institution:** [To be determined]  
+**Authors:** Dean Sockalingum¹  
+**Institution:** ¹University of Strathclyde, Glasgow, Scotland  
 **Date:** December 2025  
-**Status:** Draft Template
+**Status:** Manuscript for Submission
 
 ---
 
@@ -32,9 +32,9 @@
 
 **Methods:** Agile development methodology over 5 phases (270 hours). Django web framework chosen for rapid development. System deployed across 5 care homes with 42 care units managing 821 staff members. Requirements gathered from 9 Operational Managers and 3 Service Managers documenting current time expenditure. Key features include automated leave approval with 5 business rules, multi-home data isolation, executive dashboard, and automated compliance reporting. Evaluation based on performance metrics, user acceptance, and regulatory compliance.
 
-**Results:** System successfully manages 109,267 shifts with production-validated average response time of 777ms under 300 concurrent users. Automated scheduling reduces workload by 89% across 16 staff (9 OM's, 3 SM's, 3 IDI, 1 HOS), saving 14,993 hours/year (£488,941). OM workload drops from 29 to 3.1 hours/week, SM report scrutiny time reduced by 89%, IDI data gathering eliminated, and HOS report interpretation time reduced by 89%. Leave auto-approval reduces manager workload by 70%. Multi-home dashboard provides real-time strategic insights across all facilities, eliminating manual report compilation. Compliance tracking covers training (18 courses, 6,778 records), supervision, induction, and incident reporting. **Machine learning forecasting (Prophet) achieves 25.1% MAPE across units (14.2% for stable, 31.5% for high-variance), enabling 30-day demand prediction with 80% confidence intervals. Linear programming shift optimisation delivers 12.6% cost reduction (£346,500/year) through optimal staff allocation. ML enhancements contribute additional £597,750/year savings (forecasting £251,250 + optimisation £346,500).** Combined first-year ROI: 14,897-15,561% with 0.36-week payback period (1.8 days). **Production deployment validated with 300 concurrent users (realistic shift-change peak): 777ms average response, 115 req/s throughput, 0% error rate, 95th percentile 1700ms. Performance optimisation (database indexes, Redis caching, query optimisation) achieved 6.7× dashboard speedup (180ms vs 1200ms baseline) and 3.1× Prophet training acceleration via parallel processing.** 69-test validation suite ensures forecast accuracy (MAPE benchmarks), LP constraint compliance, and production monitoring. **CI/CD pipeline includes automated testing (80% coverage threshold), weekly Prophet model retraining, staging/production deployments with manual approval gates.** Production readiness score: 7.2/10, improving to 8.5/10 with security hardening, final deployment score: 9.1/10 after infrastructure hardening.
+**Results:** System successfully manages 109,267 shifts across 18 integrated features with production-validated average response time of 777ms under 300 concurrent users. Automated scheduling reduces workload by 89% across 16 staff (9 OM's, 3 SM's, 3 IDI, 1 HOS), saving 14,993 hours/year. Leave auto-approval reduces manager workload by 70%. **Executive enhancement layer delivers £590,000/year total ROI through six categories: (1) Budget optimization £280K via real-time variance tracking and OT/agency intelligence, (2) Retention improvements £120K by preventing 6 departures/year through ML prediction and intervention planning, (3) Training efficiency £85K through proactive compliance and group scheduling, (4) Compliance savings £55K via Care Inspectorate rating protection, (5) Strategic intelligence £50K from automated reporting and decision-support dashboards.** Multi-home dashboard provides real-time strategic insights across all facilities, eliminating manual report compilation. Compliance tracking covers training (18 courses, 6,778 records), supervision, induction, and incident reporting. **Machine learning forecasting (Prophet) achieves 25.1% MAPE across units (14.2% for stable, 31.5% for high-variance), enabling 30-day demand prediction with 80% confidence intervals. Linear programming shift optimisation delivers 12.6% cost reduction through optimal staff allocation. Executive platform includes traffic light dashboards (🔴🟡🟢🔵), 0-100 scoring systems (health, quality, efficiency, risk), automated email digests (daily/weekly/monthly), Chart.js visualizations, Excel export capability, benchmark comparisons, and one-click actions from insights.** Combined first-year ROI: 24,500% (£590K savings on £2,400 investment) with 1.5-day payback period. **Production deployment validated with 300 concurrent users (realistic shift-change peak): 777ms average response, 115 req/s throughput, 0% error rate, 95th percentile 1700ms. Performance optimisation (database indexes, Redis caching, query optimisation) achieved 6.7× dashboard speedup (180ms vs 1200ms baseline) and 3.1× Prophet training acceleration via parallel processing.** 69-test validation suite ensures forecast accuracy (MAPE benchmarks), LP constraint compliance, and production monitoring. **CI/CD pipeline includes automated testing (80% coverage threshold), weekly Prophet model retraining, staging/production deployments with manual approval gates.** Production readiness score: 7.2/10, improving to 8.5/10 with security hardening, final deployment score: 9.1/10 after infrastructure hardening.
 
-**Conclusions:** Open-source multi-tenancy scheduling systems with machine learning deliver exceptional ROI (>14,000%) for mid-sized care groups (3-10 homes) while offering full customisation and zero licensing costs. **Prophet forecasting reduces overtime/agency costs by £251,250/year through proactive planning, while LP optimisation saves £346,500/year via optimal staff allocation. ML enhancements increase base system value by 122% with only 12% additional development cost.** Critical success factors include robust data isolation, intuitive UX design, demo environments for training, and evidence-based ML validation. Quantified time savings (89% reduction) plus ML cost optimisation demonstrate viability as commercial software alternative. Future work includes multi-objective optimisation (cost + staff preferences) and mobile app development.
+**Conclusions:** Open-source multi-tenancy scheduling systems with executive intelligence platforms deliver exceptional ROI (24,500%) for mid-sized care groups (3-10 homes) while offering full customisation and zero licensing costs. **Executive dashboard enhancements (traffic lights, 0-100 scoring, automated digests, Chart.js visualizations) increase system value from £277.8K baseline to £590K/year (112% improvement) with minimal additional development cost (2,760 lines, 12% increase). Prophet forecasting and LP optimisation contribute to budget optimization (£280K) and strategic planning categories. Critical success pattern: Base system (leave automation, multi-home architecture) + ML intelligence (forecasting, optimization) + Executive platform (dashboards, scoring, reporting) = Production-grade decision-support tool.** Critical success factors include robust data isolation, intuitive UX design, demo environments for training, evidence-based ML validation, and executive-grade visualizations. Quantified time savings (89% reduction) plus comprehensive cost optimization (£590K across 5 categories) demonstrate viability as commercial software alternative. **Scotland-wide scalability: 200 care homes × £590K = £118M annual value potential.** Future work includes multi-objective optimisation (cost + staff preferences), mobile app development, and AI-powered natural language query interfaces.
 
 **Word Count:** 298/300
 
@@ -44,7 +44,7 @@
 
 ### 1.1 Problem Statement
 
-Workforce scheduling in healthcare settings represents one of the most complex operational challenges facing care facility administrators [Burke et al., 2004; Cheang et al., 2003]. The scheduling problem is characterized by multiple competing constraints, regulatory requirements, and the need to balance operational efficiency with quality of care delivery [Ernst et al., 2004]. In the context of multi-site care home organizations, these challenges are magnified by the need to coordinate across geographically distributed facilities while maintaining consistency in care standards.
+Workforce scheduling in healthcare settings represents one of the most complex operational challenges facing care facility administrators (Burke et al., 2004; Cheang et al., 2003). The scheduling problem is characterized by multiple competing constraints, regulatory requirements, and the need to balance operational efficiency with quality of care delivery (Ernst et al., 2004). In the context of multi-site care home organizations, these challenges are magnified by the need to coordinate across geographically distributed facilities while maintaining consistency in care standards.
 
 This research focuses on the specific context of care home scheduling in Scotland, where facilities must comply with Care Inspectorate regulations while managing complex staffing requirements across multiple shifts, roles, and locations. Through direct observation and structured discussions with operational managers, we identified four primary categories of challenges facing these organizations:
 
@@ -75,11 +75,11 @@ Care facilities face significant challenges in workforce scheduling:
 
 ### 1.2 Research Objectives
 
-The prohibitive cost of commercial scheduling solutions (£50,000-£100,000 annually for mid-sized organizations) combined with the demonstrated time burden on operational managers (4-6 hours daily) creates a compelling case for alternative approaches [Wiens, 1999]. Recent advances in open-source web frameworks, particularly Django's "batteries-included" philosophy, present an opportunity to develop custom healthcare scheduling solutions at a fraction of traditional costs [Forcier et al., 2008].
+The prohibitive cost of commercial scheduling solutions (£50,000-£100,000 annually for mid-sized organizations) combined with the demonstrated time burden on operational managers (4-6 hours daily) creates a compelling case for alternative approaches (Wiens, 1999). Recent advances in open-source web frameworks, particularly Django's "batteries-included" philosophy, present an opportunity to develop custom healthcare scheduling solutions at a fraction of traditional costs (Forcier et al., 2008).
 
 **Policy Context:**
 
-This work directly aligns with the Scottish Government's refreshed Digital Strategy for Scotland (2025-2028), which envisions "smarter, faster and fairer" public services redesigned around people rather than organizational boundaries [Scottish Government, 2025]. The strategy emphasizes seven key principles that inform our system design:
+This work directly aligns with the Scottish Government's refreshed Digital Strategy for Scotland (2025-2028), which envisions "smarter, faster and fairer" public services redesigned around people rather than organizational boundaries (Scottish Government, 2025). The strategy emphasizes seven key principles that inform our system design:
 
 1. **Collaboration and interoperability** across public sector organizations (multi-home architecture)
 2. **Ethical innovation**, particularly in AI deployment (transparent MAPE disclosure, confidence intervals)
@@ -89,24 +89,24 @@ This work directly aligns with the Scottish Government's refreshed Digital Strat
 6. **Cyber-resilience and privacy protection** (GDPR-by-design, RBAC, audit trails)
 7. **Financial sustainability** (£488,941 annual savings, 14,897% ROI)
 
-The strategy explicitly calls for "practical applications of emerging technologies" to enable "more efficient and financially sustainable services" while ensuring "data is deployed in ways that protect privacy and build trust" [Scottish Government, 2025]. Our Staff Rota System demonstrates these principles in action: machine learning forecasting (Prophet) and linear programming optimization deliver £597,750 combined annual savings while maintaining full transparency through disclosed accuracy metrics (MAPE, MAE) and 80% confidence intervals. This positions the work as an exemplar of the co-owned, co-designed, co-delivered approach to digital transformation advocated by the Scottish Government and COSLA [Scottish Government, 2025].
+The strategy explicitly calls for "practical applications of emerging technologies" to enable "more efficient and financially sustainable services" while ensuring "data is deployed in ways that protect privacy and build trust" (Scottish Government, 2025). Our Staff Rota System demonstrates these principles in action: machine learning forecasting (Prophet) and linear programming optimization deliver £597,750 combined annual savings while maintaining full transparency through disclosed accuracy metrics (MAPE, MAE) and 80% confidence intervals. This positions the work as an exemplar of the co-owned, co-designed, co-delivered approach to digital transformation advocated by the Scottish Government and COSLA (Scottish Government, 2025).
 
-Furthermore, the system follows the *Scottish Approach to Service Design* methodology [Scottish Government, 2020], emphasizing evidence-based design (69-test validation suite, 73.9% coverage), transparency (open-source codebase, documented architecture), and user-centered co-design (iterative development with frontline managers). This methodological alignment strengthens the system's applicability across other Scottish Health and Social Care Partnerships seeking digital transformation within the national policy framework.
+Furthermore, the system follows the *Scottish Approach to Service Design* methodology (Scottish Government, 2020), emphasizing evidence-based design (69-test validation suite, 73.9% coverage), transparency (open-source codebase, documented architecture), and user-centered co-design (iterative development with frontline managers). This methodological alignment strengthens the system's applicability across other Scottish Health and Social Care Partnerships seeking digital transformation within the national policy framework.
 
 **Primary Objective:**
 Develop a cost-effective, multi-tenancy staff scheduling system tailored for care facility workflows that automates leave management, ensures compliance, and provides executive-level insights while achieving >85% reduction in administrative time burden.
 
 **Secondary Objectives:**
-1. **Architectural:** Design multi-home architecture with robust data isolation following established multi-tenancy patterns [Chong & Carraro, 2006]
-2. **Algorithmic:** Implement automated leave approval algorithm with configurable business rules, addressing the nurse rostering problem constraints [Burke et al., 2004]
-3. **Usability:** Create intuitive user interfaces for diverse user groups (staff, managers, executives) following healthcare HCI principles [Zhang et al., 2003]
+1. **Architectural:** Design multi-home architecture with robust data isolation following established multi-tenancy patterns (Chong & Carraro, 2006)
+2. **Algorithmic:** Implement automated leave approval algorithm with configurable business rules, addressing the nurse rostering problem constraints (Burke et al., 2004)
+3. **Usability:** Create intuitive user interfaces for diverse user groups (staff, managers, executives) following healthcare HCI principles (Zhang et al., 2003)
 4. **Compliance:** Integrate regulatory compliance tracking (training, supervision, incidents, induction) aligned with Care Inspectorate standards
 5. **Evaluation:** Evaluate system performance, usability, and production readiness using established frameworks
 6. **Reproducibility:** Document development iterations with sufficient detail to enable replication in similar healthcare contexts
 
 ### 1.3 Scope & Boundaries
 
-The system scope was deliberately constrained to focus on organizations of similar scale to our deployment context. Research suggests that different organizational sizes face distinct scheduling challenges, with small facilities (<100 staff) having simpler requirements addressable by spreadsheets, while large hospital systems (>2,000 staff) require enterprise resource planning integration [Cheang et al., 2003]. Our target segment—mid-sized multi-site care home groups—represents an underserved market where commercial solutions are often over-engineered and prohibitively expensive.
+The system scope was deliberately constrained to focus on organizations of similar scale to our deployment context. Research suggests that different organizational sizes face distinct scheduling challenges, with small facilities (<100 staff) having simpler requirements addressable by spreadsheets, while large hospital systems (>2,000 staff) require enterprise resource planning integration (Cheang et al., 2003). Our target segment—mid-sized multi-site care home groups—represents an underserved market where commercial solutions are often over-engineered and prohibitively expensive.
 
 **Scope:**
 - **Organizations:** Multi-site care home groups (3-10 facilities) - representing approximately 500-1,500 residents
@@ -122,7 +122,7 @@ The system scope was deliberately constrained to focus on organizations of simil
 - Mobile native applications (mobile-responsive web interface included, but native iOS/Android apps deferred to future work)
 
 **Rationale for Boundaries:**
-The exclusion of clinical documentation reflects a deliberate architectural decision to maintain system focus and avoid scope creep, a common cause of healthcare IT project failure [Koppel et al., 2005]. Integration points are designed to allow future interoperability while maintaining clear separation of concerns.
+The exclusion of clinical documentation reflects a deliberate architectural decision to maintain system focus and avoid scope creep, a common cause of healthcare IT project failure (Koppel et al., 2005). Integration points are designed to allow future interoperability while maintaining clear separation of concerns.
 
 ### 1.4 Contributions
 
@@ -159,42 +159,42 @@ The exclusion of clinical documentation reflects a deliberate architectural deci
 
 #### Theoretical Foundations
 
-The **Nurse Rostering Problem (NRP)** has been extensively studied in operations research literature since the 1960s, representing a classic example of constraint satisfaction problems [Warner, 1976]. Burke et al. [2004] provide a comprehensive survey identifying two categories of constraints that define the problem space:
+The **Nurse Rostering Problem (NRP)** has been extensively studied in operations research literature since the 1960s, representing a classic example of constraint satisfaction problems (Warner, 1976). Burke et al. [2004] provide a comprehensive survey identifying two categories of constraints that define the problem space:
 
 **Hard constraints** (must be satisfied for valid solution):
-- Coverage requirements: Minimum staff per shift to maintain safe patient ratios [Aiken et al., 2002]
-- Rest periods: Mandatory breaks between shifts to prevent fatigue-related errors [Scott et al., 2006]
-- Qualifications: Staff certifications and competencies must match role requirements [Cheang et al., 2003]
+- Coverage requirements: Minimum staff per shift to maintain safe patient ratios (Aiken et al., 2002)
+- Rest periods: Mandatory breaks between shifts to prevent fatigue-related errors (Scott et al., 2006)
+- Qualifications: Staff certifications and competencies must match role requirements (Cheang et al., 2003)
 - Legal restrictions: Working Time Regulations (1998) limiting weekly hours and mandating rest breaks
 
 **Soft constraints** (desirable but negotiable):
-- Staff preferences: Shift patterns aligned with personal circumstances [Topaloglu & Ozkarahan, 2004]
-- Fairness: Equitable distribution of weekend/night shifts [De Causmaecker & Vanden Berghe, 2011]
-- Workload balance: Avoiding consecutive high-intensity shifts [Rönnberg & Larsson, 2010]
-- Continuity of care: Minimising staff rotation for resident familiarity [Mozos et al., 2010]
+- Staff preferences: Shift patterns aligned with personal circumstances (Topaloglu & Ozkarahan, 2004)
+- Fairness: Equitable distribution of weekend/night shifts (De Causmaecker & Vanden Berghe, 2011)
+- Workload balance: Avoiding consecutive high-intensity shifts (Rönnberg & Larsson, 2010)
+- Continuity of care: Minimising staff rotation for resident familiarity (Mozos et al., 2010)
 
 **Computational Complexity:**
-The NRP is proven to be NP-hard [Cheang et al., 2003], meaning exact optimal solutions become computationally intractable as problem size increases. For a facility with 100 staff across 7 days with 3 shift types, the search space exceeds 10^200 possible configurations. This complexity necessitates heuristic or approximate solution methods for real-world applications.
+The NRP is proven to be NP-hard (Cheang et al., 2003), meaning exact optimal solutions become computationally intractable as problem size increases. For a facility with 100 staff across 7 days with 3 shift types, the search space exceeds 10^200 possible configurations. This complexity necessitates heuristic or approximate solution methods for real-world applications.
 
 **Common Approaches:**
-1. **Integer Linear Programming (ILP):** Formulates scheduling as optimisation problem with objective function (e.g., minimise cost) subject to constraints [Rönnberg & Larsson, 2010]. Guarantees optimal solutions for small instances (<50 staff, 2-week horizon) but suffers from exponential time complexity. Commercial solvers (CPLEX, Gurobi) can handle medium instances but require expensive licensing.
+1. **Integer Linear Programming (ILP):** Formulates scheduling as optimisation problem with objective function (e.g., minimise cost) subject to constraints (Rönnberg & Larsson, 2010). Guarantees optimal solutions for small instances (<50 staff, 2-week horizon) but suffers from exponential time complexity. Commercial solvers (CPLEX, Gurobi) can handle medium instances but require expensive licensing.
 
-2. **Heuristics:** Fast, deterministic rules-of-thumb producing "good enough" solutions in polynomial time [Burke et al., 2013]. Examples include greedy algorithms (assign highest-priority shifts first) and construction algorithms (build schedule incrementally). Weaknesses include local optima traps and lack of optimality guarantees.
+2. **Heuristics:** Fast, deterministic rules-of-thumb producing "good enough" solutions in polynomial time (Burke et al., 2013). Examples include greedy algorithms (assign highest-priority shifts first) and construction algorithms (build schedule incrementally). Weaknesses include local optima traps and lack of optimality guarantees.
 
-3. **Meta-heuristics:** Population-based stochastic search algorithms exploring solution space intelligently [Awadallah et al., 2015]. Genetic algorithms encode schedules as chromosomes, applying crossover and mutation operators to evolve better solutions over generations [Aickelin & Dowsland, 2004]. Simulated annealing accepts probabilistically worse solutions to escape local optima [Meyer auf'm Hofe, 2001]. Tabu search maintains memory of explored solutions to guide search away from previously visited regions [Burke et al., 1999].
+3. **Meta-heuristics:** Population-based stochastic search algorithms exploring solution space intelligently (Awadallah et al., 2015). Genetic algorithms encode schedules as chromosomes, applying crossover and mutation operators to evolve better solutions over generations (Aickelin & Dowsland, 2004). Simulated annealing accepts probabilistically worse solutions to escape local optima (Meyer auf'm Hofe, 2001). Tabu search maintains memory of explored solutions to guide search away from previously visited regions (Burke et al., 1999).
 
-4. **Hybrid methods:** Combine exact and heuristic approaches, e.g., ILP for hard constraints + tabu search for soft constraint optimisation [De Causmaecker & Vanden Berghe, 2011]. Achieves near-optimal solutions with acceptable computation time.
+4. **Hybrid methods:** Combine exact and heuristic approaches, e.g., ILP for hard constraints + tabu search for soft constraint optimisation (De Causmaecker & Vanden Berghe, 2011). Achieves near-optimal solutions with acceptable computation time.
 
 **This Project's Approach:**
-We employ **pattern-based scheduling** - a deterministic approach where shifts follow predefined repeating patterns (e.g., "2 days, 2 off, 2 nights, 5 off"). This method is suitable for care homes with stable staffing levels and predictable workload [Ernst et al., 2004]. Advantages include simplicity, transparency to staff, and fairness (patterns rotate equitably). Limitations include inflexibility for unexpected demand spikes or staff preferences. Future integration of optimisation algorithms could address edge cases while maintaining pattern-based foundation for majority of shifts.
+We employ **pattern-based scheduling** - a deterministic approach where shifts follow predefined repeating patterns (e.g., "2 days, 2 off, 2 nights, 5 off"). This method is suitable for care homes with stable staffing levels and predictable workload (Ernst et al., 2004). Advantages include simplicity, transparency to staff, and fairness (patterns rotate equitably). Limitations include inflexibility for unexpected demand spikes or staff preferences. Future integration of optimisation algorithms could address edge cases while maintaining pattern-based foundation for majority of shifts.
 
 #### Commercial Solutions Review
 
 | System | Cost | Multi-Home | Compliance | Customization | Ref |
 |--------|------|------------|------------|---------------|-----|
-| RotaMaster | £7/user/mo | Yes (addon) | Basic | Limited | [RotaMaster, 2024] |
-| PeoplePlanner | £9/user/mo | Yes | Advanced | Medium | [PeoplePlanner, 2024] |
-| Humanity | £6/user/mo | No | Basic | API only | [Humanity, 2024] |
+| RotaMaster | £7/user/mo | Yes (addon) | Basic | Limited | (RotaMaster, 2024) |
+| PeoplePlanner | £9/user/mo | Yes | Advanced | Medium | (PeoplePlanner, 2024) |
+| Humanity | £6/user/mo | No | Basic | API only | (Humanity, 2024) |
 | **This System** | £0 (OSS) | Native | Advanced | Full | - |
 
 **Gap:** No open-source solution with native multi-home support and compliance automation.
@@ -203,14 +203,14 @@ We employ **pattern-based scheduling** - a deterministic approach where shifts f
 
 #### Definitions
 
-**Multi-tenancy:** Single software instance serving multiple independent customers (tenants) [Chong & Carraro, 2006].
+**Multi-tenancy:** Single software instance serving multiple independent customers (tenants) (Chong & Carraro, 2006).
 
 **Isolation Levels:**
 1. **Shared Database, Shared Schema:** Query filtering (this project)
 2. **Shared Database, Separate Schema:** Schema per tenant
 3. **Separate Databases:** Database per tenant
 
-**Trade-offs [Guo et al., 2007]:**
+**Trade-offs (Guo et al., 2007):**
 - Isolation ↑ → Cost ↑, Scalability ↓
 - Sharing ↑ → Cost ↓, Isolation ↓
 
@@ -237,7 +237,7 @@ Shift.objects.filter(unit__care_home=request.user.care_home)
 - Shared resource contention
 - Security depends on code correctness
 
-**Mitigation [Krebs et al., 2014]:**
+**Mitigation (Krebs et al., 2014):**
 - Permission decorators on all views
 - Automated tests for data leakage
 - Regular security audits
@@ -252,7 +252,7 @@ Shift.objects.filter(unit__care_home=request.user.care_home)
 - Incident reporting (24-hour notification for serious events)
 - Induction standards (22-week framework)
 
-**Challenges [Wears & Berg, 2005]:**
+**Challenges (Wears & Berg, 2005):**
 - Paper-based compliance tracking error-prone
 - Manual monitoring labour-intensive
 - Audit preparation time-consuming
@@ -260,13 +260,13 @@ Shift.objects.filter(unit__care_home=request.user.care_home)
 
 #### Technology Solutions
 
-**Electronic Compliance Systems [Jones et al., 2019]:**
+**Electronic Compliance Systems (Jones et al., 2019):**
 - Automated expiry reminders (training, certifications)
 - Audit trail generation
 - Real-time compliance dashboards
 - Regulatory reporting automation
 
-**Success Factors [Kaplan & Shaw, 2004]:**
+**Success Factors (Kaplan & Shaw, 2004):**
 1. Integration with existing workflows
 2. Minimal data entry burden
 3. Clear visual indicators
@@ -288,13 +288,13 @@ Shift.objects.filter(unit__care_home=request.user.care_home)
 3. **Executives:** Strategic oversight, dashboard-oriented
 4. **Admin:** Data entry, reporting, desktop-focused
 
-**Design Implications [Mamykina et al., 2016]:**
+**Design Implications (Mamykina et al., 2016):**
 - Role-specific interfaces essential
 - Progressive disclosure for complexity
 - Visual indicators over text
 - Mobile optimisation critical
 
-#### Usability Principles for Healthcare [Zhang et al., 2003]
+#### Usability Principles for Healthcare (Zhang et al., 2003)
 
 1. **Error Prevention:** Confirmations for critical actions
 2. **Error Recovery:** Clear error messages, undo capabilities
@@ -313,7 +313,7 @@ Shift.objects.filter(unit__care_home=request.user.care_home)
 
 **Identified Gaps:**
 
-1. **No open-source multi-home scheduling system** with healthcare compliance features [Literature search: IEEE, ACM, PubMed, 2024]
+1. **No open-source multi-home scheduling system** with healthcare compliance features (Literature search: IEEE, ACM, PubMed, 2024)
 
 2. **Limited published case studies** on Django-based healthcare systems at scale (500+ users)
 
@@ -334,11 +334,11 @@ Addresses all four gaps with:
 
 ### 3.1 Stakeholder Identification
 
-Healthcare scheduling systems serve diverse user groups with competing priorities and varying technical proficiency [Berg, 1999]. We identified seven distinct stakeholder categories across Glasgow's 5 care homes through initial scoping interviews and organisational analysis. Each group has unique requirements, constraints, and success criteria that informed system design priorities.
+Healthcare scheduling systems serve diverse user groups with competing priorities and varying technical proficiency (Berg, 1999). We identified seven distinct stakeholder categories across Glasgow's 5 care homes through initial scoping interviews and organisational analysis. Each group has unique requirements, constraints, and success criteria that informed system design priorities.
 
 **Primary Users (Direct System Interaction):**
 
-Frontline care staff (600+ across 5 homes) represent the largest user base, requiring mobile-friendly access to view schedules, submit leave requests, and check training compliance. Despite limited technical expertise, this group's satisfaction is critical for system adoption—rejected staff scheduling systems frequently fail due to poor frontline usability [Rönnberg & Larsson, 2010].
+Frontline care staff (600+ across 5 homes) represent the largest user base, requiring mobile-friendly access to view schedules, submit leave requests, and check training compliance. Despite limited technical expertise, this group's satisfaction is critical for system adoption—rejected staff scheduling systems frequently fail due to poor frontline usability (Rönnberg & Larsson, 2010).
 
 Operational Managers (11 across 5 homes) are power users spending 25-30 hours weekly on scheduling tasks. This group experiences the highest administrative burden from manual processes and thus represents the primary ROI opportunity. OMs require advanced functionality: 4-week rota generation, absence management, real-time coverage visualisation, and multi-unit oversight.
 
@@ -675,7 +675,7 @@ class LeaveRequest(Model):
 
 ### 5.1 Development Methodology
 
-We adopted an agile development approach adapted from Scrum [Schwaber & Sutherland, 2017], modified for single-developer context. Agile methodologies have demonstrated particular effectiveness in healthcare IT projects where requirements evolve through user feedback and regulatory changes [Kerzner, 2017]. The choice of iterative development over traditional waterfall was motivated by three factors: (1) initial requirements uncertainty in a novel domain, (2) need for rapid validation with stakeholders, and (3) ability to pivot based on technical discoveries.
+We adopted an agile development approach adapted from Scrum (Schwaber & Sutherland, 2017), modified for single-developer context. Agile methodologies have demonstrated particular effectiveness in healthcare IT projects where requirements evolve through user feedback and regulatory changes (Kerzner, 2017). The choice of iterative development over traditional waterfall was motivated by three factors: (1) initial requirements uncertainty in a novel domain, (2) need for rapid validation with stakeholders, and (3) ability to pivot based on technical discoveries.
 
 **Approach:** Agile/Iterative (adapted Scrum)
 
@@ -693,9 +693,9 @@ We adopted an agile development approach adapted from Scrum [Schwaber & Sutherla
 - DevOps: Database migrations, deployment scripting
 
 **Tools:**
-- Version Control: Git with feature-branch workflow [Chacon & Straub, 2014]
+- Version Control: Git with feature-branch workflow (Chacon & Straub, 2014)
 - IDE: Visual Studio Code with Python, Django extensions
-- Debugging: Django Debug Toolbar for query optimisation [Django Software Foundation, 2024]
+- Debugging: Django Debug Toolbar for query optimisation (Django Software Foundation, 2024)
 - Database: DB Browser for SQLite for schema inspection
 - Documentation: Markdown files maintained alongside code
 
@@ -712,7 +712,7 @@ We adopted an agile development approach adapted from Scrum [Schwaber & Sutherla
 - Code review: Solo project, but periodic external review by technical advisor
 
 **Deviation from Standard Agile:**
-As a solo developer project, certain Scrum ceremonies were omitted (daily standups, sprint planning meetings) while maintaining core principles of iterative development, stakeholder feedback, and continuous integration. This pragmatic adaptation aligns with agile's value of "individuals and interactions over processes and tools" [Beck et al., 2001].
+As a solo developer project, certain Scrum ceremonies were omitted (daily standups, sprint planning meetings) while maintaining core principles of iterative development, stakeholder feedback, and continuous integration. This pragmatic adaptation aligns with agile's value of "individuals and interactions over processes and tools" (Beck et al., 2001).
 
 ### 5.2 Phase 1: Foundation (MVP) - Weeks 1-3
 
@@ -946,7 +946,7 @@ def update_leave_balance(sender, instance, **kwargs):
 
 ### 7.1 Quantitative Metrics
 
-We evaluated system performance using established benchmarks for web application responsiveness [Nielsen, 1993] and database query optimisation [Kleppmann, 2017]. Performance testing was conducted on development hardware (MacBook Pro, M1 chip, 16GB RAM) running the application under simulated multi-user load.
+We evaluated system performance using established benchmarks for web application responsiveness (Nielsen, 1993) and database query optimisation (Kleppmann, 2017). Performance testing was conducted on development hardware (MacBook Pro, M1 chip, 16GB RAM) running the application under simulated multi-user load.
 
 **Testing Methodology:**
 - Load generation: Apache JMeter simulating 50 concurrent users
@@ -965,7 +965,7 @@ We evaluated system performance using established benchmarks for web application
 | Rota View (week) | 30 | 650 | B | <1000ms (instantaneous) |
 | Leave Request | 8 | 180 | A+ | <1000ms (instantaneous) |
 
-**Analysis:** All pages meet Nielsen's 1-second threshold for "instantaneous" response, maintaining user flow without interruption [Nielsen, 1993]. The senior dashboard's 60 queries indicate optimisation opportunity through caching or query consolidation (see Section 10 recommendations). Query counts suggest N+1 problem in dashboard views, addressable via select_related() and prefetch_related() Django ORM optimisations [Greenfeld & Roy, 2015].
+**Analysis:** All pages meet Nielsen's 1-second threshold for "instantaneous" response, maintaining user flow without interruption (Nielsen, 1993). The senior dashboard's 60 queries indicate optimisation opportunity through caching or query consolidation (see Section 10 recommendations). Query counts suggest N+1 problem in dashboard views, addressable via select_related() and prefetch_related() Django ORM optimisations (Greenfeld & Roy, 2015).
 
 **Auto-Approval Algorithm Accuracy:**
 Validation conducted using holdout test set of 50 historical leave requests manually classified by operational managers.
@@ -990,7 +990,7 @@ Validation conducted using holdout test set of 50 historical leave requests manu
 - **Specificity:** 100% (15/(15+0)) - correct review flagging
 - **F1-Score:** 0.82 (harmonic mean of precision/recall)
 
-**Interpretation:** The algorithm demonstrates perfect precision (critical for safety - no inappropriate approvals) with good recall (70% of requests eligible for automation). The conservative approach (flagging ambiguous cases for manual review) aligns with healthcare's "first, do no harm" principle [Beauchamp & Childress, 2019].
+**Interpretation:** The algorithm demonstrates perfect precision (critical for safety - no inappropriate approvals) with good recall (70% of requests eligible for automation). The conservative approach (flagging ambiguous cases for manual review) aligns with healthcare's "first, do no harm" principle (Beauchamp & Childress, 2019).
 
 **System Uptime:**
 - Demo mode: 98.5% availability (periodic restarts for testing and maintenance)
@@ -1026,7 +1026,7 @@ Validation conducted using holdout test set of 50 historical leave requests manu
 
 ### 7.12 ML Model Validation Testing
 
-To ensure robustness of machine learning components, we implemented comprehensive test suite covering Prophet forecasting accuracy, ShiftOptimiser constraint compliance, and feature engineering pipeline correctness. Testing methodology follows established ML validation practices [Géron, 2019; Chollet, 2017].
+To ensure robustness of machine learning components, we implemented comprehensive test suite covering Prophet forecasting accuracy, ShiftOptimiser constraint compliance, and feature engineering pipeline correctness. Testing methodology follows established ML validation practices (Géron, 2019; Chollet, 2017).
 
 **Test Suite Structure (69 tests total):**
 
@@ -1095,22 +1095,22 @@ Execution time: ~6 seconds (fast feedback loop)
 | Feature Engineering | Format validity | 100% | ✅ All tests pass |
 
 **Implementation Gaps Identified:**
-Tests revealed missing methods in shift_optimiser.py (`_calculate_staff_costs`, `_get_weekly_hours`, `create_shifts`) and ml_utils.py (`fill_missing_dates`, `add_lag_features`, `add_rolling_features`). This demonstrates test-driven development value—tests written before full implementation catch gaps early [Beck, 2003].
+Tests revealed missing methods in shift_optimiser.py (`_calculate_staff_costs`, `_get_weekly_hours`, `create_shifts`) and ml_utils.py (`fill_missing_dates`, `add_lag_features`, `add_rolling_features`). This demonstrates test-driven development value—tests written before full implementation catch gaps early (Beck, 2003).
 
 **MAPE Interpretation Guidelines:**
-Following healthcare forecasting literature [Hyndman & Athanasopoulos, 2018], we established accuracy bands:
+Following healthcare forecasting literature (Hyndman & Athanasopoulos, 2018), we established accuracy bands:
 - **0-15%:** Excellent (stable administrative units, low variance)
 - **15-30%:** Good (typical social care, seasonal patterns)
 - **30-50%:** Moderate (high variance, acceptable for new units)
 - **>50%:** Poor (retrain recommended, insufficient data likely)
 
-Typical care home units achieve 20-25% MAPE, comparable to published healthcare demand forecasting studies [Jones et al., 2008; Tandberg & Qualls, 1994]. Seasonal units (winter pressure, school holidays) may reach 30-35% MAPE—acceptable given inherent unpredictability.
+Typical care home units achieve 20-25% MAPE, comparable to published healthcare demand forecasting studies (Jones et al., 2008; Tandberg & Qualls, 1994). Seasonal units (winter pressure, school holidays) may reach 30-35% MAPE—acceptable given inherent unpredictability.
 
 **Test Development Efficiency:**
 - **Time:** 2.5 hours (vs 6-hour estimate) - 58% faster
 - **Cost:** £92.50 @ £37/hour
 - **Budget:** £296 allocated (£203.50 under budget)
-- **ROI:** Tests prevent production bugs, estimated 10:1 value from early bug detection [Boehm & Basili, 2001]
+- **ROI:** Tests prevent production bugs, estimated 10:1 value from early bug detection (Boehm & Basili, 2001)
 
 **Scottish Design Alignment:**
 - **Evidence-Based:** MAPE benchmarks from healthcare forecasting literature, cross-validation standard for time-series
@@ -1123,10 +1123,10 @@ Typical care home units achieve 20-25% MAPE, comparable to published healthcare 
 
 ### 8.1 Time Savings
 
-Time-motion studies have long been used in healthcare to quantify workflow efficiency and identify improvement opportunities [Lopetegui et al., 2014]. Our findings demonstrate substantial time savings consistent with other healthcare IT automation studies, which typically report 30-80% reduction in administrative tasks [Poissant et al., 2005].
+Time-motion studies have long been used in healthcare to quantify workflow efficiency and identify improvement opportunities (Lopetegui et al., 2014). Our findings demonstrate substantial time savings consistent with other healthcare IT automation studies, which typically report 30-80% reduction in administrative tasks (Poissant et al., 2005).
 
 **Current State (Manual Process):**
-Data collected through dual methodology: (1) 8 hours direct observation of operational managers during typical workweeks, and (2) structured interviews with 9 Operational Managers, 3 Service Managers, 3 IDI team staff, and 1 Head of Service across all 5 care homes. The convergence of observational data and self-reported estimates strengthens validity [Creswell & Clark, 2017].
+Data collected through dual methodology: (1) 8 hours direct observation of operational managers during typical workweeks, and (2) structured interviews with 9 Operational Managers, 3 Service Managers, 3 IDI team staff, and 1 Head of Service across all 5 care homes. The convergence of observational data and self-reported estimates strengthens validity (Creswell & Clark, 2017).
 
 **Operational Managers (9 total):**
 - **Source:** Direct observations (8 hours) + structured discussions (9 OM's, 3 SM's)
@@ -1158,7 +1158,7 @@ Data collected through dual methodology: (1) 8 hours direct observation of opera
 
 **Total Current Burden:** 14,924 hours/year (**£550,732/year**)
 
-**Validation:** The 100% agreement among 12 managers on 4-6 hour daily burden suggests high reliability of time estimates. Triangulation with observational data (5.8 hours/day average observed) confirms self-reported figures [Denzin, 1978]. SM, IDI and HOS time estimates corroborated through system access logs and calendar reviews.
+**Validation:** The 100% agreement among 12 managers on 4-6 hour daily burden suggests high reliability of time estimates. Triangulation with observational data (5.8 hours/day average observed) confirms self-reported figures (Denzin, 1978). SM, IDI and HOS time estimates corroborated through system access logs and calendar reviews.
 
 **Manual vs. Automated (per OM per week):**
 
@@ -1184,7 +1184,7 @@ Data collected through dual methodology: (1) 8 hours direct observation of opera
 
 **Financial Impact:**
 
-Return on Investment (ROI) analysis follows standard capital budgeting methodology [Brigham & Ehrhardt, 2016], calculating net present value of cost savings versus development investment. We employ conservative assumptions: (1) hourly rates at market median (OM: £37, SM: £44, IDI: £27, HOS: £50), (2) maintenance costs ignored (minimal for mature Django applications), (3) no value assigned to qualitative benefits (improved compliance, staff satisfaction).
+Return on Investment (ROI) analysis follows standard capital budgeting methodology (Brigham & Ehrhardt, 2016), calculating net present value of cost savings versus development investment. We employ conservative assumptions: (1) hourly rates at market median (OM: £37, SM: £44, IDI: £27, HOS: £50), (2) maintenance costs ignored (minimal for mature Django applications), (3) no value assigned to qualitative benefits (improved compliance, staff satisfaction).
 
 **Direct Labour Savings:**
 - **Annual cost (current manual):** £550,732 (OM: £432,900 + SM: £54,912 + IDI: £42,120 + HOS: £20,800)
@@ -1239,7 +1239,7 @@ Return on Investment (ROI) analysis follows standard capital budgeting methodolo
 - **Base system only:** £6,750 / £10,234 = 0.66 weeks (for comparison)
 
 **Interpretation:**
-The ROI figures substantially exceed typical healthcare IT investments, which average 15-30% annual returns [Wang et al., 2018]. The exceptional returns reflect two factors: (1) high labour cost baseline due to manual inefficiency, and (2) low development cost due to open-source framework leverage. The one-week payback period is virtually unprecedented in healthcare IT, where typical payback ranges from 2-5 years [Halamka, 2006].
+The ROI figures substantially exceed typical healthcare IT investments, which average 15-30% annual returns (Wang et al., 2018). The exceptional returns reflect two factors: (1) high labour cost baseline due to manual inefficiency, and (2) low development cost due to open-source framework leverage. The one-week payback period is virtually unprecedented in healthcare IT, where typical payback ranges from 2-5 years (Halamka, 2006).
 
 **Sensitivity Analysis:**
 Even under pessimistic assumptions (50% lower time savings, double development cost), ROI remains >1,000% annually. This robustness suggests the business case holds across varied organizational contexts.
@@ -1370,11 +1370,11 @@ Our results within expected range demonstrate production-ready forecasting accur
 
 ### 8.12 Production Deployment & Performance Optimisation
 
-Transitioning from development to production-ready deployment required comprehensive performance optimisation, load testing validation, and CI/CD infrastructure. This section documents scalability improvements and production deployment architecture, addressing the "valley of death" between prototype and operational system [Gulati & Garino, 2000].
+Transitioning from development to production-ready deployment required comprehensive performance optimisation, load testing validation, and CI/CD infrastructure. This section documents scalability improvements and production deployment architecture, addressing the "valley of death" between prototype and operational system (Gulati & Garino, 2000).
 
 **Performance Optimisation Requirements:**
 
-Initial development focused on functional correctness, deferring performance optimisation. However, production deployment for 821 concurrent users across 5 care homes demanded systematic performance engineering. We identified three critical bottlenecks through profiling [Kleppmann, 2017]:
+Initial development focused on functional correctness, deferring performance optimisation. However, production deployment for 821 concurrent users across 5 care homes demanded systematic performance engineering. We identified three critical bottlenecks through profiling (Kleppmann, 2017):
 
 1. **Database Queries:** N+1 query problem causing 45-60 queries per dashboard page
 2. **Forecast Generation:** Synchronous Prophet training blocking UI (8-12s per unit)
@@ -1382,11 +1382,11 @@ Initial development focused on functional correctness, deferring performance opt
 
 **Optimisation Methodology:**
 
-Following established performance tuning practices [Gregg, 2013], we implemented systematic optimisation in three phases:
+Following established performance tuning practices (Gregg, 2013), we implemented systematic optimisation in three phases:
 
 **Phase 1: Database Query Optimisation**
 
-**Problem:** Django ORM's default lazy loading causes N+1 query anti-pattern [Greenfeld & Roy, 2015]. Example: Loading shifts with assigned staff:
+**Problem:** Django ORM's default lazy loading causes N+1 query anti-pattern (Greenfeld & Roy, 2015). Example: Loading shifts with assigned staff:
 
 ```python
 # Anti-pattern (45 queries for 20 shifts)
@@ -1438,7 +1438,7 @@ class Staff(models.Model):
 
 **Problem:** Expensive aggregations (shift counts, leave balances, compliance stats) recalculated on every dashboard load, despite data changing infrequently.
 
-**Solution:** Multi-tier Redis caching strategy [Carlson, 2013]:
+**Solution:** Multi-tier Redis caching strategy (Carlson, 2013):
 
 **Tier 1 - Forecast Cache (24-hour TTL):**
 ```python
@@ -1487,7 +1487,7 @@ Caches staffing coverage calculations (compliance-critical, updated frequently).
 
 **Problem:** Sequential Prophet model training for 5 units takes 15-20s (5 units × 3-4s each), blocking deployment and UI.
 
-**Solution:** Parallel training using Python `ThreadPoolExecutor` [Beazley & Jones, 2013]:
+**Solution:** Parallel training using Python `ThreadPoolExecutor` (Beazley & Jones, 2013):
 
 ```python
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -1521,7 +1521,7 @@ print(f"Trained {len(units)} models in {elapsed:.1f}s")
 # Output: "Trained 5 models in 4.8s" (3.1× speedup vs 15s sequential)
 ```
 
-**Thread Safety:** Prophet models trained independently (no shared state), enabling embarrassingly parallel execution [Foster, 1995]. GIL released during NumPy/Stan operations [Van Der Walt et al., 2011].
+**Thread Safety:** Prophet models trained independently (no shared state), enabling embarrassingly parallel execution (Foster, 1995). GIL released during NumPy/Stan operations (Van Der Walt et al., 2011).
 
 **Results:** Training time reduced from 15s to 4.8s (68% reduction, 3.1× speedup). Worker count tuned to CPU cores (4 workers on 8-core production server).
 
@@ -1529,7 +1529,7 @@ print(f"Trained {len(units)} models in {elapsed:.1f}s")
 
 **Methodology:**
 
-Realistic load testing required simulating peak concurrent usage during shift changes (8am, 8pm). Following established load testing practices [Meier et al., 2007], we designed multi-threaded concurrent user simulation:
+Realistic load testing required simulating peak concurrent usage during shift changes (8am, 8pm). Following established load testing practices (Meier et al., 2007), we designed multi-threaded concurrent user simulation:
 
 ```python
 import threading
@@ -1617,7 +1617,7 @@ def run_load_test(num_users=300, duration_seconds=120):
 
 **Performance Validation:**
 
-Following Nielsen's usability heuristics [Nielsen, 1993], we established performance targets:
+Following Nielsen's usability heuristics (Nielsen, 1993), we established performance targets:
 - **< 1s:** Instantaneous (user flow uninterrupted) - ✓ **ACHIEVED** (777ms avg)
 - **< 10s:** Acceptable (user waits without losing focus) - ✓ **ACHIEVED** (2.87s p99)
 - **> 10s:** Unacceptable (user loses attention) - ✗ **AVOIDED**
@@ -1634,7 +1634,7 @@ The 300-user test validates production readiness for realistic peak load:
 | **Staff Rota (Django)** | **300** | **777ms** | This study |
 | RotaMaster (Commercial) | 250 | 890ms | Vendor documentation |
 | PeoplePlanner (SaaS) | 500 | 1,250ms | User reviews (G2 Crowd) |
-| Hospital EHR System | 1000 | 1,800ms | [Payne et al., 2016] |
+| Hospital EHR System | 1000 | 1,800ms | (Payne et al., 2016) |
 
 Our Django-based system outperforms commercial alternatives at comparable scale, demonstrating open-source frameworks can achieve enterprise-grade performance.
 
@@ -1642,7 +1642,7 @@ Our Django-based system outperforms commercial alternatives at comparable scale,
 
 **Infrastructure Specifications:**
 
-Following best practices for Django production deployment [Greenfeld & Roy, 2015; Two Twelve-Factor App, 2012], we designed 2-server architecture:
+Following best practices for Django production deployment (Greenfeld & Roy, 2015; Two Twelve-Factor App, 2012), we designed 2-server architecture:
 
 **Application Servers (2×):**
 - CPU: 8 cores (Intel Xeon or equivalent)
@@ -1752,7 +1752,7 @@ server {
 
 **CI/CD Pipeline:**
 
-Continuous integration and deployment infrastructure ensures code quality and streamlines production updates [Humble & Farley, 2010; Kim et al., 2016]:
+Continuous integration and deployment infrastructure ensures code quality and streamlines production updates (Humble & Farley, 2010; Kim et al., 2016):
 
 **GitHub Actions Workflows (4 workflows):**
 
@@ -1862,11 +1862,11 @@ jobs:
 | Change failure rate | <15% | 8% | ✓ |
 | MTTR (mean time to recovery) | <1 hour | 20 min | ✓ |
 
-These metrics align with "high performer" thresholds in State of DevOps research [Forsgren et al., 2018].
+These metrics align with "high performer" thresholds in State of DevOps research (Forsgren et al., 2018).
 
 **Production Readiness Assessment:**
 
-Using established production readiness rubrics [Beyer et al., 2016; Nygard, 2018], we scored the system across 10 dimensions:
+Using established production readiness rubrics (Beyer et al., 2016; Nygard, 2018), we scored the system across 10 dimensions:
 
 | Dimension | Score | Rationale |
 |-----------|-------|-----------|
@@ -1909,7 +1909,7 @@ Using established production readiness rubrics [Beyer et al., 2016; Nygard, 2018
 
 **Scottish Design Principles:**
 
-- **Evidence-Based:** Load testing methodology from [Meier et al., 2007], performance targets from [Nielsen, 1993], CI/CD from [Forsgren et al., 2018]
+- **Evidence-Based:** Load testing methodology from (Meier et al., 2007), performance targets from (Nielsen, 1993), CI/CD from (Forsgren et al., 2018)
 - **Transparent:** Performance metrics published, load test code open-source, bottlenecks documented
 - **User-Centered:** 300-user scenario derived from OM feedback on shift-change peak usage
 
@@ -1917,18 +1917,18 @@ Using established production readiness rubrics [Beyer et al., 2016; Nygard, 2018
 
 Systematic performance optimisation (database indexes, Redis caching, parallel Prophet training) combined with rigorous load testing (300 concurrent users) and automated CI/CD pipeline validates production readiness. The 777ms average response time under realistic peak load (shift changes at 8am/8pm) demonstrates Django-based open-source solutions can match or exceed commercial alternatives at 1/10th the cost.
 
-Key achievement: **9.1/10 production readiness score**, up from 7.2/10 pre-optimisation, meeting enterprise deployment standards [Beyer et al., 2016] with £371 investment delivering £217,000/year value (58,382% ROI).
+Key achievement: **9.1/10 production readiness score**, up from 7.2/10 pre-optimisation, meeting enterprise deployment standards (Beyer et al., 2016) with £371 investment delivering £217,000/year value (58,382% ROI).
 
 ### 8.13 User Testing & Iterative Enhancements
 
 **Production User Testing (December 2025):**
 
-Following full deployment across 5 care homes (300 users), Service Managers (SM) and Operational Managers (OM) participated in structured user acceptance testing (UAT). This testing phase revealed opportunities for ML feature accessibility improvements, demonstrating agile response to real-world user needs [Beck et al., 2001].
+Following full deployment across 5 care homes (300 users), Service Managers (SM) and Operational Managers (OM) participated in structured user acceptance testing (UAT). This testing phase revealed opportunities for ML feature accessibility improvements, demonstrating agile response to real-world user needs (Beck et al., 2001).
 
 **Enhancement Request #1: ML Forecasting in AI Chatbot**
 
 **User Need Identified:**
-SM/OM users reported difficulty accessing Prophet forecasting insights during shift planning. While ML predictions existed in dedicated dashboards, managers needed instant forecast access during conversations with the AI assistant. This represents a critical usability finding: advanced ML features must be accessible through natural language interfaces, not only specialized dashboards [Norman, 2013].
+SM/OM users reported difficulty accessing Prophet forecasting insights during shift planning. While ML predictions existed in dedicated dashboards, managers needed instant forecast access during conversations with the AI assistant. This represents a critical usability finding: advanced ML features must be accessible through natural language interfaces, not only specialized dashboards (Norman, 2013).
 
 **User Feedback:**
 > "I know the system predicts demand, but I want to ask 'Will we be short-staffed tomorrow?' and get an instant answer—not navigate to a separate dashboard." - Service Manager, Care Home A
@@ -1970,7 +1970,7 @@ Integrated Prophet ML forecasting directly into AI chatbot API (`scheduling/view
 - **Accessibility:** ML insights now accessible via natural language, no dashboard navigation required
 - **Decision Speed:** Instant forecast access during shift planning conversations
 - **Proactive Planning:** Shortage alerts enable early agency staff booking
-- **Confidence Building:** Uncertainty indicators promote informed decision-making [Brehmer, 1992]
+- **Confidence Building:** Uncertainty indicators promote informed decision-making (Brehmer, 1992)
 
 **Technical Implementation:**
 - **Development Time:** 2 hours (£74 cost)
@@ -1980,7 +1980,7 @@ Integrated Prophet ML forecasting directly into AI chatbot API (`scheduling/view
 
 **Validation Methodology:**
 
-Following participatory design principles [Schuler & Namioka, 1993], this enhancement demonstrates:
+Following participatory design principles (Schuler & Namioka, 1993), this enhancement demonstrates:
 
 1. **User-Centered Development:** Feature emerged from real user needs during production testing, not developer assumptions
 2. **Agile Response:** Same-day implementation and deployment shows system adaptability
@@ -2002,10 +2002,10 @@ Following participatory design principles [Schuler & Namioka, 1993], this enhanc
 
 **Significance for Healthcare AI Systems:**
 
-This enhancement illustrates a critical lesson for ML healthcare applications: **sophisticated ML capabilities are underutilized if not accessible through familiar interfaces** [Coiera, 2003]. By integrating Prophet forecasting into conversational AI, we lower the barrier to ML adoption among non-technical healthcare managers.
+This enhancement illustrates a critical lesson for ML healthcare applications: **sophisticated ML capabilities are underutilized if not accessible through familiar interfaces** (Coiera, 2003). By integrating Prophet forecasting into conversational AI, we lower the barrier to ML adoption among non-technical healthcare managers.
 
 Alignment with Scottish Approach principles:
-- **Evidence-Based:** Participatory design methodology [Schuler & Namioka, 1993], chatbot usability research [Følstad & Brandtzæg, 2017]
+- **Evidence-Based:** Participatory design methodology (Schuler & Namioka, 1993), chatbot usability research (Følstad & Brandtzæg, 2017)
 - **Transparent:** Implementation details documented, user feedback tracked in USER_TESTING_FEEDBACK.md
 - **User-Centered:** Enhancement directly responds to SM/OM production usage patterns
 
@@ -2024,25 +2024,25 @@ This iterative enhancement cycle demonstrates production system maturity: not me
 
 ### 9.1 Technical Lessons
 
-Reflective practice is essential for extracting generalizable knowledge from project-specific experiences [Schön, 1983]. Our technical lessons align with established software engineering principles while highlighting healthcare-specific considerations.
+Reflective practice is essential for extracting generalizable knowledge from project-specific experiences (Schön, 1983). Our technical lessons align with established software engineering principles while highlighting healthcare-specific considerations.
 
 **Success:**
-- **Django signals for automation:** The Observer pattern implementation via Django signals [Gamma et al., 1994] proved elegant for leave balance automation. Post-save signals trigger balance updates without coupling LeaveRequest model to AnnualLeaveTransaction logic, maintaining clean separation of concerns. This approach enabled easy addition of notification features without modifying core approval logic.
+- **Django signals for automation:** The Observer pattern implementation via Django signals (Gamma et al., 1994) proved elegant for leave balance automation. Post-save signals trigger balance updates without coupling LeaveRequest model to AnnualLeaveTransaction logic, maintaining clean separation of concerns. This approach enabled easy addition of notification features without modifying core approval logic.
 
-- **Multi-home via relationships:** Early architectural decision to implement multi-tenancy through database relationships (Unit → CareHome) rather than tenant flags proved superior. This "row-level multi-tenancy" pattern [Chong & Carraro, 2006] provides natural data isolation through foreign key constraints, eliminating entire class of data leakage bugs. Query filtering (`unit__care_home=user.home`) becomes automatic via Django ORM, reducing developer cognitive load.
+- **Multi-home via relationships:** Early architectural decision to implement multi-tenancy through database relationships (Unit → CareHome) rather than tenant flags proved superior. This "row-level multi-tenancy" pattern (Chong & Carraro, 2006) provides natural data isolation through foreign key constraints, eliminating entire class of data leakage bugs. Query filtering (`unit__care_home=user.home`) becomes automatic via Django ORM, reducing developer cognitive load.
 
-- **Demo database architecture:** Separate demo database (not just flags) enabled true production-simulation for training. This mirrors continuous deployment best practices [Humble & Farley, 2010] of environment parity. Cost: 5GB additional storage. Benefit: 50+ training sessions conducted without production data risk.
+- **Demo database architecture:** Separate demo database (not just flags) enabled true production-simulation for training. This mirrors continuous deployment best practices (Humble & Farley, 2010) of environment parity. Cost: 5GB additional storage. Benefit: 50+ training sessions conducted without production data risk.
 
 **Mistakes:**
-- **views.py file size (8,539 lines):** Violation of Single Responsibility Principle [Martin, 2008]. File became unwieldy around 2,000 lines but procrastination delayed refactoring. Lesson learned: Enforce strict file size limits (500 lines max) and refactor proactively. Modern IDEs (VS Code) struggle with files >5,000 lines (autocomplete lag, search slowdown).
+- **views.py file size (8,539 lines):** Violation of Single Responsibility Principle (Martin, 2008). File became unwieldy around 2,000 lines but procrastination delayed refactoring. Lesson learned: Enforce strict file size limits (500 lines max) and refactor proactively. Modern IDEs (VS Code) struggle with files >5,000 lines (autocomplete lag, search slowdown).
 
-- **SQLite for development:** Initially chosen for zero-configuration simplicity, SQLite's limitations became apparent at ~50,000 records (write contention, missing features like concurrent migrations). Migration to PostgreSQL required 4 hours plus regression testing. PostgreSQL's JSONB, full-text search, and concurrent access would have benefited development earlier. Lesson: Use production database engine from day one [Kleppmann, 2017].
+- **SQLite for development:** Initially chosen for zero-configuration simplicity, SQLite's limitations became apparent at ~50,000 records (write contention, missing features like concurrent migrations). Migration to PostgreSQL required 4 hours plus regression testing. PostgreSQL's JSONB, full-text search, and concurrent access would have benefited development earlier. Lesson: Use production database engine from day one (Kleppmann, 2017).
 
-- **Delayed caching implementation:** Adding caching after 50,000 shifts created required analysing query patterns retrospectively. Redis integration from start would have: (1) informed architecture decisions (what to cache), (2) prevented N+1 query patterns, (3) simplified performance optimisation. Caching is architectural concern, not post-hoc optimisation [Fowler, 2002].
+- **Delayed caching implementation:** Adding caching after 50,000 shifts created required analysing query patterns retrospectively. Redis integration from start would have: (1) informed architecture decisions (what to cache), (2) prevented N+1 query patterns, (3) simplified performance optimisation. Caching is architectural concern, not post-hoc optimisation (Fowler, 2002).
 
 **Advice for Similar Projects:**
-1. **Implement caching early (Redis):** Even if unused initially, forces consideration of cache invalidation strategy [Fowler, 2002]
-2. **Use PostgreSQL from day one:** Development/production parity prevents late-stage migration pain [Twelve-Factor App, 2012]
+1. **Implement caching early (Redis):** Even if unused initially, forces consideration of cache invalidation strategy (Fowler, 2002)
+2. **Use PostgreSQL from day one:** Development/production parity prevents late-stage migration pain (Twelve-Factor App, 2012)
 3. **Split large files immediately:** Enforceautomatic linting rules (e.g., pylint max-module-lines=500)
 4. **Test on production-like data volumes:** Synthetic data (1,000 records) masks performance issues appearing at scale (100,000+ records)
 
@@ -2084,7 +2084,7 @@ Reflective practice is essential for extracting generalizable knowledge from pro
 
 **Linear Programming for Healthcare Scheduling:**
 
-We implemented binary linear programming model using PuLP library [Mitchell et al., 2011] to minimise staffing costs while satisfying forecasted demand and regulatory constraints. This approach proved highly effective for care home scheduling—a domain historically dominated by heuristic methods [Burke et al., 2004].
+We implemented binary linear programming model using PuLP library (Mitchell et al., 2011) to minimise staffing costs while satisfying forecasted demand and regulatory constraints. This approach proved highly effective for care home scheduling—a domain historically dominated by heuristic methods (Burke et al., 2004).
 
 **Key Insight: Healthcare Constraints Are Linear**
 
@@ -2095,7 +2095,7 @@ Most care home scheduling constraints map naturally to linear inequalities:
 - **Availability:** `x[staff, date] = 0` if staff on leave or existing shift
 - **Skills matching:** `x[SCA, DAY_SENIOR] = 0` (role incompatibility)
 
-This linearity enables use of simplex algorithm [Dantzig, 1947], guaranteeing optimal solution (if feasible) in polynomial time. Contrast with constraint satisfaction approaches [Cheang et al., 2003] which may find suboptimal solutions or fail to prove optimality.
+This linearity enables use of simplex algorithm (Dantzig, 1947), guaranteeing optimal solution (if feasible) in polynomial time. Contrast with constraint satisfaction approaches (Cheang et al., 2003) which may find suboptimal solutions or fail to prove optimality.
 
 **Lesson 1: Cost Minimization as Proxy for Quality**
 
@@ -2106,7 +2106,7 @@ Objective function: `Minimise Z = Σ (hourly_cost × duration × x)` where costs
   * SCA agency: £21.25-£38.49/hour (midweek to public holidays)
   * SSCW agency: £30.49-£53.75/hour (midweek to public holidays)
 
-LP solver naturally prefers permanent staff, uses overtime sparingly, and reserves agency for infeasible scenarios. This aligns cost optimisation with care continuity goals—familiar staff provide better resident outcomes [Bowers et al., 2001]. We call this "cost-quality alignment."
+LP solver naturally prefers permanent staff, uses overtime sparingly, and reserves agency for infeasible scenarios. This aligns cost optimisation with care continuity goals—familiar staff provide better resident outcomes (Bowers et al., 2001). We call this "cost-quality alignment."
 
 **Lesson 2: Infeasibility Is Actionable Information**
 
@@ -2134,7 +2134,7 @@ Integrating Prophet confidence intervals with LP creates synergistic workflow:
 3. **LP optimises:** Find minimum-cost assignment satisfying `[min, max]` range
 4. **Validation:** If LP infeasible, retrain Prophet or recruit staff
 
-This two-stage approach (forecast → optimise) mirrors supply chain planning [Silver et al., 2016] and hospital bed management [Harper & Shahani, 2002]. Separating prediction from optimisation enables:
+This two-stage approach (forecast → optimise) mirrors supply chain planning (Silver et al., 2016) and hospital bed management (Harper & Shahani, 2002). Separating prediction from optimisation enables:
 - **Independent improvement:** Better forecasts → tighter bounds → lower costs
 - **Uncertainty handling:** CI width informs contingency planning
 - **Explainability:** "Forecast predicts 5-7 staff needed, LP assigns 6 (minimum cost)"
@@ -2162,12 +2162,12 @@ for date in dates:
 prob.solve()
 ```
 
-This declarative syntax (state *what* to optimise, not *how*) contrasts with imperative heuristics [Cheang et al., 2003] requiring complex search logic.
+This declarative syntax (state *what* to optimise, not *how*) contrasts with imperative heuristics (Cheang et al., 2003) requiring complex search logic.
 
 **Performance:**
 - Small instances (5 staff, 7 days): <0.1s solve time
 - Medium instances (20 staff, 30 days): 2-5s solve time
-- Large instances (50 staff, 90 days): 15-30s solve time (within interactive threshold [Nielsen, 1993])
+- Large instances (50 staff, 90 days): 15-30s solve time (within interactive threshold (Nielsen, 1993))
 
 CBC solver (default in PuLP) handles care home scale efficiently. For hospital-scale (500+ staff), commercial solvers (Gurobi, CPLEX) recommended.
 
@@ -2190,9 +2190,9 @@ Across 5 homes: £346,500/year savings. Development cost: £111 (3 hours @ £37/
 
 **Limitations:**
 
-1. **Staff Preferences Not Modeled:** Current version minimises cost, ignoring staff preferences ("I prefer weekends"). Future work: Multi-objective optimisation [Coello et al., 2007] balancing cost + satisfaction.
+1. **Staff Preferences Not Modeled:** Current version minimises cost, ignoring staff preferences ("I prefer weekends"). Future work: Multi-objective optimisation (Coello et al., 2007) balancing cost + satisfaction.
 
-2. **Deterministic Demand:** Uses Prophet point forecasts (confidence_lower, confidence_upper) but ignores probability distributions. Stochastic programming [Birge & Louveaux, 2011] could model demand uncertainty explicitly.
+2. **Deterministic Demand:** Uses Prophet point forecasts (confidence_lower, confidence_upper) but ignores probability distributions. Stochastic programming (Birge & Louveaux, 2011) could model demand uncertainty explicitly.
 
 3. **No Learning from History:** LP re-solves from scratch each run. Could leverage previous solutions (warm starts) or learn patterns (machine learning + optimisation hybrid).
 
@@ -2206,7 +2206,7 @@ Across 5 homes: £346,500/year savings. Development cost: £111 (3 hours @ £37/
 
 **Scottish Design Alignment:**
 
-- **Evidence-Based:** LP proven optimal for nurse rostering [Burke et al., 2004; Cheang et al., 2003], cost minimisation aligns with care continuity research [Bowers et al., 2001]
+- **Evidence-Based:** LP proven optimal for nurse rostering (Burke et al., 2004; Cheang et al., 2003), cost minimisation aligns with care continuity research (Bowers et al., 2001)
 - **Transparent:** Algorithm explains decisions ("Staff A assigned because lowest cost and available"), infeasibility reasons surfaced
 - **User-Centered:** OM feedback shaped constraint priorities (WTD compliance non-negotiable, preferences flexible), manual validation before production
 
@@ -2214,13 +2214,13 @@ Across 5 homes: £346,500/year savings. Development cost: £111 (3 hours @ £37/
 
 Linear programming delivers optimal shift assignments in <30s solve time while respecting 5 constraint types. Integration with Prophet forecasting creates end-to-end planning pipeline (predict demand → optimise schedule → validate feasibility). 12.6% cost savings demonstrate production value beyond academic interest.
 
-Key insight: Healthcare scheduling constraints (demand, WTD, skills) map naturally to linear inequalities—leverage 70+ years of LP research [Dantzig, 1947] rather than reinventing heuristics.
+Key insight: Healthcare scheduling constraints (demand, WTD, skills) map naturally to linear inequalities—leverage 70+ years of LP research (Dantzig, 1947) rather than reinventing heuristics.
 
 ---
 
 ### 8.9 Alignment with Scottish Digital Strategy 2025-2028
 
-The Staff Rota System exemplifies the practical implementation of principles outlined in the Scottish Government's refreshed Digital Strategy for Scotland (2025-2028), which envisions "smarter, faster and fairer" public services delivered through digital transformation [Scottish Government, 2025]. This section demonstrates how the system's design, implementation, and outcomes directly contribute to national digital transformation objectives.
+The Staff Rota System exemplifies the practical implementation of principles outlined in the Scottish Government's refreshed Digital Strategy for Scotland (2025-2028), which envisions "smarter, faster and fairer" public services delivered through digital transformation (Scottish Government, 2025). This section demonstrates how the system's design, implementation, and outcomes directly contribute to national digital transformation objectives.
 
 #### 8.9.1 Policy Principle Mapping
 
@@ -2238,7 +2238,7 @@ The following table maps system features to the seven core principles of the Sco
 
 #### 8.9.2 Strategic Context: From Policy to Practice
 
-The Scottish Digital Strategy emphasizes that digital transformation must be "co-owned, co-designed, co-delivered" through collaboration between Scottish Government, COSLA (Convention of Scottish Local Authorities), and public service providers [Scottish Government, 2025]. This system's development methodology directly reflects this principle:
+The Scottish Digital Strategy emphasizes that digital transformation must be "co-owned, co-designed, co-delivered" through collaboration between Scottish Government, COSLA (Convention of Scottish Local Authorities), and public service providers (Scottish Government, 2025). This system's development methodology directly reflects this principle:
 
 **Co-Design Evidence:**
 - Requirements gathered from 9 Operational Managers (frontline users) and 3 Service Managers (strategic users)
@@ -2248,11 +2248,11 @@ The Scottish Digital Strategy emphasizes that digital transformation must be "co
 - ML forecasting dashboard co-designed through OM workshops: "What predictions would help you most?"
 
 **Policy-Practice Translation:**
-The strategy calls for "leaders and frontline staff to become confident users of digital tools to improve services" [Scottish Government, 2025]. Our 89% time reduction demonstrates this principle: OMs transition from 29 hours/week on manual rotas to 3.1 hours/week on strategic planning. Time recovered enables managers to focus on care quality improvement initiatives (supervision, training, incident response) rather than administrative burden—directly supporting the Care Inspectorate's Health and Social Care Standards [Care Inspectorate Scotland, 2023].
+The strategy calls for "leaders and frontline staff to become confident users of digital tools to improve services" (Scottish Government, 2025). Our 89% time reduction demonstrates this principle: OMs transition from 29 hours/week on manual rotas to 3.1 hours/week on strategic planning. Time recovered enables managers to focus on care quality improvement initiatives (supervision, training, incident response) rather than administrative burden—directly supporting the Care Inspectorate's Health and Social Care Standards (Care Inspectorate Scotland, 2023).
 
 #### 8.9.3 National Reproducibility and Knowledge Transfer
 
-The Scottish Government's vision for "sustainable digital public services" requires solutions that can scale across multiple authorities and care providers [Scottish Government, 2025]. This system's design prioritizes reproducibility:
+The Scottish Government's vision for "sustainable digital public services" requires solutions that can scale across multiple authorities and care providers (Scottish Government, 2025). This system's design prioritizes reproducibility:
 
 **Knowledge Transfer Assets:**
 - **30+ documentation guides** (user manuals, admin guides, API references)
@@ -2267,7 +2267,7 @@ Glasgow HSCP's context (5 homes, 821 staff, 42 units) represents the mid-sized c
 
 #### 8.9.4 Scottish Design Methodology Validation
 
-The *Scottish Approach to Service Design* framework [Scottish Government, 2020] emphasizes three core principles validated through this project:
+The *Scottish Approach to Service Design* framework (Scottish Government, 2020) emphasizes three core principles validated through this project:
 
 **1. Evidence-Based Design:**
 - Time-motion study (8 hours observation + structured interviews with 16 staff)
@@ -2308,7 +2308,7 @@ Evidence-based design does not mean "copy industry best practices blindly." The 
 **For Health and Social Care Academic Community:**
 1. **Replication Studies:** Validate 89% time savings claim across different Scottish/UK contexts.
 2. **Multi-Objective Optimization:** Extend LP model to balance cost + staff preferences + continuity of care.
-3. **Federated Learning:** Train Prophet models across multiple HSCPs while preserving data privacy [McMahan et al., 2017].
+3. **Federated Learning:** Train Prophet models across multiple HSCPs while preserving data privacy (McMahan et al., 2017).
 
 ---
 
@@ -2340,7 +2340,7 @@ Evidence-based design does not mean "copy industry best practices blindly." The 
 - **Fairness constraints:** Equitable weekend/night distribution across staff
 - **Continuity bonuses:** Prefer assigning same staff to residents (care quality proxy)
 
-**Technology:** Multi-objective optimisation [Coello et al., 2007], Pareto frontier exploration
+**Technology:** Multi-objective optimisation (Coello et al., 2007), Pareto frontier exploration
 
 **Estimated Impact:** 5-10% staff satisfaction improvement, reduced turnover
 
@@ -2452,11 +2452,11 @@ Evidence-based design does not mean "copy industry best practices blindly." The 
 
 **Policy Alignment and National Impact:**
 
-This work demonstrates practical implementation of the Scottish Government's Digital Strategy for Scotland (2025-2028), positioning it as an exemplar of "smarter, faster and fairer" public services achieved through ethical AI adoption, user-centered design, and financial sustainability [Scottish Government, 2025]. The system's 14,897% ROI and 89% time reduction provide compelling evidence that open-source solutions can deliver exceptional value for Scottish Health and Social Care Partnerships.
+This work demonstrates practical implementation of the Scottish Government's Digital Strategy for Scotland (2025-2028), positioning it as an exemplar of "smarter, faster and fairer" public services achieved through ethical AI adoption, user-centered design, and financial sustainability (Scottish Government, 2025). The system's 14,897% ROI and 89% time reduction provide compelling evidence that open-source solutions can deliver exceptional value for Scottish Health and Social Care Partnerships.
 
 If replicated across 50% of Scotland's 45 HSCPs with similar-scale care home portfolios, estimated national impact: **£26.9M/year savings** (£24.4M labour + £2.5M avoided licensing). This calculation supports the strategy's vision of financially sustainable digital transformation through collaboration and open-source adoption. The comprehensive documentation (30+ guides), 69-test validation suite, and replicable methodology enable knowledge transfer across Scottish public services, demonstrating the "co-owned, co-designed, co-delivered" approach advocated by Scottish Government and COSLA.
 
-Furthermore, the system validates the *Scottish Approach to Service Design* methodology [Scottish Government, 2020] through evidence-based development (time-motion studies, UAT), transparency (open-source codebase, disclosed ML metrics), and user-centered co-design (iterative development with 9 OMs, 3 SMs). The 10-character password policy decision (vs. 12-character industry norm) exemplifies contextual adaptation: global best practices adapted to Scottish care sector realities (24/7 operations, varied digital literacy) while maintaining NCSC compliance. This demonstrates that Scottish design methodology empowers practitioners to balance rigor with local context.
+Furthermore, the system validates the *Scottish Approach to Service Design* methodology (Scottish Government, 2020) through evidence-based development (time-motion studies, UAT), transparency (open-source codebase, disclosed ML metrics), and user-centered co-design (iterative development with 9 OMs, 3 SMs). The 10-character password policy decision (vs. 12-character industry norm) exemplifies contextual adaptation: global best practices adapted to Scottish care sector realities (24/7 operations, varied digital literacy) while maintaining NCSC compliance. This demonstrates that Scottish design methodology empowers practitioners to balance rigor with local context.
 
 **Recommendation for Scottish Government:** Consider this system as a case study for Digital Strategy 2025-2028 implementation guidance, particularly for demonstrating all seven strategy principles (collaboration, ethical AI, data-informed decisions, user-centered design, workforce capability, privacy protection, financial sustainability) in a single integrated solution. The open-source model warrants policy consideration for broader public sector IT procurement reform.
 
@@ -3779,7 +3779,7 @@ This schema represents the first documented open-source multi-tenancy healthcare
 
 ### Appendix B: User Interface Screenshots
 
-This appendix provides annotated screenshots demonstrating key user interfaces across the three-tier dashboard system. All screenshots follow Scottish Government Digital Design principles: evidence-based, transparent, and user-centred [Scottish Government, 2020]. Sensitive patient data has been anonymised in accordance with GDPR requirements.
+This appendix provides annotated screenshots demonstrating key user interfaces across the three-tier dashboard system. All screenshots follow Scottish Government Digital Design principles: evidence-based, transparent, and user-centred (Scottish Government, 2020). Sensitive patient data has been anonymised in accordance with GDPR requirements.
 
 ---
 
@@ -4595,7 +4595,7 @@ def should_auto_approve(leave_request):
 3. **Rule 4-5:** Safety constraints - prevents understaffing incidents that previously occurred 3-5 times/month
 
 **Academic Contribution:**
-Novel application of business rules engine to healthcare scheduling, balancing automation efficiency with safety-critical oversight. Similar to clinical decision support systems [Sutton et al., 2020], but adapted for operational rather than clinical decisions.
+Novel application of business rules engine to healthcare scheduling, balancing automation efficiency with safety-critical oversight. Similar to clinical decision support systems (Sutton et al., 2020), but adapted for operational rather than clinical decisions.
 
 ---
 
@@ -4623,7 +4623,7 @@ class CareHomeIsolationMiddleware:
     - Transparent to view logic (follows Django's "fat models, thin views")
     - Fails closed: If no permission level, deny access
     
-    Based on: Django Row-Level Permissions pattern [Django Docs, 2024]
+    Based on: Django Row-Level Permissions pattern (Django Docs, 2024)
     """
     
     def __init__(self, get_response):
@@ -5076,7 +5076,7 @@ def generate_unit_forecast(care_home_name, unit_name):
 - **Cost savings:** £18,400/year (optimized agency contracts via demand forecasting)
 
 **Academic Contribution:**
-First documented application of Prophet to UK social care staffing. Previous healthcare forecasting used ARIMA [Gul & Guneri, 2015] or regression [Afilal et al., 2020]. Prophet advantages:
+First documented application of Prophet to UK social care staffing. Previous healthcare forecasting used ARIMA (Gul & Guneri, 2015) or regression (Afilal et al., 2020). Prophet advantages:
 1. **Interpretability:** Decomposed components (trend, seasonality) actionable for OMs
 2. **Uncertainty quantification:** Confidence intervals support risk-based decisions
 3. **Holiday effects:** UK-specific calendar improves accuracy vs generic models
@@ -6733,135 +6733,133 @@ Thematic analysis of open-ended responses (n=6):
 
 ## References
 
-### Healthcare Scheduling & Rostering
+1. **Altman, D. G., & Bland, J. M. (2005).** Standard deviations and standard errors. *BMJ*, 331(7521), 903. https://doi.org/10.1136/bmj.331.7521.903
 
-1. **Burke, E. K., De Causmaecker, P., Berghe, G. V., & Van Landeghem, H. (2004).** The state of the art of nurse rostering. *Journal of Scheduling*, 7(6), 441-499. https://doi.org/10.1023/B:JOSH.0000046076.75950.0b
+2. **Bangor, A., Kortum, P., & Miller, J. (2009).** Determining what individual SUS scores mean: Adding an adjective rating scale. *Journal of Usability Studies*, 4(3), 114-123.
 
-2. **Cheang, B., Li, H., Lim, A., & Rodrigues, B. (2003).** Nurse rostering problems—a bibliographic survey. *European Journal of Operational Research*, 151(3), 447-460. https://doi.org/10.1016/S0377-2217(03)00021-3
+3. **Bangor, A., Kortum, P. T., & Miller, J. T. (2008).** An empirical evaluation of the System Usability Scale. *International Journal of Human-Computer Interaction*, 24(6), 574-594. https://doi.org/10.1080/10447310802205776
 
-3. **Ernst, A. T., Jiang, H., Krishnamoorthy, M., & Sier, D. (2004).** Staff scheduling and rostering: A review of applications, methods and models. *European Journal of Operational Research*, 153(1), 3-27. https://doi.org/10.1016/S0377-2217(03)00095-X
+4. **Beck, K., & Andres, C. (2004).** *Extreme Programming Explained: Embrace Change* (2nd ed.). Addison-Wesley Professional. ISBN: 978-0321278654
 
-4. **Warner, D. M., & Prawda, J. (1972).** A mathematical programming model for scheduling nursing personnel in a hospital. *Management Science*, 19(4-part-1), 411-422. https://doi.org/10.1287/mnsc.19.4.411
+5. **Bezemer, C. P., & Zaidman, A. (2010).** Multi-tenant SaaS applications: Maintenance dream or nightmare? *Proceedings of the Joint ERCIM Workshop on Software Evolution (EVOL) and International Workshop on Principles of Software Evolution (IWPSE)*, 88-92. https://doi.org/10.1145/1862372.1862393
 
-5. **Brucker, P., Burke, E. K., Curtois, T., Qu, R., & Berghe, G. V. (2010).** A shift sequence based approach for nurse scheduling and a new benchmark dataset. *Journal of Heuristics*, 16(4), 559-573. https://doi.org/10.1007/s10732-008-9099-6
+6. **Black, A. D., Car, J., Pagliari, C., Anandan, C., Cresswell, K., Bokshi, T., ... & Sheikh, A. (2011).** The impact of eHealth on the quality and safety of health care: A systematic overview. *PLOS Medicine*, 8(1), e1000387. https://doi.org/10.1371/journal.pmed.1000387
 
-6. **Wright, P. D., & Mahar, S. (2013).** Centralized nurse scheduling to simultaneously improve schedule cost and nurse satisfaction. *Omega*, 41(6), 1042-1052. https://doi.org/10.1016/j.omega.2012.08.004
-
-### Operations Research & Optimisation
-
-7. **Dantzig, G. B. (1963).** *Linear Programming and Extensions*. Princeton University Press. ISBN: 978-0691080000
-
-8. **Winston, W. L., & Goldberg, J. B. (2004).** *Operations Research: Applications and Algorithms* (4th ed.). Thomson Brooks/Cole. ISBN: 978-0534380588
-
-9. **Hillier, F. S., & Lieberman, G. J. (2015).** *Introduction to Operations Research* (10th ed.). McGraw-Hill Education. ISBN: 978-0073523453
-
-10. **Mitchell, S., O'Sullivan, M., & Dunning, I. (2011).** PuLP: A Linear Programming Toolkit for Python. *The University of Auckland*. Retrieved from https://projects.coin-or.org/PuLP
-
-11. **Forrest, J., & Lougee-Heimer, R. (2005).** CBC User Guide. *INFORMS Journal on Computing*, 17(1), 7-11. https://projects.coin-or.org/Cbc
-
-### Machine Learning & Forecasting
-
-12. **Taylor, S. J., & Letham, B. (2018).** Forecasting at scale. *The American Statistician*, 72(1), 37-45. https://doi.org/10.1080/00031305.2017.1380080
-
-13. **Hyndman, R. J., & Athanasopoulos, G. (2018).** *Forecasting: Principles and Practice* (2nd ed.). OTexts. Retrieved from https://otexts.com/fpp2/
-
-14. **Box, G. E. P., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).** *Time Series Analysis: Forecasting and Control* (5th ed.). John Wiley & Sons. ISBN: 978-1118675021
-
-15. **Cleveland, R. B., Cleveland, W. S., McRae, J. E., & Terpenning, I. (1990).** STL: A seasonal-trend decomposition procedure based on loess. *Journal of Official Statistics*, 6(1), 3-73.
-
-16. **Makridakis, S., Spiliotis, E., & Assimakopoulos, V. (2018).** The M4 Competition: Results, findings, conclusion and way forward. *International Journal of Forecasting*, 34(4), 802-808. https://doi.org/10.1016/j.ijforecast.2018.06.001
-
-### Healthcare Information Systems
-
-17. **Wiens, R. (1999).** A decision support system for workforce planning. *Canadian Journal of Nursing Leadership*, 12(2), 16-20.
-
-18. **Jaspers, M. W. M. (2009).** A comparison of usability methods for testing interactive health technologies: Methodological aspects and empirical evidence. *International Journal of Medical Informatics*, 78(5), 340-353. https://doi.org/10.1016/j.ijmedinf.2008.10.002
-
-19. **Greenhalgh, T., & Russell, J. (2010).** Why do evaluations of eHealth programs fail? An alternative set of guiding principles. *PLOS Medicine*, 7(11), e1000360. https://doi.org/10.1371/journal.pmed.1000360
-
-20. **Black, A. D., Car, J., Pagliari, C., Anandan, C., Cresswell, K., Bokshi, T., ... & Sheikh, A. (2011).** The impact of eHealth on the quality and safety of health care: A systematic overview. *PLOS Medicine*, 8(1), e1000387. https://doi.org/10.1371/journal.pmed.1000387
-
-21. **NHS Digital. (2022).** *Digital Technology Assessment Criteria (DTAC)*. Retrieved from https://digital.nhs.uk/services/digital-technology-assessment-criteria-dtac
-
-### Multi-Tenancy & Software Architecture
-
-22. **Chong, F., & Carraro, G. (2006).** Architecture strategies for catching the long tail. *Microsoft Developer Network Library*. Retrieved from https://msdn.microsoft.com/en-us/library/aa479069.aspx
-
-23. **Bezemer, C. P., & Zaidman, A. (2010).** Multi-tenant SaaS applications: Maintenance dream or nightmare? *Proceedings of the Joint ERCIM Workshop on Software Evolution (EVOL) and International Workshop on Principles of Software Evolution (IWPSE)*, 88-92. https://doi.org/10.1145/1862372.1862393
-
-24. **Krebs, R., Momm, C., & Kounev, S. (2012).** Architectural concerns in multi-tenant SaaS applications. *Closer*, 12, 426-431.
-
-25. **Guo, C. J., Sun, W., Huang, Y., Wang, Z. H., & Gao, B. (2007).** A framework for native multi-tenancy application development and management. *IEEE International Conference on E-Commerce Technology and Enterprise Computing, E-Commerce and E-Services*, 551-558. https://doi.org/10.1109/CEC-EEE.2007.4
-
-### Django & Web Frameworks
-
-26. **Forcier, J., Bissex, P., & Chun, W. (2008).** *Python Web Development with Django*. Addison-Wesley Professional. ISBN: 978-0132356084
-
-27. **Holovaty, A., & Kaplan-Moss, J. (2009).** *The Definitive Guide to Django: Web Development Done Right* (2nd ed.). Apress. ISBN: 978-1430219385
-
-28. **Greenfeld, D. R., & Roy, A. (2015).** *Two Scoops of Django: Best Practices for Django 1.8* (3rd ed.). Two Scoops Press. ISBN: 978-0981467344
-
-29. **Percival, H. (2017).** *Test-Driven Development with Python* (2nd ed.). O'Reilly Media. ISBN: 978-1491958704
-
-### Usability & Human-Computer Interaction
-
-30. **Brooke, J. (1996).** SUS: A "Quick and Dirty" Usability Scale. In P. W. Jordan, B. Thomas, B. A. Weerdmeester, & I. L. McClelland (Eds.), *Usability Evaluation in Industry* (pp. 189-194). Taylor & Francis. ISBN: 978-0748404605
-
-31. **Bangor, A., Kortum, P., & Miller, J. (2009).** Determining what individual SUS scores mean: Adding an adjective rating scale. *Journal of Usability Studies*, 4(3), 114-123.
-
-32. **Bangor, A., Kortum, P. T., & Miller, J. T. (2008).** An empirical evaluation of the System Usability Scale. *International Journal of Human-Computer Interaction*, 24(6), 574-594. https://doi.org/10.1080/10447310802205776
-
-33. **Nielsen, J. (1994).** *Usability Engineering*. Morgan Kaufmann. ISBN: 978-0125184069
-
-34. **Zhang, J., Johnson, T. R., Patel, V. L., Paige, D. L., & Kubose, T. (2003).** Using usability heuristics to evaluate patient safety of medical devices. *Journal of Biomedical Informatics*, 36(1-2), 23-30. https://doi.org/10.1016/S1532-0464(03)00060-1
-
-### Statistics & Validation Methods
-
-35. **Field, A. (2013).** *Discovering Statistics Using IBM SPSS Statistics* (4th ed.). SAGE Publications. ISBN: 978-1446249178
-
-36. **Altman, D. G., & Bland, J. M. (2005).** Standard deviations and standard errors. *BMJ*, 331(7521), 903. https://doi.org/10.1136/bmj.331.7521.903
-
-37. **Bland, J. M., & Altman, D. G. (1995).** Multiple significance tests: The Bonferroni method. *BMJ*, 310(6973), 170. https://doi.org/10.1136/bmj.310.6973.170
+7. **Bland, J. M., & Altman, D. G. (1995).** Multiple significance tests: The Bonferroni method. *BMJ*, 310(6973), 170. https://doi.org/10.1136/bmj.310.6973.170
 
 ### UK Healthcare Context
 
-38. **Care Inspectorate Scotland. (2023).** *Health and Social Care Standards*. Retrieved from https://www.careinspectorate.com/index.php/care-standards
+8. **Box, G. E. P., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).** *Time Series Analysis: Forecasting and Control* (5th ed.). John Wiley & Sons. ISBN: 978-1118675021
 
-39. **Scottish Government. (2022).** *National Care Service for Scotland*. Retrieved from https://www.gov.scot/policies/social-care/national-care-service/
+9. **Brooke, J. (1996).** SUS: A "Quick and Dirty" Usability Scale. In P. W. Jordan, B. Thomas, B. A. Weerdmeester, & I. L. McClelland (Eds.), *Usability Evaluation in Industry* (pp. 189-194). Taylor & Francis. ISBN: 978-0748404605
 
-40. **NHS Scotland. (2021).** *Integration of Health and Social Care*. Retrieved from https://www.gov.scot/policies/integration-health-social-care/
+10. **Brucker, P., Burke, E. K., Curtois, T., Qu, R., & Berghe, G. V. (2010).** A shift sequence based approach for nurse scheduling and a new benchmark dataset. *Journal of Heuristics*, 16(4), 559-573. https://doi.org/10.1007/s10732-008-9099-6
 
-41. **Glasgow Health and Social Care Partnership. (2023).** *Strategic Plan 2023-2026*. Retrieved from https://glasgowcity.hscp.scot/strategic-plan
+11. **Burke, E. K., De Causmaecker, P., Berghe, G. V., & Van Landeghem, H. (2004).** The state of the art of nurse rostering. *Journal of Scheduling*, 7(6), 441-499. https://doi.org/10.1023/B:JOSH.0000046076.75950.0b
 
-42. **Skills for Care. (2022).** *The State of the Adult Social Care Sector and Workforce in England*. Retrieved from https://www.skillsforcare.org.uk/adult-social-care-workforce-data/
+12. **Care Inspectorate Scotland. (2023).** *Health and Social Care Standards*. Retrieved from https://www.careinspectorate.com/index.php/care-standards
 
-### Software Engineering & Agile
+13. **Cheang, B., Li, H., Lim, A., & Rodrigues, B. (2003).** Nurse rostering problems—a bibliographic survey. *European Journal of Operational Research*, 151(3), 447-460. https://doi.org/10.1016/S0377-2217(03)00021-3
 
-43. **Beck, K., & Andres, C. (2004).** *Extreme Programming Explained: Embrace Change* (2nd ed.). Addison-Wesley Professional. ISBN: 978-0321278654
+14. **Chong, F., & Carraro, G. (2006).** Architecture strategies for catching the long tail. *Microsoft Developer Network Library*. Retrieved from https://msdn.microsoft.com/en-us/library/aa479069.aspx
 
-44. **Fowler, M., & Beck, K. (1999).** *Refactoring: Improving the Design of Existing Code*. Addison-Wesley Professional. ISBN: 978-0201485677
+15. **Cleveland, R. B., Cleveland, W. S., McRae, J. E., & Terpenning, I. (1990).** STL: A seasonal-trend decomposition procedure based on loess. *Journal of Official Statistics*, 6(1), 3-73.
 
-45. **Martin, R. C. (2008).** *Clean Code: A Handbook of Agile Software Craftsmanship*. Prentice Hall. ISBN: 978-0132350884
+16. **Coiera, E. (2015).** *Guide to Health Informatics* (3rd ed.). CRC Press. ISBN: 978-1444170580
 
-### Database & Performance
+17. **Dantzig, G. B. (1963).** *Linear Programming and Extensions*. Princeton University Press. ISBN: 978-0691080000
 
-46. **Elmasri, R., & Navathe, S. B. (2015).** *Fundamentals of Database Systems* (7th ed.). Pearson. ISBN: 978-0133970777
+18. **Elmasri, R., & Navathe, S. B. (2015).** *Fundamentals of Database Systems* (7th ed.). Pearson. ISBN: 978-0133970777
 
-47. **Meier, J. D., Farre, C., Bansode, P., Barber, S., & Rea, D. (2007).** *Performance Testing Guidance for Web Applications*. Microsoft Press. ISBN: 978-0735625709
+19. **Ernst, A. T., Jiang, H., Krishnamoorthy, M., & Sier, D. (2004).** Staff scheduling and rostering: A review of applications, methods and models. *European Journal of Operational Research*, 153(1), 3-27. https://doi.org/10.1016/S0377-2217(03)00095-X
 
-### Additional Healthcare IT & Deployment
+20. **Field, A. (2013).** *Discovering Statistics Using IBM SPSS Statistics* (4th ed.). SAGE Publications. ISBN: 978-1446249178
 
-48. **Coiera, E. (2015).** *Guide to Health Informatics* (3rd ed.). CRC Press. ISBN: 978-1444170580
+21. **Forcier, J., Bissex, P., & Chun, W. (2008).** *Python Web Development with Django*. Addison-Wesley Professional. ISBN: 978-0132356084
 
-49. **Shortliffe, E. H., & Cimino, J. J. (2013).** *Biomedical Informatics: Computer Applications in Health Care and Biomedicine* (4th ed.). Springer. ISBN: 978-1447144748
+22. **Forrest, J., & Lougee-Heimer, R. (2005).** CBC User Guide. *INFORMS Journal on Computing*, 17(1), 7-11. https://projects.coin-or.org/Cbc
 
-50. **Gartner, Inc. (2023).** *Healthcare Provider Digital Transformation Survey*. Retrieved from https://www.gartner.com/en/industries/healthcare-providers
+### Machine Learning & Forecasting
+
+23. **Fowler, M., & Beck, K. (1999).** *Refactoring: Improving the Design of Existing Code*. Addison-Wesley Professional. ISBN: 978-0201485677
+
+24. **Gartner, Inc. (2023).** *Healthcare Provider Digital Transformation Survey*. Retrieved from https://www.gartner.com/en/industries/healthcare-providers
 
 ### Scottish Digital Transformation Policy
 
-51. **Scottish Government. (2025).** *Digital Strategy for Scotland: Sustainable Digital Public Services Delivery Plan 2025-2028*. Retrieved from https://www.gov.scot/publications/digital-strategy-scotland-sustainable-digital-public-services-delivery-plan-2025-2028/
+25. **Glasgow Health and Social Care Partnership. (2023).** *Strategic Plan 2023-2026*. Retrieved from https://glasgowcity.hscp.scot/strategic-plan
 
-52. **Scottish Government. (2020).** *Scottish Approach to Service Design*. Scottish Government Digital Directorate. Retrieved from https://www.gov.scot/publications/the-scottish-approach-to-service-design/
+26. **Greenfeld, D. R., & Roy, A. (2015).** *Two Scoops of Django: Best Practices for Django 1.8* (3rd ed.). Two Scoops Press. ISBN: 978-0981467344
+
+27. **Greenhalgh, T., & Russell, J. (2010).** Why do evaluations of eHealth programs fail? An alternative set of guiding principles. *PLOS Medicine*, 7(11), e1000360. https://doi.org/10.1371/journal.pmed.1000360
+
+28. **Guo, C. J., Sun, W., Huang, Y., Wang, Z. H., & Gao, B. (2007).** A framework for native multi-tenancy application development and management. *IEEE International Conference on E-Commerce Technology and Enterprise Computing, E-Commerce and E-Services*, 551-558. https://doi.org/10.1109/CEC-EEE.2007.4
+
+### Django & Web Frameworks
+
+29. **Hillier, F. S., & Lieberman, G. J. (2015).** *Introduction to Operations Research* (10th ed.). McGraw-Hill Education. ISBN: 978-0073523453
+
+30. **Holovaty, A., & Kaplan-Moss, J. (2009).** *The Definitive Guide to Django: Web Development Done Right* (2nd ed.). Apress. ISBN: 978-1430219385
+
+31. **Hyndman, R. J., & Athanasopoulos, G. (2018).** *Forecasting: Principles and Practice* (2nd ed.). OTexts. Retrieved from https://otexts.com/fpp2/
+
+32. **Jaspers, M. W. M. (2009).** A comparison of usability methods for testing interactive health technologies: Methodological aspects and empirical evidence. *International Journal of Medical Informatics*, 78(5), 340-353. https://doi.org/10.1016/j.ijmedinf.2008.10.002
+
+33. **Krebs, R., Momm, C., & Kounev, S. (2012).** Architectural concerns in multi-tenant SaaS applications. *Closer*, 12, 426-431.
+
+34. **Makridakis, S., Spiliotis, E., & Assimakopoulos, V. (2018).** The M4 Competition: Results, findings, conclusion and way forward. *International Journal of Forecasting*, 34(4), 802-808. https://doi.org/10.1016/j.ijforecast.2018.06.001
+
+### Healthcare Information Systems
+
+35. **Martin, R. C. (2008).** *Clean Code: A Handbook of Agile Software Craftsmanship*. Prentice Hall. ISBN: 978-0132350884
+
+### Database & Performance
+
+36. **Meier, J. D., Farre, C., Bansode, P., Barber, S., & Rea, D. (2007).** *Performance Testing Guidance for Web Applications*. Microsoft Press. ISBN: 978-0735625709
+
+### Additional Healthcare IT & Deployment
+
+37. **Mitchell, S., O'Sullivan, M., & Dunning, I. (2011).** PuLP: A Linear Programming Toolkit for Python. *The University of Auckland*. Retrieved from https://projects.coin-or.org/PuLP
+
+38. **NHS Digital. (2022).** *Digital Technology Assessment Criteria (DTAC)*. Retrieved from https://digital.nhs.uk/services/digital-technology-assessment-criteria-dtac
+
+### Multi-Tenancy & Software Architecture
+
+39. **NHS Scotland. (2021).** *Integration of Health and Social Care*. Retrieved from https://www.gov.scot/policies/integration-health-social-care/
+
+40. **Nielsen, J. (1994).** *Usability Engineering*. Morgan Kaufmann. ISBN: 978-0125184069
+
+41. **Percival, H. (2017).** *Test-Driven Development with Python* (2nd ed.). O'Reilly Media. ISBN: 978-1491958704
+
+### Usability & Human-Computer Interaction
+
+42. **Scottish Government. (2022).** *National Care Service for Scotland*. Retrieved from https://www.gov.scot/policies/social-care/national-care-service/
+
+43. **Scottish Government. (2025).** *Digital Strategy for Scotland: Sustainable Digital Public Services Delivery Plan 2025-2028*. Retrieved from https://www.gov.scot/publications/digital-strategy-scotland-sustainable-digital-public-services-delivery-plan-2025-2028/
+
+44. **Scottish Government. (2020).** *Scottish Approach to Service Design*. Scottish Government Digital Directorate. Retrieved from https://www.gov.scot/publications/the-scottish-approach-to-service-design/
+
+45. **Shortliffe, E. H., & Cimino, J. J. (2013).** *Biomedical Informatics: Computer Applications in Health Care and Biomedicine* (4th ed.). Springer. ISBN: 978-1447144748
+
+46. **Skills for Care. (2022).** *The State of the Adult Social Care Sector and Workforce in England*. Retrieved from https://www.skillsforcare.org.uk/adult-social-care-workforce-data/
+
+### Software Engineering & Agile
+
+47. **Taylor, S. J., & Letham, B. (2018).** Forecasting at scale. *The American Statistician*, 72(1), 37-45. https://doi.org/10.1080/00031305.2017.1380080
+
+48. **Warner, D. M., & Prawda, J. (1972).** A mathematical programming model for scheduling nursing personnel in a hospital. *Management Science*, 19(4-part-1), 411-422. https://doi.org/10.1287/mnsc.19.4.411
+
+49. **Wiens, R. (1999).** A decision support system for workforce planning. *Canadian Journal of Nursing Leadership*, 12(2), 16-20.
+
+50. **Winston, W. L., & Goldberg, J. B. (2004).** *Operations Research: Applications and Algorithms* (4th ed.). Thomson Brooks/Cole. ISBN: 978-0534380588
+
+51. **Wright, P. D., & Mahar, S. (2013).** Centralized nurse scheduling to simultaneously improve schedule cost and nurse satisfaction. *Omega*, 41(6), 1042-1052. https://doi.org/10.1016/j.omega.2012.08.004
+
+### Operations Research & Optimisation
+
+52. **Zhang, J., Johnson, T. R., Patel, V. L., Paige, D. L., & Kubose, T. (2003).** Using usability heuristics to evaluate patient safety of medical devices. *Journal of Biomedical Informatics*, 36(1-2), 23-30. https://doi.org/10.1016/S1532-0464(03)00060-1
+
+### Statistics & Validation Methods
 
 ---
 
