@@ -631,7 +631,14 @@
         <div class="dashboard-view active" id="step1">
             <div class="narration-box">
                 <strong>Welcome to your Executive Dashboard</strong>
-                You're the Head of Service overseeing 5 care homes with 500+ staff. This dashboard gives you complete strategic visibility in seconds. Let's explore what you see when you login each Monday morning.
+                You're the Head of Service overseeing 5 care homes with 500+ staff. This dashboard gives you complete strategic visibility in seconds. <strong>NEW:</strong> Access all 7 Executive Dashboards with one click from the collapsible navigation section. Let's explore what you see when you login each Monday morning.
+            </div>
+
+            <div class="alert-box" style="background: #e6f2ff; border-left: 4px solid #0066cc;">
+                <div class="alert-icon">🎯</div>
+                <div>
+                    <strong>Executive Dashboards Navigation:</strong> Scroll down to access CI Performance Dashboard, Budget Dashboard, Staff Retention Dashboard, Training Dashboard, Early Warning Dashboard, Rota Health Dashboard, and Proactive Suggestions Dashboard - all with one-click access.
+                </div>
             </div>
 
             <div class="dashboard-header">
@@ -858,52 +865,60 @@
         <!-- Step 3: Care Inspectorate Integration -->
         <div class="dashboard-view" id="step3">
             <div class="narration-box">
-                <strong>Care Inspectorate Integration (Automated)</strong>
-                Every April, the system automatically downloads the latest CI inspection reports for all 5 homes. No more manual gathering - you're always prepared for Board questions.
+                <strong>CI Performance Dashboard with Actual Inspection Data</strong>
+                Access comprehensive Care Inspectorate performance data through the Executive Dashboards navigation. View peer benchmarking across all 5 homes with actual inspection data including CS numbers, all 4 theme ratings (Care & Support, Environment, Staffing, Management & Leadership), inspection dates, and 6-month operational metrics trends. <strong>NEW:</strong> Standard 1-6 rating scale with color-coded badges for instant visual comparison.
             </div>
 
             <div class="dashboard-header">
                 <div class="dashboard-title">
                     <div class="icon">✅</div>
-                    <span>Care Inspectorate Status</span>
+                    <span>CI Performance Dashboard - Peer Benchmarking</span>
                 </div>
                 <div class="dashboard-actions">
-                    <button class="btn btn-success">📥 Refresh Reports (Auto: April 1st)</button>
+                    <button class="btn btn-primary">📊 View Full Peer Benchmarking Table</button>
+                    <button class="btn btn-success">📈 View 6-Month Operational Metrics</button>
+                </div>
+            </div>
+
+            <div class="alert-box" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                <div class="alert-icon">📋</div>
+                <div>
+                    <strong>Peer Benchmarking Table:</strong> 9-column responsive table showing Rank, Care Home, CS Number, CI Rating (1-6 scale), all 4 theme ratings, and Last Inspection date. Color-coded badges (Green=Excellent/Very Good, Blue=Good, Yellow=Adequate, Orange=Weak, Red=Unsatisfactory).
                 </div>
             </div>
 
             <div class="ci-report-card">
                 <div class="ci-header">
-                    <div class="ci-title">Victoria Gardens - Latest Inspection</div>
-                    <div class="ci-date">Inspected: October 15, 2024</div>
+                    <div class="ci-title">🥇 Victoria Gardens - Latest Inspection</div>
+                    <div class="ci-date">Inspected: July 10, 2025 | <strong>CS Number: CS2018371437</strong></div>
                 </div>
                 <div class="themes-grid">
                     <div class="theme-item rating-5">
                         <div class="theme-name">Care & Support</div>
-                        <div class="theme-rating">5 - Excellent</div>
+                        <div class="theme-rating">5 - Very Good</div>
                     </div>
                     <div class="theme-item rating-5">
                         <div class="theme-name">Environment</div>
-                        <div class="theme-rating">5 - Excellent</div>
+                        <div class="theme-rating">5 - Very Good</div>
                     </div>
                     <div class="theme-item rating-5">
                         <div class="theme-name">Staffing</div>
-                        <div class="theme-rating">5 - Excellent</div>
+                        <div class="theme-rating">5 - Very Good</div>
                     </div>
                     <div class="theme-item rating-5">
-                        <div class="theme-name">Management</div>
-                        <div class="theme-rating">5 - Excellent</div>
+                        <div class="theme-name">Management & Leadership</div>
+                        <div class="theme-rating">5 - Very Good</div>
                     </div>
                 </div>
                 <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px;">
-                    <strong style="color: #28a745;">✓ 0 Requirements</strong> | 2 Recommendations | Next inspection due: October 2025
+                    <strong style="color: #28a745;">Overall CI Rating: 5 (Very Good)</strong> | Rank: #1 of 5 homes | <em>Overall rating = minimum of all 4 theme ratings (official CI methodology)</em>
                 </div>
             </div>
 
             <div class="ci-report-card">
                 <div class="ci-header">
                     <div class="ci-title">Hawthorn House - Latest Inspection</div>
-                    <div class="ci-date">Inspected: March 8, 2025</div>
+                    <div class="ci-date">Inspected: October 28, 2024 | <strong>CS Number: CS2003001025</strong></div>
                 </div>
                 <div class="themes-grid">
                     <div class="theme-item rating-4">
@@ -918,13 +933,58 @@
                         <div class="theme-name">Staffing</div>
                         <div class="theme-rating">4 - Good</div>
                     </div>
-                    <div class="theme-item rating-3">
-                        <div class="theme-name">Care Planning</div>
-                        <div class="theme-rating">3 - Adequate ⚠️</div>
+                    <div class="theme-item rating-4">
+                        <div class="theme-name">Management & Leadership</div>
+                        <div class="theme-rating">4 - Good</div>
                     </div>
                 </div>
-                <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px;">
-                    <strong style="color: #856404;">⚠️ 2 Requirements</strong> (Care planning documentation) | 5 Recommendations | Next inspection: March 2026
+                <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px;">
+                    <strong style="color: #28a745;">Overall CI Rating: 4 (Good)</strong> | Rank: #2-4 of 5 homes
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 15px; color: #0066cc;">📈 6-Month Operational Metrics Trend (Victoria Gardens)</h3>
+                <div class="alert-box" style="background: #e6f2ff; border-left: 4px solid #0066cc;">
+                    <div class="alert-icon">📊</div>
+                    <div>
+                        <strong>Actionable Monthly Metrics:</strong> Replaced meaningless 6-month CI score trends (inspections are annual) with operational KPIs tracked monthly to help you improve performance between inspections.
+                    </div>
+                </div>
+                <div class="metrics-grid" style="margin-top: 20px;">
+                    <div class="metric-card">
+                        <div class="metric-label">Training Compliance</div>
+                        <div class="metric-value">97.2%</div>
+                        <div class="metric-change positive">↑ 2.4% | Target: ≥95%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Supervision Completion</div>
+                        <div class="metric-value">93.8%</div>
+                        <div class="metric-change positive">↑ 3.1% | Target: ≥90%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Incident Frequency</div>
+                        <div class="metric-value">1.2/month</div>
+                        <div class="metric-change positive">↓ 0.6 | Target: ≤2.0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Turnover Rate</div>
+                        <div class="metric-value">11.5%</div>
+                        <div class="metric-change positive">↓ 2.3% | Target: ≤15%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Staffing Level</div>
+                        <div class="metric-value">103.2%</div>
+                        <div class="metric-change positive">↑ 1.8% | Target: ≥100%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Care Plan Reviews</div>
+                        <div class="metric-value">96.5%</div>
+                        <div class="metric-change positive">↑ 1.2% | Target: ≥95%</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>Note:</strong> All 6 metrics trending positively over past 6 months. Color-coded badges show performance vs targets: <span style="color: #28a745;">✓ Green = Meeting/Exceeding</span>, <span style="color: #ffc107;">⚠️ Yellow = Within 5%</span>, <span style="color: #dc3545;">✗ Red = Below target</span>
                 </div>
             </div>
 
