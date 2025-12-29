@@ -60,6 +60,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-trophy"></i> Peer Benchmarking</h5>
+                    <small class="text-muted">CI Ratings: 6=Excellent, 5=Very Good, 4=Good, 3=Adequate, 2=Weak, 1=Unsatisfactory</small>
                 </div>
                 <div class="card-body">
                     <div class="peer-ranking mb-3">
@@ -67,12 +68,16 @@
                         <div class="ranking-value">#{{ ci_data.executive_summary.peer_rank }} of {{ ci_data.executive_summary.total_homes }}</div>
                     </div>
                     
+                    <div class="alert alert-info mb-3" style="font-size: 0.85rem;">
+                        <i class="fas fa-info-circle"></i> <strong>Note:</strong> Overall CI Rating is the <strong>lowest</strong> theme rating (as per Care Inspectorate methodology)
+                    </div>
+                    
                     <table class="table table-sm">
                         <thead>
                             <tr>
                                 <th>Rank</th>
                                 <th>Care Home</th>
-                                <th>CI Score</th>
+                                <th>CI Rating</th>
                                 <th>Care & Support</th>
                                 <th>Environment</th>
                                 <th>Staffing</th>
@@ -90,7 +95,11 @@
                                         {{ peer.home_name }}
                                     {% endif %}
                                 </td>
-                                <td><strong>{{ peer.ci_score }}</strong></td>
+                                <td>
+                                    <strong class="badge {% if peer.ci_rating == 6 %}bg-success{% elif peer.ci_rating == 5 %}bg-info{% elif peer.ci_rating == 4 %}bg-primary{% elif peer.ci_rating == 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ peer.ci_rating }}
+                                    </strong>
+                                </td>
                                 <td>{{ peer.theme1_care_support|default:"-" }}</td>
                                 <td>{{ peer.theme2_environment|default:"-" }}</td>
                                 <td>{{ peer.theme3_staffing|default:"-" }}</td>

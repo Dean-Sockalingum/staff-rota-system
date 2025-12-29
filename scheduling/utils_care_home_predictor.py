@@ -1157,6 +1157,18 @@ def _convert_ci_rating_to_score(rating_choice):
     }
     return rating_scores.get(rating_choice, 75)  # Default to Good if unknown
 
+def _convert_ci_rating_to_grade(rating_choice):
+    """Convert CI rating choice to numeric grade (1-6)"""
+    rating_grades = {
+        'EXCELLENT': 6,
+        'VERY_GOOD': 5,
+        'GOOD': 4,
+        'ADEQUATE': 3,
+        'WEAK': 2,
+        'UNSATISFACTORY': 1,
+    }
+    return rating_grades.get(rating_choice, None)
+
 def _get_latest_ci_scores_for_home(care_home):
     """Get actual CI scores from latest inspection report"""
     from .models_improvement import CareInspectorateReport
@@ -1176,25 +1188,26 @@ def _get_latest_ci_scores_for_home(care_home):
         if not latest_report:
             return None
             
-        # Convert individual theme ratings to scores
-        theme1_score = _convert_ci_rating_to_score(latest_report.theme1_rating) if latest_report.theme1_rating else None
-        theme2_score = _convert_ci_rating_to_score(latest_report.theme2_rating) if latest_report.theme2_rating else None
-        theme3_score = _convert_ci_rating_to_score(latest_report.theme3_rating) if latest_report.theme3_rating else None
-        theme4_score = _convert_ci_rating_to_score(latest_report.theme4_rating) if latest_report.theme4_rating else None
+        # Convert individual theme ratings to grades (1-6)
+        theme1_grade = _convert_ci_rating_to_grade(latest_report.theme1_rating)
+        theme2_grade = _convert_ci_rating_to_grade(latest_report.theme2_rating)
+        theme3_grade = _convert_ci_rating_to_grade(latest_report.theme3_rating)
+        theme4_grade = _convert_ci_rating_to_grade(latest_report.theme4_rating)
         
-        # Calculate average CI score from available themes
-        theme_scores = [s for s in [theme1_score, theme2_score, theme3_score, theme4_score] if s is not None]
-        if not theme_scores:
+        # Get all valid grades
+        valid_grades = [g for g in [theme1_grade, theme2_grade, theme3_grade, theme4_grade] if g is not None]
+        if not valid_grades:
             return None
             
-        ci_score = sum(theme_scores) / len(theme_scores)
+        # Overall CI rating is the LOWEST theme rating (as per CI methodology)
+        overall_grade = min(valid_grades)
         
         return {
-            'ci_score': round(ci_score, 1),
-            'theme1_care_support': round(theme1_score, 1) if theme1_score else None,
-            'theme2_environment': round(theme2_score, 1) if theme2_score else None,
-            'theme3_staffing': round(theme3_score, 1) if theme3_score else None,
-            'theme4_management': round(theme4_score, 1) if theme4_score else None,
+            'ci_rating': overall_grade,
+            'theme1_care_support': theme1_grade,
+            'theme2_environment': theme2_grade,
+            'theme3_staffing': theme3_grade,
+            'theme4_management': theme4_grade,
             'inspection_date': latest_report.inspection_date,
             'overall_rating': latest_report.overall_rating
         }
@@ -1215,57 +1228,81 @@ def _generate_peer_benchmarking(care_home, current_score):
             # For current home, try to get actual CI scores first, fallback to predicted
             actual_scores = _get_latest_ci_scores_for_home(home)
             if actual_scores:
-                ci_score = actual_scores['ci_score']
+                ci_rating = actual_scores['ci_rating']
                 theme1 = actual_scores['theme1_care_support']
                 theme2 = actual_scores['theme2_environment']
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
             else:
-                # Use predicted score if no inspection data
-                ci_score = round(current_score, 1)
-                theme1 = round(current_score + 1, 1)
-                theme2 = round(current_score, 1)
-                theme3 = round(current_score + 3, 1)
-                theme4 = round(current_score + 2, 1)
+                # Convert predicted score to rating (1-6)
+                if current_score >= 90:
+                    ci_rating = 6
+                elif current_score >= 75:
+                    ci_rating = 5
+                elif current_score >= 60:
+                    ci_rating = 4
+                elif current_score >= 45:
+                    ci_rating = 3
+                elif current_score >= 30:
+                    ci_rating = 2
+                else:
+                    ci_rating = 1
+                # Estimate theme ratings around overall
+                theme1 = ci_rating
+                theme2 = ci_rating
+                theme3 = min(ci_rating + 1, 6)
+                theme4 = ci_rating
         else:
             # For other homes, use actual CI scores from their latest inspection
             actual_scores = _get_latest_ci_scores_for_home(home)
             if actual_scores:
-                ci_score = actual_scores['ci_score']
+                ci_rating = actual_scores['ci_rating']
                 theme1 = actual_scores['theme1_care_support']
                 theme2 = actual_scores['theme2_environment']
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
             else:
-                # If no inspection data, calculate predicted score
+                # If no inspection data, calculate predicted score and convert to rating
                 try:
                     other_predictor = CareHomePerformancePredictor(home)
                     other_prediction = other_predictor.predict_rating()
-                    ci_score = round(other_prediction['total_score'], 1)
-                    theme1 = round(ci_score + 1, 1)
-                    theme2 = round(ci_score, 1)
-                    theme3 = round(ci_score + 3, 1)
-                    theme4 = round(ci_score + 2, 1)
+                    score = other_prediction['total_score']
+                    if score >= 90:
+                        ci_rating = 6
+                    elif score >= 75:
+                        ci_rating = 5
+                    elif score >= 60:
+                        ci_rating = 4
+                    elif score >= 45:
+                        ci_rating = 3
+                    elif score >= 30:
+                        ci_rating = 2
+                    else:
+                        ci_rating = 1
+                    theme1 = ci_rating
+                    theme2 = ci_rating
+                    theme3 = min(ci_rating + 1, 6)
+                    theme4 = ci_rating
                 except Exception as e:
                     logger.warning(f"Could not predict for {home.name}: {e}")
-                    # Fallback to default scores
-                    ci_score = 75.0
-                    theme1 = 76.0
-                    theme2 = 75.0
-                    theme3 = 78.0
-                    theme4 = 77.0
+                    # Fallback to default ratings
+                    ci_rating = 4
+                    theme1 = 4
+                    theme2 = 4
+                    theme3 = 5
+                    theme4 = 4
         
         peer_data.append({
             'home_name': home.name.upper() if home.id == care_home.id else home.name,
-            'ci_score': ci_score,
+            'ci_rating': ci_rating,
             'theme1_care_support': theme1,
             'theme2_environment': theme2,
             'theme3_staffing': theme3,
             'theme4_management': theme4
         })
     
-    # Sort by CI score descending
-    peer_data.sort(key=lambda x: x['ci_score'], reverse=True)
+    # Sort by CI rating descending
+    peer_data.sort(key=lambda x: x['ci_rating'], reverse=True)
     
     # Add rankings
     for idx, home_data in enumerate(peer_data, 1):
