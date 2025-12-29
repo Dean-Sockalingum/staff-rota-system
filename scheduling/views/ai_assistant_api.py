@@ -553,6 +553,12 @@ def ai_assistant_api(request):
             answer += "• 'Show me recent incidents'\n"
             answer += "• 'What's the shift coverage today?'\n"
             answer += "• 'Show leave requests'\n"
+            answer += "\n**Executive Dashboards (NEW!):**\n"
+            answer += "• 'Show executive dashboard' - Senior leadership analytics\n"
+            answer += "• 'CI performance dashboard' - Care Inspectorate ratings & quality metrics\n"
+            answer += "• 'What are our latest CI ratings?' - Inspection data by care home\n"
+            answer += "• 'Show operational metrics' - 6-month performance trends\n"
+            answer += "• 'Quality metrics for all homes' - 4-theme quality assessment\n"
             answer += "\n**Advanced Reports & Analytics:**\n"
             answer += "• 'Show OT and Agency usage' - Detailed breakdown by home and grade\n"
             answer += "• 'Show staff vacancies' - Current and upcoming leavers by home\n"
@@ -593,7 +599,14 @@ def ai_assistant_api(request):
 • "What's the coverage today?"
 • "Show leave requests"
 
-**ML-Powered Forecasts (NEW!):**
+**Executive Dashboards (NEW!):**
+• "Show executive dashboard"
+• "CI performance dashboard"
+• "What are our latest CI ratings?"
+• "Show operational metrics"
+• "Quality metrics for all homes"
+
+**ML-Powered Forecasts:**
 • "What's the staffing forecast for next week?"
 • "Will we be short-staffed tomorrow?"
 • "Predict demand for next 30 days"
@@ -614,8 +627,8 @@ def ai_assistant_api(request):
 • Import errors
 • Permission denied errors
 
-Ask about forecasts, shortages, sickness, or incidents for instant ML-powered insights!""",
-                'related': ['Staffing Forecast', 'Shortage Prediction', 'Sickness Report', 'Coverage Report'],
+Ask about executive dashboards, CI ratings, forecasts, or operational metrics!""",
+                'related': ['Executive Dashboard', 'CI Performance', 'Staffing Forecast', 'Quality Metrics'],
                 'category': 'help'
             })
     

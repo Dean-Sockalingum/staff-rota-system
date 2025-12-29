@@ -463,6 +463,104 @@ See: CAREPLAN_REVIEW_IMPLEMENTATION.md for full documentation
                     'related': ['view_residents', 'compliance_reports', 'review_approval', 'manager_dashboard']
                 },
                 
+                'executive_dashboard': {
+                    'question': ['executive dashboard', 'executive dashboards', 'ci performance', 'care inspectorate dashboard', 'ci dashboard', 'quality ratings', 'inspection data', 'care inspectorate data', 'regulatory dashboard', 'senior leadership dashboard', 'operational metrics', 'quality metrics', 'executive analytics'],
+                    'answer': """
+**Executive Dashboards - Advanced Analytics for Senior Leadership:**
+
+**Access Executive Dashboards:**
+1. Login to http://127.0.0.1:8000
+2. Navigate to: Executive Dashboards (top navigation menu)
+3. Choose from available dashboards:
+   - **CI Performance Dashboard** (Care Inspectorate Integration)
+   - Risk & Early Warning Dashboard
+   - Budget & Costs Analysis
+   - Retention & Workforce Analytics
+
+**CI Performance Dashboard Features:**
+
+**Real-Time Inspection Data Integration:**
+- Displays actual Care Inspectorate ratings for all care homes
+- Official CS registration numbers linked to each home
+- 4-theme quality assessment framework
+- Historical performance tracking
+
+**Quality Themes Tracked:**
+1. **Quality of Care & Support** - Person-centered care delivery
+2. **Quality of Environment** - Safety, comfort, and facilities
+3. **Quality of Staffing** - Staff competence and deployment
+4. **Quality of Management & Leadership** - Governance and oversight
+
+**Rating Scale (1-6):**
+- 6 = Excellent
+- 5 = Very Good
+- 4 = Good
+- 3 = Adequate
+- 2 = Weak
+- 1 = Unsatisfactory
+
+**Operational Metrics (6-Month Trends):**
+The dashboard shows key performance indicators with monthly tracking:
+- Staff Retention Rate (%)
+- Training Compliance (%)
+- Sickness Absence Rate (%)
+- Incident Rate (per 1000 bed days)
+- Shift Fill Rate (%)
+- Budget Variance (%)
+
+**Example Data - Actual Care Homes:**
+
+**Victoria Gardens (CS2018371437):**
+- Quality of Care: 5 (Very Good)
+- Environment: 5 (Very Good)
+- Staffing: 4 (Good)
+- Management: 5 (Very Good)
+- Inspection Date: September 2024
+
+**Hawthorn House (CS2003001025):**
+- Quality of Care: 4 (Good)
+- Environment: 4 (Good)
+- Staffing: 4 (Good)
+- Management: 4 (Good)
+- Inspection Date: August 2024
+
+**Dashboard Capabilities:**
+- Compare performance across all care homes
+- Track quality improvements over time
+- Identify areas requiring attention
+- Export data for board reports
+- Generate regulatory compliance summaries
+- Monitor operational efficiency trends
+
+**Color-Coded Visual Indicators:**
+- Green: Excellent/Very Good (5-6)
+- Amber: Good/Adequate (3-4)
+- Red: Weak/Unsatisfactory (1-2)
+
+**Integration with AI Assistant:**
+Ask me questions like:
+- "What is Victoria Gardens' latest CI rating?"
+- "Show me quality metrics for all homes"
+- "Which homes need staffing improvements?"
+- "What are the operational trends this month?"
+- "Generate executive summary report"
+
+**Access Requirements:**
+- Head of Service or Service Manager role required
+- Secure authentication via Django login
+- Real-time data updates from Care Inspectorate API
+
+**Related Features:**
+- Automated monthly executive summaries
+- Quality improvement action tracking
+- Benchmarking against sector standards
+- Board-ready presentation exports
+
+See: Academic Paper Phase 4 for detailed implementation methodology
+""",
+                    'related': ['ci_ratings', 'quality_metrics', 'operational_dashboard', 'executive_reports', 'care_inspectorate', 'regulatory_compliance']
+                },
+                
                 'view_rota': {
                     'question': ['view rota', 'see schedule', 'check shifts', 'my rota'],
                     'answer': """
