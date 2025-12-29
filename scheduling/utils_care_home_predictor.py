@@ -1224,6 +1224,7 @@ def _generate_peer_benchmarking(care_home, current_score):
     
     peer_data = []
     for home in all_homes:
+        inspection_date = None
         if home.id == care_home.id:
             # For current home, try to get actual CI scores first, fallback to predicted
             actual_scores = _get_latest_ci_scores_for_home(home)
@@ -1233,6 +1234,7 @@ def _generate_peer_benchmarking(care_home, current_score):
                 theme2 = actual_scores['theme2_environment']
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
+                inspection_date = actual_scores['inspection_date']
             else:
                 # Convert predicted score to rating (1-6)
                 if current_score >= 90:
@@ -1261,6 +1263,7 @@ def _generate_peer_benchmarking(care_home, current_score):
                 theme2 = actual_scores['theme2_environment']
                 theme3 = actual_scores['theme3_staffing']
                 theme4 = actual_scores['theme4_management']
+                inspection_date = actual_scores['inspection_date']
             else:
                 # If no inspection data, calculate predicted score and convert to rating
                 try:
@@ -1298,7 +1301,8 @@ def _generate_peer_benchmarking(care_home, current_score):
             'theme1_care_support': theme1,
             'theme2_environment': theme2,
             'theme3_staffing': theme3,
-            'theme4_management': theme4
+            'theme4_management': theme4,
+            'inspection_date': inspection_date
         })
     
     # Sort by CI rating descending

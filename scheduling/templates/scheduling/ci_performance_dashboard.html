@@ -82,6 +82,7 @@
                                 <th>Environment</th>
                                 <th>Staffing</th>
                                 <th>Management</th>
+                                <th>Last Inspection</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -104,6 +105,13 @@
                                 <td>{{ peer.theme2_environment|default:"-" }}</td>
                                 <td>{{ peer.theme3_staffing|default:"-" }}</td>
                                 <td>{{ peer.theme4_management|default:"-" }}</td>
+                                <td>
+                                    {% if peer.inspection_date %}
+                                        <small>{{ peer.inspection_date|date:"d M Y" }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Predicted</small>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
