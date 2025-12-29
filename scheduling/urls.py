@@ -151,6 +151,10 @@ urlpatterns = [
     path('export/leave/summary/', views.export_leave_summary_pdf, name='export_leave_summary_pdf'),
     path('export/allocation/<int:home_id>/', views.export_allocation_summary_pdf, name='export_allocation_summary_pdf'),
     
+    # Excel Export (Phase 2 - Task 20)
+    path('export/my-shifts/excel/', views.export_my_shifts_excel, name='export_my_shifts_excel'),
+    path('export/rota/weekly/<int:home_id>/excel/', views.export_weekly_rota_excel, name='export_weekly_rota_excel'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

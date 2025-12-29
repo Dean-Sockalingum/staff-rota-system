@@ -10655,3 +10655,258 @@ def export_weekly_rota_pdf(request, home_id):
     
     return response
 
+
+# ============================================================================
+# TASK 20: EXCEL EXPORT - Shift Data to Excel Spreadsheets
+# ============================================================================
+
+@login_required
+def export_my_shifts_excel(request):
+    """Export current user's shifts as Excel spreadsheet"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    
+    # Get date range
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # Default: next 4 weeks
+        start_date = date.today()
+        end_date = start_date + timedelta(days=28)
+    
+    # Get user's shifts
+    shifts = Shift.objects.filter(
+        staff=request.user,
+        date__range=[start_date, end_date]
+    ).select_related('shift_type', 'unit', 'care_home').order_by('date', 'start_time')
+    
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "My Shifts"
+    
+    # Header styling
+    header_fill = PatternFill(start_color="0066FF", end_color="0066FF", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=12)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Border
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Title row
+    ws.merge_cells('A1:G1')
+    ws['A1'] = f"My Shift Schedule - {request.user.get_full_name()}"
+    ws['A1'].font = Font(size=16, bold=True, color="0066FF")
+    ws['A1'].alignment = Alignment(horizontal="center")
+    
+    ws.merge_cells('A2:G2')
+    ws['A2'] = f"{start_date.strftime('%d %B %Y')} - {end_date.strftime('%d %B %Y')}"
+    ws['A2'].alignment = Alignment(horizontal="center")
+    
+    # Headers (row 4)
+    headers = ['Date', 'Day', 'Shift Type', 'Start Time', 'End Time', 'Unit', 'Care Home']
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Data rows
+    row_num = 5
+    for shift in shifts:
+        ws.cell(row=row_num, column=1, value=shift.date.strftime('%d/%m/%Y'))
+        ws.cell(row=row_num, column=2, value=shift.date.strftime('%A'))
+        ws.cell(row=row_num, column=3, value=shift.shift_type.name if shift.shift_type else 'N/A')
+        ws.cell(row=row_num, column=4, value=shift.start_time.strftime('%H:%M'))
+        ws.cell(row=row_num, column=5, value=shift.end_time.strftime('%H:%M'))
+        ws.cell(row=row_num, column=6, value=shift.unit.name if shift.unit else 'N/A')
+        ws.cell(row=row_num, column=7, value=shift.care_home.name if shift.care_home else 'N/A')
+        
+        # Apply borders and alignment
+        for col in range(1, 8):
+            cell = ws.cell(row=row_num, column=col)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            
+            # Alternate row colors
+            if row_num % 2 == 0:
+                cell.fill = PatternFill(start_color="F5F7FA", end_color="F5F7FA", fill_type="solid")
+        
+        row_num += 1
+    
+    # Summary
+    summary_row = row_num + 1
+    ws.cell(row=summary_row, column=1, value=f"Total Shifts: {shifts.count()}")
+    ws.cell(row=summary_row, column=1).font = Font(bold=True)
+    
+    ws.cell(row=summary_row + 1, column=1, value=f"Generated: {timezone.now().strftime('%d/%m/%Y %H:%M')}")
+    ws.cell(row=summary_row + 1, column=1).font = Font(italic=True, size=9)
+    
+    # Auto-adjust column widths
+    for col in range(1, 8):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    # Save to buffer
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(
+        buffer,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"my_shifts_{start_date}_{end_date}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_weekly_rota_excel(request, home_id):
+    """Export weekly rota for a care home as Excel spreadsheet"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    
+    home = get_object_or_404(CareHome, pk=home_id)
+    
+    # Get week start date
+    week_start_str = request.GET.get('week_start')
+    if week_start_str:
+        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+    else:
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+    
+    week_end = week_start + timedelta(days=6)
+    
+    # Get all shifts for the week
+    shifts = Shift.objects.filter(
+        care_home=home,
+        date__range=[week_start, week_end]
+    ).select_related('staff', 'shift_type', 'unit').order_by('date', 'start_time')
+    
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Weekly Rota"
+    
+    # Styling
+    header_fill = PatternFill(start_color="0066FF", end_color="0066FF", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Title
+    ws.merge_cells('A1:H1')
+    ws['A1'] = f"Weekly Rota - {home.name}"
+    ws['A1'].font = Font(size=16, bold=True, color="0066FF")
+    ws['A1'].alignment = Alignment(horizontal="center")
+    
+    ws.merge_cells('A2:H2')
+    ws['A2'] = f"Week: {week_start.strftime('%d %B %Y')} - {week_end.strftime('%d %B %Y')}"
+    ws['A2'].alignment = Alignment(horizontal="center")
+    
+    # Headers
+    days = [(week_start + timedelta(days=i)) for i in range(7)]
+    headers = ['Unit'] + [day.strftime('%a\n%d/%m') for day in days]
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Data - one row per unit
+    units = home.units.all().order_by('name')
+    row_num = 5
+    
+    for unit in units:
+        ws.cell(row=row_num, column=1, value=unit.name)
+        ws.cell(row=row_num, column=1).font = Font(bold=True)
+        ws.cell(row=row_num, column=1).border = thin_border
+        
+        for col_num, day in enumerate(days, 2):
+            day_shifts = shifts.filter(unit=unit, date=day)
+            
+            if day_shifts.exists():
+                shift_text = '\n'.join([
+                    f"{s.staff.first_name} {s.staff.last_name[0]}. ({s.shift_type.code if s.shift_type else 'N/A'})"
+                    for s in day_shifts
+                ])
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = shift_text
+                cell.alignment = Alignment(horizontal="center", vertical="top", wrap_text=True)
+                cell.border = thin_border
+                
+                # Weekend highlighting
+                if day.weekday() >= 5:  # Saturday or Sunday
+                    cell.fill = PatternFill(start_color="FFF3E0", end_color="FFF3E0", fill_type="solid")
+                elif row_num % 2 == 0:
+                    cell.fill = PatternFill(start_color="F5F7FA", end_color="F5F7FA", fill_type="solid")
+            else:
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = "-"
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
+                
+                if day.weekday() >= 5:
+                    cell.fill = PatternFill(start_color="FFF3E0", end_color="FFF3E0", fill_type="solid")
+                elif row_num % 2 == 0:
+                    cell.fill = PatternFill(start_color="F5F7FA", end_color="F5F7FA", fill_type="solid")
+        
+        row_num += 1
+    
+    # Summary
+    summary_row = row_num + 1
+    ws.cell(row=summary_row, column=1, value=f"Total Shifts: {shifts.count()}")
+    ws.cell(row=summary_row, column=1).font = Font(bold=True)
+    
+    ws.cell(row=summary_row + 1, column=1, value=f"Generated: {timezone.now().strftime('%d/%m/%Y %H:%M')}")
+    ws.cell(row=summary_row + 1, column=1).font = Font(italic=True, size=9)
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 20
+    for col in range(2, 9):
+        ws.column_dimensions[get_column_letter(col)].width = 18
+    
+    # Adjust row heights for better readability
+    for row in range(5, row_num):
+        ws.row_dimensions[row].height = 40
+    
+    # Save to buffer
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(
+        buffer,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"weekly_rota_{home.name.replace(' ', '_')}_{week_start}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
