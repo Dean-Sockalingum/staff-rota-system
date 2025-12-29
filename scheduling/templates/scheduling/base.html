@@ -45,30 +45,8 @@
     <link href="{% static 'css/ui-polish.css' %}?v=2" rel="stylesheet">
     {% endif %}
     <style>
-        .shift-card {
-            border-radius: 8px;
-            padding: 8px;
-            margin: 2px;
-            /* color now defined by role-specific classes in rota_view.html */
-            text-align: center;
-            font-size: 0.9em;
-        }
-        /* Role-specific colors now defined in rota_view.html */
-        /* .shift-day { background-color: #3498db; } */
-        /* .shift-night { background-color: #34495e; } */
-        .shift-early { background-color: #f39c12; color: white; }
-        .shift-late { background-color: #e74c3c; color: white; }
-        .shift-long_day { background-color: #9b59b6; color: white; }
-        .shift-on_call { background-color: #1abc9c; color: white; }
-        .shift-uncovered { background-color: #e74c3c; border: 2px dashed #fff; color: white; }
-        
-        .status-good { color: #27ae60; font-weight: bold; }
-        .status-shortage { color: #e74c3c; font-weight: bold; }
-        
-        .widget-card {
-            border-left: 4px solid #3498db;
-            margin-bottom: 20px;
-        }
+        /* Legacy styles - kept for backward compatibility */
+        /* Most spacing is now handled by modern-theme.css */
         
         .calendar-day {
             border: 1px solid #dee2e6;

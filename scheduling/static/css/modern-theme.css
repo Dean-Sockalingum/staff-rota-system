@@ -126,13 +126,20 @@ a:hover {
     background: white;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-base);
-    margin-bottom: var(--spacing-5);
+    padding: var(--spacing-6);  /* 24px - increased from 12px */
+    margin-bottom: var(--spacing-10);  /* 40px - increased from 20px */
     transition: all var(--duration-base) var(--ease-in-out);
 }
 
 .widget-card:hover {
     box-shadow: var(--shadow-hover);
     transform: translateY(-2px);
+}
+
+.widget-card .card-header,
+.widget-card h3,
+.widget-card h4 {
+    margin-bottom: var(--spacing-4);  /* 16px - better header spacing */
 }
 
 /* ===== Alert Styles ===== */
@@ -278,6 +285,7 @@ a:hover {
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-neutral-200);
     box-shadow: var(--shadow-base);
+    margin-bottom: var(--spacing-6);  /* 24px - consistent card spacing */
     transition: all var(--duration-base) var(--ease-in-out);
 }
 
@@ -290,6 +298,26 @@ a:hover {
     border-bottom: 1px solid var(--color-neutral-200);
     font-weight: 600;
     color: var(--color-neutral-900);
+    padding: var(--spacing-4) var(--spacing-6);  /* 16px 24px - increased padding */
+}
+
+.card-body {
+    padding: var(--spacing-6);  /* 24px - increased from default 16px */
+}
+
+.card-footer {
+    padding: var(--spacing-4) var(--spacing-6);  /* 16px 24px */
+    background: var(--color-neutral-50);
+    border-top: 1px solid var(--color-neutral-200);
+}
+
+/* Card spacing variants */
+.card.mb-3 {
+    margin-bottom: var(--spacing-6) !important;  /* 24px */
+}
+
+.card.mb-4 {
+    margin-bottom: var(--spacing-8) !important;  /* 32px */
 }
 
 /* ===== Tables ===== */
@@ -373,4 +401,198 @@ a:hover {
 
 .border-secondary {
     border-color: var(--color-secondary-500) !important;
+}
+
+/* ===== SPACING & LAYOUT IMPROVEMENTS ===== */
+
+/* Container spacing */
+.container,
+.container-fluid {
+    padding-top: var(--spacing-6);  /* 24px */
+    padding-bottom: var(--spacing-6);  /* 24px */
+}
+
+/* Row spacing - add breathing room between rows */
+.row {
+    margin-bottom: var(--spacing-6);  /* 24px */
+}
+
+.row:last-child {
+    margin-bottom: 0;
+}
+
+/* Column spacing - add padding between columns */
+.row > [class*="col-"] {
+    margin-bottom: var(--spacing-6);  /* 24px on mobile/tablet */
+}
+
+@media (min-width: 768px) {
+    .row > [class*="col-"] {
+        margin-bottom: 0;  /* Remove on larger screens where columns are side-by-side */
+    }
+}
+
+/* Section spacing - generous margins between major sections */
+section,
+.section {
+    margin-bottom: var(--spacing-12);  /* 48px */
+}
+
+/* Dashboard grid improvements */
+.dashboard-grid {
+    display: grid;
+    gap: var(--spacing-6);  /* 24px between grid items */
+    margin-bottom: var(--spacing-8);
+}
+
+@media (min-width: 768px) {
+    .dashboard-grid {
+        gap: var(--spacing-8);  /* 32px on larger screens */
+    }
+}
+
+/* List group spacing */
+.list-group-item {
+    padding: var(--spacing-4) var(--spacing-5);  /* 16px 20px - increased from default */
+    margin-bottom: var(--spacing-1);  /* 4px gap between items */
+}
+
+.list-group-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Form group spacing */
+.form-group,
+.mb-3 {
+    margin-bottom: var(--spacing-5) !important;  /* 20px - consistent form spacing */
+}
+
+/* Button spacing */
+.btn {
+    padding: var(--spacing-3) var(--spacing-5);  /* 12px 20px - comfortable touch targets */
+    margin-right: var(--spacing-2);  /* 8px between buttons */
+    margin-bottom: var(--spacing-2);  /* 8px for wrapped buttons */
+}
+
+.btn:last-child {
+    margin-right: 0;
+}
+
+.btn-sm {
+    padding: var(--spacing-2) var(--spacing-3);  /* 8px 12px */
+}
+
+.btn-lg {
+    padding: var(--spacing-4) var(--spacing-6);  /* 16px 24px */
+}
+
+/* Modal spacing */
+.modal-body {
+    padding: var(--spacing-6);  /* 24px */
+}
+
+.modal-header,
+.modal-footer {
+    padding: var(--spacing-5) var(--spacing-6);  /* 20px 24px */
+}
+
+/* Alert spacing */
+.alert {
+    padding: var(--spacing-4) var(--spacing-5);  /* 16px 20px */
+    margin-bottom: var(--spacing-5);  /* 20px */
+}
+
+/* Table spacing */
+.table {
+    margin-bottom: var(--spacing-6);  /* 24px */
+}
+
+.table td,
+.table th {
+    padding: var(--spacing-3) var(--spacing-4);  /* 12px 16px - more spacious cells */
+}
+
+/* Breadcrumb spacing */
+.breadcrumb {
+    padding: var(--spacing-3) var(--spacing-5);  /* 12px 20px */
+    margin-bottom: var(--spacing-5);
+}
+
+/* Pagination spacing */
+.pagination {
+    margin-bottom: var(--spacing-6);
+}
+
+.page-link {
+    padding: var(--spacing-2) var(--spacing-4);  /* 8px 16px */
+}
+
+/* Navigation spacing */
+.navbar {
+    padding: var(--spacing-3) var(--spacing-5);  /* 12px 20px */
+}
+
+.nav-link {
+    padding: var(--spacing-2) var(--spacing-4);  /* 8px 16px */
+}
+
+/* Heading spacing - add breathing room */
+h1, h2, h3, h4, h5, h6 {
+    margin-bottom: var(--spacing-4);  /* 16px */
+}
+
+h1 { margin-top: var(--spacing-8); }  /* 32px */
+h2 { margin-top: var(--spacing-6); }  /* 24px */
+h3 { margin-top: var(--spacing-5); }  /* 20px */
+h4 { margin-top: var(--spacing-4); }  /* 16px */
+
+/* First heading - no top margin */
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child {
+    margin-top: 0;
+}
+
+/* Paragraph spacing */
+p {
+    margin-bottom: var(--spacing-4);  /* 16px */
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+/* HR spacing */
+hr {
+    margin: var(--spacing-8) 0;  /* 32px top/bottom */
+}
+
+/* Badge spacing */
+.badge {
+    padding: var(--spacing-1) var(--spacing-3);  /* 4px 12px */
+    margin-right: var(--spacing-1);  /* 4px */
+}
+
+/* Stat cards - dashboard metrics */
+.stat-card {
+    padding: var(--spacing-6);  /* 24px */
+    margin-bottom: var(--spacing-6);
+    text-align: center;
+}
+
+.stat-card h2,
+.stat-card .stat-value {
+    margin-bottom: var(--spacing-2);
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.stat-card p,
+.stat-card .stat-label {
+    margin-bottom: 0;
+    color: var(--color-neutral-600);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
 }
