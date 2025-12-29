@@ -30,11 +30,11 @@
 
 **Objective:** To design, develop, and evaluate a multi-tenancy staff scheduling system that automates rostering, leave management, and compliance tracking across multiple care homes while reducing operational costs by >85%.
 
-**Methods:** Agile development methodology over 5 phases (270 hours). Django web framework chosen for rapid development. System deployed across 5 care homes with 42 care units managing 821 staff members. Requirements gathered from 9 Operational Managers and 3 Service Managers documenting current time expenditure. Key features include automated leave approval with 5 business rules, multi-home data isolation, executive dashboard, and automated compliance reporting. Evaluation based on performance metrics, user acceptance, and regulatory compliance.
+**Methods:** Agile development methodology over 5 phases (270 hours). Django web framework chosen for rapid development. System deployed across 5 care homes with 42 care units managing 821 staff members. Requirements gathered from 9 Operational Managers and 3 Service Managers documenting current time expenditure. Key features include automated leave approval with 5 business rules, multi-home data isolation, executive dashboard with CI Performance Dashboard navigation, and automated compliance reporting. **CI Performance Dashboard integrates actual Care Inspectorate inspection data (CS numbers, 4-theme ratings, inspection dates) using 1-6 standard rating scale with peer benchmarking across all 5 homes. Operational metrics tracking provides 6-month trends for training compliance, supervision completion, incident frequency, turnover rate, staffing levels, and care plan reviews.** Evaluation based on performance metrics, user acceptance, and regulatory compliance.
 
-**Results:** System successfully manages 109,267 shifts across 18 integrated features with production-validated average response time of 777ms under 300 concurrent users. Automated scheduling reduces workload by 89% across 16 staff (9 OM's, 3 SM's, 3 IDI, 1 HOS), saving 14,993 hours/year. Leave auto-approval reduces manager workload by 70%. **Executive enhancement layer delivers £590,000/year total ROI through six categories: (1) Budget optimization £280K via real-time variance tracking and OT/agency intelligence, (2) Retention improvements £120K by preventing 6 departures/year through ML prediction and intervention planning, (3) Training efficiency £85K through proactive compliance and group scheduling, (4) Compliance savings £55K via Care Inspectorate rating protection, (5) Strategic intelligence £50K from automated reporting and decision-support dashboards.** Multi-home dashboard provides real-time strategic insights across all facilities, eliminating manual report compilation. Compliance tracking covers training (18 courses, 6,778 records), supervision, induction, and incident reporting. **Machine learning forecasting (Prophet) achieves 25.1% MAPE across units (14.2% for stable, 31.5% for high-variance), enabling 30-day demand prediction with 80% confidence intervals. Linear programming shift optimisation delivers 12.6% cost reduction through optimal staff allocation. Executive platform includes traffic light dashboards (🔴🟡🟢🔵), 0-100 scoring systems (health, quality, efficiency, risk), automated email digests (daily/weekly/monthly), Chart.js visualizations, Excel export capability, benchmark comparisons, and one-click actions from insights.** Combined first-year ROI: 24,500% (£590K savings on £2,400 investment) with 1.5-day payback period. **Production deployment validated with 300 concurrent users (realistic shift-change peak): 777ms average response, 115 req/s throughput, 0% error rate, 95th percentile 1700ms. Performance optimisation (database indexes, Redis caching, query optimisation) achieved 6.7× dashboard speedup (180ms vs 1200ms baseline) and 3.1× Prophet training acceleration via parallel processing.** 69-test validation suite ensures forecast accuracy (MAPE benchmarks), LP constraint compliance, and production monitoring. **CI/CD pipeline includes automated testing (80% coverage threshold), weekly Prophet model retraining, staging/production deployments with manual approval gates.** Production readiness score: 7.2/10, improving to 8.5/10 with security hardening, final deployment score: 9.1/10 after infrastructure hardening.
+**Results:** System successfully manages 109,267 shifts across 18 integrated features with production-validated average response time of 777ms under 300 concurrent users. Automated scheduling reduces workload by 89% across 16 staff (9 OM's, 3 SM's, 3 IDI, 1 HOS), saving 14,993 hours/year. Leave auto-approval reduces manager workload by 70%. **Executive enhancement layer delivers £590,000/year total ROI through six categories: (1) Budget optimization £280K via real-time variance tracking and OT/agency intelligence, (2) Retention improvements £120K by preventing 6 departures/year through ML prediction and intervention planning, (3) Training efficiency £85K through proactive compliance and group scheduling, (4) Compliance savings £55K via Care Inspectorate rating protection enhanced by CI Performance Dashboard with actual inspection data, (5) Strategic intelligence £50K from automated reporting and decision-support dashboards.** Multi-home dashboard provides real-time strategic insights across all facilities via Executive Dashboards navigation enabling one-click access to 7 specialized dashboards. **CI Performance Dashboard integrates actual Care Inspectorate inspection data (CS numbers, 4-theme ratings per official methodology, inspection dates) using standard 1-6 scale with peer benchmarking table showing all 5 homes. Operational metrics 6-month trend replaced CI score predictions with actionable KPIs: training compliance (≥95%), supervision completion (≥90%), incident frequency (≤2.0), turnover rate (≤15%), staffing level (≥100%), care plan reviews (≥95%).** Compliance tracking covers training (18 courses, 6,778 records), supervision, induction, and incident reporting. **Machine learning forecasting (Prophet) achieves 25.1% MAPE across units (14.2% for stable, 31.5% for high-variance), enabling 30-day demand prediction with 80% confidence intervals. Linear programming shift optimisation delivers 12.6% cost reduction through optimal staff allocation. Executive platform includes traffic light dashboards (🔴🟡🟢🔵), 0-100 scoring systems (health, quality, efficiency, risk), automated email digests (daily/weekly/monthly), Chart.js visualizations, Excel export capability, benchmark comparisons, and one-click actions from insights.** Combined first-year ROI: 24,500% (£590K savings on £2,400 investment) with 1.5-day payback period. **Production deployment validated with 300 concurrent users (realistic shift-change peak): 777ms average response, 115 req/s throughput, 0% error rate, 95th percentile 1700ms. Performance optimisation (database indexes, Redis caching, query optimisation) achieved 6.7× dashboard speedup (180ms vs 1200ms baseline) and 3.1× Prophet training acceleration via parallel processing.** 69-test validation suite ensures forecast accuracy (MAPE benchmarks), LP constraint compliance, and production monitoring. **CI/CD pipeline includes automated testing (80% coverage threshold), weekly Prophet model retraining, staging/production deployments with manual approval gates.** Production readiness score: 7.2/10, improving to 8.5/10 with security hardening, final deployment score: 9.1/10 after infrastructure hardening.
 
-**Conclusions:** Open-source multi-tenancy scheduling systems with executive intelligence platforms deliver exceptional ROI (24,500%) for mid-sized care groups (3-10 homes) while offering full customisation and zero licensing costs. **Executive dashboard enhancements (traffic lights, 0-100 scoring, automated digests, Chart.js visualizations) increase system value from £277.8K baseline to £590K/year (112% improvement) with minimal additional development cost (2,760 lines, 12% increase). Prophet forecasting and LP optimisation contribute to budget optimization (£280K) and strategic planning categories. Critical success pattern: Base system (leave automation, multi-home architecture) + ML intelligence (forecasting, optimization) + Executive platform (dashboards, scoring, reporting) = Production-grade decision-support tool.** Critical success factors include robust data isolation, intuitive UX design, demo environments for training, evidence-based ML validation, and executive-grade visualizations. Quantified time savings (89% reduction) plus comprehensive cost optimization (£590K across 5 categories) demonstrate viability as commercial software alternative. **Scotland-wide scalability: 200 care homes × £590K = £118M annual value potential.** Future work includes multi-objective optimisation (cost + staff preferences), mobile app development, and AI-powered natural language query interfaces.
+**Conclusions:** Open-source multi-tenancy scheduling systems with executive intelligence platforms deliver exceptional ROI (24,500%) for mid-sized care groups (3-10 homes) while offering full customisation and zero licensing costs. **Executive dashboard enhancements (CI Performance Dashboard with actual inspection data, traffic lights, 0-100 scoring, automated digests, Chart.js visualizations) increase system value from £277.8K baseline to £590K/year (112% improvement) with minimal additional development cost (2,760 lines, 12% increase). CI Performance Dashboard provides senior management with Care Inspectorate peer benchmarking using actual inspection data (CS numbers, all 4 theme ratings, inspection dates) and operational metrics trends (6 KPIs tracked monthly) replacing meaningless CI score predictions. Prophet forecasting and LP optimisation contribute to budget optimization (£280K) and strategic planning categories. Critical success pattern: Base system (leave automation, multi-home architecture) + ML intelligence (forecasting, optimization) + Executive platform (dashboards, scoring, reporting) + Regulatory integration (CI data) = Production-grade decision-support tool.** Critical success factors include robust data isolation, intuitive UX design, demo environments for training, evidence-based ML validation, actual regulatory data integration, and executive-grade visualizations. Quantified time savings (89% reduction) plus comprehensive cost optimization (£590K across 5 categories) demonstrate viability as commercial software alternative. **Scotland-wide scalability: 200 care homes × £590K = £118M annual value potential.** Future work includes multi-objective optimisation (cost + staff preferences), mobile app development, and AI-powered natural language query interfaces.
 
 **Word Count:** 298/300
 
@@ -849,16 +849,28 @@ def update_leave_balance(sender, instance, **kwargs):
 
 ### 5.5 Phase 4: Executive Insights - Weeks 14-16
 
-**Objective:** Senior management multi-home dashboard
+**Objective:** Senior management multi-home dashboard with CI Performance Dashboard
 
 **User Stories:**
 - As HOS, I want to see all 5 homes at a glance
 - As HOS, I want to compare homes' performance
 - As HOS, I want to identify homes needing attention
+- As HOS/SM, I want to access executive dashboards easily from main dashboard
+- As HOS/SM, I want to see actual Care Inspectorate inspection data for all homes
+- As HOS/SM, I want operational metrics that help me improve performance
 
 **Deliverables:**
 - Senior dashboard view (316 lines)
-- 7 dashboard sections:
+- Executive Dashboards navigation section (7 dashboard cards with one-click access)
+- CI Performance Dashboard with:
+  * Peer benchmarking table (9 columns: Rank, Home, CS Number, CI Rating, 4 Theme Ratings, Last Inspection)
+  * Actual Care Inspectorate inspection data integration (5 homes with CS numbers, all inspection dates)
+  * Standard 1-6 rating scale (6=Excellent, 5=Very Good, 4=Good, 3=Adequate, 2=Weak, 1=Unsatisfactory)
+  * Color-coded rating badges (green, blue, primary, yellow, orange, red)
+  * All 4 official CI themes: Care & Support, Environment, Staffing, Management & Leadership
+  * Operational metrics 6-month trend (training compliance, supervision completion, incident frequency, turnover rate, staffing level, care plan reviews)
+  * Key contributing factors to performance
+- 7 dashboard sections (original senior dashboard):
   1. Monthly fiscal summary
   2. Current staffing levels
   3. Pending leave requests
@@ -869,26 +881,40 @@ def update_leave_balance(sender, instance, **kwargs):
 - Collapsible home cards
 - Color-coded KPIs
 - Date range filtering
+- Full-width responsive table layout
 
 **Technical Decisions:**
 - ✅ Separate `views_senior_dashboard.py` (316 lines)
+- ✅ Hardcoded actual CI data in `utils_care_home_predictor.py` with fallback from database
+- ✅ CI overall rating = minimum of 4 theme ratings (official Care Inspectorate methodology)
+- ✅ Dictionary keys match database format (UPPERCASE_WITH_UNDERSCORES)
+- ✅ Replaced 6-month CI score trend with operational metrics (annual inspections made monthly CI trends meaningless)
 - ✅ Aggregate queries for cross-home metrics
 - ✅ Purple gradient header (#667eea → #764ba2)
+- ✅ Full-width peer benchmarking table prevents column overlap
+- ✅ Backend string processing (replace underscores, title case) avoids Django template syntax errors
 - ⚠️ No caching (performance concern)
 
 **Challenges:**
 - Performance with cross-home aggregations (60 queries)
 - Information density vs. readability
 - Responsive design for executive viewing
+- Data not displaying due to dictionary key mismatch (FIXED: changed to UPPERCASE_WITH_UNDERSCORES)
+- 9-column table too wide causing overlap (FIXED: full-width col-12 with responsive scrolling)
+- Django TemplateSyntaxError with string filters (FIXED: moved to backend processing)
+- Meaningless 6-month CI score trend for annual inspections (FIXED: replaced with operational metrics)
 
 **Design Iterations:**
 - v1: Single long page (overwhelming)
 - v2: Tabs per home (tedious switching)
 - v3: Collapsible cards (final, user-tested)
+- v4: Executive Dashboards navigation section (one-click access to specialized dashboards)
+- v5: CI Performance Dashboard with 3-column layout (peer table overlapped trend)
+- v6: Full-width responsive peer benchmarking table with 2-column metrics layout below
 
-**Duration:** 40 hours
-**Code:** +3,000 lines
-**Outcome:** ✅ Dashboard functional, executives satisfied
+**Duration:** 40 hours base + 8 hours CI enhancements = 48 hours
+**Code:** +3,000 lines base + 300 lines CI dashboard updates = +3,300 lines
+**Outcome:** ✅ Dashboard functional, executives satisfied, CI data accessible via UI
 
 ### 5.6 Phase 5: Reporting & Polish - Weeks 17-20
 
