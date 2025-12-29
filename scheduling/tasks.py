@@ -505,3 +505,90 @@ def send_weekly_rotas():
     logger.info(f"Weekly rota task complete: {sent_count} sent, {failed_count} failed")
     return f"Sent {sent_count} weekly rotas, {failed_count} failed"
 
+
+# ==================== TASK 22: SMS Notification Tasks ====================
+
+@shared_task
+def monitor_late_clockins():
+    """
+    Monitor for late clock-ins and send SMS reminders
+    Scheduled to run every 15 minutes via Celery Beat
+    """
+    from scheduling.models import Shift
+    from scheduling.sms_notifications import send_late_clockin_alert
+    
+    logger.info("Starting late clock-in monitoring")
+    
+    now = timezone.now()
+    current_time = now.time()
+    today = now.date()
+    
+    # Find shifts that started 15+ minutes ago with no clock-in
+    grace_period = timedelta(minutes=15)
+    cutoff_time = (now - grace_period).time()
+    
+    # Get shifts that should have started
+    late_shifts = Shift.objects.filter(
+        date=today,
+        start_time__lte=cutoff_time,
+        # Add clock_in tracking field check here when implemented
+        # clock_in_time__isnull=True
+    ).select_related('staff', 'unit', 'care_home')
+    
+    sent_count = 0
+    
+    for shift in late_shifts:
+        if shift.staff and shift.staff.sms_notifications_enabled:
+            try:
+                if send_late_clockin_alert(shift.staff, shift):
+                    sent_count += 1
+            except Exception as e:
+                logger.error(f"Error sending late clock-in SMS for shift {shift.id}: {str(e)}")
+    
+    logger.info(f"Late clock-in monitoring complete: {sent_count} SMS sent")
+    return f"Sent {sent_count} late clock-in reminders"
+
+
+@shared_task
+def send_emergency_coverage_sms():
+    """
+    Send SMS alerts for unfilled emergency shifts
+    Scheduled to run every 30 minutes via Celery Beat
+    """
+    from scheduling.models import Shift, User
+    from scheduling.sms_notifications import send_emergency_coverage_alert
+    
+    logger.info("Starting emergency coverage SMS alerts")
+    
+    now = timezone.now()
+    tomorrow = now.date() + timedelta(days=1)
+    
+    # Find unfilled shifts in next 24 hours
+    # (This is a simplified example - adjust query based on your vacancy tracking)
+    urgent_shifts = Shift.objects.filter(
+        date__range=[now.date(), tomorrow],
+        staff__isnull=True  # Unfilled shifts
+    ).select_related('shift_type', 'unit', 'care_home')
+    
+    sent_count = 0
+    
+    for shift in urgent_shifts[:10]:  # Limit to 10 most urgent
+        # Find qualified staff with SMS enabled
+        qualified_staff = User.objects.filter(
+            is_active=True,
+            role=shift.shift_type.required_role if shift.shift_type else None,
+            sms_notifications_enabled=True,
+            phone_number__isnull=False
+        ).exclude(phone_number='')[:5]  # Top 5 candidates
+        
+        for staff in qualified_staff:
+            try:
+                if send_emergency_coverage_alert(staff, shift):
+                    sent_count += 1
+            except Exception as e:
+                logger.error(f"Error sending emergency SMS for shift {shift.id}: {str(e)}")
+    
+    logger.info(f"Emergency coverage SMS complete: {sent_count} SMS sent")
+    return f"Sent {sent_count} emergency coverage alerts"
+
+

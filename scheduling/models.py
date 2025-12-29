@@ -121,6 +121,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, db_index=True)  # Indexed for performance
     is_staff = models.BooleanField(default=False)
     
+    # Task 22: SMS Notification Preferences
+    sms_notifications_enabled = models.BooleanField(default=False, help_text='Enable SMS notifications for urgent alerts')
+    sms_emergency_only = models.BooleanField(default=False, help_text='Only send SMS for emergency/critical alerts')
+    sms_opted_in_date = models.DateTimeField(null=True, blank=True, help_text='Date when user opted in to SMS notifications')
+    
     # Annual leave tracking
     annual_leave_allowance = models.IntegerField(default=28)  # Days per year
     annual_leave_used = models.IntegerField(default=0)

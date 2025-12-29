@@ -511,6 +511,20 @@ EMAIL_SHIFT_REMINDER_HOURS = 24  # Send reminders X hours before shift
 EMAIL_WEEKLY_ROTA_DAY = 6  # 0=Monday, 6=Sunday
 EMAIL_WEEKLY_ROTA_HOUR = 18  # 18:00 (6 PM)
 
+# ===== Task 22: SMS Notification Settings (Twilio) =====
+# Enable/disable SMS globally (requires Twilio account)
+TWILIO_ENABLED = config('TWILIO_ENABLED', default=False, cast=bool)
+
+# Twilio credentials (load from environment variables for security)
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')  # E.164 format: +447700900123
+
+# SMS notification settings
+SMS_MAX_LENGTH = 160  # Standard SMS length
+SMS_EMERGENCY_ENABLED = True  # Always allow emergency SMS even if user opted out
+SMS_RATE_LIMIT_PER_USER_HOUR = 5  # Max SMS per user per hour (prevent spam)
+
 # ===== Security Settings =====
 # Production security settings - configured via environment variables
 
@@ -704,6 +718,17 @@ if CELERY_AVAILABLE:
         'send-weekly-rotas': {
             'task': 'scheduling.tasks.send_weekly_rotas',
             'schedule': crontab(day_of_week=6, hour=18, minute=0),  # Sundays at 18:00
+        },
+        # Task 22: SMS Notification Schedules
+        'monitor-late-clockins': {
+            'task': 'scheduling.tasks.monitor_late_clockins',
+            'schedule': 900.0,  # Every 15 minutes
+            'options': {'expires': 850}
+        },
+        'send-emergency-coverage-sms': {
+            'task': 'scheduling.tasks.send_emergency_coverage_sms',
+            'schedule': 1800.0,  # Every 30 minutes
+            'options': {'expires': 1750}
         },
         'weekly-workflow-report': {
             'task': 'scheduling.tasks.generate_weekly_workflow_report',

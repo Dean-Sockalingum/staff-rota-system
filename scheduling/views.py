@@ -11015,3 +11015,181 @@ def process_shift_swap_with_email(staff_member, original_shift, swap_with, new_s
     return True
 
 
+# ============================================================================
+# TASK 22: SMS NOTIFICATIONS - Urgent Alerts via SMS
+# ============================================================================
+
+@login_required
+def sms_preferences(request):
+    """
+    Manage SMS notification preferences
+    """
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        # Handle opt-in/opt-out
+        action = request.POST.get('action')
+        
+        if action == 'enable':
+            request.user.sms_notifications_enabled = True
+            request.user.sms_emergency_only = request.POST.get('emergency_only') == 'on'
+            request.user.sms_opted_in_date = timezone.now()
+            request.user.save()
+            messages.success(request, 'SMS notifications enabled successfully')
+        
+        elif action == 'disable':
+            request.user.sms_notifications_enabled = False
+            request.user.save()
+            messages.success(request, 'SMS notifications disabled')
+        
+        elif action == 'update_phone':
+            phone = request.POST.get('phone_number', '').strip()
+            if phone:
+                request.user.phone_number = phone
+                request.user.save()
+                messages.success(request, 'Phone number updated')
+            else:
+                messages.error(request, 'Please enter a valid phone number')
+        
+        return redirect('scheduling:sms_preferences')
+    
+    context = {
+        'user': request.user,
+        'twilio_enabled': getattr(settings, 'TWILIO_ENABLED', False),
+    }
+    
+    return render(request, 'scheduling/sms_preferences.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def send_test_sms(request):
+    """
+    Send a test SMS to verify Twilio configuration (managers only)
+    """
+    from scheduling.sms_notifications import send_sms_notification
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        phone = request.POST.get('phone_number')
+        
+        if phone:
+            message = "Test SMS from Staff Rota System. Your SMS notifications are working correctly!"
+            success, msg_sid = send_sms_notification(phone, message)
+            
+            if success:
+                messages.success(request, f'Test SMS sent successfully to {phone} (ID: {msg_sid})')
+            else:
+                messages.error(request, 'Failed to send test SMS. Check Twilio configuration.')
+        else:
+            messages.error(request, 'Please enter a phone number')
+    
+    return redirect('scheduling:dashboard')
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def send_bulk_emergency_sms(request):
+    """
+    Send emergency SMS to multiple staff (managers only)
+    """
+    from scheduling.sms_notifications import send_bulk_sms
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        message_text = request.POST.get('message', '').strip()
+        recipient_saps = request.POST.getlist('recipients')
+        
+        if not message_text:
+            messages.error(request, 'Please enter a message')
+            return redirect('scheduling:dashboard')
+        
+        if not recipient_saps:
+            messages.error(request, 'Please select recipients')
+            return redirect('scheduling:dashboard')
+        
+        # Get recipients
+        recipients = User.objects.filter(sap__in=recipient_saps)
+        
+        # Send bulk SMS
+        results = send_bulk_sms(recipients, message_text)
+        
+        messages.success(
+            request,
+            f"Bulk SMS sent: {results['sent']} successful, {results['failed']} failed"
+        )
+    
+    return redirect('scheduling:dashboard')
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def sms_opt_in_report(request):
+    """
+    Report showing SMS opt-in status for all staff (managers only)
+    """
+    staff_list = User.objects.filter(
+        is_active=True
+    ).select_related('role', 'unit').order_by('last_name', 'first_name')
+    
+    stats = {
+        'total_staff': staff_list.count(),
+        'has_phone': staff_list.exclude(phone_number__isnull=True).exclude(phone_number='').count(),
+        'sms_enabled': staff_list.filter(sms_notifications_enabled=True).count(),
+        'emergency_only': staff_list.filter(sms_emergency_only=True).count(),
+    }
+    
+    context = {
+        'staff_list': staff_list,
+        'stats': stats,
+    }
+    
+    return render(request, 'scheduling/sms_opt_in_report.html', context)
+
+
+# Helper functions for SMS integration with existing features
+
+def send_emergency_shift_sms_alerts(shift, max_recipients=20):
+    """
+    Send emergency SMS to available staff for shift coverage
+    Helper function to integrate with existing shift allocation
+    """
+    from scheduling.sms_notifications import send_emergency_coverage_alert
+    
+    # Find available staff (same role, not on leave, SMS enabled)
+    available_staff = User.objects.filter(
+        is_active=True,
+        role=shift.shift_type.required_role if shift.shift_type else None,
+        sms_notifications_enabled=True,
+        phone_number__isnull=False
+    ).exclude(phone_number='')[:max_recipients]
+    
+    sent_count = 0
+    for staff in available_staff:
+        if send_emergency_coverage_alert(staff, shift):
+            sent_count += 1
+    
+    return sent_count
+
+
+def notify_late_clockin_via_sms(staff_member, shift):
+    """
+    Send late clock-in SMS reminder
+    Helper function to integrate with attendance tracking
+    """
+    from scheduling.sms_notifications import send_late_clockin_alert
+    
+    return send_late_clockin_alert(staff_member, shift)
+
+
+def notify_manager_approval_sms(manager, approval_type, details):
+    """
+    Send SMS to manager for pending approvals
+    Helper function to integrate with leave/swap approval workflows
+    """
+    from scheduling.sms_notifications import send_approval_required_alert
+    
+    return send_approval_required_alert(manager, approval_type, details)
+
+
+

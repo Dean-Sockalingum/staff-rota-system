@@ -159,6 +159,12 @@ urlpatterns = [
     path('email/test/', views.send_test_email, name='send_test_email'),
     path('email/weekly-rotas/', views.trigger_weekly_rotas, name='trigger_weekly_rotas'),
     
+    # SMS Notifications (Phase 2 - Task 22)
+    path('sms/preferences/', views.sms_preferences, name='sms_preferences'),
+    path('sms/test/', views.send_test_sms, name='send_test_sms'),
+    path('sms/bulk-emergency/', views.send_bulk_emergency_sms, name='send_bulk_emergency_sms'),
+    path('sms/opt-in-report/', views.sms_opt_in_report, name='sms_opt_in_report'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
