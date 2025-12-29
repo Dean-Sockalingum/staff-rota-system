@@ -208,7 +208,7 @@ class OvertimeCoverageRequest(models.Model):
     # Request details
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        'auth.User',
+        'scheduling.User',
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_coverage_requests'

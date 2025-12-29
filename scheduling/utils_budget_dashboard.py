@@ -649,8 +649,6 @@ def send_all_homes_weekly_digest():
     
     logger.info(f"Sent weekly budget digests for {homes.count()} homes to {len(exec_emails)} executives")
 
-            return 'on_track'
-
 
 def get_budget_dashboard_api(care_home=None, month=None, year=None):
     """
@@ -661,3 +659,405 @@ def get_budget_dashboard_api(care_home=None, month=None, year=None):
     """
     dashboard = BudgetDashboard(care_home, month, year)
     return dashboard.get_dashboard_data()
+
+
+# ============================================================================
+# EXECUTIVE ENHANCEMENT LAYER - £590K ROI Features
+# ============================================================================
+
+def get_executive_summary(care_home=None):
+    """
+    Executive-grade summary with traffic lights and 0-100 scoring
+    
+    Returns:
+        dict with:
+        - efficiency_score: 0-100 (weighted: regular×1.0, OT×0.7, agency×0.3)
+        - status_light: 🔴🟡🟢🔵
+        - ytd_summary: Year-to-date performance
+        - 12_month_trend: Historical performance charts
+        - peer_comparison: Benchmark vs other homes
+    """
+    from scheduling.models import CareHome
+    from datetime import datetime
+    import calendar
+    
+    now = datetime.now()
+    
+    # Get current month data
+    dashboard = BudgetDashboard(care_home, now.month, now.year)
+    current_data = dashboard.get_dashboard_data()
+    
+    # Calculate efficiency score (0-100)
+    efficiency = _calculate_efficiency_score(current_data)
+    
+    # Determine traffic light status
+    if efficiency >= 90:
+        status_light = "🔵"  # Excellent
+        status_text = "Excellent"
+    elif efficiency >= 75:
+        status_light = "🟢"  # Good
+        status_text = "Good"
+    elif efficiency >= 60:
+        status_light = "🟡"  # Warning
+        status_text = "Needs Attention"
+    else:
+        status_light = "🔴"  # Critical
+        status_text = "Critical"
+    
+    # Get YTD summary
+    ytd_data = _get_ytd_summary(care_home, now.year)
+    
+    # Get 12-month trend
+    trend_data = _get_12_month_trend(care_home)
+    
+    # Peer comparison (if multiple homes)
+    peer_data = None
+    if care_home is None:
+        homes = CareHome.objects.filter(is_active=True)
+        if homes.count() > 1:
+            peer_data = _get_peer_comparison(now.month, now.year)
+    
+    return {
+        'executive_summary': {
+            'efficiency_score': round(efficiency, 1),
+            'status_light': status_light,
+            'status_text': status_text,
+            'total_budget': float(current_data['monthly_budget']),
+            'total_spent': float(current_data['costs']['total_spent']),
+            'variance': float(current_data['costs']['total_spent'] - current_data['monthly_budget']),
+            'projection': current_data['projection']['month_end_projection'],
+        },
+        'ytd_performance': ytd_data,
+        'trend_chart': trend_data,
+        'peer_comparison': peer_data,
+        'key_insights': _generate_executive_insights(current_data, efficiency),
+        'recommended_actions': current_data['recommendations'][:3],  # Top 3
+    }
+
+
+def _calculate_efficiency_score(dashboard_data):
+    """
+    Calculate 0-100 efficiency score
+    
+    Weighting:
+    - Regular shifts: 1.0 (most efficient)
+    - Overtime: 0.7 (acceptable)
+    - Agency: 0.3 (least efficient)
+    """
+    costs = dashboard_data['costs']
+    total = costs['total_spent']
+    
+    if total == 0:
+        return 100.0
+    
+    # Calculate weighted score
+    regular_ratio = (costs['regular_cost'] / total) * 1.0
+    ot_ratio = (costs['ot_cost'] / total) * 0.7
+    agency_ratio = (costs['agency_cost'] / total) * 0.3
+    
+    weighted_score = (regular_ratio + ot_ratio + agency_ratio) * 100
+    
+    # Adjust for budget adherence
+    percentage_used = dashboard_data['kpis']['percentage_used']
+    if percentage_used > 100:
+        # Penalize overspend
+        overspend_penalty = min((percentage_used - 100) * 0.5, 20)
+        weighted_score -= overspend_penalty
+    
+    return max(0, min(100, weighted_score))
+
+
+def _get_ytd_summary(care_home, year):
+    """Get year-to-date summary"""
+    from datetime import datetime
+    import calendar
+    
+    now = datetime.now()
+    current_month = now.month if now.year == year else 12
+    
+    ytd_spent = Decimal('0')
+    ytd_budget = Decimal('0')
+    
+    for month in range(1, current_month + 1):
+        dashboard = BudgetDashboard(care_home, month, year)
+        data = dashboard.get_dashboard_data()
+        ytd_spent += data['costs']['total_spent']
+        ytd_budget += data['monthly_budget']
+    
+    variance = ytd_spent - ytd_budget
+    variance_pct = (variance / ytd_budget * 100) if ytd_budget > 0 else 0
+    
+    return {
+        'ytd_budget': float(ytd_budget),
+        'ytd_spent': float(ytd_spent),
+        'ytd_variance': float(variance),
+        'ytd_variance_pct': round(float(variance_pct), 1),
+        'months_tracked': current_month,
+    }
+
+
+def _get_12_month_trend(care_home):
+    """Get 12-month historical trend for Chart.js"""
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    
+    now = datetime.now()
+    trend_data = []
+    
+    for i in range(11, -1, -1):  # Last 12 months
+        target_date = now - relativedelta(months=i)
+        dashboard = BudgetDashboard(care_home, target_date.month, target_date.year)
+        data = dashboard.get_dashboard_data()
+        
+        trend_data.append({
+            'month': target_date.strftime('%b %Y'),
+            'budget': float(data['monthly_budget']),
+            'spent': float(data['costs']['total_spent']),
+            'regular': float(data['costs']['regular_cost']),
+            'overtime': float(data['costs']['ot_cost']),
+            'agency': float(data['costs']['agency_cost']),
+            'variance': float(data['costs']['total_spent'] - data['monthly_budget']),
+        })
+    
+    return trend_data
+
+
+def _get_peer_comparison(month, year):
+    """Compare all homes for benchmarking"""
+    from scheduling.models import CareHome
+    
+    homes = CareHome.objects.filter(is_active=True)
+    peer_data = []
+    
+    for home in homes:
+        dashboard = BudgetDashboard(home, month, year)
+        data = dashboard.get_dashboard_data()
+        efficiency = _calculate_efficiency_score(data)
+        
+        peer_data.append({
+            'home_name': home.name,
+            'efficiency_score': round(efficiency, 1),
+            'budget': float(data['monthly_budget']),
+            'spent': float(data['costs']['total_spent']),
+            'variance_pct': round(data['kpis']['percentage_used'] - 100, 1),
+        })
+    
+    # Sort by efficiency score (descending)
+    peer_data.sort(key=lambda x: x['efficiency_score'], reverse=True)
+    
+    # Add ranking
+    for idx, home in enumerate(peer_data, 1):
+        home['rank'] = idx
+    
+    return peer_data
+
+
+def _generate_executive_insights(dashboard_data, efficiency_score):
+    """Generate executive-friendly insights"""
+    insights = []
+    
+    costs = dashboard_data['costs']
+    kpis = dashboard_data['kpis']
+    
+    # Budget status insight
+    if kpis['percentage_used'] > 100:
+        insights.append({
+            'type': 'warning',
+            'icon': '⚠️',
+            'text': f"Budget overrun: {kpis['percentage_used'] - 100:.1f}% over target",
+            'action': 'Review staffing patterns and reduce agency usage'
+        })
+    elif kpis['percentage_used'] < 85:
+        insights.append({
+            'type': 'positive',
+            'icon': '✅',
+            'text': f"Under budget: {100 - kpis['percentage_used']:.1f}% savings opportunity",
+            'action': 'Consider strategic investments in training or retention'
+        })
+    
+    # Agency usage insight
+    agency_pct = (costs['agency_cost'] / costs['total_spent'] * 100) if costs['total_spent'] > 0 else 0
+    if agency_pct > 20:
+        insights.append({
+            'type': 'critical',
+            'icon': '🔴',
+            'text': f"High agency usage: {agency_pct:.1f}% of total costs",
+            'action': 'Reduce agency reliance through proactive recruitment'
+        })
+    
+    # Efficiency insight
+    if efficiency_score >= 85:
+        insights.append({
+            'type': 'excellent',
+            'icon': '🔵',
+            'text': f"Excellent efficiency: {efficiency_score:.1f}/100 score",
+            'action': 'Share best practices with peer homes'
+        })
+    elif efficiency_score < 65:
+        insights.append({
+            'type': 'improvement',
+            'icon': '📈',
+            'text': f"Efficiency below target: {efficiency_score:.1f}/100",
+            'action': 'Focus on converting agency shifts to regular/overtime'
+        })
+    
+    return insights
+
+
+def send_executive_email_digest(recipient_emails, frequency='weekly', care_home=None):
+    """
+    Send automated executive digest email
+    
+    Args:
+        recipient_emails: List of email addresses
+        frequency: 'daily' or 'weekly'
+        care_home: Specific home or None for all homes
+    """
+    from scheduling.notifications import send_email
+    from datetime import datetime
+    
+    summary = get_executive_summary(care_home)
+    
+    # Build email content
+    subject = f"Budget Dashboard - {frequency.capitalize()} Executive Summary"
+    
+    home_name = care_home.name if care_home else "All Homes"
+    
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif;">
+        <h2>Budget Executive Summary - {home_name}</h2>
+        <h3>{summary['executive_summary']['status_light']} Status: {summary['executive_summary']['status_text']}</h3>
+        
+        <table style="border-collapse: collapse; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Efficiency Score:</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{summary['executive_summary']['efficiency_score']}/100</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Total Budget:</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">£{summary['executive_summary']['total_budget']:,.2f}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Total Spent:</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">£{summary['executive_summary']['total_spent']:,.2f}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Variance:</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">£{summary['executive_summary']['variance']:,.2f}</td>
+            </tr>
+        </table>
+        
+        <h3>Key Insights</h3>
+        <ul>
+    """
+    
+    for insight in summary['key_insights']:
+        html_body += f"<li>{insight['icon']} <strong>{insight['text']}</strong><br/><em>Action: {insight['action']}</em></li>"
+    
+    html_body += """
+        </ul>
+        
+        <p style="margin-top: 30px; color: #666;">
+            <small>This is an automated report. View full dashboard for detailed analytics.</small>
+        </p>
+    </body>
+    </html>
+    """
+    
+    # Send to all recipients
+    for email in recipient_emails:
+        send_email(
+            to_email=email,
+            subject=subject,
+            html_message=html_body
+        )
+    
+    logger.info(f"Sent {frequency} executive digest to {len(recipient_emails)} recipients")
+
+
+def export_to_excel(care_home=None, month=None, year=None):
+    """
+    Export executive summary to Excel-compatible CSV
+    
+    Returns:
+        File path to generated CSV
+    """
+    import csv
+    import os
+    from django.conf import settings
+    from datetime import datetime
+    
+    summary = get_executive_summary(care_home)
+    dashboard = BudgetDashboard(care_home, month, year)
+    data = dashboard.get_dashboard_data()
+    
+    # Create exports directory
+    export_dir = os.path.join(settings.MEDIA_ROOT, 'exports', 'budget')
+    os.makedirs(export_dir, exist_ok=True)
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    home_name = care_home.name.replace(' ', '_') if care_home else 'All_Homes'
+    filename = f"budget_executive_summary_{home_name}_{timestamp}.csv"
+    filepath = os.path.join(export_dir, filename)
+    
+    with open(filepath, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Executive Summary Section
+        writer.writerow(['EXECUTIVE SUMMARY'])
+        writer.writerow(['Metric', 'Value'])
+        writer.writerow(['Efficiency Score', f"{summary['executive_summary']['efficiency_score']}/100"])
+        writer.writerow(['Status', summary['executive_summary']['status_text']])
+        writer.writerow(['Total Budget', f"£{summary['executive_summary']['total_budget']:,.2f}"])
+        writer.writerow(['Total Spent', f"£{summary['executive_summary']['total_spent']:,.2f}"])
+        writer.writerow(['Variance', f"£{summary['executive_summary']['variance']:,.2f}"])
+        writer.writerow([''])
+        
+        # YTD Performance
+        writer.writerow(['YEAR-TO-DATE PERFORMANCE'])
+        ytd = summary['ytd_performance']
+        writer.writerow(['YTD Budget', f"£{ytd['ytd_budget']:,.2f}"])
+        writer.writerow(['YTD Spent', f"£{ytd['ytd_spent']:,.2f}"])
+        writer.writerow(['YTD Variance', f"£{ytd['ytd_variance']:,.2f}"])
+        writer.writerow(['Variance %', f"{ytd['ytd_variance_pct']:.1f}%"])
+        writer.writerow([''])
+        
+        # Key Insights
+        writer.writerow(['KEY INSIGHTS'])
+        writer.writerow(['Type', 'Insight', 'Recommended Action'])
+        for insight in summary['key_insights']:
+            writer.writerow([insight['type'], insight['text'], insight['action']])
+        writer.writerow([''])
+        
+        # 12-Month Trend
+        writer.writerow(['12-MONTH TREND'])
+        writer.writerow(['Month', 'Budget', 'Spent', 'Regular', 'Overtime', 'Agency', 'Variance'])
+        for month_data in summary['trend_chart']:
+            writer.writerow([
+                month_data['month'],
+                f"£{month_data['budget']:,.2f}",
+                f"£{month_data['spent']:,.2f}",
+                f"£{month_data['regular']:,.2f}",
+                f"£{month_data['overtime']:,.2f}",
+                f"£{month_data['agency']:,.2f}",
+                f"£{month_data['variance']:,.2f}"
+            ])
+        writer.writerow([''])
+        
+        # Peer Comparison (if available)
+        if summary['peer_comparison']:
+            writer.writerow(['PEER COMPARISON'])
+            writer.writerow(['Rank', 'Home', 'Efficiency Score', 'Budget', 'Spent', 'Variance %'])
+            for peer in summary['peer_comparison']:
+                writer.writerow([
+                    peer['rank'],
+                    peer['home_name'],
+                    f"{peer['efficiency_score']}/100",
+                    f"£{peer['budget']:,.2f}",
+                    f"£{peer['spent']:,.2f}",
+                    f"{peer['variance_pct']:.1f}%"
+                ])
+    
+    logger.info(f"Exported executive summary to {filepath}")
+    return filepath

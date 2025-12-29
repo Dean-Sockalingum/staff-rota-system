@@ -94,8 +94,6 @@ from scheduling.views_shift_swap_api import (
     manual_approve_swap,
     deny_swap,
 )
-    respond_to_offer,
-)
 
 urlpatterns = [
     # Onboarding Wizard (Option B - Step 5: Pitch-Ready First-Time Experience)

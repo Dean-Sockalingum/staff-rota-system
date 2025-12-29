@@ -14,7 +14,6 @@ import logging
 from scheduling.models_automated_workflow import AgencyRequest, AgencyResponse, AgencyBlastBatch
 from scheduling.models import AgencyCompany, Shift
 from scheduling.notifications import send_email
-from scheduling.utils_budget import check_budget_compliance
 
 
 logger = logging.getLogger(__name__)

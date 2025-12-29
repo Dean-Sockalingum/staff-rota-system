@@ -16,8 +16,7 @@ from datetime import timedelta, date
 from decimal import Decimal
 import logging
 
-from scheduling.models import ShiftSwapRequest, Shift, User, Unit
-from scheduling.models_leave import LeaveRequest
+from scheduling.models import ShiftSwapRequest, Shift, User, Unit, LeaveRequest
 
 
 logger = logging.getLogger(__name__)
