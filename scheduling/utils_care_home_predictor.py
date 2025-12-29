@@ -1384,15 +1384,34 @@ def _generate_peer_benchmarking(care_home, current_score):
     return peer_data
 
 def _generate_ci_trend_data(care_home):
-    """Generate 6-month CI performance trend"""
+    """Generate 6-month trend of influencing operational factors (not CI scores which are annual)"""
     from datetime import datetime
     from dateutil.relativedelta import relativedelta
     now = datetime.now()
     trend = []
+    
+    # CI inspections are annual, so show monthly trend of influencing factors instead
     for i in range(5, -1, -1):
         target = now - relativedelta(months=i)
-        score = 78 + (5 - i) * 0.8  # Improving trend
-        trend.append({'month': target.strftime('%b %Y'), 'ci_score': round(score, 1), 'staffing': round(score + 3, 1), 'quality': round(score - 2, 1)})
+        
+        # Simulate improving operational metrics (in production, these would come from actual data)
+        # These are the factors that influence CI ratings
+        base_training = 88 + (5 - i) * 1.5  # Training compliance % (target: 95%)
+        base_supervision = 85 + (5 - i) * 1.8  # Supervision completion % (target: 90%)
+        base_incidents = 3.5 - (5 - i) * 0.25  # Incidents per 100 residents (target: <2.0)
+        base_turnover = 18 - (5 - i) * 0.4  # Turnover rate % (target: <15%)
+        base_staffing = 102 + (5 - i) * 0.3  # Staffing level as % of minimum (target: >100%)
+        base_care_plans = 90 + (5 - i) * 1.2  # Care plan review completion % (target: 95%)
+        
+        trend.append({
+            'month': target.strftime('%b %Y'),
+            'training_compliance': round(base_training, 1),
+            'supervision_completion': round(base_supervision, 1),
+            'incident_frequency': round(base_incidents, 1),
+            'turnover_rate': round(base_turnover, 1),
+            'staffing_level': round(base_staffing, 1),
+            'care_plan_reviews': round(base_care_plans, 1)
+        })
     return trend
 
 def _identify_improvement_areas(prediction):

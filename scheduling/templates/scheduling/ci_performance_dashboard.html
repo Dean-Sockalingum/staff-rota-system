@@ -136,31 +136,91 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-chart-area"></i> 6-Month Trend</h5>
+                    <h5><i class="fas fa-chart-line"></i> 6-Month Operational Metrics Trend</h5>
+                    <small class="text-muted">Monthly trends of factors influencing CI ratings (inspections are annual)</small>
                 </div>
                 <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Month</th>
-                                <th>CI Score</th>
-                                <th>Staffing</th>
-                                <th>Quality</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for month in ci_data.trend_6month %}
-                            <tr>
-                                <td>{{ month.month }}</td>
-                                <td>{{ month.ci_score }}</td>
-                                <td>{{ month.staffing }}</td>
-                                <td>{{ month.quality }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="trend-indicator">
-                        <i class="fas fa-arrow-up text-success"></i> Improving trend
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Training %</th>
+                                    <th>Supervision %</th>
+                                    <th>Incidents</th>
+                                    <th>Turnover %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in ci_data.trend_6month %}
+                                <tr>
+                                    <td>{{ month.month }}</td>
+                                    <td>
+                                        <span class="badge {% if month.training_compliance >= 95 %}bg-success{% elif month.training_compliance >= 90 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.training_compliance }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.supervision_completion >= 90 %}bg-success{% elif month.supervision_completion >= 85 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.supervision_completion }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.incident_frequency <= 2.0 %}bg-success{% elif month.incident_frequency <= 3.0 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.incident_frequency }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.turnover_rate <= 15 %}bg-success{% elif month.turnover_rate <= 18 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.turnover_rate }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-success mt-3 mb-0" style="font-size: 0.85rem;">
+                        <i class="fas fa-arrow-up"></i> <strong>Improving trend</strong> - All metrics moving toward target levels
+                    </div>
+                    <div class="mt-2" style="font-size: 0.8rem;">
+                        <strong>Targets:</strong> Training ≥95% • Supervision ≥90% • Incidents ≤2.0 • Turnover ≤15%
+                    </div>
+                    
+                    <!-- Additional Metrics -->
+                    <div class="mt-4">
+                        <h6 class="mb-3"><i class="fas fa-clipboard-check"></i> Additional Quality Metrics</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Staffing Level</th>
+                                        <th>Care Plan Reviews</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month in ci_data.trend_6month %}
+                                    <tr>
+                                        <td>{{ month.month }}</td>
+                                        <td>
+                                            <span class="badge {% if month.staffing_level >= 100 %}bg-success{% elif month.staffing_level >= 95 %}bg-info{% else %}bg-danger{% endif %}">
+                                                {{ month.staffing_level }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if month.care_plan_reviews >= 95 %}bg-success{% elif month.care_plan_reviews >= 90 %}bg-info{% else %}bg-warning{% endif %}">
+                                                {{ month.care_plan_reviews }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2" style="font-size: 0.8rem;">
+                            <strong>Targets:</strong> Staffing ≥100% of minimum • Care Plan Reviews ≥95%
+                        </div>
                     </div>
                 </div>
             </div>
