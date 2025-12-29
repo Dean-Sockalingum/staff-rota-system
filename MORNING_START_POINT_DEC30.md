@@ -335,12 +335,14 @@ Do you have time to produce the video, or will you rely on live demo only?
 - ✅ All commits successful
 - ✅ 100% project completion
 
-**Total Commits Tonight**: 3
+**Total Commits Tonight**: 5
 - d4cf914 - Pitch deck update
 - 80d15ae - Demo video script
 - 11eca0b - Automated video creation script
+- 0536c54 - Academic paper updated (£590K ROI, 18 features, £118M Scotland potential)
+- 2f87731 - Evening checkpoint marker
 
-**Lines of Code**: +1,041 lines (documentation + scripts)
+**Lines of Code**: +1,043 lines (documentation + scripts + academic paper)
 
 ---
 
