@@ -452,6 +452,170 @@
         }
     </script>
     
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{% static 'js/service-worker.js' %}")
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            console.log('🔄 Service Worker update found');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available, show update notification
+                                    showUpdateNotification(newWorker);
+                                }
+                            });
+                        });
+                        
+                        // Handle controller change (new SW activated)
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            console.log('⚡ Service Worker controller changed');
+                            // Optionally reload to use new service worker
+                            // window.location.reload();
+                        });
+                        
+                        // Register background sync for offline forms
+                        if ('sync' in registration) {
+                            console.log('✅ Background Sync supported');
+                        }
+                        
+                        // Request notification permission for push updates
+                        if ('Notification' in window && Notification.permission === 'default') {
+                            // Don't auto-request - wait for user action
+                            console.log('ℹ️ Notification permission not yet requested');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+                
+                // Listen for online/offline events
+                window.addEventListener('online', () => {
+                    console.log('🟢 Back online');
+                    showToast('You\'re back online!', 'success');
+                });
+                
+                window.addEventListener('offline', () => {
+                    console.log('🔴 Gone offline');
+                    showToast('You\'re offline. Some features may be limited.', 'warning');
+                });
+            });
+            
+            // Show update notification
+            function showUpdateNotification(newWorker) {
+                const updateBanner = document.createElement('div');
+                updateBanner.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 24px rgba(0, 200, 83, 0.4);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    animation: slideDown 0.3s ease-out;
+                `;
+                
+                updateBanner.innerHTML = `
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                    <div style="flex: 1;">
+                        <strong>Update Available</strong>
+                        <div style="font-size: 0.9em; opacity: 0.95;">A new version is ready to install</div>
+                    </div>
+                    <button id="sw-update-btn" style="
+                        background: white;
+                        color: #00C853;
+                        border: none;
+                        padding: 8px 20px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">Update Now</button>
+                    <button id="sw-dismiss-btn" style="
+                        background: transparent;
+                        color: white;
+                        border: 1px solid rgba(255,255,255,0.5);
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                    ">Later</button>
+                `;
+                
+                // Add animation
+                const style = document.createElement('style');
+                style.textContent = '@keyframes slideDown { from { top: -100px; opacity: 0; } to { top: 20px; opacity: 1; } }';
+                document.head.appendChild(style);
+                
+                document.body.appendChild(updateBanner);
+                
+                // Update button - activate new service worker
+                document.getElementById('sw-update-btn').addEventListener('click', () => {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    updateBanner.remove();
+                    
+                    // Reload after new SW takes control
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        window.location.reload();
+                    });
+                });
+                
+                // Dismiss button
+                document.getElementById('sw-dismiss-btn').addEventListener('click', () => {
+                    updateBanner.remove();
+                });
+            }
+            
+            // Toast notification helper
+            function showToast(message, type = 'info') {
+                const colors = {
+                    success: '#00C853',
+                    warning: '#FF6F00',
+                    info: '#0066FF',
+                    error: '#F44336'
+                };
+                
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: ${colors[type]};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease-out;
+                `;
+                toast.textContent = message;
+                
+                const style = document.createElement('style');
+                style.textContent = '@keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }';
+                document.head.appendChild(style);
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        } else {
+            console.warn('⚠️ Service Workers not supported in this browser');
+        }
+    </script>
+    
     <!-- Skeleton Loader Utility -->
     <script src="{% static 'js/skeleton-loader.js' %}?v=1.0"></script>
     

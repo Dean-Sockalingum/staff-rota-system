@@ -87,6 +87,10 @@ def logout_view(request):
         return redirect('login')
     return redirect('login')
 
+def offline_view(request):
+    """Offline fallback page for PWA"""
+    return render(request, 'scheduling/offline.html')
+
 # ==================== MANAGER/ADMIN VIEWS ====================
 
 @login_required

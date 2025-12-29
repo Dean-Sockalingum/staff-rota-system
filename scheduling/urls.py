@@ -31,6 +31,9 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     
+    # PWA Offline Page
+    path('offline/', views.offline_view, name='offline'),
+    
     # Onboarding Wizard (Pitch Demo - Step 5)
     path('onboarding/', onboarding_welcome, name='onboarding_welcome'),
     path('onboarding/complete/', onboarding_complete, name='onboarding_complete'),
