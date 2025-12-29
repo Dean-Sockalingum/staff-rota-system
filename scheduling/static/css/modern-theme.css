@@ -1087,3 +1087,404 @@ html {
         opacity: 0.6;
     }
 }
+
+/* ===== Skeleton Loading States ===== */
+/* Modern skeleton screens with shimmer animation for improved perceived performance */
+
+/* Base skeleton element */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--color-neutral-200) 0%,
+        var(--color-neutral-100) 20%,
+        var(--color-neutral-200) 40%,
+        var(--color-neutral-200) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.6) 50%,
+        transparent 100%
+    );
+    animation: shimmer-shine 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes shimmer-shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Skeleton text lines */
+.skeleton-text {
+    height: 16px;
+    margin-bottom: var(--spacing-2);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-text-sm {
+    height: 14px;
+}
+
+.skeleton-text-lg {
+    height: 20px;
+}
+
+.skeleton-text-xl {
+    height: 24px;
+}
+
+/* Width variations for realistic text */
+.skeleton-text-full {
+    width: 100%;
+}
+
+.skeleton-text-90 {
+    width: 90%;
+}
+
+.skeleton-text-75 {
+    width: 75%;
+}
+
+.skeleton-text-50 {
+    width: 50%;
+}
+
+.skeleton-text-25 {
+    width: 25%;
+}
+
+/* Skeleton heading */
+.skeleton-heading {
+    height: 32px;
+    width: 60%;
+    margin-bottom: var(--spacing-4);
+    border-radius: var(--radius-md);
+}
+
+/* Skeleton avatar/circle */
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.skeleton-avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.skeleton-avatar-lg {
+    width: 64px;
+    height: 64px;
+}
+
+/* Skeleton button */
+.skeleton-button {
+    height: 44px;
+    width: 120px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-button-sm {
+    height: 36px;
+    width: 100px;
+}
+
+.skeleton-button-lg {
+    height: 52px;
+    width: 160px;
+}
+
+/* Skeleton card */
+.skeleton-card {
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+}
+
+.skeleton-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+/* Skeleton table */
+.skeleton-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.skeleton-table-header {
+    background: var(--color-neutral-50);
+    border-bottom: 2px solid var(--color-neutral-200);
+}
+
+.skeleton-table-header th {
+    padding: var(--spacing-4);
+}
+
+.skeleton-table-row {
+    border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.skeleton-table-row td {
+    padding: var(--spacing-4);
+}
+
+.skeleton-table-cell {
+    height: 20px;
+    border-radius: var(--radius-sm);
+}
+
+/* Skeleton list */
+.skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.skeleton-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4);
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-md);
+}
+
+.skeleton-list-item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+/* Skeleton widget (dashboard) */
+.skeleton-widget {
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-left: 4px solid var(--color-primary-300);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-4);
+}
+
+.skeleton-widget-stat {
+    height: 48px;
+    width: 120px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-2);
+}
+
+/* Skeleton chart/graph */
+.skeleton-chart {
+    height: 300px;
+    border-radius: var(--radius-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-chart::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(
+        to top,
+        var(--color-neutral-200) 0%,
+        var(--color-neutral-200) 20%,
+        var(--color-neutral-100) 40%,
+        transparent 100%
+    );
+}
+
+/* Skeleton form */
+.skeleton-form-group {
+    margin-bottom: var(--spacing-5);
+}
+
+.skeleton-label {
+    height: 16px;
+    width: 120px;
+    margin-bottom: var(--spacing-2);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-input {
+    height: 44px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-textarea {
+    height: 120px;
+    border-radius: var(--radius-md);
+}
+
+/* Skeleton image/thumbnail */
+.skeleton-image {
+    width: 100%;
+    height: 200px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-thumbnail {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-md);
+}
+
+/* Skeleton badge */
+.skeleton-badge {
+    height: 24px;
+    width: 60px;
+    border-radius: var(--radius-pill);
+    display: inline-block;
+}
+
+/* Composite skeleton components */
+
+/* Dashboard stat card skeleton */
+.skeleton-stat-card {
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-stat-card .skeleton-text-sm {
+    margin-bottom: var(--spacing-3);
+}
+
+.skeleton-stat-card .skeleton-heading {
+    width: 80%;
+    margin-bottom: var(--spacing-2);
+}
+
+/* Staff profile skeleton */
+.skeleton-staff-profile {
+    display: flex;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4);
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+}
+
+.skeleton-staff-profile-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+/* Shift card skeleton */
+.skeleton-shift-card {
+    background: var(--color-neutral-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-shift-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+}
+
+.skeleton-shift-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+/* Container for multiple skeletons */
+.skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+}
+
+/* Grid layout for skeleton cards */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-6);
+}
+
+/* Accessibility */
+.skeleton[aria-busy="true"] {
+    pointer-events: none;
+}
+
+/* Dark mode support (when implemented) */
+@media (prefers-color-scheme: dark) {
+    .skeleton {
+        background: linear-gradient(
+            90deg,
+            var(--color-neutral-800) 0%,
+            var(--color-neutral-700) 20%,
+            var(--color-neutral-800) 40%,
+            var(--color-neutral-800) 100%
+        );
+    }
+    
+    .skeleton::after {
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 100%
+        );
+    }
+}

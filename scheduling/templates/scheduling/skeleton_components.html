@@ -1,0 +1,185 @@
+{% comment %}
+Skeleton Loading Components
+===========================
+Reusable skeleton screen placeholders for improved perceived performance.
+
+Usage:
+{% include 'scheduling/skeleton_components.html' with component='widget' %}
+{% include 'scheduling/skeleton_components.html' with component='table' rows=5 %}
+{% include 'scheduling/skeleton_components.html' with component='card' %}
+
+Available components:
+- widget: Dashboard widget skeleton
+- stat-card: Stat card skeleton
+- table: Table skeleton (rows parameter optional, default 5)
+- card: Generic card skeleton
+- list: List skeleton (items parameter optional, default 5)
+- shift-card: Shift card skeleton
+- staff-profile: Staff profile skeleton
+- chart: Chart/graph skeleton
+- form: Form skeleton (fields parameter optional, default 3)
+{% endcomment %}
+
+{% if component == 'widget' %}
+<!-- Dashboard Widget Skeleton -->
+<div class="skeleton-widget" aria-busy="true" role="status" aria-label="Loading widget">
+    <div class="skeleton-widget-header">
+        <div class="skeleton skeleton-text skeleton-text-50"></div>
+        <div class="skeleton skeleton-badge"></div>
+    </div>
+    <div class="skeleton skeleton-widget-stat"></div>
+    <div class="skeleton skeleton-text skeleton-text-75"></div>
+    <div class="skeleton skeleton-text skeleton-text-90"></div>
+    <div class="skeleton skeleton-text skeleton-text-50"></div>
+</div>
+
+{% elif component == 'stat-card' %}
+<!-- Stat Card Skeleton -->
+<div class="skeleton-stat-card" aria-busy="true" role="status" aria-label="Loading statistics">
+    <div class="skeleton skeleton-text skeleton-text-sm skeleton-text-50"></div>
+    <div class="skeleton skeleton-heading"></div>
+    <div class="skeleton skeleton-text skeleton-text-75"></div>
+</div>
+
+{% elif component == 'table' %}
+<!-- Table Skeleton -->
+<div class="table-responsive" aria-busy="true" role="status" aria-label="Loading table">
+    <table class="skeleton-table table">
+        <thead class="skeleton-table-header">
+            <tr>
+                <th><div class="skeleton skeleton-text"></div></th>
+                <th><div class="skeleton skeleton-text"></div></th>
+                <th><div class="skeleton skeleton-text"></div></th>
+                <th><div class="skeleton skeleton-text"></div></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% with rows|default:5 as row_count %}
+            {% for i in "x"|rjust:row_count %}
+            <tr class="skeleton-table-row">
+                <td><div class="skeleton skeleton-table-cell skeleton-text-75"></div></td>
+                <td><div class="skeleton skeleton-table-cell skeleton-text-90"></div></td>
+                <td><div class="skeleton skeleton-table-cell skeleton-text-50"></div></td>
+                <td><div class="skeleton skeleton-table-cell skeleton-text-25"></div></td>
+            </tr>
+            {% endfor %}
+            {% endwith %}
+        </tbody>
+    </table>
+</div>
+
+{% elif component == 'card' %}
+<!-- Generic Card Skeleton -->
+<div class="skeleton-card" aria-busy="true" role="status" aria-label="Loading content">
+    <div class="skeleton-card-header">
+        <div class="skeleton skeleton-avatar"></div>
+        <div style="flex: 1;">
+            <div class="skeleton skeleton-text skeleton-text-50"></div>
+            <div class="skeleton skeleton-text skeleton-text-sm skeleton-text-75"></div>
+        </div>
+    </div>
+    <div class="skeleton-card-body">
+        <div class="skeleton skeleton-text skeleton-text-full"></div>
+        <div class="skeleton skeleton-text skeleton-text-90"></div>
+        <div class="skeleton skeleton-text skeleton-text-75"></div>
+        <div class="skeleton skeleton-text skeleton-text-50"></div>
+    </div>
+</div>
+
+{% elif component == 'list' %}
+<!-- List Skeleton -->
+<div class="skeleton-list" aria-busy="true" role="status" aria-label="Loading list">
+    {% with items|default:5 as item_count %}
+    {% for i in "x"|rjust:item_count %}
+    <div class="skeleton-list-item">
+        <div class="skeleton skeleton-avatar-sm"></div>
+        <div class="skeleton-list-item-content">
+            <div class="skeleton skeleton-text skeleton-text-75"></div>
+            <div class="skeleton skeleton-text skeleton-text-sm skeleton-text-50"></div>
+        </div>
+        <div class="skeleton skeleton-badge"></div>
+    </div>
+    {% endfor %}
+    {% endwith %}
+</div>
+
+{% elif component == 'shift-card' %}
+<!-- Shift Card Skeleton -->
+<div class="skeleton-shift-card" aria-busy="true" role="status" aria-label="Loading shift">
+    <div class="skeleton-shift-header">
+        <div class="skeleton skeleton-text skeleton-text-50"></div>
+        <div class="skeleton skeleton-badge"></div>
+    </div>
+    <div class="skeleton-shift-body">
+        <div class="skeleton skeleton-text skeleton-text-75"></div>
+        <div class="skeleton skeleton-text skeleton-text-90"></div>
+        <div class="skeleton skeleton-text skeleton-text-50"></div>
+    </div>
+</div>
+
+{% elif component == 'staff-profile' %}
+<!-- Staff Profile Skeleton -->
+<div class="skeleton-staff-profile" aria-busy="true" role="status" aria-label="Loading profile">
+    <div class="skeleton skeleton-avatar-lg"></div>
+    <div class="skeleton-staff-profile-info">
+        <div class="skeleton skeleton-text skeleton-text-lg skeleton-text-75"></div>
+        <div class="skeleton skeleton-text skeleton-text-sm skeleton-text-50"></div>
+        <div class="skeleton skeleton-text skeleton-text-90"></div>
+        <div class="skeleton skeleton-badge"></div>
+    </div>
+</div>
+
+{% elif component == 'chart' %}
+<!-- Chart/Graph Skeleton -->
+<div class="skeleton skeleton-chart" aria-busy="true" role="status" aria-label="Loading chart">
+    <div class="skeleton skeleton-text skeleton-text-50" style="position: absolute; top: 16px; left: 16px;"></div>
+</div>
+
+{% elif component == 'form' %}
+<!-- Form Skeleton -->
+<div aria-busy="true" role="status" aria-label="Loading form">
+    {% with fields|default:3 as field_count %}
+    {% for i in "x"|rjust:field_count %}
+    <div class="skeleton-form-group">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-input"></div>
+    </div>
+    {% endfor %}
+    {% endwith %}
+    <div class="skeleton skeleton-button"></div>
+</div>
+
+{% elif component == 'grid-3' %}
+<!-- 3-Column Grid of Cards -->
+<div class="skeleton-grid" aria-busy="true" role="status" aria-label="Loading content">
+    <div class="skeleton-card">
+        <div class="skeleton-card-body">
+            <div class="skeleton skeleton-text skeleton-text-full"></div>
+            <div class="skeleton skeleton-text skeleton-text-90"></div>
+            <div class="skeleton skeleton-text skeleton-text-75"></div>
+        </div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-card-body">
+            <div class="skeleton skeleton-text skeleton-text-full"></div>
+            <div class="skeleton skeleton-text skeleton-text-90"></div>
+            <div class="skeleton skeleton-text skeleton-text-75"></div>
+        </div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-card-body">
+            <div class="skeleton skeleton-text skeleton-text-full"></div>
+            <div class="skeleton skeleton-text skeleton-text-90"></div>
+            <div class="skeleton skeleton-text skeleton-text-75"></div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Default: Simple text skeleton -->
+<div aria-busy="true" role="status" aria-label="Loading">
+    <div class="skeleton skeleton-text skeleton-text-full"></div>
+    <div class="skeleton skeleton-text skeleton-text-90"></div>
+    <div class="skeleton skeleton-text skeleton-text-75"></div>
+</div>
+{% endif %}
