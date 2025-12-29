@@ -165,6 +165,16 @@ urlpatterns = [
     path('sms/bulk-emergency/', views.send_bulk_emergency_sms, name='send_bulk_emergency_sms'),
     path('sms/opt-in-report/', views.sms_opt_in_report, name='sms_opt_in_report'),
     
+    # Calendar Sync (Phase 2 - Task 23)
+    path('calendar/export/shifts/', views.export_my_shifts_ical, name='export_my_shifts_ical'),
+    path('calendar/export/leave/', views.export_leave_ical, name='export_leave_ical'),
+    path('calendar/feed/<str:sap>/<str:token>/', views.calendar_feed, name='calendar_feed'),
+    path('calendar/feed/info/', views.my_calendar_feed_info, name='my_calendar_feed_info'),
+    path('calendar/add-shift/<int:shift_id>/', views.add_shift_to_calendar, name='add_shift_to_calendar'),
+    path('calendar/google/<int:shift_id>/', views.google_calendar_redirect, name='google_calendar_redirect'),
+    path('calendar/outlook/<int:shift_id>/', views.outlook_calendar_redirect, name='outlook_calendar_redirect'),
+    path('sms/opt-in-report/', views.sms_opt_in_report, name='sms_opt_in_report'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

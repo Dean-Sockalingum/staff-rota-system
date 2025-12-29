@@ -11192,4 +11192,229 @@ def notify_manager_approval_sms(manager, approval_type, details):
     return send_approval_required_alert(manager, approval_type, details)
 
 
+# ============================================
+# TASK 23: CALENDAR SYNC (iCal/Google Calendar Export)
+# ============================================
 
+@login_required
+def export_my_shifts_ical(request):
+    """
+    Export user's shifts as iCal (.ics) file
+    Allows import to Google Calendar, Apple Calendar, Outlook, etc.
+    """
+    from scheduling.calendar_sync import generate_shift_ical
+    from datetime import date, timedelta
+    
+    # Get date range (default: next 12 weeks)
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        start_date = date.today()
+    
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = start_date + timedelta(weeks=12)
+    
+    # Get user's shifts
+    shifts = Shift.objects.filter(
+        staff=request.user,
+        date__range=[start_date, end_date]
+    ).select_related(
+        'shift_type', 'unit', 'care_home'
+    ).order_by('date', 'start_time')
+    
+    if not shifts.exists():
+        messages.warning(request, "No shifts found for the selected date range.")
+        return redirect('my_schedule')
+    
+    # Generate iCal
+    calendar_name = f"{request.user.get_full_name()}'s Shifts"
+    ical_content = generate_shift_ical(shifts, calendar_name)
+    
+    # Create HTTP response with iCal file
+    response = HttpResponse(ical_content, content_type='text/calendar; charset=utf-8')
+    filename = f"my_shifts_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.ics"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Length'] = len(ical_content)
+    
+    return response
+
+
+@login_required
+def calendar_feed(request, sap, token):
+    """
+    Personal calendar feed URL (subscribable in calendar apps)
+    Updates automatically when rota changes
+    
+    URL: /calendar/feed/<sap>/<token>/
+    Subscribe with: webcal://domain/calendar/feed/<sap>/<token>/
+    """
+    from scheduling.calendar_sync import verify_calendar_token, generate_shift_ical
+    from datetime import date, timedelta
+    
+    # Verify token
+    if not verify_calendar_token(sap, token):
+        return HttpResponse("Invalid calendar feed token", status=403)
+    
+    # Get user
+    try:
+        user = User.objects.get(sap=sap)
+    except User.DoesNotExist:
+        return HttpResponse("User not found", status=404)
+    
+    # Get shifts (next 8 weeks by default, configurable)
+    weeks = int(request.GET.get('weeks', 8))
+    start_date = date.today()
+    end_date = start_date + timedelta(weeks=weeks)
+    
+    shifts = Shift.objects.filter(
+        staff=user,
+        date__range=[start_date, end_date]
+    ).select_related(
+        'shift_type', 'unit', 'care_home'
+    ).order_by('date', 'start_time')
+    
+    # Generate iCal
+    calendar_name = f"{user.get_full_name()}'s Shifts (Auto-Update)"
+    ical_content = generate_shift_ical(shifts, calendar_name)
+    
+    # Response with calendar MIME type
+    response = HttpResponse(ical_content, content_type='text/calendar; charset=utf-8')
+    response['Content-Disposition'] = f'inline; filename="shift_calendar.ics"'
+    response['Cache-Control'] = 'no-cache, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    
+    return response
+
+
+@login_required
+def export_leave_ical(request):
+    """
+    Export approved leave requests as iCal file
+    """
+    from scheduling.calendar_sync import generate_leave_ical
+    from datetime import date, timedelta
+    
+    # Get date range
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        start_date = date.today()
+    
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = start_date + timedelta(weeks=52)  # 1 year
+    
+    # Get approved leave requests
+    leave_requests = LeaveRequest.objects.filter(
+        staff=request.user,
+        status='APPROVED',
+        start_date__lte=end_date,
+        end_date__gte=start_date
+    ).order_by('start_date')
+    
+    if not leave_requests.exists():
+        messages.warning(request, "No approved leave requests found.")
+        return redirect('my_schedule')
+    
+    # Generate iCal
+    calendar_name = f"{request.user.get_full_name()}'s Leave"
+    ical_content = generate_leave_ical(leave_requests, calendar_name)
+    
+    response = HttpResponse(ical_content, content_type='text/calendar; charset=utf-8')
+    filename = f"my_leave_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.ics"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@login_required
+def add_shift_to_calendar(request, shift_id):
+    """
+    Download single shift as iCal for "Add to Calendar" button
+    """
+    from scheduling.calendar_sync import create_single_shift_event
+    
+    # Get shift
+    shift = get_object_or_404(
+        Shift.objects.select_related('shift_type', 'unit', 'care_home'),
+        id=shift_id,
+        staff=request.user
+    )
+    
+    # Generate single event
+    ical_content = create_single_shift_event(shift)
+    
+    response = HttpResponse(ical_content, content_type='text/calendar; charset=utf-8')
+    filename = f"shift_{shift.date.strftime('%Y%m%d')}_{shift.start_time.strftime('%H%M')}.ics"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@login_required
+def google_calendar_redirect(request, shift_id):
+    """
+    Redirect to Google Calendar "Add Event" page for a shift
+    """
+    from scheduling.calendar_sync import generate_google_calendar_url
+    
+    shift = get_object_or_404(
+        Shift.objects.select_related('shift_type', 'unit', 'care_home'),
+        id=shift_id,
+        staff=request.user
+    )
+    
+    google_url = generate_google_calendar_url(shift)
+    return redirect(google_url)
+
+
+@login_required
+def outlook_calendar_redirect(request, shift_id):
+    """
+    Redirect to Outlook.com "Add Event" page for a shift
+    """
+    from scheduling.calendar_sync import generate_outlook_calendar_url
+    
+    shift = get_object_or_404(
+        Shift.objects.select_related('shift_type', 'unit', 'care_home'),
+        id=shift_id,
+        staff=request.user
+    )
+    
+    outlook_url = generate_outlook_calendar_url(shift)
+    return redirect(outlook_url)
+
+
+@login_required
+def my_calendar_feed_info(request):
+    """
+    Display personal calendar feed URL and instructions
+    """
+    from scheduling.calendar_sync import generate_personal_calendar_token
+    
+    token = generate_personal_calendar_token(request.user)
+    
+    # Build feed URL
+    feed_url = request.build_absolute_uri(
+        reverse('calendar_feed', kwargs={'sap': request.user.sap, 'token': token})
+    )
+    
+    # Webcal URL (for subscription)
+    webcal_url = feed_url.replace('http://', 'webcal://').replace('https://', 'webcal://')
+    
+    context = {
+        'feed_url': feed_url,
+        'webcal_url': webcal_url,
+        'token': token,
+    }
+    
+    return render(request, 'scheduling/calendar_feed_info.html', context)
