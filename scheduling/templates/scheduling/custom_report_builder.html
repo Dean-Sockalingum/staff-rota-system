@@ -5,7 +5,7 @@
 {% block extra_css %}
 <style>
     .report-builder-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
         color: white;
         padding: 2rem;
         border-radius: 8px;
@@ -29,7 +29,7 @@
     }
     
     .step-number {
-        background: #667eea;
+        background: var(--color-primary-500);
         color: white;
         width: 40px;
         height: 40px;
@@ -58,12 +58,12 @@
     }
     
     .report-type-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        border-color: var(--color-primary-500);
+        box-shadow: 0 4px 8px rgba(0, 102, 255, 0.2);
     }
     
     .report-type-card.selected {
-        border-color: #667eea;
+        border-color: var(--color-primary-500);
         background: #f0f4ff;
     }
     
