@@ -143,6 +143,14 @@ urlpatterns = [
     path('reports/vacancies/', views.staff_vacancies_report, name='staff_vacancies_report'),
     path('reports/vacancies/export/', views.staff_vacancies_report_csv, name='staff_vacancies_report_csv'),
     
+    # PDF Export (Phase 2 - Task 19)
+    path('export/my-shifts/pdf/', views.export_my_shifts_pdf, name='export_my_shifts_pdf'),
+    path('export/rota/weekly/<int:home_id>/', views.export_weekly_rota_pdf, name='export_weekly_rota_pdf'),
+    path('export/rota/monthly/<int:home_id>/', views.export_monthly_rota_pdf, name='export_monthly_rota_pdf'),
+    path('export/schedule/<int:staff_id>/', views.export_staff_schedule_pdf, name='export_staff_schedule_pdf'),
+    path('export/leave/summary/', views.export_leave_summary_pdf, name='export_leave_summary_pdf'),
+    path('export/allocation/<int:home_id>/', views.export_allocation_summary_pdf, name='export_allocation_summary_pdf'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

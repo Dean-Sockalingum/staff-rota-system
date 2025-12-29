@@ -10326,3 +10326,332 @@ from .views_compliance import (
     ai_assistant_insights_api
 )
 
+
+# ============================================================================
+# TASK 19: PDF EXPORT FUNCTIONALITY (Phase 2)
+# ============================================================================
+
+# Temporarily disabled - using ReportLab instead
+# from .utils.pdf_export import (
+#     RotaPDFExporter,
+#     LeaveReportPDFExporter,
+#     ShiftAllocationPDFExporter
+# )
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_weekly_rota_pdf(request, home_id):
+    """Export weekly rota as PDF"""
+    from .models_multi_home import CareHome
+    from datetime import datetime, timedelta
+    
+    home = get_object_or_404(CareHome, pk=home_id)
+    
+    # Get week start date from query params or use current week
+    week_start_str = request.GET.get('week_start')
+    if week_start_str:
+        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+    else:
+        # Default to start of current week (Monday)
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+    
+    exporter = RotaPDFExporter()
+    return exporter.export_weekly_rota(home, week_start)
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_monthly_rota_pdf(request, home_id):
+    """Export monthly rota as PDF"""
+    from .models_multi_home import CareHome
+    
+    home = get_object_or_404(CareHome, pk=home_id)
+    
+    # Get month/year from query params or use current month
+    month = int(request.GET.get('month', date.today().month))
+    year = int(request.GET.get('year', date.today().year))
+    
+    exporter = RotaPDFExporter()
+    return exporter.export_monthly_rota(home, month, year)
+
+
+@login_required
+def export_staff_schedule_pdf(request, staff_id):
+    """Export individual staff schedule as PDF"""
+    from datetime import datetime, timedelta
+    
+    staff = get_object_or_404(User, pk=staff_id)
+    
+    # Staff can only export their own schedule unless they're management
+    if not (request.user == staff or (request.user.role and request.user.role.is_management)):
+        messages.error(request, "You don't have permission to view this schedule")
+        return redirect('staff_dashboard')
+    
+    # Get date range from query params or default to next 4 weeks
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = date.today()
+        end_date = start_date + timedelta(days=28)
+    
+    exporter = RotaPDFExporter()
+    return exporter.export_staff_schedule(staff, start_date, end_date)
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_leave_summary_pdf(request):
+    """Export leave request summary as PDF"""
+    from datetime import datetime, timedelta
+    from .models_multi_home import CareHome
+    
+    # Get date range and optional home filter
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    home_id = request.GET.get('home_id')
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # Default to current month
+        today = date.today()
+        start_date = date(today.year, today.month, 1)
+        # Last day of month
+        if today.month == 12:
+            end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+    
+    home = None
+    if home_id:
+        home = get_object_or_404(CareHome, pk=home_id)
+    
+    exporter = LeaveReportPDFExporter()
+    return exporter.export_leave_summary(start_date, end_date, home)
+
+
+@login_required
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_allocation_summary_pdf(request, home_id):
+    """Export shift allocation summary as PDF"""
+    from .models_multi_home import CareHome
+    from datetime import datetime, timedelta
+    
+    home = get_object_or_404(CareHome, pk=home_id)
+    
+    # Get week start date from query params or use current week
+    week_start_str = request.GET.get('week_start')
+    if week_start_str:
+        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+    else:
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+    
+    exporter = ShiftAllocationPDFExporter()
+    return exporter.export_allocation_summary(home, week_start)
+
+
+# ============================================================================
+# TASK 19: PDF EXPORT - Downloadable Shift Schedules and Reports
+# ============================================================================
+
+@login_required
+def export_my_shifts_pdf(request):
+    """Export current user's shifts as PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from io import BytesIO
+    
+    # Get date range
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        # Default: next 2 weeks
+        start_date = date.today()
+        end_date = start_date + timedelta(days=14)
+    
+    # Get user's shifts
+    shifts = Shift.objects.filter(
+        staff=request.user,
+        date__range=[start_date, end_date]
+    ).select_related('shift_type', 'unit', 'care_home').order_by('date', 'start_time')
+    
+    # Create PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor('#0066FF'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+    elements.append(Paragraph(f"My Shift Schedule", title_style))
+    elements.append(Paragraph(f"{request.user.get_full_name()} ({request.user.sap})", styles['Normal']))
+    elements.append(Paragraph(f"{start_date.strftime('%d %B %Y')} - {end_date.strftime('%d %B %Y')}", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Table data
+    data = [['Date', 'Day', 'Shift', 'Time', 'Unit', 'Home']]
+    
+    for shift in shifts:
+        data.append([
+            shift.date.strftime('%d/%m/%Y'),
+            shift.date.strftime('%A'),
+            shift.shift_type.name if shift.shift_type else 'N/A',
+            f"{shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}",
+            shift.unit.name if shift.unit else 'N/A',
+            shift.care_home.name if shift.care_home else 'N/A'
+        ])
+    
+    # Create table
+    table = Table(data, colWidths=[3*cm, 3*cm, 3*cm, 3.5*cm, 3*cm, 3*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0066FF')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F7FA')])
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Paragraph(f"Total shifts: {shifts.count()}", styles['Normal']))
+    elements.append(Paragraph(f"Generated: {timezone.now().strftime('%d %B %Y %H:%M')}", styles['Italic']))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    filename = f"my_shifts_{start_date}_{end_date}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@user_passes_test(lambda u: u.role and u.role.is_management)
+def export_weekly_rota_pdf(request, home_id):
+    """Export weekly rota for a care home as PDF"""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.enums import TA_CENTER
+    from io import BytesIO
+    
+    home = get_object_or_404(CareHome, pk=home_id)
+    
+    # Get week start date
+    week_start_str = request.GET.get('week_start')
+    if week_start_str:
+        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+    else:
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+    
+    week_end = week_start + timedelta(days=6)
+    
+    # Get all shifts for the week
+    shifts = Shift.objects.filter(
+        care_home=home,
+        date__range=[week_start, week_end]
+    ).select_related('staff', 'shift_type', 'unit').order_by('date', 'start_time', 'unit__name')
+    
+    # Create PDF (landscape for weekly view)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=1.5*cm, bottomMargin=1.5*cm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#0066FF'),
+        spaceAfter=20,
+        alignment=TA_CENTER
+    )
+    elements.append(Paragraph(f"Weekly Rota - {home.name}", title_style))
+    elements.append(Paragraph(f"Week: {week_start.strftime('%d %B %Y')} - {week_end.strftime('%d %B %Y')}", styles['Normal']))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Group shifts by day and unit
+    days = [(week_start + timedelta(days=i)) for i in range(7)]
+    units = home.units.all().order_by('name')
+    
+    # Table header
+    data = [['Unit'] + [day.strftime('%a\n%d/%m') for day in days]]
+    
+    # Table data - one row per unit
+    for unit in units:
+        row = [unit.name]
+        for day in days:
+            day_shifts = shifts.filter(unit=unit, date=day)
+            if day_shifts.exists():
+                shift_text = '\n'.join([
+                    f"{s.staff.first_name} {s.staff.last_name[0]}. ({s.shift_type.code if s.shift_type else 'N/A'})"
+                    for s in day_shifts
+                ])
+                row.append(shift_text)
+            else:
+                row.append('-')
+        data.append(row)
+    
+    # Create table
+    col_width = 3.5*cm
+    table = Table(data, colWidths=[4*cm] + [col_width]*7)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0066FF')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F7FA')])
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(f"Total shifts: {shifts.count()} | Generated: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Italic']))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    filename = f"weekly_rota_{home.name.replace(' ', '_')}_{week_start}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
