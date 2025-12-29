@@ -1176,7 +1176,7 @@ def _get_latest_ci_scores_for_home(care_home):
     # Hardcoded actual CI data from latest inspections (as of Dec 2025)
     # Source: CARE_INSPECTORATE_REPORTS_SUMMARY.md
     ACTUAL_CI_DATA = {
-        'Meadowburn': {
+        'MEADOWBURN': {
             'cs_number': 'CS2018371804',
             'inspection_date': date(2024, 6, 5),
             'report_type': 'Unannounced',
@@ -1186,7 +1186,7 @@ def _get_latest_ci_scores_for_home(care_home):
             'theme4_management': 5,  # How good is our leadership? - Very Good
             'ci_rating': 4,  # Overall (lowest rating)
         },
-        'Hawthorn House': {
+        'HAWTHORN_HOUSE': {
             'cs_number': 'CS2003001025',
             'inspection_date': date(2024, 10, 28),
             'report_type': 'Unannounced',
@@ -1196,7 +1196,7 @@ def _get_latest_ci_scores_for_home(care_home):
             'theme4_management': 4,  # Leadership - Good
             'ci_rating': 4,  # Overall (all Good, but care planning was Adequate)
         },
-        'Orchard Grove': {
+        'ORCHARD_GROVE': {
             'cs_number': 'CS2014333831',
             'inspection_date': date(2025, 10, 1),
             'report_type': 'Unannounced',
@@ -1206,7 +1206,7 @@ def _get_latest_ci_scores_for_home(care_home):
             'theme4_management': 5,  # Not assessed in latest, using previous
             'ci_rating': 5,  # Overall - Very Good
         },
-        'Riverside': {
+        'RIVERSIDE': {
             'cs_number': 'CS2014333834',
             'inspection_date': date(2025, 6, 25),
             'report_type': 'Unannounced',
@@ -1216,7 +1216,7 @@ def _get_latest_ci_scores_for_home(care_home):
             'theme4_management': 5,  # Not assessed in latest, using previous
             'ci_rating': 5,  # Overall - Very Good
         },
-        'Victoria Gardens': {
+        'VICTORIA_GARDENS': {
             'cs_number': 'CS2018371437',
             'inspection_date': date(2025, 7, 10),
             'report_type': 'Unannounced',
