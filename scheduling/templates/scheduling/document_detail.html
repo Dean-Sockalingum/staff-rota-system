@@ -1,0 +1,423 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{{ document.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-header {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .document-icon-large {
+        font-size: 4rem;
+        color: #007bff;
+        margin-right: 2rem;
+    }
+    
+    .document-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-primary { background: #007bff; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-warning { background: #ffc107; color: #000; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    .metadata-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .metadata-label {
+        font-size: 0.875rem;
+        color: #666;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metadata-value {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #007bff;
+    }
+    
+    .version-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .version-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .version-item.current {
+        background: #e7f3ff;
+        border-color: #007bff;
+    }
+    
+    .comment-list {
+        margin-top: 1rem;
+    }
+    
+    .comment {
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+    
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .comment-author {
+        font-weight: 600;
+    }
+    
+    .comment-date {
+        font-size: 0.875rem;
+        color: #666;
+    }
+    
+    .comment-form {
+        margin-top: 1rem;
+    }
+    
+    .comment-form textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        min-height: 100px;
+    }
+    
+    .access-log-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .access-log-table th,
+    .access-log-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .access-log-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .badge-view { background: #e7f3ff; color: #007bff; }
+    .badge-download { background: #d4edda; color: #28a745; }
+    .badge-share { background: #fff3cd; color: #ffc107; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-alt"></i> Document Details</h2>
+        <a href="{% url 'document_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Documents
+        </a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="document-header">
+        <div class="d-flex align-items-start">
+            <i class="{{ document.get_file_icon }} document-icon-large"></i>
+            <div class="flex-grow-1">
+                <h3>{{ document.title }}</h3>
+                <p class="text-muted">{{ document.description|default:"No description" }}</p>
+                
+                <div class="document-actions mt-3">
+                    <a href="{% url 'document_download' document.id %}" class="btn btn-success">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    
+                    {% if can_edit %}
+                        <a href="{% url 'document_edit' document.id %}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'document_new_version' document.id %}" class="btn btn-info">
+                            <i class="fas fa-upload"></i> New Version
+                        </a>
+                    {% endif %}
+                    
+                    {% if can_manage %}
+                        <a href="{% url 'document_share' document.id %}" class="btn btn-info">
+                            <i class="fas fa-share"></i> Share
+                        </a>
+                        <button class="btn btn-danger" onclick="if(confirm('Are you sure you want to archive this document?')) window.location.href='{% url 'document_delete' document.id %}'">
+                            <i class="fas fa-archive"></i> Archive
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="metadata-grid">
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-file"></i> File Name</div>
+                <div class="metadata-value">{{ document.file_name }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-hdd"></i> File Size</div>
+                <div class="metadata-value">{{ document.get_file_size_display }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-tag"></i> File Type</div>
+                <div class="metadata-value">{{ document.file_type|upper }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-lock"></i> Access Level</div>
+                <div class="metadata-value">{{ document.get_access_level_display }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-folder"></i> Category</div>
+                <div class="metadata-value">{{ document.category.name|default:"Uncategorized" }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-code-branch"></i> Version</div>
+                <div class="metadata-value">v{{ document.version }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-user"></i> Uploaded By</div>
+                <div class="metadata-value">{{ document.uploaded_by.get_full_name }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-clock"></i> Uploaded</div>
+                <div class="metadata-value">{{ document.uploaded_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-download"></i> Downloads</div>
+                <div class="metadata-value">{{ document.download_count }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label"><i class="fas fa-eye"></i> Views</div>
+                <div class="metadata-value">{{ document.view_count }}</div>
+            </div>
+        </div>
+        
+        {% if document.tags %}
+            <div class="mt-3">
+                <strong><i class="fas fa-tags"></i> Tags:</strong>
+                {% for tag in document.tags.split ',' %}
+                    <span class="badge badge-secondary">{{ tag.strip }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        {% if shared_info %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-share"></i> This document was shared with you by <strong>{{ shared_info.shared_by.get_full_name }}</strong>
+                {% if shared_info.expires_at %}
+                    <br>Expires: {{ shared_info.expires_at|date:"Y-m-d H:i" }}
+                {% endif %}
+                {% if shared_info.max_downloads %}
+                    <br>Downloads remaining: {{ shared_info.max_downloads|add:"-"|add:shared_info.download_count }}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if version_history %}
+        <div class="section">
+            <div class="section-title">
+                <i class="fas fa-history"></i> Version History
+            </div>
+            <ul class="version-list">
+                {% for version in version_history %}
+                    <li class="version-item {% if version.is_latest_version %}current{% endif %}">
+                        <div>
+                            <strong>Version {{ version.version }}</strong>
+                            {% if version.is_latest_version %}
+                                <span class="badge badge-primary">Current</span>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">
+                                Uploaded by {{ version.uploaded_by.get_full_name }} on {{ version.uploaded_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="{% url 'document_download' version.id %}" class="btn btn-sm btn-success">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    
+    <div class="section">
+        <div class="section-title">
+            <i class="fas fa-comments"></i> Comments ({{ comments.count }})
+        </div>
+        
+        <div class="comment-form">
+            <textarea id="commentText" placeholder="Add a comment..."></textarea>
+            <button class="btn btn-primary mt-2" onclick="addComment()">
+                <i class="fas fa-paper-plane"></i> Add Comment
+            </button>
+        </div>
+        
+        <div class="comment-list mt-4">
+            {% for comment in comments %}
+                <div class="comment">
+                    <div class="comment-header">
+                        <span class="comment-author">
+                            <i class="fas fa-user"></i> {{ comment.user.get_full_name }}
+                        </span>
+                        <span class="comment-date">{{ comment.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="comment-content">{{ comment.content }}</div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No comments yet. Be the first to comment!</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">
+            <i class="fas fa-history"></i> Recent Access (Last 20)
+        </div>
+        <table class="access-log-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Date & Time</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for access in access_logs %}
+                    <tr>
+                        <td>{{ access.user.get_full_name }}</td>
+                        <td>
+                            <span class="badge badge-{{ access.action }}">
+                                {% if access.action == 'view' %}
+                                    <i class="fas fa-eye"></i> Viewed
+                                {% elif access.action == 'download' %}
+                                    <i class="fas fa-download"></i> Downloaded
+                                {% elif access.action == 'share' %}
+                                    <i class="fas fa-share"></i> Shared
+                                {% else %}
+                                    {{ access.get_action_display }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>{{ access.accessed_at|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ access.ip_address|default:"N/A" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-muted text-center">No access logs yet</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function addComment() {
+    const commentText = document.getElementById('commentText').value.trim();
+    if (!commentText) {
+        alert('Please enter a comment');
+        return;
+    }
+    
+    fetch('{% url "document_add_comment" document.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: 'content=' + encodeURIComponent(commentText)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error adding comment: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding comment');
+    });
+}
+</script>
+{% endblock %}

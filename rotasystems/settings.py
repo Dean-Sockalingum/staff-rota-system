@@ -417,6 +417,7 @@ MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
 TRAINING_CERTIFICATES_DIR = 'training/certificates/'
 INCIDENT_PHOTOS_DIR = 'incidents/photos/'
 BODY_MAPS_DIR = 'incidents/body_maps/'
+DOCUMENTS_DIR = 'documents/'  # Task 53: Document Management System
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

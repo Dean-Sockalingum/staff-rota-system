@@ -142,6 +142,21 @@ from .views_workflow import (
     workflow_update_step,
     workflow_delete_step
 )
+from .views_documents import (
+    document_list,
+    document_upload,
+    document_detail,
+    document_download,
+    document_edit,
+    document_delete,
+    document_new_version,
+    document_share,
+    document_add_comment,
+    my_documents,
+    shared_with_me,
+    category_manage,
+    category_create
+)
 
 urlpatterns = [
     # Authentication
@@ -557,4 +572,19 @@ urlpatterns = [
     path('workflows/<int:workflow_id>/steps/add/', workflow_add_step, name='workflow_add_step'),
     path('workflows/steps/<int:step_id>/update/', workflow_update_step, name='workflow_update_step'),
     path('workflows/steps/<int:step_id>/', workflow_delete_step, name='workflow_delete_step'),
+    
+    # Task 53: Document Management System
+    path('documents/', document_list, name='document_list'),
+    path('documents/upload/', document_upload, name='document_upload'),
+    path('documents/<int:document_id>/', document_detail, name='document_detail'),
+    path('documents/<int:document_id>/download/', document_download, name='document_download'),
+    path('documents/<int:document_id>/edit/', document_edit, name='document_edit'),
+    path('documents/<int:document_id>/delete/', document_delete, name='document_delete'),
+    path('documents/<int:document_id>/new-version/', document_new_version, name='document_new_version'),
+    path('documents/<int:document_id>/share/', document_share, name='document_share'),
+    path('documents/<int:document_id>/comment/', document_add_comment, name='document_add_comment'),
+    path('documents/my/', my_documents, name='my_documents'),
+    path('documents/shared/', shared_with_me, name='shared_with_me'),
+    path('documents/categories/', category_manage, name='category_manage'),
+    path('documents/categories/create/', category_create, name='category_create'),
 ]

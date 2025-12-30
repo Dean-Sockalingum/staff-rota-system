@@ -4679,3 +4679,12 @@ from .models_workflow import (
     WorkflowStepExecution,
     WorkflowTrigger
 )
+
+# Import document models (Task 53)
+from .models_documents import (
+    DocumentCategory,
+    Document,
+    DocumentAccess,
+    DocumentShare,
+    DocumentComment
+)
