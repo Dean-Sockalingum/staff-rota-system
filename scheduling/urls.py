@@ -247,6 +247,15 @@ urlpatterns = [
     path('costs/forecast/create/', views.budget_forecast_create, name='budget_forecast_create'),
     path('costs/forecast/<int:forecast_id>/', views.budget_forecast_detail, name='budget_forecast_detail'),
     
+    # Compliance Monitoring (Phase 3 - Task 33)
+    path('compliance/', views.compliance_dashboard, name='compliance_dashboard'),
+    path('compliance/check/run/', views.run_compliance_check, name='run_compliance_check'),
+    path('compliance/check/<int:check_id>/', views.compliance_check_detail, name='compliance_check_detail'),
+    path('compliance/certifications/', views.certification_expiry_list, name='certification_expiry_list'),
+    path('compliance/training/', views.training_compliance_view, name='training_compliance_view'),
+    path('compliance/audit-trail/', views.audit_trail_view, name='audit_trail_view'),
+    path('compliance/report/', views.compliance_report_view, name='compliance_report_view'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

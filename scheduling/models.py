@@ -3532,3 +3532,287 @@ class BudgetForecast(models.Model):
     def __str__(self):
         return f"{self.name} (£{self.forecasted_total_cost:,.2f})"
 
+
+# ========================
+# Compliance Monitoring Models
+# Phase 3 - Task 33
+# ========================
+
+class StaffCertification(models.Model):
+    """
+    Track staff certifications and their expiry dates
+    """
+    CERTIFICATION_TYPES = [
+        ('FIRST_AID', 'First Aid'),
+        ('MANUAL_HANDLING', 'Manual Handling'),
+        ('FIRE_SAFETY', 'Fire Safety'),
+        ('FOOD_HYGIENE', 'Food Hygiene'),
+        ('MEDICATION', 'Medication Administration'),
+        ('SAFEGUARDING', 'Safeguarding'),
+        ('INFECTION_CONTROL', 'Infection Control'),
+        ('DEMENTIA_CARE', 'Dementia Care'),
+        ('PALLIATIVE_CARE', 'Palliative Care'),
+        ('PVG', 'PVG Scheme'),
+        ('SSSC', 'SSSC Registration'),
+        ('OTHER', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('VALID', 'Valid'),
+        ('EXPIRING_SOON', 'Expiring Soon'),
+        ('EXPIRED', 'Expired'),
+        ('PENDING', 'Pending Renewal'),
+    ]
+    
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certifications')
+    certification_type = models.CharField(max_length=50, choices=CERTIFICATION_TYPES)
+    certification_name = models.CharField(max_length=200)
+    
+    issue_date = models.DateField()
+    expiry_date = models.DateField()
+    renewal_date = models.DateField(null=True, blank=True, help_text="Expected renewal date")
+    
+    issuing_body = models.CharField(max_length=200, blank=True)
+    certificate_number = models.CharField(max_length=100, blank=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='VALID')
+    
+    # File attachment
+    certificate_file = models.FileField(upload_to='certificates/', null=True, blank=True)
+    
+    # Alert settings
+    days_before_expiry_alert = models.IntegerField(default=30, help_text="Days before expiry to send alert")
+    alert_sent = models.BooleanField(default=False)
+    alert_sent_at = models.DateTimeField(null=True, blank=True)
+    
+    notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_certifications')
+    
+    class Meta:
+        verbose_name = 'Staff Certification'
+        verbose_name_plural = 'Staff Certifications'
+        ordering = ['expiry_date']
+        indexes = [
+            models.Index(fields=['staff_member', 'expiry_date']),
+            models.Index(fields=['certification_type', 'status']),
+            models.Index(fields=['expiry_date', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.get_certification_type_display()}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-update status based on expiry date"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        days_until_expiry = (self.expiry_date - today).days
+        
+        if days_until_expiry < 0:
+            self.status = 'EXPIRED'
+        elif days_until_expiry <= self.days_before_expiry_alert:
+            self.status = 'EXPIRING_SOON'
+        else:
+            self.status = 'VALID'
+        
+        super().save(*args, **kwargs)
+    
+    def is_expired(self):
+        """Check if certification has expired"""
+        from django.utils import timezone
+        return self.expiry_date < timezone.now().date()
+    
+    def days_until_expiry(self):
+        """Calculate days until expiry"""
+        from django.utils import timezone
+        return (self.expiry_date - timezone.now().date()).days
+
+
+class RegulatoryCheck(models.Model):
+    """
+    Track regulatory compliance checks and their results
+    """
+    CHECK_TYPES = [
+        ('TRAINING', 'Training Compliance'),
+        ('CERTIFICATION', 'Certification Check'),
+        ('STAFFING_RATIO', 'Staffing Ratio'),
+        ('DOCUMENTATION', 'Documentation Review'),
+        ('HEALTH_SAFETY', 'Health & Safety'),
+        ('CARE_STANDARDS', 'Care Standards'),
+        ('MEDICATION', 'Medication Management'),
+        ('FIRE_SAFETY', 'Fire Safety'),
+        ('INFECTION_CONTROL', 'Infection Control'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PASS', 'Pass'),
+        ('FAIL', 'Fail'),
+        ('WARNING', 'Warning'),
+        ('IN_PROGRESS', 'In Progress'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+        ('CRITICAL', 'Critical'),
+    ]
+    
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, related_name='regulatory_checks')
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True, related_name='regulatory_checks')
+    
+    check_type = models.CharField(max_length=50, choices=CHECK_TYPES)
+    check_name = models.CharField(max_length=200)
+    description = models.TextField()
+    
+    check_date = models.DateField()
+    due_date = models.DateField(null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='IN_PROGRESS')
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='MEDIUM')
+    
+    # Results
+    compliance_score = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Compliance score (0-100%)"
+    )
+    findings = models.TextField(blank=True, help_text="Detailed findings from the check")
+    violations_found = models.IntegerField(default=0)
+    
+    # Actions
+    action_required = models.BooleanField(default=False)
+    action_plan = models.TextField(blank=True)
+    action_deadline = models.DateField(null=True, blank=True)
+    action_completed = models.BooleanField(default=False)
+    action_completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    checked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='regulatory_checks_performed')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='regulatory_checks_reviewed')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Regulatory Check'
+        verbose_name_plural = 'Regulatory Checks'
+        ordering = ['-check_date']
+        indexes = [
+            models.Index(fields=['care_home', '-check_date']),
+            models.Index(fields=['check_type', 'status']),
+            models.Index(fields=['status', 'severity']),
+            models.Index(fields=['due_date', 'action_completed']),
+        ]
+    
+    def __str__(self):
+        return f"{self.check_name} - {self.check_date} ({self.get_status_display()})"
+    
+    def is_overdue(self):
+        """Check if compliance check is overdue"""
+        from django.utils import timezone
+        if self.due_date and not self.action_completed:
+            return self.due_date < timezone.now().date()
+        return False
+
+
+class AuditTrail(models.Model):
+    """
+    Track system audit trail for compliance and security
+    """
+    ACTION_TYPES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('VIEW', 'View'),
+        ('EXPORT', 'Export'),
+        ('IMPORT', 'Import'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('APPROVE', 'Approve'),
+        ('REJECT', 'Reject'),
+        ('OVERRIDE', 'Override'),
+    ]
+    
+    ENTITY_TYPES = [
+        ('SHIFT', 'Shift'),
+        ('STAFF', 'Staff'),
+        ('LEAVE', 'Leave Request'),
+        ('SWAP', 'Shift Swap'),
+        ('CERTIFICATION', 'Certification'),
+        ('COMPLIANCE', 'Compliance Check'),
+        ('REPORT', 'Report'),
+        ('COST', 'Cost Analysis'),
+        ('FORECAST', 'Budget Forecast'),
+        ('USER', 'User'),
+        ('SYSTEM', 'System'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_trail')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, related_name='audit_trails')
+    
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    entity_type = models.CharField(max_length=50, choices=ENTITY_TYPES)
+    entity_id = models.IntegerField(null=True, blank=True, help_text="ID of the affected entity")
+    
+    description = models.TextField()
+    
+    # Before/After state for changes
+    before_state = models.JSONField(null=True, blank=True, help_text="State before change")
+    after_state = models.JSONField(null=True, blank=True, help_text="State after change")
+    
+    # Request details
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    
+    # Compliance flags
+    is_sensitive = models.BooleanField(default=False, help_text="Contains sensitive data")
+    requires_review = models.BooleanField(default=False)
+    reviewed = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_reviews')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Audit Trail Entry'
+        verbose_name_plural = 'Audit Trail Entries'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['care_home', '-timestamp']),
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['action_type', 'entity_type']),
+            models.Index(fields=['entity_type', 'entity_id']),
+            models.Index(fields=['is_sensitive', 'reviewed']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user} - {self.get_action_type_display()} {self.get_entity_type_display()} at {self.timestamp}"
+    
+    @classmethod
+    def log_action(cls, user, care_home, action_type, entity_type, description, entity_id=None, 
+                   before_state=None, after_state=None, ip_address=None, user_agent=None, 
+                   is_sensitive=False, requires_review=False):
+        """
+        Convenience method to create audit log entries
+        """
+        return cls.objects.create(
+            user=user,
+            care_home=care_home,
+            action_type=action_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            description=description,
+            before_state=before_state,
+            after_state=after_state,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            is_sensitive=is_sensitive,
+            requires_review=requires_review,
+        )
+
+

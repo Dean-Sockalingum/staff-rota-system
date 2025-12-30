@@ -14199,3 +14199,216 @@ def budget_forecast_detail(request, forecast_id):
     return render(request, 'scheduling/budget_forecast_detail.html', context)
 
 
+# ======================
+# Compliance Monitoring Views
+# Phase 3 - Task 33
+# ======================
+
+@login_required
+def compliance_dashboard(request):
+    """Compliance monitoring dashboard"""
+    from .compliance_monitoring import calculate_compliance_score, check_certification_expiry, check_training_compliance, get_overdue_certifications
+    
+    care_home = request.user.care_home
+    
+    # Get compliance score
+    compliance_data = calculate_compliance_score(care_home)
+    
+    # Get certification data
+    cert_data = check_certification_expiry(care_home, days_ahead=90)
+    
+    # Get training data
+    training_data = check_training_compliance(care_home)
+    
+    # Get overdue certifications
+    overdue_certs = get_overdue_certifications(care_home)[:10]
+    
+    # Get recent compliance checks
+    recent_checks = ComplianceCheck.objects.filter(
+        care_home=care_home
+    ).order_by('-check_date')[:5]
+    
+    # Count issues
+    critical_issues = ComplianceCheck.objects.filter(
+        care_home=care_home,
+        severity='CRITICAL',
+        action_completed=False
+    ).count()
+    
+    high_issues = ComplianceCheck.objects.filter(
+        care_home=care_home,
+        severity='HIGH',
+        action_completed=False
+    ).count()
+    
+    context = {
+        'compliance_score': compliance_data['total_score'],
+        'compliance_level': compliance_data['compliance_level'],
+        'compliance_color': compliance_data['compliance_color'],
+        'cert_score': compliance_data['cert_score'],
+        'training_score': compliance_data['training_score'],
+        'staffing_score': compliance_data['staffing_score'],
+        'expiring_soon_count': cert_data['expiring_soon_count'],
+        'expired_count': cert_data['expired_count'],
+        'critical_expiring': cert_data['critical_expiring'],
+        'critical_expired': cert_data['critical_expired'],
+        'training_compliance_rate': training_data['overall_compliance_rate'],
+        'staff_non_compliant': training_data['overall_non_compliant'],
+        'overdue_certifications': overdue_certs,
+        'recent_checks': recent_checks,
+        'critical_issues': critical_issues,
+        'high_issues': high_issues,
+    }
+    return render(request, 'scheduling/compliance_dashboard.html', context)
+
+
+@login_required
+def run_compliance_check(request):
+    """Run a compliance check"""
+    from .compliance_monitoring import run_compliance_check as run_check
+    
+    if request.method == 'POST':
+        care_home = request.user.care_home
+        
+        check_type = request.POST.get('check_type')
+        check_name = request.POST.get('check_name', f"{check_type} Check")
+        description = request.POST.get('description', f"Automated {check_type} compliance check")
+        
+        # Run check
+        check = run_check(care_home, check_type, check_name, description, request.user)
+        
+        messages.success(request, f'Compliance check completed: {check.get_status_display()}')
+        return redirect('compliance_check_detail', check_id=check.id)
+    
+    # GET request - show form
+    context = {
+        'check_types': ComplianceCheck.CHECK_TYPES,
+    }
+    return render(request, 'scheduling/compliance_check_form.html', context)
+
+
+@login_required
+def compliance_check_detail(request, check_id):
+    """View compliance check details"""
+    check = get_object_or_404(ComplianceCheck, id=check_id, care_home=request.user.care_home)
+    
+    context = {
+        'check': check,
+    }
+    return render(request, 'scheduling/compliance_check_detail.html', context)
+
+
+@login_required
+def certification_expiry_list(request):
+    """List certifications by expiry date"""
+    from .compliance_monitoring import check_certification_expiry
+    
+    care_home = request.user.care_home
+    days_ahead = int(request.GET.get('days_ahead', 90))
+    
+    cert_data = check_certification_expiry(care_home, days_ahead=days_ahead)
+    
+    context = {
+        'expiring_soon': cert_data['expiring_soon'],
+        'expired': cert_data['expired'],
+        'staff_with_expiring': cert_data['staff_with_expiring'],
+        'staff_with_expired': cert_data['staff_with_expired'],
+        'days_ahead': days_ahead,
+        'expiring_soon_count': cert_data['expiring_soon_count'],
+        'expired_count': cert_data['expired_count'],
+        'critical_expiring': cert_data['critical_expiring'],
+        'critical_expired': cert_data['critical_expired'],
+    }
+    return render(request, 'scheduling/certification_expiry_list.html', context)
+
+
+@login_required
+def training_compliance_view(request):
+    """View training compliance"""
+    from .compliance_monitoring import check_training_compliance
+    
+    care_home = request.user.care_home
+    unit_id = request.GET.get('unit')
+    
+    unit = Unit.objects.get(id=unit_id) if unit_id else None
+    
+    training_data = check_training_compliance(care_home, unit)
+    
+    context = {
+        'training_data': training_data,
+        'units': Unit.objects.filter(care_home=care_home),
+        'selected_unit': unit,
+    }
+    return render(request, 'scheduling/training_compliance.html', context)
+
+
+@login_required
+def audit_trail_view(request):
+    """View audit trail"""
+    care_home = request.user.care_home
+    
+    # Filter parameters
+    action_type = request.GET.get('action_type')
+    entity_type = request.GET.get('entity_type')
+    user_id = request.GET.get('user_id')
+    days_back = int(request.GET.get('days_back', 30))
+    
+    # Date filter
+    start_date = timezone.now() - timedelta(days=days_back)
+    
+    # Build query
+    audit_entries = AuditTrail.objects.filter(
+        care_home=care_home,
+        timestamp__gte=start_date
+    )
+    
+    if action_type:
+        audit_entries = audit_entries.filter(action_type=action_type)
+    if entity_type:
+        audit_entries = audit_entries.filter(entity_type=entity_type)
+    if user_id:
+        audit_entries = audit_entries.filter(user_id=user_id)
+    
+    audit_entries = audit_entries.order_by('-timestamp')[:100]
+    
+    # Get filter options
+    users = User.objects.filter(care_home=care_home)
+    
+    context = {
+        'audit_entries': audit_entries,
+        'action_types': AuditTrail.ACTION_TYPES,
+        'entity_types': AuditTrail.ENTITY_TYPES,
+        'users': users,
+        'selected_action_type': action_type,
+        'selected_entity_type': entity_type,
+        'selected_user_id': user_id,
+        'days_back': days_back,
+    }
+    return render(request, 'scheduling/audit_trail.html', context)
+
+
+@login_required
+def compliance_report_view(request):
+    """Generate compliance report"""
+    from .compliance_monitoring import generate_compliance_report
+    
+    care_home = request.user.care_home
+    
+    # Date range from request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Generate report
+    report = generate_compliance_report(care_home, start_date, end_date)
+    
+    context = {
+        'report': report,
+    }
+    return render(request, 'scheduling/compliance_report.html', context)
+
+

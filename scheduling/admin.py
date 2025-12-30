@@ -7,7 +7,8 @@ from .models import (
     AuditReport, DataChangeLog, SystemAccessLog,
     TrainingCourse, TrainingRecord, InductionProgress,
     SupervisionRecord, IncidentReport,
-    CostAnalysis, AgencyCostComparison, BudgetForecast
+    CostAnalysis, AgencyCostComparison, BudgetForecast,
+    StaffCertification, AuditTrail
 )
 
 @admin.register(Role)
@@ -371,6 +372,28 @@ class BudgetForecastAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at']
     date_hierarchy = 'created_at'
+
+
+# Compliance Monitoring Admin (Phase 3 - Task 33)
+@admin.register(StaffCertification)
+class StaffCertificationAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'certification_type', 'expiry_date', 'status', 'days_until_expiry']
+    list_filter = ['certification_type', 'status', 'expiry_date']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name', 'certification_name']
+    readonly_fields = ['created_at', 'updated_at', 'alert_sent_at']
+    date_hierarchy = 'expiry_date'
+    
+    def days_until_expiry(self, obj):
+        return obj.days_until_expiry()
+    days_until_expiry.short_description = 'Days Until Expiry'
+
+@admin.register(AuditTrail)
+class AuditTrailAdmin(admin.ModelAdmin):
+    list_display = ['timestamp', 'user', 'action_type', 'entity_type', 'description', 'is_sensitive']
+    list_filter = ['action_type', 'entity_type', 'is_sensitive', 'reviewed', 'timestamp']
+    search_fields = ['user__first_name', 'user__last_name', 'description']
+    readonly_fields = ['timestamp', 'reviewed_at']
+    date_hierarchy = 'timestamp'
 
 
 # Import automated workflow admin configurations
