@@ -275,6 +275,21 @@ urlpatterns = [
     path('leave-forecast/patterns/<int:staff_id>/', views.leave_pattern_analysis, name='leave_pattern_analysis'),
     path('leave-forecast/conflicts/', views.leave_conflict_detection, name='leave_conflict_detection'),
     
+    # Task 36: Real-time Collaboration URLs
+    path('collaboration/', views.collaboration_dashboard, name='collaboration_dashboard'),
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('notifications/read/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/read-all/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('messages/', views.messages_inbox, name='messages_inbox'),
+    path('messages/<int:message_id>/', views.message_detail, name='message_detail'),
+    path('messages/send/', views.send_message_view, name='send_message'),
+    path('messages/reply/<int:message_id>/', views.reply_to_message, name='reply_to_message'),
+    path('activity/', views.activity_feed_view, name='activity_feed'),
+    path('presence/update/', views.update_presence, name='update_presence'),
+    path('online-users/', views.online_users_list, name='online_users_list'),
+    path('activity/stats/<int:user_id>/', views.user_activity_stats, name='user_activity_stats'),
+    path('activity/stats/', views.user_activity_stats, name='my_activity_stats'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

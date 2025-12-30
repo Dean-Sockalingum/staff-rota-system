@@ -4267,3 +4267,245 @@ class LeaveImpactAnalysis(models.Model):
         return f"{self.care_home.name} - Impact Analysis ({self.period_start} to {self.period_end})"
 
 
+# ==================== TASK 36: REAL-TIME COLLABORATION MODELS ====================
+
+class Notification(models.Model):
+    """
+    Real-time notifications for users about system events
+    """
+    NOTIFICATION_TYPES = [
+        ('SHIFT_ASSIGNED', 'Shift Assigned'),
+        ('SHIFT_CHANGED', 'Shift Changed'),
+        ('SHIFT_CANCELLED', 'Shift Cancelled'),
+        ('LEAVE_APPROVED', 'Leave Request Approved'),
+        ('LEAVE_REJECTED', 'Leave Request Rejected'),
+        ('SWAP_REQUEST', 'Shift Swap Request'),
+        ('SWAP_APPROVED', 'Swap Approved'),
+        ('SWAP_REJECTED', 'Swap Rejected'),
+        ('MESSAGE_RECEIVED', 'Message Received'),
+        ('MENTION', 'Mentioned in Message'),
+        ('COMPLIANCE_ALERT', 'Compliance Alert'),
+        ('PERFORMANCE_REVIEW', 'Performance Review Due'),
+        ('CERTIFICATION_EXPIRY', 'Certification Expiring'),
+        ('SYSTEM_ALERT', 'System Alert'),
+    ]
+    
+    PRIORITY_LEVELS = [
+        ('LOW', 'Low'),
+        ('NORMAL', 'Normal'),
+        ('HIGH', 'High'),
+        ('URGENT', 'Urgent'),
+    ]
+    
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    priority = models.CharField(max_length=10, choices=PRIORITY_LEVELS, default='NORMAL')
+    
+    # Related objects (optional)
+    related_shift = models.ForeignKey('Shift', on_delete=models.SET_NULL, null=True, blank=True)
+    related_leave_request = models.ForeignKey('LeaveRequest', on_delete=models.SET_NULL, null=True, blank=True)
+    related_swap = models.ForeignKey('ShiftSwapRequest', on_delete=models.SET_NULL, null=True, blank=True)
+    related_message = models.ForeignKey('Message', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Action URL (where to redirect when clicked)
+    action_url = models.CharField(max_length=500, blank=True)
+    
+    # Status tracking
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    is_archived = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read', '-created_at']),
+            models.Index(fields=['recipient', 'notification_type']),
+            models.Index(fields=['priority', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.recipient.username} - {self.get_notification_type_display()}"
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+
+class Message(models.Model):
+    """
+    Real-time messaging between users
+    """
+    MESSAGE_TYPES = [
+        ('DIRECT', 'Direct Message'),
+        ('GROUP', 'Group Message'),
+        ('SYSTEM', 'System Message'),
+        ('ANNOUNCEMENT', 'Announcement'),
+    ]
+    
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='DIRECT')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipients = models.ManyToManyField(User, related_name='received_messages')
+    
+    subject = models.CharField(max_length=200, blank=True)
+    content = models.TextField()
+    
+    # Thread support
+    parent_message = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='replies')
+    thread_id = models.CharField(max_length=50, blank=True)  # For grouping related messages
+    
+    # Related objects (optional - for context)
+    related_shift = models.ForeignKey('Shift', on_delete=models.SET_NULL, null=True, blank=True)
+    related_leave_request = models.ForeignKey('LeaveRequest', on_delete=models.SET_NULL, null=True, blank=True)
+    care_home = models.ForeignKey('CareHome', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Attachments/metadata
+    attachment_url = models.CharField(max_length=500, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)  # For mentions, tags, etc.
+    
+    # Status
+    is_important = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['sender', '-created_at']),
+            models.Index(fields=['thread_id', '-created_at']),
+            models.Index(fields=['message_type', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.sender.username} - {self.subject or 'No subject'} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+    
+    def get_reply_count(self):
+        """Get number of replies to this message"""
+        return self.replies.count()
+
+
+class SystemActivity(models.Model):
+    """
+    Extended activity feed tracking all system actions for transparency and audit
+    """
+    ACTIVITY_TYPES = [
+        ('SHIFT_CREATED', 'Shift Created'),
+        ('SHIFT_UPDATED', 'Shift Updated'),
+        ('SHIFT_DELETED', 'Shift Deleted'),
+        ('SHIFT_ASSIGNED', 'Shift Assigned'),
+        ('LEAVE_REQUESTED', 'Leave Requested'),
+        ('LEAVE_APPROVED', 'Leave Approved'),
+        ('LEAVE_REJECTED', 'Leave Rejected'),
+        ('SWAP_REQUESTED', 'Swap Requested'),
+        ('SWAP_APPROVED', 'Swap Approved'),
+        ('SWAP_REJECTED', 'Swap Rejected'),
+        ('STAFF_ADDED', 'Staff Added'),
+        ('STAFF_UPDATED', 'Staff Updated'),
+        ('USER_LOGIN', 'User Login'),
+        ('USER_LOGOUT', 'User Logout'),
+        ('COMPLIANCE_CHECK', 'Compliance Check'),
+        ('REPORT_GENERATED', 'Report Generated'),
+        ('SYSTEM_CONFIG', 'System Configuration Changed'),
+        ('MESSAGE_SENT', 'Message Sent'),
+        ('NOTIFICATION_CREATED', 'Notification Created'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='system_activities')
+    activity_type = models.CharField(max_length=30, choices=ACTIVITY_TYPES)
+    description = models.TextField()
+    
+    # Related objects
+    care_home = models.ForeignKey('CareHome', on_delete=models.SET_NULL, null=True, blank=True)
+    related_shift = models.ForeignKey('Shift', on_delete=models.SET_NULL, null=True, blank=True)
+    related_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='activities_about')
+    related_leave_request = models.ForeignKey('LeaveRequest', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Change tracking
+    old_value = models.JSONField(default=dict, blank=True)  # State before change
+    new_value = models.JSONField(default=dict, blank=True)  # State after change
+    
+    # Additional metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'System Activities'
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['care_home', '-created_at']),
+            models.Index(fields=['activity_type', '-created_at']),
+        ]
+    
+    def __str__(self):
+        user_str = self.user.username if self.user else 'System'
+        return f"{user_str} - {self.get_activity_type_display()} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+class UserPresence(models.Model):
+    """
+    Track user online/offline status for real-time collaboration
+    """
+    STATUS_CHOICES = [
+        ('ONLINE', 'Online'),
+        ('AWAY', 'Away'),
+        ('BUSY', 'Busy'),
+        ('OFFLINE', 'Offline'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='presence')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OFFLINE')
+    
+    # Activity tracking
+    last_seen = models.DateTimeField(auto_now=True)
+    last_activity = models.DateTimeField(null=True, blank=True)
+    current_page = models.CharField(max_length=200, blank=True)  # Current page/view user is on
+    
+    # Custom status
+    custom_status = models.CharField(max_length=100, blank=True)  # e.g., "In a meeting", "On shift"
+    status_emoji = models.CharField(max_length=10, blank=True)  # e.g., "🏥", "☕"
+    
+    # Session tracking
+    session_id = models.CharField(max_length=100, blank=True)
+    device_info = models.CharField(max_length=200, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'last_seen']),
+            models.Index(fields=['user', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_status_display()}"
+    
+    def is_online(self):
+        """Check if user is currently online (active in last 5 minutes)"""
+        from datetime import timedelta
+        if self.status == 'OFFLINE':
+            return False
+        time_threshold = timezone.now() - timedelta(minutes=5)
+        return self.last_seen >= time_threshold
+    
+    def set_status(self, status, custom_message=None):
+        """Update user status"""
+        self.status = status
+        if custom_message:
+            self.custom_status = custom_message
+        self.last_activity = timezone.now()
+        self.save()
+
+

@@ -10,7 +10,8 @@ from .models import (
     CostAnalysis, AgencyCostComparison, BudgetForecast,
     StaffCertification, AuditTrail,
     AttendanceRecord, StaffPerformance, PerformanceReview,
-    LeaveForecast, LeavePattern, LeaveImpactAnalysis
+    LeaveForecast, LeavePattern, LeaveImpactAnalysis,
+    Notification, Message, SystemActivity, UserPresence
 )
 
 @admin.register(Role)
@@ -450,6 +451,140 @@ class LeaveImpactAnalysisAdmin(admin.ModelAdmin):
     readonly_fields = ['analysis_date']
     date_hierarchy = 'analysis_date'
 
+
+# ==================== TASK 36: REAL-TIME COLLABORATION ADMIN ====================
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['recipient', 'notification_type', 'title', 'priority', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'priority', 'is_read', 'is_archived']
+    search_fields = ['recipient__username', 'title', 'message']
+    readonly_fields = ['created_at', 'updated_at', 'read_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Recipient', {
+            'fields': ('recipient', 'notification_type', 'priority')
+        }),
+        ('Content', {
+            'fields': ('title', 'message', 'action_url')
+        }),
+        ('Related Objects', {
+            'fields': ('related_shift', 'related_leave_request', 'related_swap', 'related_message'),
+            'classes': ('collapse',)
+        }),
+        ('Status', {
+            'fields': ('is_read', 'read_at', 'is_archived')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ['sender', 'subject', 'message_type', 'is_important', 'created_at', 'recipient_count']
+    list_filter = ['message_type', 'is_important', 'is_archived']
+    search_fields = ['sender__username', 'subject', 'content']
+    readonly_fields = ['created_at', 'updated_at', 'recipient_count', 'reply_count']
+    date_hierarchy = 'created_at'
+    filter_horizontal = ['recipients']
+    
+    fieldsets = (
+        ('Message Info', {
+            'fields': ('sender', 'message_type', 'subject', 'content')
+        }),
+        ('Recipients', {
+            'fields': ('recipients',)
+        }),
+        ('Threading', {
+            'fields': ('parent_message', 'thread_id'),
+            'classes': ('collapse',)
+        }),
+        ('Related Objects', {
+            'fields': ('related_shift', 'related_leave_request', 'care_home'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('is_important', 'is_archived', 'attachment_url', 'metadata'),
+            'classes': ('collapse',)
+        }),
+        ('Stats', {
+            'fields': ('recipient_count', 'reply_count', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def recipient_count(self, obj):
+        return obj.recipients.count()
+    recipient_count.short_description = 'Recipients'
+    
+    def reply_count(self, obj):
+        return obj.get_reply_count()
+    reply_count.short_description = 'Replies'
+
+
+@admin.register(SystemActivity)
+class SystemActivityAdmin(admin.ModelAdmin):
+    list_display = ['user', 'activity_type', 'description_preview', 'care_home', 'created_at']
+    list_filter = ['activity_type', 'care_home']
+    search_fields = ['user__username', 'description']
+    readonly_fields = ['created_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Activity Info', {
+            'fields': ('user', 'activity_type', 'description', 'care_home')
+        }),
+        ('Related Objects', {
+            'fields': ('related_shift', 'related_user', 'related_leave_request'),
+            'classes': ('collapse',)
+        }),
+        ('Change Tracking', {
+            'fields': ('old_value', 'new_value'),
+            'classes': ('collapse',)
+        }),
+        ('Technical Details', {
+            'fields': ('ip_address', 'user_agent', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_preview(self, obj):
+        return obj.description[:100] + '...' if len(obj.description) > 100 else obj.description
+    description_preview.short_description = 'Description'
+
+
+@admin.register(UserPresence)
+class UserPresenceAdmin(admin.ModelAdmin):
+    list_display = ['user', 'status', 'custom_status', 'status_emoji', 'is_online_display', 'last_seen']
+    list_filter = ['status']
+    search_fields = ['user__username', 'custom_status']
+    readonly_fields = ['created_at', 'updated_at', 'last_seen', 'is_online_display']
+    
+    fieldsets = (
+        ('User & Status', {
+            'fields': ('user', 'status', 'custom_status', 'status_emoji')
+        }),
+        ('Activity Tracking', {
+            'fields': ('last_seen', 'last_activity', 'current_page', 'is_online_display')
+        }),
+        ('Session Info', {
+            'fields': ('session_id', 'device_info'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def is_online_display(self, obj):
+        return obj.is_online()
+    is_online_display.boolean = True
+    is_online_display.short_description = 'Currently Online'
 
 
 # Import automated workflow admin configurations

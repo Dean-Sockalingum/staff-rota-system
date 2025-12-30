@@ -14911,3 +14911,361 @@ def leave_conflict_detection(request):
         'total_conflicts': len(conflicts),
     }
     return render(request, 'scheduling/leave_conflicts.html', context)
+
+
+# ==================== TASK 36: REAL-TIME COLLABORATION VIEWS ====================
+
+@login_required
+def collaboration_dashboard(request):
+    """Main collaboration dashboard with notifications, messages, activity"""
+    from . import collaboration
+    
+    user = request.user
+    
+    # Get notification summary
+    notification_summary = collaboration.get_notification_summary(user)
+    
+    # Get recent notifications (limit 10)
+    recent_notifications = collaboration.get_user_notifications(user, limit=10)
+    
+    # Get recent messages (limit 10)
+    recent_messages = collaboration.get_user_messages(user, limit=10)
+    
+    # Get online users
+    online_users = collaboration.get_online_users(minutes=5)
+    
+    # Get activity feed (last 7 days, limit 20)
+    care_home = getattr(request.user, 'care_home', None)
+    activity_feed = collaboration.get_activity_feed(care_home=care_home, days=7, limit=20)
+    
+    # User presence info
+    user_presence = collaboration.get_user_presence_info(user)
+    
+    context = {
+        'notification_summary': notification_summary,
+        'recent_notifications': recent_notifications,
+        'recent_messages': recent_messages,
+        'online_users': online_users,
+        'online_count': len(online_users),
+        'activity_feed': activity_feed,
+        'user_presence': user_presence,
+    }
+    return render(request, 'scheduling/collaboration_dashboard.html', context)
+
+
+@login_required
+def notifications_list(request):
+    """View all notifications for user"""
+    from . import collaboration
+    
+    user = request.user
+    unread_only = request.GET.get('unread', '') == 'true'
+    
+    notifications = collaboration.get_user_notifications(user, unread_only=unread_only, limit=100)
+    notification_summary = collaboration.get_notification_summary(user)
+    
+    context = {
+        'notifications': notifications,
+        'notification_summary': notification_summary,
+        'unread_only': unread_only,
+    }
+    return render(request, 'scheduling/notifications_list.html', context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark a notification as read"""
+    from .models import Notification
+    
+    try:
+        notification = Notification.objects.get(id=notification_id, recipient=request.user)
+        notification.mark_as_read()
+        
+        # If notification has action URL, redirect there
+        if notification.action_url:
+            return redirect(notification.action_url)
+        
+        messages.success(request, 'Notification marked as read.')
+    except Notification.DoesNotExist:
+        messages.error(request, 'Notification not found.')
+    
+    return redirect('notifications_list')
+
+
+@login_required
+def mark_all_notifications_read(request):
+    """Mark all notifications as read"""
+    from . import collaboration
+    
+    if request.method == 'POST':
+        unread_notifications = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).values_list('id', flat=True)
+        
+        count = collaboration.mark_notifications_as_read(list(unread_notifications))
+        messages.success(request, f'Marked {count} notifications as read.')
+    
+    return redirect('notifications_list')
+
+
+@login_required
+def messages_inbox(request):
+    """User's message inbox"""
+    from . import collaboration
+    
+    user = request.user
+    message_type = request.GET.get('type', None)
+    
+    messages_list = collaboration.get_user_messages(user, message_type=message_type, limit=100)
+    
+    # Get message type counts
+    from .models import Message
+    direct_count = Message.objects.filter(recipients=user, message_type='DIRECT', is_archived=False).count()
+    group_count = Message.objects.filter(recipients=user, message_type='GROUP', is_archived=False).count()
+    announcement_count = Message.objects.filter(recipients=user, message_type='ANNOUNCEMENT', is_archived=False).count()
+    
+    context = {
+        'messages': messages_list,
+        'message_type': message_type,
+        'direct_count': direct_count,
+        'group_count': group_count,
+        'announcement_count': announcement_count,
+    }
+    return render(request, 'scheduling/messages_inbox.html', context)
+
+
+@login_required
+def message_detail(request, message_id):
+    """View a message and its thread"""
+    from .models import Message
+    from . import collaboration
+    
+    try:
+        message = Message.objects.get(id=message_id)
+        
+        # Check if user is recipient or sender
+        if request.user not in message.recipients.all() and request.user != message.sender:
+            messages.error(request, 'You do not have permission to view this message.')
+            return redirect('messages_inbox')
+        
+        # Get thread messages if part of a thread
+        thread_messages = []
+        if message.thread_id:
+            thread_messages = collaboration.get_thread_messages(message.thread_id)
+        
+        context = {
+            'message': message,
+            'thread_messages': thread_messages,
+        }
+        return render(request, 'scheduling/message_detail.html', context)
+    
+    except Message.DoesNotExist:
+        messages.error(request, 'Message not found.')
+        return redirect('messages_inbox')
+
+
+@login_required
+def send_message_view(request):
+    """Send a new message"""
+    from . import collaboration
+    from django.contrib.auth.models import User
+    
+    if request.method == 'POST':
+        recipient_ids = request.POST.getlist('recipients')
+        subject = request.POST.get('subject', '')
+        content = request.POST.get('content', '')
+        is_important = request.POST.get('is_important') == 'on'
+        
+        if not content:
+            messages.error(request, 'Message content is required.')
+            return redirect('send_message')
+        
+        recipients = User.objects.filter(id__in=recipient_ids)
+        if not recipients.exists():
+            messages.error(request, 'Please select at least one recipient.')
+            return redirect('send_message')
+        
+        # Determine message type
+        message_type = 'GROUP' if len(recipients) > 1 else 'DIRECT'
+        
+        # Send message
+        message = collaboration.send_message(
+            sender=request.user,
+            recipients=list(recipients),
+            content=content,
+            subject=subject,
+            message_type=message_type,
+            is_important=is_important
+        )
+        
+        messages.success(request, f'Message sent to {len(recipients)} recipient(s).')
+        return redirect('message_detail', message_id=message.id)
+    
+    # GET - show form
+    all_users = User.objects.filter(is_active=True).exclude(id=request.user.id).order_by('username')
+    
+    context = {
+        'all_users': all_users,
+    }
+    return render(request, 'scheduling/send_message.html', context)
+
+
+@login_required
+def reply_to_message(request, message_id):
+    """Reply to a message"""
+    from .models import Message
+    from . import collaboration
+    
+    try:
+        parent_message = Message.objects.get(id=message_id)
+        
+        if request.method == 'POST':
+            content = request.POST.get('content', '')
+            
+            if not content:
+                messages.error(request, 'Reply content is required.')
+                return redirect('message_detail', message_id=message_id)
+            
+            # Send reply to original sender + all original recipients
+            recipients = list(parent_message.recipients.all())
+            if parent_message.sender not in recipients:
+                recipients.append(parent_message.sender)
+            
+            # Remove current user from recipients
+            recipients = [r for r in recipients if r != request.user]
+            
+            reply = collaboration.send_message(
+                sender=request.user,
+                recipients=recipients,
+                content=content,
+                subject=f"Re: {parent_message.subject}",
+                message_type=parent_message.message_type,
+                parent_message=parent_message
+            )
+            
+            messages.success(request, 'Reply sent.')
+            return redirect('message_detail', message_id=parent_message.id)
+        
+        context = {
+            'parent_message': parent_message,
+        }
+        return render(request, 'scheduling/reply_to_message.html', context)
+    
+    except Message.DoesNotExist:
+        messages.error(request, 'Message not found.')
+        return redirect('messages_inbox')
+
+
+@login_required
+def activity_feed_view(request):
+    """View system activity feed"""
+    from . import collaboration
+    
+    care_home = getattr(request.user, 'care_home', None)
+    days = int(request.GET.get('days', 7))
+    activity_type = request.GET.get('type', None)
+    
+    activity_types = [activity_type] if activity_type else None
+    
+    activities = collaboration.get_activity_feed(
+        care_home=care_home,
+        days=days,
+        activity_types=activity_types,
+        limit=200
+    )
+    
+    # Get available activity types
+    from .models import SystemActivity
+    all_activity_types = SystemActivity.ACTIVITY_TYPES
+    
+    context = {
+        'activities': activities,
+        'days': days,
+        'selected_type': activity_type,
+        'all_activity_types': all_activity_types,
+        'total_activities': activities.count() if hasattr(activities, 'count') else len(activities),
+    }
+    return render(request, 'scheduling/activity_feed.html', context)
+
+
+@login_required
+def update_presence(request):
+    """Update user presence status (AJAX endpoint)"""
+    from . import collaboration
+    import json
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            status = data.get('status', 'ONLINE')
+            current_page = data.get('current_page', '')
+            custom_status = data.get('custom_status', '')
+            
+            presence = collaboration.update_user_presence(
+                user=request.user,
+                status=status,
+                current_page=current_page,
+                custom_status=custom_status
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'status': presence.get_status_display(),
+                'is_online': presence.is_online()
+            })
+        
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
+@login_required
+def online_users_list(request):
+    """View list of currently online users"""
+    from . import collaboration
+    
+    minutes = int(request.GET.get('minutes', 5))
+    online_users = collaboration.get_online_users(minutes=minutes)
+    
+    # Get detailed presence info for each
+    user_presences = []
+    for user in online_users:
+        presence_info = collaboration.get_user_presence_info(user)
+        presence_info['user'] = user
+        user_presences.append(presence_info)
+    
+    context = {
+        'user_presences': user_presences,
+        'online_count': len(online_users),
+        'minutes_threshold': minutes,
+    }
+    return render(request, 'scheduling/online_users.html', context)
+
+
+@login_required
+def user_activity_stats(request, user_id=None):
+    """View activity statistics for a user"""
+    from . import collaboration
+    from django.contrib.auth.models import User
+    
+    if user_id:
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+            return redirect('collaboration_dashboard')
+    else:
+        target_user = request.user
+    
+    days = int(request.GET.get('days', 30))
+    stats = collaboration.get_user_activity_stats(target_user, days=days)
+    
+    context = {
+        'target_user': target_user,
+        'stats': stats,
+        'days': days,
+    }
+    return render(request, 'scheduling/user_activity_stats.html', context)
+
