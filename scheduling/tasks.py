@@ -592,3 +592,358 @@ def send_emergency_coverage_sms():
     return f"Sent {sent_count} emergency coverage alerts"
 
 
+# ==================== EMAIL NOTIFICATION TASKS (Task 47) ====================
+
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from datetime import timedelta
+
+
+class EmailNotificationService:
+    """Service for managing email notifications"""
+    
+    @staticmethod
+    def get_email_from():
+        """Get the FROM email address"""
+        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@staffrota.com')
+    
+    @staticmethod
+    def get_admin_emails():
+        """Get list of admin email addresses"""
+        admins = getattr(settings, 'ADMINS', [])
+        return [admin[1] for admin in admins] if admins else []
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_email_notification(self, subject, message, recipient_list, html_message=None):
+    """
+    Generic task to send email notifications with retry logic
+    
+    Args:
+        subject: Email subject
+        message: Plain text message
+        recipient_list: List of recipient emails
+        html_message: Optional HTML version
+    
+    Returns:
+        int: Number of emails sent
+    """
+    try:
+        if html_message:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=EmailNotificationService.get_email_from(),
+                to=recipient_list
+            )
+            msg.attach_alternative(html_message, "text/html")
+            result = msg.send()
+        else:
+            result = send_mail(
+                subject=subject,
+                message=message,
+                from_email=EmailNotificationService.get_email_from(),
+                recipient_list=recipient_list,
+                fail_silently=False
+            )
+        
+        logger.info(f"📧 Email sent: '{subject}' to {len(recipient_list)} recipients")
+        return result
+    
+    except Exception as exc:
+        logger.error(f"❌ Email send failed: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries * 60)
+
+
+@shared_task
+def send_shift_assignment_email(shift_id):
+    """Send email when staff assigned to shift"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home', 'shift_type').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        subject = f"Shift Assignment: {shift.date.strftime('%d %b %Y')}"
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+You have been assigned to a shift:
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+Shift Type: {shift.shift_type.name}
+
+Please confirm your availability or contact your manager if you have any concerns.
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_leave_approval_email(leave_request_id, approved):
+    """Send email when leave request is approved/rejected"""
+    from scheduling.models import LeaveRequest
+    
+    try:
+        leave_request = LeaveRequest.objects.select_related('staff__user', 'approved_by').get(id=leave_request_id)
+        
+        if not leave_request.staff.user or not leave_request.staff.user.email:
+            return 0
+        
+        status = "Approved" if approved else "Rejected"
+        subject = f"Leave Request {status}: {leave_request.start_date.strftime('%d %b')} - {leave_request.end_date.strftime('%d %b')}"
+        
+        message = f"""
+Dear {leave_request.staff.user.get_full_name()},
+
+Your leave request has been {status.lower()}.
+
+Start Date: {leave_request.start_date.strftime('%A, %d %B %Y')}
+End Date: {leave_request.end_date.strftime('%A, %d %B %Y')}
+Reason: {leave_request.reason}
+{f"Approved by: {leave_request.approved_by.get_full_name()}" if leave_request.approved_by else ""}
+
+{f"Please check the system for more details." if not approved else "Enjoy your time off!"}
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[leave_request.staff.user.email]
+        )
+    
+    except LeaveRequest.DoesNotExist:
+        logger.error(f"Leave request {leave_request_id} not found")
+        return 0
+
+
+@shared_task
+def send_schedule_change_email(shift_id, change_type):
+    """Send email when schedule is changed"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        subject = f"Schedule Change: {change_type.title()} - {shift.date.strftime('%d %b %Y')}"
+        
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+Your shift schedule has been {change_type.lower()}:
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+
+Please check the system for updated details.
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_shift_reminder_email(shift_id, hours_before=24):
+    """Send reminder email before shift starts"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home', 'shift_type').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        if shift.date < timezone.now().date():
+            return 0
+        
+        subject = f"Shift Reminder: Tomorrow at {shift.start_time.strftime('%H:%M')}"
+        
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+Reminder: You have a shift tomorrow!
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+Shift Type: {shift.shift_type.name}
+
+See you tomorrow!
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_daily_shift_reminders():
+    """
+    Daily task to send shift reminders for tomorrow's shifts
+    Scheduled to run at 18:00 daily via Celery Beat
+    """
+    from scheduling.models import Shift
+    
+    tomorrow = timezone.now().date() + timedelta(days=1)
+    
+    shifts = Shift.objects.filter(
+        date=tomorrow,
+        staff__isnull=False,
+        staff__user__isnull=False,
+        staff__user__email__isnull=False
+    ).select_related('staff__user')
+    
+    count = 0
+    for shift in shifts:
+        send_shift_reminder_email.delay(shift.id, hours_before=24)
+        count += 1
+    
+    logger.info(f"📧 Queued {count} shift reminder emails for {tomorrow}")
+    return count
+
+
+@shared_task
+def send_weekly_schedule_summary():
+    """
+    Send weekly schedule summary to all staff
+    Scheduled to run every Sunday at 18:00
+    """
+    from scheduling.models import Shift, Staff
+    
+    today = timezone.now().date()
+    next_monday = today + timedelta(days=(7 - today.weekday()))
+    next_sunday = next_monday + timedelta(days=6)
+    
+    staff_members = Staff.objects.filter(
+        is_active=True,
+        user__isnull=False,
+        user__email__isnull=False
+    ).select_related('user')
+    
+    count = 0
+    for staff in staff_members:
+        shifts = Shift.objects.filter(
+            staff=staff,
+            date__range=[next_monday, next_sunday]
+        ).select_related('home', 'shift_type').order_by('date', 'start_time')
+        
+        if not shifts.exists():
+            continue
+        
+        subject = f"Your Schedule: {next_monday.strftime('%d %b')} - {next_sunday.strftime('%d %b')}"
+        
+        shifts_text = "\n".join([
+            f"  - {s.date.strftime('%a %d %b')}: {s.start_time.strftime('%H:%M')}-{s.end_time.strftime('%H:%M')} at {s.home.name}"
+            for s in shifts
+        ])
+        
+        message = f"""
+Dear {staff.user.get_full_name()},
+
+Your schedule for next week ({next_monday.strftime('%d %b')} - {next_sunday.strftime('%d %b')}):
+
+{shifts_text}
+
+Total Shifts: {shifts.count()}
+
+Have a great week!
+
+Best regards,
+Staff Rota System
+"""
+        
+        send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[staff.user.email]
+        )
+        count += 1
+    
+    logger.info(f"📧 Queued {count} weekly schedule summary emails")
+    return count
+
+
+@shared_task
+def send_urgent_alert_email(subject, message, recipient_emails=None):
+    """Send urgent alert to managers/admins"""
+    if recipient_emails is None:
+        recipient_emails = EmailNotificationService.get_admin_emails()
+    
+    if not recipient_emails:
+        logger.warning("No admin emails configured")
+        return 0
+    
+    subject = f"[URGENT] {subject}"
+    
+    return send_email_notification.delay(
+        subject=subject,
+        message=message,
+        recipient_list=recipient_emails
+    )
+
+
+@shared_task
+def send_bulk_notification_batch(subject, message, recipient_list, batch_size=50):
+    """Send bulk emails in batches"""
+    total = len(recipient_list)
+    sent = 0
+    
+    for i in range(0, total, batch_size):
+        batch = recipient_list[i:i + batch_size]
+        
+        try:
+            send_email_notification.delay(
+                subject=subject,
+                message=message,
+                recipient_list=batch
+            )
+            sent += len(batch)
+        except Exception as e:
+            logger.error(f"Error queuing batch: {e}")
+    
+    logger.info(f"📧 Queued {sent}/{total} emails in batches")
+    return sent
+

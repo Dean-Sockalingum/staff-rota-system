@@ -772,4 +772,15 @@ if CELERY_AVAILABLE:
             'task': 'scheduling.tasks.generate_weekly_workflow_report',
             'schedule': crontab(day_of_week=1, hour=9, minute=0),  # Mondays at 09:00
         },
+        # Task 47: Email Notification Queue - Daily & Weekly Schedules
+        'daily-shift-reminders': {
+            'task': 'scheduling.tasks.send_daily_shift_reminders',
+            'schedule': crontab(hour=18, minute=0),  # Daily at 18:00
+            'options': {'expires': 3500}
+        },
+        'weekly-schedule-summary': {
+            'task': 'scheduling.tasks.send_weekly_schedule_summary',
+            'schedule': crontab(day_of_week=0, hour=18, minute=0),  # Sundays at 18:00
+            'options': {'expires': 3500}
+        },
     }
