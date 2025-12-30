@@ -39,9 +39,8 @@ if [ -x .git/hooks/post-push ]; then
 fi
 
 # Step 4: Summary
-echo -e "${GREEN}[4/4]${NC} NVMe sync completed (check log: ~/Library/Logs/staff_rota_post_push.log)""
+echo -e "${GREEN}[4/4]${NC} NVMe sync completed (check log: ~/Library/Logs/staff_rota_post_push.log)"
 
-# Step 5: Summary
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}✓ All locations synced successfully!${NC}"
