@@ -157,6 +157,20 @@ from .views_documents import (
     category_manage,
     category_create
 )
+from .views_videos import (
+    video_library,
+    video_detail,
+    video_upload,
+    video_update_progress,
+    video_rate,
+    my_progress,
+    playlist_create,
+    playlist_detail,
+    playlist_add_video,
+    category_list as video_category_list,
+    video_analytics
+)
+
 
 urlpatterns = [
     # Authentication
@@ -587,4 +601,17 @@ urlpatterns = [
     path('documents/shared/', shared_with_me, name='shared_with_me'),
     path('documents/categories/', category_manage, name='category_manage'),
     path('documents/categories/create/', category_create, name='category_create'),
+    
+    # Task 54: Video Tutorial Library
+    path('videos/', video_library, name='video_library'),
+    path('videos/upload/', video_upload, name='video_upload'),
+    path('videos/<int:video_id>/', video_detail, name='video_detail'),
+    path('videos/<int:video_id>/progress/', video_update_progress, name='video_update_progress'),
+    path('videos/<int:video_id>/rate/', video_rate, name='video_rate'),
+    path('videos/progress/', my_progress, name='my_video_progress'),
+    path('videos/categories/', video_category_list, name='video_category_list'),
+    path('videos/analytics/', video_analytics, name='video_analytics'),
+    path('playlists/create/', playlist_create, name='playlist_create'),
+    path('playlists/<int:playlist_id>/', playlist_detail, name='playlist_detail'),
+    path('playlists/<int:playlist_id>/add/', playlist_add_video, name='playlist_add_video'),
 ]

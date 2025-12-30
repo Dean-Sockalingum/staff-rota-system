@@ -4688,3 +4688,13 @@ from .models_documents import (
     DocumentShare,
     DocumentComment
 )
+
+# Import video models (Task 54)
+from .models_videos import (
+    VideoCategory,
+    Video,
+    VideoProgress,
+    VideoRating,
+    VideoPlaylist,
+    PlaylistVideo
+)
