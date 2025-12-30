@@ -4736,3 +4736,9 @@ from .models_activity import (
     RecentActivity,
     ActivityFeedWidget
 )
+
+# Task 56: Compliance Dashboard Widgets models
+from .models_compliance_widgets import (
+    ComplianceMetric,
+    ComplianceWidget
+)
