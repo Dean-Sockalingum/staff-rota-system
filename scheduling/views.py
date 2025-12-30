@@ -14206,60 +14206,63 @@ def budget_forecast_detail(request, forecast_id):
 
 @login_required
 def compliance_dashboard(request):
-    """Compliance monitoring dashboard"""
-    from .compliance_monitoring import calculate_compliance_score, check_certification_expiry, check_training_compliance, get_overdue_certifications
+    """Compliance monitoring dashboard - Updated for new models"""
+    from .models import StaffCertification, RegulatoryCheck, AuditTrail
+    from django.utils import timezone
+    from datetime import timedelta
     
     care_home = request.user.care_home
+    today = timezone.now().date()
     
-    # Get compliance score
-    compliance_data = calculate_compliance_score(care_home)
+    # Get certification stats
+    expiring_certifications = StaffCertification.objects.filter(
+        staff_member__care_home=care_home,
+        status='EXPIRING_SOON'
+    ).select_related('staff_member')[:10]
     
-    # Get certification data
-    cert_data = check_certification_expiry(care_home, days_ahead=90)
+    expired_certifications_count = StaffCertification.objects.filter(
+        staff_member__care_home=care_home,
+        status='EXPIRED'
+    ).count()
     
-    # Get training data
-    training_data = check_training_compliance(care_home)
-    
-    # Get overdue certifications
-    overdue_certs = get_overdue_certifications(care_home)[:10]
+    expiring_certifications_count = expiring_certifications.count()
     
     # Get recent compliance checks
-    recent_checks = ComplianceCheck.objects.filter(
+    recent_checks = RegulatoryCheck.objects.filter(
         care_home=care_home
-    ).order_by('-check_date')[:5]
+    ).order_by('-check_date')[:10]
     
-    # Count issues
-    critical_issues = ComplianceCheck.objects.filter(
+    # Get failed checks that need action
+    failed_checks = RegulatoryCheck.objects.filter(
         care_home=care_home,
-        severity='CRITICAL',
+        status__in=['FAIL', 'WARNING'],
+        action_required=True,
         action_completed=False
+    ).order_by('-severity', 'action_deadline')
+    
+    # Count overdue actions
+    overdue_checks_count = failed_checks.filter(
+        action_deadline__lt=today
     ).count()
     
-    high_issues = ComplianceCheck.objects.filter(
-        care_home=care_home,
-        severity='HIGH',
-        action_completed=False
-    ).count()
+    # Calculate compliance score
+    total_checks = recent_checks.count()
+    if total_checks > 0:
+        passed_checks = recent_checks.filter(status='PASS').count()
+        compliance_score = (passed_checks / total_checks) * 100
+    else:
+        compliance_score = 100
     
     context = {
-        'compliance_score': compliance_data['total_score'],
-        'compliance_level': compliance_data['compliance_level'],
-        'compliance_color': compliance_data['compliance_color'],
-        'cert_score': compliance_data['cert_score'],
-        'training_score': compliance_data['training_score'],
-        'staffing_score': compliance_data['staffing_score'],
-        'expiring_soon_count': cert_data['expiring_soon_count'],
-        'expired_count': cert_data['expired_count'],
-        'critical_expiring': cert_data['critical_expiring'],
-        'critical_expired': cert_data['critical_expired'],
-        'training_compliance_rate': training_data['overall_compliance_rate'],
-        'staff_non_compliant': training_data['overall_non_compliant'],
-        'overdue_certifications': overdue_certs,
+        'compliance_score': compliance_score,
+        'expiring_certifications': expiring_certifications,
+        'expiring_certifications_count': expiring_certifications_count,
+        'expired_certifications_count': expired_certifications_count,
         'recent_checks': recent_checks,
-        'critical_issues': critical_issues,
-        'high_issues': high_issues,
+        'failed_checks': failed_checks[:10],
+        'overdue_checks_count': overdue_checks_count,
     }
-    return render(request, 'scheduling/compliance_dashboard.html', context)
+    return render(request, 'scheduling/compliance_dashboard_new.html', context)
 
 
 @login_required
