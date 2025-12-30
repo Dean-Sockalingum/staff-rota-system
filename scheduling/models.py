@@ -3816,3 +3816,280 @@ class AuditTrail(models.Model):
         )
 
 
+# ========================
+# Staff Performance Models
+# Phase 3 - Task 34
+# ========================
+
+class AttendanceRecord(models.Model):
+    """Track staff attendance and punctuality"""
+    STATUS_CHOICES = [
+        ('PRESENT', 'Present'),
+        ('LATE', 'Late'),
+        ('ABSENT', 'Absent'),
+        ('SICK', 'Sick Leave'),
+        ('AUTHORIZED', 'Authorized Absence'),
+        ('UNAUTHORIZED', 'Unauthorized Absence'),
+    ]
+    
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_records')
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='attendance_records')
+    
+    date = models.DateField()
+    shift_type = models.CharField(max_length=20)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PRESENT')
+    
+    # Time tracking
+    scheduled_start = models.TimeField()
+    actual_start = models.TimeField(null=True, blank=True)
+    scheduled_end = models.TimeField()
+    actual_end = models.TimeField(null=True, blank=True)
+    
+    # Punctuality
+    minutes_late = models.IntegerField(default=0, help_text="Minutes late for shift start")
+    minutes_early_departure = models.IntegerField(default=0, help_text="Minutes left before shift end")
+    
+    # Completion
+    shift_completed = models.BooleanField(default=True)
+    completion_notes = models.TextField(blank=True)
+    
+    # Documentation
+    reason_for_absence = models.TextField(blank=True)
+    documentation_provided = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_attendance')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Attendance Record'
+        verbose_name_plural = 'Attendance Records'
+        ordering = ['-date']
+        unique_together = ['staff_member', 'shift']
+        indexes = [
+            models.Index(fields=['staff_member', '-date']),
+            models.Index(fields=['date', 'status']),
+            models.Index(fields=['shift', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.date} ({self.get_status_display()})"
+    
+    def save(self, *args, **kwargs):
+        """Calculate punctuality metrics"""
+        if self.actual_start and self.scheduled_start:
+            from datetime import datetime, timedelta
+            scheduled = datetime.combine(self.date, self.scheduled_start)
+            actual = datetime.combine(self.date, self.actual_start)
+            diff = (actual - scheduled).total_seconds() / 60
+            self.minutes_late = max(0, int(diff))
+            
+        if self.actual_end and self.scheduled_end:
+            from datetime import datetime, timedelta
+            scheduled = datetime.combine(self.date, self.scheduled_end)
+            actual = datetime.combine(self.date, self.actual_end)
+            diff = (scheduled - actual).total_seconds() / 60
+            self.minutes_early_departure = max(0, int(diff))
+        
+        super().save(*args, **kwargs)
+
+
+class StaffPerformance(models.Model):
+    """Track staff performance metrics and scores"""
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='performance_records')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, related_name='staff_performance')
+    
+    # Period
+    period_start = models.DateField()
+    period_end = models.DateField()
+    
+    # Attendance Metrics
+    total_shifts = models.IntegerField(default=0)
+    shifts_attended = models.IntegerField(default=0)
+    shifts_late = models.IntegerField(default=0)
+    shifts_absent = models.IntegerField(default=0)
+    unauthorized_absences = models.IntegerField(default=0)
+    
+    attendance_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Percentage (0-100)")
+    punctuality_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Percentage (0-100)")
+    
+    # Completion Metrics
+    shifts_completed = models.IntegerField(default=0)
+    completion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Percentage (0-100)")
+    
+    # Time Metrics
+    total_minutes_late = models.IntegerField(default=0)
+    average_minutes_late = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    
+    # Performance Scores
+    attendance_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Score 0-100")
+    punctuality_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Score 0-100")
+    completion_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Score 0-100")
+    overall_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Score 0-100")
+    
+    # Rating
+    RATING_CHOICES = [
+        ('EXCELLENT', 'Excellent'),
+        ('GOOD', 'Good'),
+        ('SATISFACTORY', 'Satisfactory'),
+        ('NEEDS_IMPROVEMENT', 'Needs Improvement'),
+        ('POOR', 'Poor'),
+    ]
+    performance_rating = models.CharField(max_length=20, choices=RATING_CHOICES, default='SATISFACTORY')
+    
+    # Feedback
+    strengths = models.TextField(blank=True)
+    areas_for_improvement = models.TextField(blank=True)
+    manager_notes = models.TextField(blank=True)
+    
+    # Review
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='performance_reviews_given')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Staff Performance'
+        verbose_name_plural = 'Staff Performance Records'
+        ordering = ['-period_end']
+        unique_together = ['staff_member', 'period_start', 'period_end']
+        indexes = [
+            models.Index(fields=['staff_member', '-period_end']),
+            models.Index(fields=['care_home', 'performance_rating']),
+            models.Index(fields=['overall_score']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.period_start} to {self.period_end} ({self.overall_score})"
+    
+    def calculate_scores(self):
+        """Calculate all performance scores"""
+        # Attendance Score (0-100)
+        if self.total_shifts > 0:
+            self.attendance_rate = (self.shifts_attended / self.total_shifts) * 100
+            self.attendance_score = self.attendance_rate
+            
+            # Punctuality Score (0-100) - penalize lateness
+            on_time_shifts = self.shifts_attended - self.shifts_late
+            self.punctuality_rate = (on_time_shifts / self.total_shifts) * 100 if self.total_shifts > 0 else 100
+            self.punctuality_score = self.punctuality_rate
+            
+            # Completion Score (0-100)
+            self.completion_rate = (self.shifts_completed / self.total_shifts) * 100
+            self.completion_score = self.completion_rate
+        else:
+            self.attendance_rate = 100
+            self.attendance_score = 100
+            self.punctuality_rate = 100
+            self.punctuality_score = 100
+            self.completion_rate = 100
+            self.completion_score = 100
+        
+        # Average minutes late
+        if self.shifts_late > 0:
+            self.average_minutes_late = self.total_minutes_late / self.shifts_late
+        else:
+            self.average_minutes_late = 0
+        
+        # Overall Score (weighted average)
+        self.overall_score = (
+            self.attendance_score * 0.4 +  # 40% weight
+            self.punctuality_score * 0.3 +  # 30% weight
+            self.completion_score * 0.3     # 30% weight
+        )
+        
+        # Determine rating
+        if self.overall_score >= 90:
+            self.performance_rating = 'EXCELLENT'
+        elif self.overall_score >= 75:
+            self.performance_rating = 'GOOD'
+        elif self.overall_score >= 60:
+            self.performance_rating = 'SATISFACTORY'
+        elif self.overall_score >= 40:
+            self.performance_rating = 'NEEDS_IMPROVEMENT'
+        else:
+            self.performance_rating = 'POOR'
+        
+        self.save()
+
+
+class PerformanceReview(models.Model):
+    """Formal performance review records"""
+    REVIEW_TYPES = [
+        ('PROBATION', 'Probation Review'),
+        ('QUARTERLY', 'Quarterly Review'),
+        ('ANNUAL', 'Annual Review'),
+        ('DISCIPLINARY', 'Disciplinary Review'),
+        ('EXCELLENCE', 'Excellence Recognition'),
+    ]
+    
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='formal_reviews')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, related_name='performance_reviews')
+    
+    review_type = models.CharField(max_length=20, choices=REVIEW_TYPES)
+    review_date = models.DateField()
+    
+    # Linked performance record
+    performance_record = models.ForeignKey(StaffPerformance, on_delete=models.SET_NULL, null=True, blank=True, related_name='formal_reviews')
+    
+    # Scores (manager assessment)
+    quality_of_work = models.IntegerField(default=5, help_text="Score 1-10")
+    reliability = models.IntegerField(default=5, help_text="Score 1-10")
+    teamwork = models.IntegerField(default=5, help_text="Score 1-10")
+    communication = models.IntegerField(default=5, help_text="Score 1-10")
+    professionalism = models.IntegerField(default=5, help_text="Score 1-10")
+    
+    # Comments
+    achievements = models.TextField(blank=True)
+    concerns = models.TextField(blank=True)
+    development_goals = models.TextField(blank=True)
+    action_plan = models.TextField(blank=True)
+    
+    # Staff feedback
+    staff_comments = models.TextField(blank=True)
+    staff_acknowledged = models.BooleanField(default=False)
+    staff_acknowledged_at = models.DateTimeField(null=True, blank=True)
+    
+    # Outcome
+    OUTCOME_CHOICES = [
+        ('CONTINUE', 'Continue as Normal'),
+        ('IMPROVE', 'Improvement Plan'),
+        ('PROMOTE', 'Promotion Recommended'),
+        ('WARNING', 'Formal Warning'),
+        ('TERMINATE', 'Termination Recommended'),
+    ]
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES, default='CONTINUE')
+    
+    # Review details
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='reviews_conducted')
+    next_review_date = models.DateField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Performance Review'
+        verbose_name_plural = 'Performance Reviews'
+        ordering = ['-review_date']
+        indexes = [
+            models.Index(fields=['staff_member', '-review_date']),
+            models.Index(fields=['review_type', 'outcome']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.get_review_type_display()} ({self.review_date})"
+    
+    def average_score(self):
+        """Calculate average score across all categories"""
+        scores = [
+            self.quality_of_work,
+            self.reliability,
+            self.teamwork,
+            self.communication,
+            self.professionalism,
+        ]
+        return sum(scores) / len(scores) if scores else 0
+
+
