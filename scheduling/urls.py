@@ -61,6 +61,22 @@ from .views_health_monitoring import (
     collect_metrics_now,
     system_info_api
 )
+from .views_audit import (
+    audit_dashboard,
+    data_changes_log,
+    access_log_view,
+    user_activity_view,
+    object_history_view,
+    compliance_dashboard,
+    compliance_violations_view,
+    acknowledge_violation,
+    resolve_violation,
+    generate_audit_report_view,
+    audit_reports_list,
+    view_audit_report,
+    export_audit_data,
+    suspicious_activity_api
+)
 from .views_integration_api import (
     api_get_token,
     api_list_staff,
@@ -414,4 +430,20 @@ urlpatterns = [
     path("health/alerts/", alert_rules_view, name="alert_rules"),
     path("health/collect-now/", collect_metrics_now, name="collect_metrics_now"),
     path("health/system-info/", system_info_api, name="system_info_api"),
+
+    # Task 43: Audit Trail URLs
+    path("audit/", audit_dashboard, name="audit_dashboard"),
+    path("audit/data-changes/", data_changes_log, name="data_changes_log"),
+    path("audit/access-log/", access_log_view, name="access_log"),
+    path("audit/user/<int:user_id>/", user_activity_view, name="user_activity"),
+    path("audit/object-history/", object_history_view, name="object_history"),
+    path("audit/compliance/", compliance_dashboard, name="compliance_dashboard"),
+    path("audit/compliance/violations/", compliance_violations_view, name="compliance_violations"),
+    path("audit/compliance/violations/<int:violation_id>/acknowledge/", acknowledge_violation, name="acknowledge_violation"),
+    path("audit/compliance/violations/<int:violation_id>/resolve/", resolve_violation, name="resolve_violation"),
+    path("audit/reports/generate/", generate_audit_report_view, name="generate_audit_report"),
+    path("audit/reports/", audit_reports_list, name="audit_reports_list"),
+    path("audit/reports/<int:report_id>/", view_audit_report, name="view_audit_report"),
+    path("audit/export/", export_audit_data, name="export_audit_data"),
+    path("audit/suspicious-activity/api/", suspicious_activity_api, name="suspicious_activity_api"),
 ]
