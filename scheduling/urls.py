@@ -48,6 +48,16 @@ from .views_report_builder import (
     api_get_data_sources,
     api_preview_report
 )
+from .views_integration_api import (
+    api_get_token,
+    api_list_staff,
+    api_get_staff,
+    api_list_shifts,
+    api_list_leave_requests,
+    api_export_payroll,
+    api_create_webhook,
+    api_get_info
+)
 
 urlpatterns = [
     # Authentication
@@ -361,4 +371,21 @@ urlpatterns = [
     path('feedback/thanks/', views.demo_feedback_thanks, name='demo_feedback_thanks'),
     path('feedback/results/', views.view_feedback_results, name='view_feedback_results'),
     path('feature-request/', views.submit_feature_request, name='submit_feature_request'),
+    
+    # Task 41: Integration API URLs
+    # Authentication
+    path("api/v1/integration/auth/token", api_get_token, name="api_get_token"),
+    # Staff endpoints
+    path("api/v1/integration/staff", api_list_staff, name="api_list_staff"),
+    path("api/v1/integration/staff/<str:sap>", api_get_staff, name="api_get_staff"),
+    # Shift endpoints
+    path("api/v1/integration/shifts", api_list_shifts, name="api_list_shifts"),
+    # Leave endpoints
+    path("api/v1/integration/leave-requests", api_list_leave_requests, name="api_list_leave_requests"),
+    # Payroll endpoints
+    path("api/v1/integration/payroll/export", api_export_payroll, name="api_export_payroll"),
+    # Webhook endpoints
+    path("api/v1/integration/webhooks", api_create_webhook, name="api_create_webhook"),
+    # System info
+    path("api/v1/integration/info", api_get_info, name="api_get_info"),
 ]

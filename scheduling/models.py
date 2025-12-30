@@ -4601,6 +4601,17 @@ from .models_reports import (
     ReportFavorite
 )
 
+# Import integration models (Task 41)
+from .models_integrations import (
+    APIClient,
+    APIToken,
+    APIRateLimit,
+    APIRequestLog,
+    WebhookEndpoint,
+    WebhookDelivery,
+    DataSyncJob
+)
+
 
 
 
