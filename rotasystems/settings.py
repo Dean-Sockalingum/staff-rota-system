@@ -82,6 +82,9 @@ MIDDLEWARE = [
     # Phase 6: Security middleware
     'axes.middleware.AxesMiddleware',  # Account lockout protection
     'csp.middleware.CSPMiddleware',  # Content Security Policy
+    # Task 51: Sentry error tracking and performance monitoring
+    'scheduling.middleware.sentry_middleware.SentryContextMiddleware',
+    'scheduling.middleware.sentry_middleware.SentryPerformanceMiddleware',
     # Custom middleware
     'scheduling.middleware.AuditLoggingMiddleware',  # Automatic audit logging
 ]
@@ -830,3 +833,57 @@ SEARCH_RESULTS_PER_PAGE = 20
 SEARCH_AUTOCOMPLETE_MIN_LENGTH = 2
 SEARCH_HIGHLIGHT_ENABLED = True
 SEARCH_ANALYTICS_ENABLED = True  # Track search queries for analytics
+
+# ===== Task 51: Sentry Error Tracking Configuration =====
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+
+# Initialize Sentry
+# Get DSN from environment variable (keep it secret!)
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+        # We recommend adjusting this value in production (0.1 = 10% of transactions)
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        
+        # Set profiles_sample_rate to 1.0 to profile 100% of sampled transactions.
+        # We recommend adjusting this value in production (0.1 = 10% of sampled transactions)
+        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
+        
+        # Send default PII (Personally Identifiable Information) such as user id, username, email
+        send_default_pii=True,
+        
+        # Enable performance monitoring
+        enable_tracing=True,
+        
+        # Set environment (development, staging, production)
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'development'),
+        
+        # Release tracking (use git commit SHA or version number)
+        release=os.environ.get('SENTRY_RELEASE', 'staff-rota-system@1.0.0'),
+        
+        # Ignore common errors
+        ignore_errors=[
+            'PermissionDenied',
+            'Http404',
+        ],
+        
+        # Before sending an event, modify it
+        before_send=lambda event, hint: event if not DEBUG else None,  # Don't send in DEBUG mode
+    )
+
+# Sentry settings for user feedback
+SENTRY_USER_FEEDBACK_ENABLED = True
+SENTRY_FEEDBACK_WIDGET_ENABLED = True

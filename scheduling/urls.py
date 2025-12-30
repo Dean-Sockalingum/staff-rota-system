@@ -123,6 +123,9 @@ from .views_preferences import (
     reset_preferences,
     export_preferences
 )
+from .views_errors import (
+    trigger_error
+)
 
 urlpatterns = [
     # Authentication
@@ -147,6 +150,9 @@ urlpatterns = [
     path('settings/update-theme/', update_theme, name='update_theme'),
     path('settings/reset/', reset_preferences, name='reset_preferences'),
     path('settings/export/', export_preferences, name='export_preferences'),
+    
+    # Task 51: Error Tracking - Test Error View (DEBUG only)
+    path('test-sentry-error/', trigger_error, name='trigger_error'),
     
     # PWA Offline Page
     path('offline/', views.offline_view, name='offline'),

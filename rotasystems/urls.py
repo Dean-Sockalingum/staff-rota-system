@@ -29,6 +29,10 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login
 ]
 
+# Task 51: Custom error handlers
+handler404 = 'scheduling.views_errors.handler404'
+handler500 = 'scheduling.views_errors.handler500'
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
