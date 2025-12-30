@@ -1,0 +1,271 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Two-Factor Authentication Setup{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qr-code-container {
+        text-align: center;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .backup-codes-container {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .backup-code {
+        font-family: 'Courier New', monospace;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin: 5px 0;
+        display: inline-block;
+    }
+    .alert-2fa-required {
+        background: #f8d7da;
+        border: 2px solid #f5c6cb;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .verification-input {
+        font-size: 24px;
+        text-align: center;
+        letter-spacing: 5px;
+        font-family: 'Courier New', monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <h2>
+                <i class="fas fa-shield-alt"></i> Two-Factor Authentication (2FA)
+            </h2>
+            
+            {% if requires_2fa and not has_2fa %}
+            <div class="alert-2fa-required">
+                <strong><i class="fas fa-exclamation-triangle"></i> 2FA Required</strong><br>
+                As a {{ user.staffprofile.role.name|default:"manager" }}, you are required to enable 
+                Two-Factor Authentication for enhanced security.
+            </div>
+            {% endif %}
+            
+            {% if has_2fa and totp_device.confirmed %}
+            <!-- 2FA Already Enabled -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title text-success">
+                        <i class="fas fa-check-circle"></i> 2FA is Enabled
+                    </h5>
+                    <p class="card-text">
+                        Your account is protected with Two-Factor Authentication.
+                    </p>
+                    
+                    <div class="mt-3">
+                        <h6>Active Devices:</h6>
+                        <ul>
+                            <li><i class="fas fa-mobile-alt"></i> {{ totp_device.name }}</li>
+                            <li><i class="fas fa-key"></i> Backup Codes</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Actions:</h6>
+                        <form method="post" action="{% url 'scheduling:regenerate_backup_codes' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-sync"></i> Regenerate Backup Codes
+                            </button>
+                        </form>
+                        
+                        {% if not requires_2fa %}
+                        <form method="post" action="{% url 'scheduling:two_factor_disable' %}" style="display:inline;" 
+                              onsubmit="return confirm('Are you sure you want to disable 2FA? This will make your account less secure.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Disable 2FA
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% elif totp_device and not totp_device.confirmed %}
+            <!-- 2FA Setup In Progress - Scan QR Code -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Step 1: Scan QR Code</h5>
+                    <p>
+                        Use an authenticator app like <strong>Google Authenticator</strong>, 
+                        <strong>Microsoft Authenticator</strong>, or <strong>Authy</strong> 
+                        to scan this QR code:
+                    </p>
+                    
+                    {% if qr_code_data %}
+                    <div class="qr-code-container">
+                        <img src="data:image/png;base64,{{ qr_code_data }}" alt="2FA QR Code" style="max-width: 250px;">
+                        <p class="text-muted mt-2">Scan with your authenticator app</p>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <h5 class="card-title">Step 2: Enter Verification Code</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="verify">
+                        
+                        <div class="form-group">
+                            <label for="token">Enter the 6-digit code from your authenticator app:</label>
+                            <input type="text" 
+                                   class="form-control verification-input" 
+                                   id="token" 
+                                   name="token" 
+                                   maxlength="6" 
+                                   pattern="[0-9]{6}" 
+                                   placeholder="000000"
+                                   autocomplete="off"
+                                   required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check"></i> Verify & Enable 2FA
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            {% if backup_codes %}
+            <!-- Display Backup Codes (One Time Only) -->
+            <div class="backup-codes-container mt-4">
+                <h5><i class="fas fa-exclamation-triangle"></i> Save Your Backup Codes</h5>
+                <p>
+                    <strong>Important:</strong> These backup codes will only be shown once. 
+                    Save them in a secure location. You can use them to access your account 
+                    if you lose access to your authenticator app.
+                </p>
+                
+                <div class="row mt-3">
+                    {% for code in backup_codes %}
+                    <div class="col-md-6">
+                        <div class="backup-code">{{ code }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="printBackupCodes()">
+                        <i class="fas fa-print"></i> Print Backup Codes
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadBackupCodes()">
+                        <i class="fas fa-download"></i> Download as Text
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <!-- 2FA Not Enabled - Show Setup Button -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Why Enable 2FA?</h5>
+                    <p>
+                        Two-Factor Authentication adds an extra layer of security to your account. 
+                        Even if someone knows your password, they won't be able to access your account 
+                        without the second factor.
+                    </p>
+                    
+                    <h6 class="mt-4">Benefits:</h6>
+                    <ul>
+                        <li><i class="fas fa-lock text-success"></i> Enhanced security for sensitive data</li>
+                        <li><i class="fas fa-shield-alt text-success"></i> Protection against password breaches</li>
+                        <li><i class="fas fa-check text-success"></i> Compliance with security standards</li>
+                        <li><i class="fas fa-key text-success"></i> Backup codes for account recovery</li>
+                    </ul>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="enable">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-shield-alt"></i> Enable Two-Factor Authentication
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Info Section -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6>How 2FA Works:</h6>
+                    <ol>
+                        <li>You install an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, or Authy)</li>
+                        <li>You scan the QR code to link the app to your account</li>
+                        <li>Each time you log in, you enter your password + a 6-digit code from the app</li>
+                        <li>The code changes every 30 seconds, making it impossible for others to use</li>
+                    </ol>
+                    
+                    <h6 class="mt-3">Lost Your Device?</h6>
+                    <p>
+                        You can use your backup codes to access your account if you lose your phone. 
+                        Keep them in a safe place (password manager, secure note, or printed copy).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function printBackupCodes() {
+    window.print();
+}
+
+function downloadBackupCodes() {
+    const codes = [
+        {% for code in backup_codes %}
+        "{{ code }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const content = "Staff Rota System - Backup Codes\n" +
+                    "Generated: " + new Date().toLocaleString() + "\n" +
+                    "User: {{ user.get_full_name }}\n\n" +
+                    "IMPORTANT: Keep these codes secure!\n\n" +
+                    codes.join("\n") + "\n\n" +
+                    "Use these codes if you lose access to your authenticator app.\n" +
+                    "Each code can only be used once.";
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'staffrota_backup_codes.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Auto-submit when 6 digits entered
+document.getElementById('token')?.addEventListener('input', function(e) {
+    if (this.value.length === 6) {
+        // Optional: auto-submit
+        // this.form.submit();
+    }
+});
+</script>
+{% endblock %}

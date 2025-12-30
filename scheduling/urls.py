@@ -105,12 +105,26 @@ from .views_executive_summary import (
     executive_summary_api_forecast,
     executive_summary_api_insights
 )
+from .views_2fa import (
+    two_factor_setup,
+    two_factor_disable,
+    two_factor_verify,
+    regenerate_backup_codes,
+    two_factor_status
+)
 
 urlpatterns = [
     # Authentication
     path('', views.login_view, name='login'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    
+    # Task 48: Two-Factor Authentication
+    path('2fa/setup/', two_factor_setup, name='two_factor_setup'),
+    path('2fa/verify/', two_factor_verify, name='two_factor_verify'),
+    path('2fa/disable/', two_factor_disable, name='two_factor_disable'),
+    path('2fa/regenerate-backup-codes/', regenerate_backup_codes, name='regenerate_backup_codes'),
+    path('api/2fa/status/', two_factor_status, name='two_factor_status'),
     
     # PWA Offline Page
     path('offline/', views.offline_view, name='offline'),

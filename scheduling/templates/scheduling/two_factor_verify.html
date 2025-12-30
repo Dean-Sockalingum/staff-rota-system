@@ -1,0 +1,110 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Two-Factor Verification{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verification-container {
+        max-width: 500px;
+        margin: 100px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .verification-input {
+        font-size: 32px;
+        text-align: center;
+        letter-spacing: 10px;
+        font-family: 'Courier New', monospace;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .shield-icon {
+        font-size: 64px;
+        color: #28a745;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="verification-container">
+        <div class="shield-icon">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        
+        <h3 class="text-center mb-4">Two-Factor Verification</h3>
+        
+        <p class="text-center text-muted">
+            Enter the 6-digit code from your authenticator app
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <input type="text" 
+                       class="form-control verification-input" 
+                       id="token" 
+                       name="token" 
+                       maxlength="6" 
+                       pattern="[0-9]{6}" 
+                       placeholder="000000"
+                       autocomplete="off"
+                       autofocus
+                       required>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-block btn-lg">
+                <i class="fas fa-check"></i> Verify
+            </button>
+        </form>
+        
+        <hr class="my-4">
+        
+        <div class="text-center">
+            <p class="text-muted mb-2">Lost access to your authenticator app?</p>
+            <button class="btn btn-link" data-toggle="collapse" data-target="#backupCodeSection">
+                Use a backup code instead
+            </button>
+            
+            <div class="collapse mt-3" id="backupCodeSection">
+                <div class="alert alert-info">
+                    <strong>Backup Codes</strong><br>
+                    Enter one of your saved backup codes above.<br>
+                    <small>Each code can only be used once.</small><br>
+                    <small class="text-muted">Remaining codes: {{ backup_count }}</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'scheduling:logout' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-sign-out-alt"></i> Log Out
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-submit when 6 digits entered
+document.getElementById('token').addEventListener('input', function(e) {
+    // Remove non-numeric characters
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    if (this.value.length === 6) {
+        // Optional: auto-submit after brief delay
+        setTimeout(() => {
+            this.form.submit();
+        }, 300);
+    }
+});
+
+// Auto-focus on input
+document.getElementById('token').focus();
+</script>
+{% endblock %}

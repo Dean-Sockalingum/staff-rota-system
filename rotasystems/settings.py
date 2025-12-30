@@ -52,6 +52,10 @@ INSTALLED_APPS = [
     # Phase 6: Security & ML apps
     'axes',  # Account lockout protection
     'auditlog',  # Audit logging for compliance
+    # Task 48: Two-Factor Authentication
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',  # Backup codes
     # Core apps
     'scheduling',
     'scheduling.management',
@@ -68,6 +72,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',  # Task 48: 2FA verification
+    'scheduling.middleware.two_factor_middleware.TwoFactorAuthMiddleware',  # Task 48: 2FA enforcement
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'scheduling.middleware.cache_middleware.CacheInvalidationMiddleware',  # Task 44: Cache management
@@ -784,3 +790,19 @@ if CELERY_AVAILABLE:
             'options': {'expires': 3500}
         },
     }
+
+# ===== Task 48: Two-Factor Authentication Settings =====
+
+# OTP (One-Time Password) Settings
+OTP_TOTP_ISSUER = 'Staff Rota System'  # Displayed in authenticator apps
+
+# Session timeout for 2FA verification (optional)
+# User must re-verify 2FA after this period
+OTP_SESSION_TIMEOUT = 86400  # 24 hours (in seconds)
+
+# Roles that require mandatory 2FA
+REQUIRED_2FA_ROLES = [
+    'is_staff',  # Django staff users
+    'is_superuser',  # Django superusers
+    'Manager',  # Staff with Manager role
+]
