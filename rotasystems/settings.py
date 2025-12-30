@@ -70,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'scheduling.middleware.cache_middleware.CacheInvalidationMiddleware',  # Task 44: Cache management
     # Phase 6: Security middleware
     'axes.middleware.AxesMiddleware',  # Account lockout protection
     'csp.middleware.CSPMiddleware',  # Content Security Policy
@@ -353,25 +354,30 @@ USE_TZ = True
 if not DEBUG and config('REDIS_URL', default=None):
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'BACKEND': 'django_redis.cache.RedisCache',
             'LOCATION': config('REDIS_URL'),
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
                 'CONNECTION_POOL_KWARGS': {'max_connections': 50},
                 'SOCKET_CONNECT_TIMEOUT': 5,
                 'SOCKET_TIMEOUT': 5,
+                'PARSER_CLASS': 'redis.connection.PythonParser',
+                'PICKLE_VERSION': -1,  # Use latest pickle protocol
             },
             'KEY_PREFIX': 'rota',
             'TIMEOUT': 300,  # Default 5 minutes
         }
     }
 else:
-    # Development: Use local memory cache
+    # Development: Use local memory cache (fast, no Redis needed)
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'unique-snowflake',
             'TIMEOUT': 300,
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000
+            }
         }
     }
 
@@ -384,6 +390,11 @@ CACHES['template_fragments'] = {
 CACHES['static_data'] = {
     **CACHES['default'],
     'TIMEOUT': 3600,  # 1 hour for relatively static data (homes, roles)
+}
+
+CACHES['dashboard'] = {
+    **CACHES['default'],
+    'TIMEOUT': 300,  # 5 minutes for dashboard data
 }
 STATIC_URL = 'static/'
 STATIC_ROOT = config('STATIC_ROOT', default=str(BASE_DIR / 'staticfiles'))

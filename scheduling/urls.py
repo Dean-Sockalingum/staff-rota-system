@@ -87,6 +87,11 @@ from .views_integration_api import (
     api_create_webhook,
     api_get_info
 )
+from .views_cache import (
+    cache_stats_view,
+    clear_cache_view,
+    warm_cache_view
+)
 
 urlpatterns = [
     # Authentication
@@ -157,6 +162,11 @@ urlpatterns = [
     path('audit/reports/', views.audit_report_list, name='audit_report_list'),
     path('audit/reports/<int:report_id>/', views.audit_report_detail, name='audit_report_detail'),
     path('audit/reports/generate/', views.generate_audit_report, name='generate_audit_report'),
+    
+    # Cache Management (Task 44)
+    path('cache/stats/', cache_stats_view, name='cache_stats'),
+    path('cache/clear/', clear_cache_view, name='clear_cache'),
+    path('cache/warm/', warm_cache_view, name='warm_cache'),
     
     # Advanced Analytics Dashboard (Task 39)
     path('analytics/executive/', executive_dashboard, name='analytics_executive_dashboard'),
