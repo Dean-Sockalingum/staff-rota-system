@@ -205,6 +205,14 @@ urlpatterns = [
     path('reports/schedule/create/', views.report_schedule_create, name='report_schedule_create'),
     path('reports/schedule/<int:schedule_id>/delete/', views.report_schedule_delete, name='report_schedule_delete'),
     
+    # KPI Tracking System (Phase 3 - Task 28)
+    path('kpi/', views.kpi_dashboard, name='kpi_dashboard'),
+    path('kpi/<int:kpi_id>/', views.kpi_detail, name='kpi_detail'),
+    path('kpi/calculate/', views.kpi_calculate, name='kpi_calculate'),
+    path('kpi/<int:kpi_id>/targets/', views.kpi_target_manage, name='kpi_target_manage'),
+    path('kpi/executive/', views.kpi_executive_summary, name='kpi_executive_summary'),
+
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

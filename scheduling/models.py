@@ -2159,3 +2159,262 @@ class ScheduledReport(models.Model):
         self.save(update_fields=['next_run'])
         return next_run
 
+
+# ============================================================================
+# TASK 28: KPI TRACKING SYSTEM
+# Models for defining KPIs, setting targets, and tracking performance
+# ============================================================================
+
+class KPIDefinition(models.Model):
+    """Define Key Performance Indicators for tracking"""
+    CATEGORY_CHOICES = [
+        ('STAFFING', 'Staffing Metrics'),
+        ('OCCUPANCY', 'Occupancy Metrics'),
+        ('FINANCIAL', 'Financial Metrics'),
+        ('COMPLIANCE', 'Compliance Metrics'),
+        ('QUALITY', 'Quality of Care'),
+        ('EFFICIENCY', 'Operational Efficiency'),
+    ]
+    
+    CALCULATION_TYPE_CHOICES = [
+        ('PERCENTAGE', 'Percentage'),
+        ('COUNT', 'Count'),
+        ('AVERAGE', 'Average'),
+        ('RATIO', 'Ratio'),
+        ('CURRENCY', 'Currency Amount'),
+    ]
+    
+    FREQUENCY_CHOICES = [
+        ('DAILY', 'Daily'),
+        ('WEEKLY', 'Weekly'),
+        ('MONTHLY', 'Monthly'),
+        ('QUARTERLY', 'Quarterly'),
+    ]
+    
+    name = models.CharField(max_length=200, help_text="KPI name (e.g., 'Staff Turnover Rate')")
+    description = models.TextField(help_text="What this KPI measures and why it matters")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    calculation_type = models.CharField(max_length=20, choices=CALCULATION_TYPE_CHOICES)
+    
+    # Calculation formula (stored as reference, actual calculation in service layer)
+    formula_description = models.TextField(
+        help_text="Human-readable formula (e.g., '(Staff Left / Total Staff) * 100')"
+    )
+    
+    # Measurement settings
+    measurement_frequency = models.CharField(
+        max_length=20,
+        choices=FREQUENCY_CHOICES,
+        default='MONTHLY',
+        help_text="How often this KPI should be measured"
+    )
+    
+    # Target direction (higher is better or lower is better)
+    higher_is_better = models.BooleanField(
+        default=True,
+        help_text="True if higher values are better, False if lower values are better"
+    )
+    
+    # Alert thresholds
+    critical_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Critical alert threshold"
+    )
+    warning_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Warning alert threshold"
+    )
+    
+    # Scope
+    care_home = models.ForeignKey(
+        'CareHome',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Specific care home (null for system-wide KPI)"
+    )
+    unit = models.ForeignKey(
+        'Unit',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Specific unit (null for home-wide or system-wide KPI)"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, related_name='created_kpis')
+    
+    class Meta:
+        ordering = ['category', 'name']
+        verbose_name = 'KPI Definition'
+        verbose_name_plural = 'KPI Definitions'
+    
+    def __str__(self):
+        scope = f" - {self.care_home.name}" if self.care_home else " - System-wide"
+        return f"{self.name}{scope}"
+
+
+class KPITarget(models.Model):
+    """Set targets for KPIs by period"""
+    kpi = models.ForeignKey(KPIDefinition, on_delete=models.CASCADE, related_name='targets')
+    
+    # Target period
+    year = models.IntegerField(help_text="Target year")
+    quarter = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(4)],
+        null=True,
+        blank=True,
+        help_text="Quarter (1-4) for quarterly targets"
+    )
+    month = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        null=True,
+        blank=True,
+        help_text="Month (1-12) for monthly targets"
+    )
+    
+    # Target values
+    target_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Target value to achieve"
+    )
+    stretch_target = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Ambitious stretch target"
+    )
+    minimum_acceptable = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Minimum acceptable performance"
+    )
+    
+    notes = models.TextField(blank=True, null=True, help_text="Target setting rationale or context")
+    
+    set_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, related_name='set_kpi_targets')
+    set_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-year', '-quarter', '-month']
+        unique_together = [['kpi', 'year', 'quarter', 'month']]
+        verbose_name = 'KPI Target'
+        verbose_name_plural = 'KPI Targets'
+    
+    def __str__(self):
+        period = f"{self.year}"
+        if self.quarter:
+            period += f" Q{self.quarter}"
+        if self.month:
+            period += f" M{self.month}"
+        return f"{self.kpi.name} - {period}: {self.target_value}"
+
+
+class KPIMeasurement(models.Model):
+    """Record actual KPI measurements"""
+    STATUS_CHOICES = [
+        ('EXCELLENT', 'Exceeds Target'),
+        ('GOOD', 'Meets Target'),
+        ('WARNING', 'Below Target'),
+        ('CRITICAL', 'Critical Threshold Breached'),
+    ]
+    
+    kpi = models.ForeignKey(KPIDefinition, on_delete=models.CASCADE, related_name='measurements')
+    
+    # Measurement period
+    measurement_date = models.DateField(help_text="Date of measurement")
+    period_start = models.DateField(help_text="Start of measurement period")
+    period_end = models.DateField(help_text="End of measurement period")
+    
+    # Measured value
+    measured_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Actual measured value"
+    )
+    
+    # Context data (stored as JSON for flexibility)
+    calculation_details = models.JSONField(
+        default=dict,
+        help_text="Breakdown of how value was calculated (numerator, denominator, etc.)"
+    )
+    
+    # Performance assessment
+    target_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Target value at time of measurement"
+    )
+    variance = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Difference from target (measured - target)"
+    )
+    variance_percentage = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Percentage variance from target"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        help_text="Performance status vs target"
+    )
+    
+    # Alerts
+    alert_generated = models.BooleanField(
+        default=False,
+        help_text="True if this measurement triggered an alert"
+    )
+    alert_message = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Alert message if threshold breached"
+    )
+    
+    # Metadata
+    measured_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='kpi_measurements',
+        help_text="User who recorded measurement (null for automated)"
+    )
+    measured_at = models.DateTimeField(auto_now_add=True)
+    is_automated = models.BooleanField(
+        default=True,
+        help_text="True if automatically calculated, False if manually entered"
+    )
+    
+    class Meta:
+        ordering = ['-measurement_date']
+        unique_together = [['kpi', 'measurement_date']]
+        verbose_name = 'KPI Measurement'
+        verbose_name_plural = 'KPI Measurements'
+        indexes = [
+            models.Index(fields=['kpi', '-measurement_date']),
+            models.Index(fields=['status', 'alert_generated']),
+        ]
+    
+    def __str__(self):
+        return f"{self.kpi.name} - {self.measurement_date}: {self.measured_value} ({self.status})"
+
+

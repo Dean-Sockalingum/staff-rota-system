@@ -12600,3 +12600,263 @@ def report_schedule_delete(request, schedule_id):
     messages.success(request, f'Scheduled report "{template_name}" deleted successfully.')
     return redirect('report_builder_dashboard')
 
+
+# ==========================================================================================
+# KPI TRACKING VIEWS (PHASE 3 - TASK 28)
+# ==========================================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def kpi_dashboard(request):
+    """
+    KPI tracking dashboard with real-time performance metrics
+    """
+    from .models import KPIDefinition, KPIMeasurement
+    from . import kpi_tracking
+    
+    # Get user's care home
+    care_home = request.user.care_home if not request.user.is_superuser else None
+    
+    # Get period filter
+    period = request.GET.get('period', 'month')
+    
+    # Get KPI summary
+    summary = kpi_tracking.get_kpi_summary(care_home=care_home, period=period)
+    
+    # Get all active KPIs with latest measurements
+    kpis = KPIDefinition.objects.filter(is_active=True)
+    if care_home:
+        kpis = kpis.filter(Q(care_home=care_home) | Q(care_home__isnull=True))
+    
+    kpi_data = []
+    for kpi in kpis:
+        latest = KPIMeasurement.objects.filter(kpi=kpi).order_by('-measurement_date').first()
+        
+        kpi_data.append({
+            'definition': kpi,
+            'latest_measurement': latest,
+            'has_alert': latest.alert_generated if latest else False,
+        })
+    
+    context = {
+        'summary': summary,
+        'kpi_data': kpi_data,
+        'period': period,
+        'care_home': care_home,
+    }
+    
+    return render(request, 'scheduling/kpi_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def kpi_detail(request, kpi_id):
+    """
+    Detailed view of a single KPI with historical trend
+    """
+    from .models import KPIDefinition, KPITarget
+    from . import kpi_tracking
+    
+    kpi = get_object_or_404(KPIDefinition, id=kpi_id, is_active=True)
+    
+    # Check access
+    if not request.user.is_superuser and kpi.care_home and kpi.care_home != request.user.care_home:
+        messages.error(request, 'Access denied to this KPI.')
+        return redirect('kpi_dashboard')
+    
+    # Get trend data
+    days_back = int(request.GET.get('days', 90))
+    trend = kpi_tracking.get_kpi_trend(kpi, days_back=days_back)
+    
+    # Get current targets
+    current_year = timezone.now().year
+    targets = KPITarget.objects.filter(
+        kpi=kpi,
+        year=current_year
+    ).order_by('month', 'quarter')
+    
+    # Prepare chart data
+    chart_labels = [m.measurement_date.strftime('%Y-%m-%d') for m in trend]
+    chart_values = [float(m.measured_value) for m in trend]
+    chart_targets = [float(m.target_value) if m.target_value else None for m in trend]
+    
+    context = {
+        'kpi': kpi,
+        'trend': trend,
+        'targets': targets,
+        'chart_labels': chart_labels,
+        'chart_values': chart_values,
+        'chart_targets': chart_targets,
+        'days_back': days_back,
+    }
+    
+    return render(request, 'scheduling/kpi_detail.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def kpi_calculate(request):
+    """
+    AJAX endpoint to trigger KPI calculation
+    """
+    from .models import KPIDefinition
+    from . import kpi_tracking
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    data = json.loads(request.body)
+    kpi_id = data.get('kpi_id')
+    
+    if not kpi_id:
+        # Calculate all KPIs
+        care_home = request.user.care_home if not request.user.is_superuser else None
+        measurements = kpi_tracking.calculate_all_kpis(care_home=care_home)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{len(measurements)} KPIs calculated successfully',
+            'count': len(measurements)
+        })
+    
+    # Calculate specific KPI
+    kpi = get_object_or_404(KPIDefinition, id=kpi_id, is_active=True)
+    
+    # Check access
+    if not request.user.is_superuser and kpi.care_home and kpi.care_home != request.user.care_home:
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        measurement = kpi_tracking.record_kpi_measurement(kpi)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'KPI calculated successfully',
+            'value': float(measurement.measured_value),
+            'status': measurement.status,
+            'alert': measurement.alert_message if measurement.alert_generated else None
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def kpi_target_manage(request, kpi_id):
+    """
+    Manage KPI targets
+    """
+    from .models import KPIDefinition, KPITarget
+    
+    kpi = get_object_or_404(KPIDefinition, id=kpi_id, is_active=True)
+    
+    # Check access
+    if not request.user.is_superuser and kpi.care_home and kpi.care_home != request.user.care_home:
+        messages.error(request, 'Access denied to this KPI.')
+        return redirect('kpi_dashboard')
+    
+    if request.method == 'POST':
+        # Create or update target
+        year = int(request.POST.get('year'))
+        quarter = request.POST.get('quarter')
+        month = request.POST.get('month')
+        target_value = Decimal(request.POST.get('target_value'))
+        stretch_target = request.POST.get('stretch_target')
+        minimum_acceptable = request.POST.get('minimum_acceptable')
+        notes = request.POST.get('notes', '')
+        
+        # Convert to integers or None
+        quarter = int(quarter) if quarter else None
+        month = int(month) if month else None
+        stretch_target = Decimal(stretch_target) if stretch_target else None
+        minimum_acceptable = Decimal(minimum_acceptable) if minimum_acceptable else None
+        
+        # Create or update
+        target, created = KPITarget.objects.update_or_create(
+            kpi=kpi,
+            year=year,
+            quarter=quarter,
+            month=month,
+            defaults={
+                'target_value': target_value,
+                'stretch_target': stretch_target,
+                'minimum_acceptable': minimum_acceptable,
+                'notes': notes,
+                'set_by': request.user,
+            }
+        )
+        
+        action = 'created' if created else 'updated'
+        messages.success(request, f'Target {action} successfully.')
+        return redirect('kpi_target_manage', kpi_id=kpi_id)
+    
+    # GET request - show form
+    current_year = timezone.now().year
+    years = range(current_year, current_year + 3)
+    
+    # Get existing targets
+    targets = KPITarget.objects.filter(kpi=kpi).order_by('-year', 'month', 'quarter')
+    
+    context = {
+        'kpi': kpi,
+        'targets': targets,
+        'years': years,
+    }
+    
+    return render(request, 'scheduling/kpi_target_manage.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def kpi_executive_summary(request):
+    """
+    Executive summary report with all KPIs
+    """
+    from .models import KPIDefinition, KPIMeasurement
+    from . import kpi_tracking
+    
+    # Get user's care home
+    care_home = request.user.care_home if not request.user.is_superuser else None
+    
+    # Get period
+    period = request.GET.get('period', 'month')
+    
+    # Get summary
+    summary = kpi_tracking.get_kpi_summary(care_home=care_home, period=period)
+    
+    # Get all categories
+    categories = ['STAFFING', 'OCCUPANCY', 'FINANCIAL', 'COMPLIANCE', 'QUALITY', 'EFFICIENCY']
+    
+    category_data = {}
+    for category in categories:
+        kpis = KPIDefinition.objects.filter(
+            is_active=True,
+            category=category
+        )
+        
+        if care_home:
+            kpis = kpis.filter(Q(care_home=care_home) | Q(care_home__isnull=True))
+        
+        kpi_list = []
+        for kpi in kpis:
+            latest = KPIMeasurement.objects.filter(kpi=kpi).order_by('-measurement_date').first()
+            if latest:
+                kpi_list.append({
+                    'definition': kpi,
+                    'measurement': latest,
+                })
+        
+        category_data[category] = kpi_list
+    
+    context = {
+        'summary': summary,
+        'category_data': category_data,
+        'period': period,
+        'care_home': care_home,
+    }
+    
+    return render(request, 'scheduling/kpi_executive_summary.html', context)
+
