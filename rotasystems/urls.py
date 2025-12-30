@@ -24,6 +24,9 @@ urlpatterns = [
     path('', include('scheduling.management.urls')),
     path('staff-records/', include(('staff_records.urls', 'staff_records'), namespace='staff_records')),
     path('accounts/', include('django.contrib.auth.urls')),
+    # Task 38: Mobile App API
+    path('api/mobile/', include('scheduling.api_urls')),
+    path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login
 ]
 
 # Serve media files in development

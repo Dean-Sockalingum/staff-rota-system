@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',  # Task 38: Token auth for mobile API
     'corsheaders',
     'django_celery_beat',  # Celery Beat for periodic tasks
     # Phase 6: Security & ML apps
@@ -411,15 +412,21 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # REST Framework Configuration
+# Task 38: Enhanced with token authentication for mobile app
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',  # For mobile apps
+        'rest_framework.authentication.SessionAuthentication',  # For web
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
 
 # CORS Settings (for frontend development)
