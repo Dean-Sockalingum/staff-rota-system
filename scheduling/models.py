@@ -4698,3 +4698,9 @@ from .models_videos import (
     VideoPlaylist,
     PlaylistVideo
 )
+
+# Task 55: Recent Activity Feed models
+from .models_activity import (
+    RecentActivity,
+    ActivityFeedWidget
+)

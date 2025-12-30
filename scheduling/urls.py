@@ -171,6 +171,20 @@ from .views_videos import (
     video_analytics
 )
 
+# Task 55: Recent Activity Feed views
+from .views_activity import (
+    recent_activity_feed,
+    activity_feed_api,
+    mark_activity_read,
+    mark_all_read,
+    archive_activity,
+    activity_dashboard_widget,
+    manage_activity_widgets,
+    delete_activity_widget,
+    toggle_activity_pin,
+    activity_statistics
+)
+
 
 urlpatterns = [
     # Authentication
@@ -614,4 +628,16 @@ urlpatterns = [
     path('playlists/create/', playlist_create, name='playlist_create'),
     path('playlists/<int:playlist_id>/', playlist_detail, name='playlist_detail'),
     path('playlists/<int:playlist_id>/add/', playlist_add_video, name='playlist_add_video'),
+    
+    # Activity Feed (Task 55)
+    path('activity/', recent_activity_feed, name='recent_activity_feed'),
+    path('activity/api/', activity_feed_api, name='activity_feed_api'),
+    path('activity/<int:activity_id>/read/', mark_activity_read, name='mark_activity_read'),
+    path('activity/mark-all-read/', mark_all_read, name='mark_all_read'),
+    path('activity/<int:activity_id>/archive/', archive_activity, name='archive_activity'),
+    path('activity/<int:activity_id>/pin/', toggle_activity_pin, name='toggle_activity_pin'),
+    path('activity/widget/', activity_dashboard_widget, name='activity_dashboard_widget'),
+    path('activity/widgets/manage/', manage_activity_widgets, name='manage_activity_widgets'),
+    path('activity/widgets/<int:widget_id>/delete/', delete_activity_widget, name='delete_activity_widget'),
+    path('activity/statistics/', activity_statistics, name='activity_statistics'),
 ]
