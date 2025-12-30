@@ -4623,6 +4623,11 @@ from .models_health_monitoring import (
     AlertRule
 )
 
+# User Preferences Models (Task 50)
+from .models_preferences import (
+    UserPreferences
+)
+
 
 # ===== Task 49: Search Analytics Model =====
 

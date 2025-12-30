@@ -117,6 +117,12 @@ from .views_search import (
     autocomplete,
     advanced_search
 )
+from .views_preferences import (
+    user_settings,
+    update_theme,
+    reset_preferences,
+    export_preferences
+)
 
 urlpatterns = [
     # Authentication
@@ -135,6 +141,12 @@ urlpatterns = [
     path('search/', global_search, name='global_search'),
     path('search/autocomplete/', autocomplete, name='search_autocomplete'),
     path('search/advanced/', advanced_search, name='advanced_search'),
+    
+    # Task 50: User Preferences Settings
+    path('settings/', user_settings, name='user_settings'),
+    path('settings/update-theme/', update_theme, name='update_theme'),
+    path('settings/reset/', reset_preferences, name='reset_preferences'),
+    path('settings/export/', export_preferences, name='export_preferences'),
     
     # PWA Offline Page
     path('offline/', views.offline_view, name='offline'),
