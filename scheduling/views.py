@@ -13523,3 +13523,343 @@ def get_correlation_interpretation(correlation):
     
     return f'{strength} {direction} correlation'
 
+
+# ============================================================================
+# SHIFT PATTERN ANALYSIS (Phase 3 - Task 31)
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def shift_pattern_dashboard(request):
+    """Shift pattern analysis dashboard with optimization recommendations"""
+    from .shift_pattern_analysis import (
+        analyze_shift_patterns,
+        detect_coverage_gaps,
+        analyze_workload_distribution,
+        generate_optimization_recommendations
+    )
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    # Get recent pattern analyses
+    recent_patterns = ShiftPattern.objects.filter(
+        care_home=care_home
+    ).order_by('-analyzed_at')[:10]
+    
+    # Get unfilled coverage gaps
+    coverage_gaps = CoverageGap.objects.filter(
+        care_home=care_home,
+        is_filled=False,
+        gap_date__gte=timezone.now().date()
+    ).order_by('gap_date', '-severity')[:15]
+    
+    # Generate optimization recommendations
+    recommendations = generate_optimization_recommendations(care_home)
+    
+    # Severity counts for gaps
+    critical_gaps = coverage_gaps.filter(severity='CRITICAL').count()
+    high_gaps = coverage_gaps.filter(severity='HIGH').count()
+    medium_gaps = coverage_gaps.filter(severity='MEDIUM').count()
+    
+    context = {
+        'recent_patterns': recent_patterns,
+        'coverage_gaps': coverage_gaps,
+        'recommendations': recommendations[:10],  # Top 10
+        'critical_gaps': critical_gaps,
+        'high_gaps': high_gaps,
+        'medium_gaps': medium_gaps,
+    }
+    return render(request, 'scheduling/shift_pattern_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def shift_pattern_analyze(request):
+    """Run shift pattern analysis"""
+    from .shift_pattern_analysis import analyze_shift_patterns
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    if request.method == 'POST':
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run analysis
+        result = analyze_shift_patterns(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Save patterns
+        patterns_created = 0
+        for pattern_data in result['day_patterns']:
+            # Generate recommendation
+            if pattern_data['pattern_type'] == 'UNDERSTAFFED':
+                recommendation = f"Increase staffing by {int(pattern_data['required_staff'] - pattern_data['average_staff'])} staff members"
+                priority = 'HIGH'
+            elif pattern_data['pattern_type'] == 'OVERSTAFFED':
+                recommendation = f"Consider reducing or reallocating {int(pattern_data['average_staff'] - pattern_data['required_staff'])} staff members"
+                priority = 'MEDIUM'
+            else:
+                recommendation = "Maintain current staffing levels"
+                priority = 'LOW'
+            
+            day_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][pattern_data['day_of_week']]
+            
+            ShiftPattern.objects.create(
+                name=f"{day_name} {pattern_data['shift_type']} Pattern",
+                care_home=care_home,
+                unit=unit,
+                pattern_type=pattern_data['pattern_type'],
+                day_of_week=pattern_data['day_of_week'],
+                shift_type=pattern_data['shift_type'],
+                start_date=start_date,
+                end_date=end_date,
+                average_staff_count=pattern_data['average_staff'],
+                required_staff_count=pattern_data['required_staff'],
+                coverage_percentage=pattern_data['coverage_percentage'],
+                pattern_data={'shifts_analyzed': pattern_data['frequency']},
+                frequency=pattern_data['frequency'],
+                is_recurring=True,
+                recommendation=recommendation,
+                priority=priority,
+                analyzed_by=request.user
+            )
+            patterns_created += 1
+        
+        messages.success(request, f'Shift pattern analysis complete. {patterns_created} patterns identified.')
+        return redirect('shift_pattern_dashboard')
+    
+    # GET - show form
+    units = Unit.objects.filter(care_home=care_home) if care_home else Unit.objects.all()
+    
+    context = {'units': units}
+    return render(request, 'scheduling/shift_pattern_analyze.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def coverage_gaps_detect(request):
+    """Detect and display coverage gaps"""
+    from .shift_pattern_analysis import detect_coverage_gaps
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    if request.method == 'POST':
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        threshold = float(request.POST.get('threshold', 0.8))
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Detect gaps
+        gaps = detect_coverage_gaps(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date,
+            threshold=threshold
+        )
+        
+        # Save gaps to database
+        gaps_created = 0
+        for gap_data in gaps:
+            # Check if gap already exists
+            existing = CoverageGap.objects.filter(
+                care_home_id=gap_data['care_home_id'],
+                gap_date=gap_data['gap_date'],
+                shift_type=gap_data['shift_type']
+            ).first()
+            
+            if not existing:
+                CoverageGap.objects.create(
+                    care_home_id=gap_data['care_home_id'],
+                    unit_id=gap_data.get('unit_id'),
+                    gap_date=gap_data['gap_date'],
+                    shift_type=gap_data['shift_type'],
+                    required_staff=gap_data['required_staff'],
+                    actual_staff=gap_data['actual_staff'],
+                    gap_size=gap_data['gap_size'],
+                    gap_percentage=gap_data['gap_percentage'],
+                    severity=gap_data['severity'],
+                    impact_score=gap_data['impact_score'],
+                    alert_sent=True,
+                    alert_sent_at=timezone.now()
+                )
+                gaps_created += 1
+        
+        messages.success(request, f'Coverage gap detection complete. {gaps_created} new gaps identified.')
+        return redirect('shift_pattern_dashboard')
+    
+    # GET - show form
+    units = Unit.objects.filter(care_home=care_home) if care_home else Unit.objects.all()
+    
+    context = {'units': units}
+    return render(request, 'scheduling/coverage_gaps_detect.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def coverage_gap_fill(request, gap_id):
+    """Mark coverage gap as filled"""
+    gap = get_object_or_404(CoverageGap, id=gap_id)
+    
+    if request.method == 'POST':
+        notes = request.POST.get('notes', '')
+        
+        gap.is_filled = True
+        gap.filled_by = request.user
+        gap.filled_at = timezone.now()
+        gap.resolution_notes = notes
+        gap.save()
+        
+        messages.success(request, 'Coverage gap marked as filled')
+        return redirect('shift_pattern_dashboard')
+    
+    context = {'gap': gap}
+    return render(request, 'scheduling/coverage_gap_fill.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def workload_distribution_analyze(request):
+    """Analyze workload distribution across staff"""
+    from .shift_pattern_analysis import analyze_workload_distribution
+    from .visualization_engine import generate_bar_chart_config
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    if request.method == 'POST':
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run analysis
+        result = analyze_workload_distribution(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if 'error' in result:
+            messages.error(request, result['error'])
+            return redirect('shift_pattern_dashboard')
+        
+        # Save analysis
+        distribution = WorkloadDistribution.objects.create(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date,
+            distribution_data=result['distribution_data'],
+            balance_score=result['balance_score'],
+            gini_coefficient=result['gini_coefficient'],
+            average_shifts_per_staff=result['average_shifts_per_staff'],
+            max_shifts_per_staff=result['max_shifts_per_staff'],
+            min_shifts_per_staff=result['min_shifts_per_staff'],
+            standard_deviation=result['standard_deviation'],
+            shift_type_balance=result['shift_type_balance'],
+            is_balanced=result['is_balanced'],
+            unfairness_score=result['unfairness_score'],
+            recommendations=result['recommendations'],
+            analyzed_by=request.user
+        )
+        
+        messages.success(request, 'Workload distribution analysis complete')
+        return redirect('workload_distribution_detail', distribution_id=distribution.id)
+    
+    # GET - show form
+    units = Unit.objects.filter(care_home=care_home) if care_home else Unit.objects.all()
+    
+    context = {'units': units}
+    return render(request, 'scheduling/workload_distribution_analyze.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def workload_distribution_detail(request, distribution_id):
+    """View workload distribution analysis details"""
+    from .visualization_engine import generate_bar_chart_config, generate_pie_chart_config
+    
+    distribution = get_object_or_404(WorkloadDistribution, id=distribution_id)
+    
+    # Prepare staff workload chart
+    staff_counts = distribution.distribution_data.get('staff_counts', {})
+    if staff_counts:
+        # Get staff names
+        from .models import StaffProfile
+        staff_ids = list(staff_counts.keys())
+        staff_profiles = StaffProfile.objects.filter(id__in=staff_ids)
+        staff_names = {str(sp.id): sp.user.get_full_name() for sp in staff_profiles}
+        
+        labels = [staff_names.get(str(sid), f'Staff {sid}') for sid in staff_ids]
+        values = [staff_counts[str(sid)] for sid in staff_ids]
+        
+        workload_chart = generate_bar_chart_config(
+            data=[values],
+            labels=labels,
+            title='Shifts per Staff Member',
+            colors=['#3b82f6']
+        )
+    else:
+        workload_chart = None
+    
+    # Prepare shift type distribution chart
+    shift_type_balance = distribution.shift_type_balance
+    if shift_type_balance:
+        shift_type_chart = generate_pie_chart_config(
+            data=list(shift_type_balance.values()),
+            labels=list(shift_type_balance.keys()),
+            title='Shift Type Distribution'
+        )
+    else:
+        shift_type_chart = None
+    
+    context = {
+        'distribution': distribution,
+        'workload_chart': json.dumps(workload_chart) if workload_chart else None,
+        'shift_type_chart': json.dumps(shift_type_chart) if shift_type_chart else None,
+    }
+    return render(request, 'scheduling/workload_distribution_detail.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def shift_pattern_heat_map(request):
+    """Display shift pattern heat map"""
+    from .shift_pattern_analysis import get_shift_pattern_heat_map
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    unit_id = request.GET.get('unit')
+    days_back = int(request.GET.get('days_back', 30))
+    
+    unit = Unit.objects.get(id=unit_id) if unit_id else None
+    
+    # Get heat map data
+    heat_map = get_shift_pattern_heat_map(
+        care_home=care_home,
+        unit=unit,
+        days_back=days_back
+    )
+    
+    units = Unit.objects.filter(care_home=care_home) if care_home else Unit.objects.all()
+    
+    context = {
+        'heat_map': heat_map,
+        'units': units,
+        'selected_unit': unit,
+        'days_back': days_back,
+    }
+    return render(request, 'scheduling/shift_pattern_heat_map.html', context)
+
+

@@ -2976,3 +2976,247 @@ class AnomalyDetection(models.Model):
     def __str__(self):
         return f"{self.get_anomaly_type_display()} on {self.detected_date} ({self.severity})"
 
+
+# ============================================================================
+# SHIFT PATTERN ANALYSIS MODELS (Phase 3 - Task 31)
+# ============================================================================
+
+class ShiftPattern(models.Model):
+    """
+    Store identified shift patterns and staffing trends
+    """
+    PATTERN_TYPE_CHOICES = [
+        ('PEAK', 'Peak Period'),
+        ('TROUGH', 'Trough Period'),
+        ('BALANCED', 'Balanced Coverage'),
+        ('UNDERSTAFFED', 'Understaffed'),
+        ('OVERSTAFFED', 'Overstaffed'),
+    ]
+    
+    DAY_OF_WEEK_CHOICES = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, null=True, blank=True)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Pattern identification
+    pattern_type = models.CharField(max_length=20, choices=PATTERN_TYPE_CHOICES)
+    day_of_week = models.IntegerField(choices=DAY_OF_WEEK_CHOICES, null=True, blank=True)
+    shift_type = models.CharField(max_length=20, blank=True)  # EARLY, LATE, NIGHT, etc.
+    
+    # Analysis period
+    start_date = models.DateField()
+    end_date = models.DateField()
+    
+    # Pattern metrics
+    average_staff_count = models.DecimalField(max_digits=6, decimal_places=2)
+    required_staff_count = models.DecimalField(max_digits=6, decimal_places=2)
+    coverage_percentage = models.DecimalField(max_digits=5, decimal_places=2)  # Coverage %
+    
+    # Pattern data (JSON)
+    pattern_data = models.JSONField(
+        default=dict,
+        help_text='Daily staffing levels and trends'
+    )
+    
+    # Frequency and recurrence
+    frequency = models.IntegerField(
+        default=0,
+        help_text='Number of times this pattern occurs'
+    )
+    is_recurring = models.BooleanField(default=False)
+    
+    # Recommendations
+    recommendation = models.TextField(blank=True)
+    priority = models.CharField(
+        max_length=20,
+        choices=[
+            ('LOW', 'Low Priority'),
+            ('MEDIUM', 'Medium Priority'),
+            ('HIGH', 'High Priority'),
+            ('CRITICAL', 'Critical Priority'),
+        ],
+        default='MEDIUM'
+    )
+    
+    # Metadata
+    analyzed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Shift Pattern'
+        verbose_name_plural = 'Shift Patterns'
+        ordering = ['-analyzed_at', 'day_of_week']
+        indexes = [
+            models.Index(fields=['care_home', 'pattern_type']),
+            models.Index(fields=['day_of_week', 'shift_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_pattern_type_display()})"
+
+
+class CoverageGap(models.Model):
+    """
+    Track identified coverage gaps in staffing
+    """
+    SEVERITY_CHOICES = [
+        ('LOW', 'Low Severity'),
+        ('MEDIUM', 'Medium Severity'),
+        ('HIGH', 'High Severity'),
+        ('CRITICAL', 'Critical Severity'),
+    ]
+    
+    shift_pattern = models.ForeignKey(
+        ShiftPattern,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='coverage_gaps'
+    )
+    
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Gap identification
+    gap_date = models.DateField()
+    shift_type = models.CharField(max_length=20)
+    
+    # Staffing levels
+    required_staff = models.IntegerField()
+    actual_staff = models.IntegerField()
+    gap_size = models.IntegerField(help_text='Required - Actual')
+    gap_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    
+    # Severity and impact
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    impact_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text='Impact score (0-100)'
+    )
+    
+    # Resolution
+    is_filled = models.BooleanField(default=False)
+    filled_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filled_gaps'
+    )
+    filled_at = models.DateTimeField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True)
+    
+    # Alerts
+    alert_sent = models.BooleanField(default=False)
+    alert_sent_at = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    detected_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Coverage Gap'
+        verbose_name_plural = 'Coverage Gaps'
+        ordering = ['-gap_date', '-severity']
+        indexes = [
+            models.Index(fields=['care_home', 'gap_date']),
+            models.Index(fields=['severity', 'is_filled']),
+            models.Index(fields=['-gap_date', 'shift_type']),
+        ]
+    
+    def __str__(self):
+        return f"Gap on {self.gap_date} ({self.shift_type}): {self.gap_size} staff short"
+
+
+class WorkloadDistribution(models.Model):
+    """
+    Analyze and track workload distribution across staff and shifts
+    """
+    shift_pattern = models.ForeignKey(
+        ShiftPattern,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='workload_distributions'
+    )
+    
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Analysis period
+    start_date = models.DateField()
+    end_date = models.DateField()
+    
+    # Workload metrics (JSON)
+    distribution_data = models.JSONField(
+        default=dict,
+        help_text='Workload distribution by staff, shift type, day of week'
+    )
+    
+    # Balance metrics
+    balance_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text='Distribution balance score (0-100, higher is better)'
+    )
+    gini_coefficient = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        help_text='Gini coefficient for inequality (0-1, lower is better)',
+        null=True,
+        blank=True
+    )
+    
+    # Staff workload
+    average_shifts_per_staff = models.DecimalField(max_digits=6, decimal_places=2)
+    max_shifts_per_staff = models.IntegerField()
+    min_shifts_per_staff = models.IntegerField()
+    standard_deviation = models.DecimalField(max_digits=6, decimal_places=2)
+    
+    # Shift type distribution
+    shift_type_balance = models.JSONField(
+        default=dict,
+        help_text='Distribution across EARLY, LATE, NIGHT, etc.'
+    )
+    
+    # Recommendations
+    recommendations = models.TextField(blank=True)
+    
+    # Fairness indicators
+    is_balanced = models.BooleanField(
+        default=False,
+        help_text='True if distribution is considered fair/balanced'
+    )
+    unfairness_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text='Unfairness score (0-100, lower is better)'
+    )
+    
+    # Metadata
+    analyzed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Workload Distribution'
+        verbose_name_plural = 'Workload Distributions'
+        ordering = ['-analyzed_at']
+        indexes = [
+            models.Index(fields=['care_home', '-analyzed_at']),
+            models.Index(fields=['is_balanced']),
+        ]
+    
+    def __str__(self):
+        return f"Workload Distribution ({self.start_date} to {self.end_date})"
+

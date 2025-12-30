@@ -229,6 +229,15 @@ urlpatterns = [
     path('trends/anomaly/<int:anomaly_id>/acknowledge/', views.anomaly_acknowledge, name='anomaly_acknowledge'),
     path('trends/correlation/', views.correlation_analysis, name='correlation_analysis'),
     
+    # Shift Pattern Analysis (Phase 3 - Task 31)
+    path('patterns/', views.shift_pattern_dashboard, name='shift_pattern_dashboard'),
+    path('patterns/analyze/', views.shift_pattern_analyze, name='shift_pattern_analyze'),
+    path('patterns/gaps/detect/', views.coverage_gaps_detect, name='coverage_gaps_detect'),
+    path('patterns/gaps/<int:gap_id>/fill/', views.coverage_gap_fill, name='coverage_gap_fill'),
+    path('patterns/workload/analyze/', views.workload_distribution_analyze, name='workload_distribution_analyze'),
+    path('patterns/workload/<int:distribution_id>/', views.workload_distribution_detail, name='workload_distribution_detail'),
+    path('patterns/heatmap/', views.shift_pattern_heat_map, name='shift_pattern_heat_map'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
