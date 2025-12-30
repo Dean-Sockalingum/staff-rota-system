@@ -11,7 +11,8 @@ from .models import (
     StaffCertification, AuditTrail,
     AttendanceRecord, StaffPerformance, PerformanceReview,
     LeaveForecast, LeavePattern, LeaveImpactAnalysis,
-    Notification, Message, SystemActivity, UserPresence
+    Notification, Message, SystemActivity, UserPresence,
+    UserLanguagePreference, Translation
 )
 
 @admin.register(Role)
@@ -585,6 +586,71 @@ class UserPresenceAdmin(admin.ModelAdmin):
         return obj.is_online()
     is_online_display.boolean = True
     is_online_display.short_description = 'Currently Online'
+
+
+# ==================== TASK 37: MULTI-LANGUAGE SUPPORT ADMIN ====================
+
+@admin.register(UserLanguagePreference)
+class UserLanguagePreferenceAdmin(admin.ModelAdmin):
+    list_display = ['user', 'language_name_display', 'timezone', 'date_format', 'time_format', 'auto_detect_language']
+    list_filter = ['language_code', 'auto_detect_language', 'use_12_hour', 'timezone']
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('User', {
+            'fields': ('user',)
+        }),
+        ('Language Settings', {
+            'fields': ('language_code', 'auto_detect_language')
+        }),
+        ('Date & Time Formatting', {
+            'fields': ('date_format', 'time_format', 'use_12_hour', 'timezone')
+        }),
+        ('Regional', {
+            'fields': ('currency_symbol',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def language_name_display(self, obj):
+        return obj.get_language_name()
+    language_name_display.short_description = 'Language'
+
+
+@admin.register(Translation)
+class TranslationAdmin(admin.ModelAdmin):
+    list_display = ['key', 'language_display', 'translated_text_preview', 'care_home', 'is_approved', 'created_by']
+    list_filter = ['language_code', 'is_approved', 'care_home', 'context']
+    search_fields = ['key', 'translated_text', 'context']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Translation Info', {
+            'fields': ('key', 'language_code', 'translated_text')
+        }),
+        ('Context', {
+            'fields': ('context', 'care_home')
+        }),
+        ('Approval', {
+            'fields': ('is_approved', 'approved_by')
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def language_display(self, obj):
+        return obj.get_language_code_display()
+    language_display.short_description = 'Language'
+    
+    def translated_text_preview(self, obj):
+        return obj.translated_text[:100] + '...' if len(obj.translated_text) > 100 else obj.translated_text
+    translated_text_preview.short_description = 'Translation'
 
 
 # Import automated workflow admin configurations

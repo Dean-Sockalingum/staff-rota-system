@@ -4509,3 +4509,87 @@ class UserPresence(models.Model):
         self.save()
 
 
+# ==================== TASK 37: MULTI-LANGUAGE SUPPORT MODELS ====================
+
+class UserLanguagePreference(models.Model):
+    """
+    Store user language preferences for multi-language support
+    """
+    LANGUAGE_CHOICES = [
+        ('en', 'English'),
+        ('gd', 'Scottish Gaelic (Gàidhlig)'),
+        ('cy', 'Welsh (Cymraeg)'),
+        ('pl', 'Polish (Polski)'),
+        ('ro', 'Romanian (Română)'),
+        ('es', 'Spanish (Español)'),
+        ('ar', 'Arabic (العربية)'),
+        ('ur', 'Urdu (اردو)'),
+        ('zh-hans', 'Simplified Chinese (简体中文)'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='language_preference')
+    language_code = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='en')
+    
+    # Formatting preferences
+    date_format = models.CharField(max_length=20, default='%d/%m/%Y', help_text='Date format string')
+    time_format = models.CharField(max_length=20, default='%H:%M', help_text='Time format string (24h by default)')
+    use_12_hour = models.BooleanField(default=False, help_text='Use 12-hour clock format')
+    
+    # Regional settings
+    timezone = models.CharField(max_length=50, default='Europe/London')
+    currency_symbol = models.CharField(max_length=5, default='£')
+    
+    # Auto-detection preferences
+    auto_detect_language = models.BooleanField(default=False, help_text='Auto-detect language from browser')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'language_code']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_language_code_display()}"
+    
+    def get_language_name(self):
+        """Get the native name of the selected language"""
+        return dict(self.LANGUAGE_CHOICES).get(self.language_code, 'English')
+
+
+class Translation(models.Model):
+    """
+    Custom translations for care home-specific terms
+    """
+    key = models.CharField(max_length=200, db_index=True, help_text='Translation key')
+    language_code = models.CharField(max_length=10, choices=UserLanguagePreference.LANGUAGE_CHOICES)
+    translated_text = models.TextField(help_text='Translated text')
+    
+    # Context
+    context = models.CharField(max_length=100, blank=True, help_text='Context for translation (e.g., "shift", "report")')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, null=True, blank=True,
+                                  help_text='Care home-specific translation (optional)')
+    
+    # Status
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_translations')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_translations')
+    
+    class Meta:
+        unique_together = ['key', 'language_code', 'care_home']
+        ordering = ['key', 'language_code']
+        indexes = [
+            models.Index(fields=['key', 'language_code']),
+            models.Index(fields=['care_home', 'language_code']),
+        ]
+    
+    def __str__(self):
+        care_home_str = f" ({self.care_home.name})" if self.care_home else ""
+        return f"{self.key} [{self.language_code}]{care_home_str}"
+
+
+

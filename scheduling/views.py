@@ -15269,3 +15269,140 @@ def user_activity_stats(request, user_id=None):
     }
     return render(request, 'scheduling/user_activity_stats.html', context)
 
+
+# ==================== TASK 37: MULTI-LANGUAGE SUPPORT VIEWS ====================
+
+@login_required
+def language_settings(request):
+    """User language settings page"""
+    from . import multilang
+    
+    user = request.user
+    
+    if request.method == 'POST':
+        language_code = request.POST.get('language_code')
+        date_format = request.POST.get('date_format', '%d/%m/%Y')
+        time_format = request.POST.get('time_format', '%H:%M')
+        use_12_hour = request.POST.get('use_12_hour') == 'on'
+        timezone = request.POST.get('timezone', 'Europe/London')
+        
+        # Set user language preference
+        multilang.set_user_language(
+            user=user,
+            language_code=language_code,
+            date_format=date_format,
+            time_format=time_format,
+            use_12_hour=use_12_hour,
+            timezone=timezone
+        )
+        
+        messages.success(request, 'Language settings updated successfully.')
+        return redirect('language_settings')
+    
+    # GET - show form
+    preferences = multilang.get_user_format_preferences(user)
+    available_languages = multilang.get_available_languages()
+    
+    context = {
+        'preferences': preferences,
+        'available_languages': available_languages,
+    }
+    return render(request, 'scheduling/language_settings.html', context)
+
+
+@login_required
+def set_language_quick(request, language_code):
+    """Quick language switcher (from navbar)"""
+    from . import multilang
+    from django.utils import translation
+    
+    # Validate language code
+    valid_languages = [code for code, name in multilang.get_available_languages()]
+    if language_code not in valid_languages:
+        messages.error(request, 'Invalid language selected.')
+        return redirect('dashboard')
+    
+    # Set user language preference
+    multilang.set_user_language(request.user, language_code)
+    
+    # Set session language
+    translation.activate(language_code)
+    request.session[translation.LANGUAGE_SESSION_KEY] = language_code
+    
+    messages.success(request, f'Language changed successfully.')
+    
+    # Redirect to referer or dashboard
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+
+
+@login_required
+def translation_management(request):
+    """Manage custom translations (admin only)"""
+    from . import multilang
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('dashboard')
+    
+    care_home = getattr(request.user, 'care_home', None)
+    language_filter = request.GET.get('language', None)
+    
+    # Get pending translations
+    pending_translations = multilang.get_pending_translations(
+        care_home=care_home,
+        language_code=language_filter
+    )
+    
+    # Get approved translations
+    from .models import Translation
+    approved_translations = Translation.objects.filter(
+        is_approved=True,
+        care_home=care_home if care_home else None
+    ).select_related('approved_by')[:50]
+    
+    available_languages = multilang.get_available_languages()
+    
+    context = {
+        'pending_translations': pending_translations,
+        'approved_translations': approved_translations,
+        'available_languages': available_languages,
+        'language_filter': language_filter,
+    }
+    return render(request, 'scheduling/translation_management.html', context)
+
+
+@login_required
+def approve_translation_view(request, translation_id):
+    """Approve a custom translation"""
+    from . import multilang
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to perform this action.')
+        return redirect('dashboard')
+    
+    try:
+        translation = multilang.approve_translation(translation_id, request.user)
+        messages.success(request, f'Translation approved: {translation.key} [{translation.language_code}]')
+    except Exception as e:
+        messages.error(request, f'Error approving translation: {str(e)}')
+    
+    return redirect('translation_management')
+
+
+@login_required
+def language_statistics(request):
+    """View language usage statistics (admin only)"""
+    from . import multilang
+    
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('dashboard')
+    
+    stats = multilang.get_language_statistics()
+    
+    context = {
+        'stats': stats,
+    }
+    return render(request, 'scheduling/language_statistics.html', context)
+
+

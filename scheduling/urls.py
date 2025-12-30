@@ -290,6 +290,13 @@ urlpatterns = [
     path('activity/stats/<int:user_id>/', views.user_activity_stats, name='user_activity_stats'),
     path('activity/stats/', views.user_activity_stats, name='my_activity_stats'),
     
+    # Task 37: Multi-language Support URLs
+    path('language/settings/', views.language_settings, name='language_settings'),
+    path('language/set/<str:language_code>/', views.set_language_quick, name='set_language'),
+    path('translations/', views.translation_management, name='translation_management'),
+    path('translations/approve/<int:translation_id>/', views.approve_translation_view, name='approve_translation'),
+    path('language/statistics/', views.language_statistics, name='language_statistics'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

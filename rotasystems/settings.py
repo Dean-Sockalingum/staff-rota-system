@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Performance: Compress responses
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',  # Task 37: Language detection
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -314,12 +315,31 @@ MANAGERS = ADMINS
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# Task 37: Multi-language Support Configuration
+LANGUAGE_CODE = 'en-gb'  # Default language (British English for UK care homes)
 
-TIME_ZONE = 'UTC'
+# Supported languages
+LANGUAGES = [
+    ('en', 'English'),
+    ('gd', 'Scottish Gaelic'),
+    ('cy', 'Welsh'),
+    ('pl', 'Polish'),
+    ('ro', 'Romanian'),
+    ('es', 'Spanish'),
+    ('ar', 'Arabic'),
+    ('ur', 'Urdu'),
+    ('zh-hans', 'Simplified Chinese'),
+]
 
-USE_I18N = True
+# Path to locale files for translations
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
+TIME_ZONE = 'Europe/London'  # UK timezone for Glasgow HSCP
+
+USE_I18N = True  # Enable internationalization
+USE_L10N = True  # Enable localized formatting
 USE_TZ = True
 
 
