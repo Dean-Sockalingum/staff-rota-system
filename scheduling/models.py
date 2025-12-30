@@ -4592,4 +4592,15 @@ class Translation(models.Model):
         return f"{self.key} [{self.language_code}]{care_home_str}"
 
 
+# Import report models (Task 40)
+from .models_reports import (
+    CustomReportTemplate,
+    CustomSavedReport,
+    ReportDataSource,
+    ReportSchedule,
+    ReportFavorite
+)
+
+
+
 

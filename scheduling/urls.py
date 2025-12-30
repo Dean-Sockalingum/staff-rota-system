@@ -36,6 +36,18 @@ from .views_analytics import (
     api_budget_analysis,
     api_weekly_trends
 )
+from .views_report_builder import (
+    report_builder_home,
+    create_report_template,
+    edit_report_template,
+    execute_report,
+    view_report,
+    export_report,
+    delete_report_template,
+    toggle_favorite,
+    api_get_data_sources,
+    api_preview_report
+)
 
 urlpatterns = [
     # Authentication
@@ -121,6 +133,20 @@ urlpatterns = [
     path('api/analytics/unit/<int:unit_id>/staffing/', api_unit_staffing, name='api_unit_staffing'),
     path('api/analytics/budget/<int:care_home_id>/', api_budget_analysis, name='api_budget_analysis'),
     path('api/analytics/trends/weekly/', api_weekly_trends, name='api_weekly_trends'),
+    
+    # Custom Report Builder (Task 40)
+    path('reports/builder/', report_builder_home, name='report_builder_home'),
+    path('reports/builder/create/', create_report_template, name='create_report_template'),
+    path('reports/builder/edit/<int:template_id>/', edit_report_template, name='edit_report_template'),
+    path('reports/builder/execute/<int:template_id>/', execute_report, name='execute_report'),
+    path('reports/builder/view/<int:report_id>/', view_report, name='view_report'),
+    path('reports/builder/export/<int:report_id>/<str:format>/', export_report, name='export_report'),
+    path('reports/builder/delete/<int:template_id>/', delete_report_template, name='delete_report_template'),
+    path('reports/builder/favorite/<int:template_id>/', toggle_favorite, name='toggle_favorite'),
+    
+    # Report Builder API
+    path('api/reports/data-sources/', api_get_data_sources, name='api_get_data_sources'),
+    path('api/reports/preview/', api_preview_report, name='api_preview_report'),
     
     # AI Assistant API
     path('ai-assistant/', views.ai_assistant_page, name='ai_assistant_page'),
