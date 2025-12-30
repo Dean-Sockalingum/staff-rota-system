@@ -13197,3 +13197,329 @@ def widget_preview(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================================
+# TREND ANALYSIS ENGINE (Phase 3 - Task 30)
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def trend_analysis_dashboard(request):
+    """Trend analysis dashboard with recent analyses and alerts"""
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    # Get recent analyses
+    recent_analyses = TrendAnalysis.objects.filter(
+        care_home=care_home
+    ).order_by('-analyzed_at')[:10]
+    
+    # Get unacknowledged anomalies
+    anomalies = AnomalyDetection.objects.filter(
+        trend_analysis__care_home=care_home,
+        acknowledged=False
+    ).order_by('-detected_date', '-severity')[:20]
+    
+    # Severity counts
+    critical_count = anomalies.filter(severity='CRITICAL').count()
+    high_count = anomalies.filter(severity='HIGH').count()
+    medium_count = anomalies.filter(severity='MEDIUM').count()
+    
+    context = {
+        'recent_analyses': recent_analyses,
+        'anomalies': anomalies,
+        'critical_count': critical_count,
+        'high_count': high_count,
+        'medium_count': medium_count,
+    }
+    return render(request, 'scheduling/trend_analysis_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def trend_analysis_run(request):
+    """Execute trend analysis for selected metric"""
+    from .trend_analysis import run_trend_analysis
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    if request.method == 'POST':
+        metric_type = request.POST.get('metric_type')
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        name = request.POST.get('name', f'{metric_type} Analysis')
+        description = request.POST.get('description', '')
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run analysis
+        result = run_trend_analysis(
+            metric_type=metric_type,
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if 'error' in result:
+            messages.error(request, result['error'])
+            return redirect('trend_analysis_dashboard')
+        
+        # Save analysis
+        analysis = TrendAnalysis.objects.create(
+            metric_type=metric_type,
+            name=name,
+            description=description,
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date,
+            trend_direction=result['trend']['direction'],
+            slope=result['trend']['slope'],
+            r_squared=result['trend']['r_squared'],
+            time_series_data=result['time_series_data'],
+            decomposition=result['decomposition'],
+            statistics=result['statistics'],
+            forecast_data=result['forecast']['forecast'],
+            confidence_interval=result['forecast']['confidence'],
+            analyzed_by=request.user
+        )
+        
+        # Save seasonality patterns
+        for pattern_type, pattern_data in result['seasonality'].items():
+            if pattern_data and pattern_data['is_significant']:
+                SeasonalityPattern.objects.create(
+                    trend_analysis=analysis,
+                    pattern_type='WEEKLY' if pattern_type == 'weekly' else 'MONTHLY',
+                    strength=pattern_data['strength'],
+                    pattern_data=pattern_data['pattern'],
+                    peak_periods=pattern_data.get('peaks', []),
+                    trough_periods=pattern_data.get('troughs', []),
+                    p_value=0.05,
+                    is_significant=True
+                )
+        
+        # Save anomalies
+        for anomaly in result['anomalies']:
+            AnomalyDetection.objects.create(
+                trend_analysis=analysis,
+                anomaly_type=anomaly['type'],
+                severity=anomaly['severity'],
+                detected_date=anomaly['date'],
+                actual_value=anomaly['value'],
+                expected_value=anomaly.get('expected', 0),
+                deviation=anomaly.get('deviation', 0),
+                deviation_percentage=anomaly.get('deviation_pct', 0),
+                z_score=anomaly.get('z_score', 0),
+                confidence=anomaly['confidence'],
+                description=anomaly.get('description', ''),
+                alert_generated=anomaly['severity'] in ['HIGH', 'CRITICAL']
+            )
+        
+        messages.success(request, f'Trend analysis completed for {name}')
+        return redirect('trend_analysis_detail', analysis_id=analysis.id)
+    
+    # GET request - show form
+    units = Unit.objects.filter(care_home=care_home) if care_home else Unit.objects.all()
+    
+    metric_choices = [
+        ('STAFF_COUNT', 'Staff Count'),
+        ('SHIFT_VOLUME', 'Shift Volume'),
+        ('OCCUPANCY', 'Occupancy Rate'),
+        ('AGENCY_USAGE', 'Agency Usage'),
+        ('OVERTIME', 'Overtime Hours'),
+        ('TURNOVER', 'Staff Turnover'),
+        ('LEAVE_REQUESTS', 'Leave Requests'),
+        ('INCIDENTS', 'Incidents'),
+        ('TRAINING_COMPLETION', 'Training Completion'),
+        ('COST', 'Cost'),
+    ]
+    
+    context = {
+        'units': units,
+        'metric_choices': metric_choices,
+    }
+    return render(request, 'scheduling/trend_analysis_run.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def trend_analysis_detail(request, analysis_id):
+    """View detailed trend analysis results"""
+    from .visualization_engine import generate_line_chart_config
+    
+    analysis = get_object_or_404(TrendAnalysis, id=analysis_id)
+    
+    # Prepare chart data
+    time_series = analysis.time_series_data
+    dates = list(time_series.keys())
+    values = list(time_series.values())
+    
+    # Trend chart config
+    trend_chart = generate_line_chart_config(
+        data=[values],
+        labels=dates,
+        title=f'{analysis.name} Trend',
+        colors=['#3b82f6']
+    )
+    
+    # Decomposition charts
+    decomposition = analysis.decomposition
+    if decomposition:
+        trend_component = list(decomposition.get('trend', {}).values())
+        seasonal_component = list(decomposition.get('seasonal', {}).values())
+        residual_component = list(decomposition.get('residual', {}).values())
+        
+        decomp_chart = generate_line_chart_config(
+            data=[trend_component, seasonal_component, residual_component],
+            labels=dates[:len(trend_component)],
+            title='Time Series Decomposition',
+            colors=['#10b981', '#f59e0b', '#ef4444']
+        )
+    else:
+        decomp_chart = None
+    
+    # Forecast chart
+    forecast_data = analysis.forecast_data
+    if forecast_data:
+        forecast_dates = list(forecast_data.keys())
+        forecast_values = list(forecast_data.values())
+        
+        # Combine historical and forecast
+        all_dates = dates + forecast_dates
+        historical_values = values + [None] * len(forecast_dates)
+        forecast_full = [None] * len(dates) + forecast_values
+        
+        forecast_chart = generate_line_chart_config(
+            data=[historical_values, forecast_full],
+            labels=all_dates,
+            title=f'Forecast ({analysis.confidence_interval}% confidence)',
+            colors=['#3b82f6', '#10b981']
+        )
+    else:
+        forecast_chart = None
+    
+    # Get seasonality patterns
+    seasonality_patterns = analysis.seasonalitypattern_set.all()
+    
+    # Get anomalies
+    anomalies = analysis.anomalydetection_set.order_by('-detected_date')
+    
+    context = {
+        'analysis': analysis,
+        'trend_chart': json.dumps(trend_chart),
+        'decomp_chart': json.dumps(decomp_chart) if decomp_chart else None,
+        'forecast_chart': json.dumps(forecast_chart) if forecast_chart else None,
+        'seasonality_patterns': seasonality_patterns,
+        'anomalies': anomalies,
+    }
+    return render(request, 'scheduling/trend_analysis_detail.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def anomaly_acknowledge(request, anomaly_id):
+    """Acknowledge an anomaly"""
+    anomaly = get_object_or_404(AnomalyDetection, id=anomaly_id)
+    
+    anomaly.acknowledged = True
+    anomaly.acknowledged_by = request.user
+    anomaly.acknowledged_at = timezone.now()
+    anomaly.save()
+    
+    messages.success(request, 'Anomaly acknowledged')
+    
+    # Redirect back to referring page
+    return redirect(request.META.get('HTTP_REFERER', 'trend_analysis_dashboard'))
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or hasattr(u, 'managerprofile') or hasattr(u, 'headofserviceprofile'))
+def correlation_analysis(request):
+    """Analyze correlations between multiple metrics"""
+    from .trend_analysis import collect_metric_time_series
+    import numpy as np
+    
+    care_home = request.user.managerprofile.care_home if hasattr(request.user, 'managerprofile') else None
+    
+    if request.method == 'POST':
+        metric1 = request.POST.get('metric1')
+        metric2 = request.POST.get('metric2')
+        days_back = int(request.POST.get('days_back', 90))
+        
+        # Collect data
+        from datetime import timedelta
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days_back)
+        
+        data1 = collect_metric_time_series(metric1, care_home, None, start_date, end_date)
+        data2 = collect_metric_time_series(metric2, care_home, None, start_date, end_date)
+        
+        # Find common dates
+        common_dates = sorted(set(data1.keys()) & set(data2.keys()))
+        
+        if len(common_dates) < 2:
+            messages.error(request, 'Insufficient data for correlation analysis')
+            return redirect('correlation_analysis')
+        
+        # Calculate correlation
+        values1 = [data1[date] for date in common_dates]
+        values2 = [data2[date] for date in common_dates]
+        
+        correlation = np.corrcoef(values1, values2)[0, 1]
+        
+        # Prepare chart
+        from .visualization_engine import generate_line_chart_config
+        
+        chart_config = generate_line_chart_config(
+            data=[values1, values2],
+            labels=common_dates,
+            title=f'{metric1} vs {metric2} Correlation: {correlation:.3f}',
+            colors=['#3b82f6', '#10b981']
+        )
+        
+        context = {
+            'metric1': metric1,
+            'metric2': metric2,
+            'correlation': correlation,
+            'chart_config': json.dumps(chart_config),
+            'interpretation': get_correlation_interpretation(correlation),
+        }
+        return render(request, 'scheduling/correlation_result.html', context)
+    
+    # GET - show form
+    metric_choices = [
+        ('STAFF_COUNT', 'Staff Count'),
+        ('SHIFT_VOLUME', 'Shift Volume'),
+        ('OCCUPANCY', 'Occupancy Rate'),
+        ('AGENCY_USAGE', 'Agency Usage'),
+        ('OVERTIME', 'Overtime Hours'),
+        ('TURNOVER', 'Staff Turnover'),
+        ('LEAVE_REQUESTS', 'Leave Requests'),
+        ('INCIDENTS', 'Incidents'),
+    ]
+    
+    context = {'metric_choices': metric_choices}
+    return render(request, 'scheduling/correlation_analysis.html', context)
+
+
+def get_correlation_interpretation(correlation):
+    """Interpret correlation coefficient"""
+    abs_corr = abs(correlation)
+    
+    if abs_corr >= 0.9:
+        strength = 'Very strong'
+    elif abs_corr >= 0.7:
+        strength = 'Strong'
+    elif abs_corr >= 0.5:
+        strength = 'Moderate'
+    elif abs_corr >= 0.3:
+        strength = 'Weak'
+    else:
+        strength = 'Very weak'
+    
+    direction = 'positive' if correlation >= 0 else 'negative'
+    
+    return f'{strength} {direction} correlation'
+

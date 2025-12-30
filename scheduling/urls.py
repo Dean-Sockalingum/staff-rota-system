@@ -222,6 +222,13 @@ urlpatterns = [
     path('dashboards/widget/<int:widget_id>/delete/', views.widget_delete, name='widget_delete'),
     path('dashboards/widget/preview/', views.widget_preview, name='widget_preview'),
     
+    # Trend Analysis Engine (Phase 3 - Task 30)
+    path('trends/', views.trend_analysis_dashboard, name='trend_analysis_dashboard'),
+    path('trends/run/', views.trend_analysis_run, name='trend_analysis_run'),
+    path('trends/<int:analysis_id>/', views.trend_analysis_detail, name='trend_analysis_detail'),
+    path('trends/anomaly/<int:anomaly_id>/acknowledge/', views.anomaly_acknowledge, name='anomaly_acknowledge'),
+    path('trends/correlation/', views.correlation_analysis, name='correlation_analysis'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

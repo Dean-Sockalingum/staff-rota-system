@@ -2653,3 +2653,326 @@ class DataVisualization(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_visualization_type_display()})"
+
+
+# ==========================================================================================
+# TREND ANALYSIS MODELS (PHASE 3 - TASK 30)
+# Statistical analysis, seasonality detection, anomaly detection
+# ==========================================================================================
+
+class TrendAnalysis(models.Model):
+    """
+    Trend analysis results for metrics over time
+    Tracks historical patterns and forecasts
+    """
+    METRIC_TYPES = [
+        ('STAFF_COUNT', 'Staff Count'),
+        ('SHIFT_VOLUME', 'Shift Volume'),
+        ('OCCUPANCY', 'Occupancy Rate'),
+        ('AGENCY_USAGE', 'Agency Usage'),
+        ('OVERTIME', 'Overtime Hours'),
+        ('TURNOVER', 'Staff Turnover'),
+        ('LEAVE_REQUESTS', 'Leave Requests'),
+        ('INCIDENTS', 'Incident Count'),
+        ('TRAINING_COMPLETION', 'Training Completion'),
+        ('COST', 'Cost Metrics'),
+    ]
+    
+    TREND_DIRECTIONS = [
+        ('INCREASING', 'Increasing'),
+        ('DECREASING', 'Decreasing'),
+        ('STABLE', 'Stable'),
+        ('VOLATILE', 'Volatile'),
+    ]
+    
+    # Identification
+    metric_type = models.CharField(
+        max_length=50,
+        choices=METRIC_TYPES,
+        help_text="Type of metric analyzed"
+    )
+    name = models.CharField(max_length=200, help_text="Analysis name")
+    description = models.TextField(blank=True)
+    
+    # Scope
+    care_home = models.ForeignKey(
+        'CareHome',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='trend_analyses',
+        help_text="Specific care home (null for system-wide)"
+    )
+    unit = models.ForeignKey(
+        'Unit',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='trend_analyses',
+        help_text="Specific unit (null for wider scope)"
+    )
+    
+    # Analysis period
+    start_date = models.DateField(help_text="Analysis start date")
+    end_date = models.DateField(help_text="Analysis end date")
+    
+    # Trend results
+    trend_direction = models.CharField(
+        max_length=20,
+        choices=TREND_DIRECTIONS,
+        help_text="Overall trend direction"
+    )
+    slope = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        help_text="Linear regression slope"
+    )
+    r_squared = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Coefficient of determination (goodness of fit)"
+    )
+    
+    # Statistical data (JSON)
+    time_series_data = models.JSONField(
+        default=dict,
+        help_text="Raw time series data points {date: value}"
+    )
+    decomposition = models.JSONField(
+        default=dict,
+        help_text="Trend, seasonal, residual components"
+    )
+    statistics = models.JSONField(
+        default=dict,
+        help_text="Mean, median, std dev, min, max, etc."
+    )
+    
+    # Forecast
+    forecast_data = models.JSONField(
+        default=dict,
+        help_text="Predicted future values"
+    )
+    confidence_interval = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Forecast confidence level (%)"
+    )
+    
+    # Metadata
+    analyzed_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='trend_analyses',
+        help_text="User who ran analysis"
+    )
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-analyzed_at']
+        verbose_name = 'Trend Analysis'
+        verbose_name_plural = 'Trend Analyses'
+    
+    def __str__(self):
+        scope = f" - {self.care_home.name}" if self.care_home else ""
+        return f"{self.name}{scope} ({self.start_date} to {self.end_date})"
+
+
+class SeasonalityPattern(models.Model):
+    """
+    Detected seasonal patterns in metrics
+    Identifies recurring patterns (daily, weekly, monthly)
+    """
+    PATTERN_TYPES = [
+        ('DAILY', 'Daily Pattern'),
+        ('WEEKLY', 'Weekly Pattern'),
+        ('MONTHLY', 'Monthly Pattern'),
+        ('QUARTERLY', 'Quarterly Pattern'),
+        ('YEARLY', 'Yearly Pattern'),
+    ]
+    
+    # Link to analysis
+    trend_analysis = models.ForeignKey(
+        'TrendAnalysis',
+        on_delete=models.CASCADE,
+        related_name='seasonality_patterns',
+        help_text="Parent trend analysis"
+    )
+    
+    # Pattern details
+    pattern_type = models.CharField(
+        max_length=20,
+        choices=PATTERN_TYPES,
+        help_text="Type of seasonal pattern"
+    )
+    strength = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Pattern strength (0-100%)"
+    )
+    
+    # Pattern data (JSON)
+    pattern_data = models.JSONField(
+        default=dict,
+        help_text="Pattern values by period (e.g., by day of week)"
+    )
+    peak_periods = models.JSONField(
+        default=list,
+        help_text="Periods with highest values"
+    )
+    trough_periods = models.JSONField(
+        default=list,
+        help_text="Periods with lowest values"
+    )
+    
+    # Statistical significance
+    p_value = models.DecimalField(
+        max_digits=6,
+        decimal_places=5,
+        null=True,
+        blank=True,
+        help_text="Statistical significance (p-value)"
+    )
+    is_significant = models.BooleanField(
+        default=False,
+        help_text="True if pattern is statistically significant"
+    )
+    
+    # Metadata
+    detected_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-strength']
+        verbose_name = 'Seasonality Pattern'
+        verbose_name_plural = 'Seasonality Patterns'
+    
+    def __str__(self):
+        return f"{self.get_pattern_type_display()} - {self.strength}% strength"
+
+
+class AnomalyDetection(models.Model):
+    """
+    Detected anomalies in metrics
+    Identifies unusual patterns or outliers
+    """
+    ANOMALY_TYPES = [
+        ('SPIKE', 'Spike (Sudden Increase)'),
+        ('DROP', 'Drop (Sudden Decrease)'),
+        ('OUTLIER', 'Outlier (Statistical)'),
+        ('SHIFT', 'Level Shift'),
+        ('TREND_CHANGE', 'Trend Change'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+        ('CRITICAL', 'Critical'),
+    ]
+    
+    # Link to analysis
+    trend_analysis = models.ForeignKey(
+        'TrendAnalysis',
+        on_delete=models.CASCADE,
+        related_name='anomalies',
+        help_text="Parent trend analysis"
+    )
+    
+    # Anomaly details
+    anomaly_type = models.CharField(
+        max_length=20,
+        choices=ANOMALY_TYPES,
+        help_text="Type of anomaly detected"
+    )
+    severity = models.CharField(
+        max_length=10,
+        choices=SEVERITY_LEVELS,
+        default='MEDIUM',
+        help_text="Severity level"
+    )
+    
+    # Occurrence
+    detected_date = models.DateField(help_text="Date of anomaly")
+    actual_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Actual value at anomaly"
+    )
+    expected_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Expected value (from trend)"
+    )
+    deviation = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Deviation from expected"
+    )
+    deviation_percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text="Percentage deviation"
+    )
+    
+    # Statistical measures
+    z_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Standard deviations from mean"
+    )
+    confidence = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Detection confidence (%)"
+    )
+    
+    # Context
+    description = models.TextField(
+        blank=True,
+        help_text="Description of anomaly and potential causes"
+    )
+    
+    # Alert status
+    alert_generated = models.BooleanField(
+        default=False,
+        help_text="True if alert was sent"
+    )
+    acknowledged = models.BooleanField(
+        default=False,
+        help_text="True if anomaly acknowledged by manager"
+    )
+    acknowledged_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acknowledged_anomalies',
+        help_text="User who acknowledged"
+    )
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When acknowledged"
+    )
+    
+    # Metadata
+    detected_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-severity', '-detected_date']
+        verbose_name = 'Anomaly Detection'
+        verbose_name_plural = 'Anomaly Detections'
+        indexes = [
+            models.Index(fields=['trend_analysis', '-detected_date']),
+            models.Index(fields=['severity', 'acknowledged']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_anomaly_type_display()} on {self.detected_date} ({self.severity})"
+
