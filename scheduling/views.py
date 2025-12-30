@@ -12860,3 +12860,340 @@ def kpi_executive_summary(request):
     
     return render(request, 'scheduling/kpi_executive_summary.html', context)
 
+
+# ==========================================================================================
+# DATA VISUALIZATION VIEWS (PHASE 3 - TASK 29)
+# ==========================================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def dashboard_builder(request):
+    """
+    Dashboard builder interface - list and manage dashboards
+    """
+    from .models import DashboardLayout
+    
+    # Get user's care home
+    care_home = request.user.care_home if not request.user.is_superuser else None
+    
+    # Get user's dashboards
+    my_dashboards = DashboardLayout.objects.filter(created_by=request.user)
+    
+    # Get public dashboards
+    public_dashboards = DashboardLayout.objects.filter(
+        is_public=True
+    ).exclude(created_by=request.user)
+    
+    if care_home:
+        public_dashboards = public_dashboards.filter(
+            Q(care_home=care_home) | Q(care_home__isnull=True)
+        )
+    
+    # Get default dashboard
+    default_dashboard = None
+    if care_home:
+        default_dashboard = DashboardLayout.objects.filter(
+            care_home=care_home,
+            is_default=True
+        ).first()
+    
+    context = {
+        'my_dashboards': my_dashboards,
+        'public_dashboards': public_dashboards,
+        'default_dashboard': default_dashboard,
+        'care_home': care_home,
+    }
+    
+    return render(request, 'scheduling/dashboard_builder.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def dashboard_view(request, dashboard_id):
+    """
+    View a specific dashboard with all widgets
+    """
+    from .models import DashboardLayout, ChartWidget
+    from . import visualization_engine
+    
+    dashboard = get_object_or_404(DashboardLayout, id=dashboard_id)
+    
+    # Check access
+    if not request.user.is_superuser:
+        if not dashboard.is_public and dashboard.created_by != request.user:
+            messages.error(request, 'Access denied to this dashboard.')
+            return redirect('dashboard_builder')
+    
+    # Get widgets
+    widgets = dashboard.widgets.all()
+    
+    # Prepare widget data
+    widget_data = []
+    for widget in widgets:
+        # Fetch data based on widget configuration
+        care_home = dashboard.care_home if dashboard.care_home else request.user.care_home
+        
+        try:
+            if widget.chart_type == 'STAT_CARD':
+                data = visualization_engine.generate_stat_card_data(
+                    widget.data_source,
+                    widget.data_config,
+                    care_home=care_home
+                )
+                chart_config = None
+            else:
+                result = visualization_engine.fetch_widget_data(
+                    widget.data_source,
+                    widget.data_config,
+                    care_home=care_home
+                )
+                data = result['data']
+                chart_config = result['chart_config']
+            
+            widget_data.append({
+                'widget': widget,
+                'data': data,
+                'chart_config': json.dumps(chart_config) if chart_config else None
+            })
+        except Exception as e:
+            # Log error but continue with other widgets
+            widget_data.append({
+                'widget': widget,
+                'data': {'error': str(e)},
+                'chart_config': None
+            })
+    
+    context = {
+        'dashboard': dashboard,
+        'widget_data': widget_data,
+    }
+    
+    return render(request, 'scheduling/dashboard_view.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def dashboard_create(request):
+    """
+    Create a new dashboard
+    """
+    from .models import DashboardLayout, CareHome
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        care_home_id = request.POST.get('care_home')
+        is_public = request.POST.get('is_public') == 'on'
+        is_default = request.POST.get('is_default') == 'on'
+        
+        # Validate
+        if not name:
+            messages.error(request, 'Dashboard name is required.')
+            return redirect('dashboard_create')
+        
+        # Get care home
+        care_home = None
+        if care_home_id:
+            care_home = CareHome.objects.get(id=care_home_id)
+        
+        # Create dashboard
+        dashboard = DashboardLayout.objects.create(
+            name=name,
+            description=description,
+            care_home=care_home,
+            created_by=request.user,
+            is_public=is_public,
+            is_default=is_default,
+            layout_config={'grid': {'rows': 3, 'cols': 3}}
+        )
+        
+        # If set as default, unset other defaults
+        if is_default and care_home:
+            DashboardLayout.objects.filter(
+                care_home=care_home,
+                is_default=True
+            ).exclude(id=dashboard.id).update(is_default=False)
+        
+        messages.success(request, f'Dashboard "{name}" created successfully.')
+        return redirect('dashboard_edit', dashboard_id=dashboard.id)
+    
+    # GET - show form
+    care_homes = CareHome.objects.all()
+    
+    context = {
+        'care_homes': care_homes,
+    }
+    
+    return render(request, 'scheduling/dashboard_create.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def dashboard_edit(request, dashboard_id):
+    """
+    Edit dashboard - add/remove/configure widgets
+    """
+    from .models import DashboardLayout, ChartWidget
+    
+    dashboard = get_object_or_404(DashboardLayout, id=dashboard_id)
+    
+    # Check ownership
+    if dashboard.created_by != request.user and not request.user.is_superuser:
+        messages.error(request, 'You can only edit your own dashboards.')
+        return redirect('dashboard_builder')
+    
+    # Get widgets
+    widgets = dashboard.widgets.all()
+    
+    # Widget options
+    chart_types = ChartWidget.CHART_TYPES
+    data_sources = ChartWidget.DATA_SOURCES
+    
+    context = {
+        'dashboard': dashboard,
+        'widgets': widgets,
+        'chart_types': chart_types,
+        'data_sources': data_sources,
+    }
+    
+    return render(request, 'scheduling/dashboard_edit.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def widget_add(request, dashboard_id):
+    """
+    AJAX endpoint to add a widget to dashboard
+    """
+    from .models import DashboardLayout, ChartWidget
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    dashboard = get_object_or_404(DashboardLayout, id=dashboard_id)
+    
+    # Check ownership
+    if dashboard.created_by != request.user and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    data = json.loads(request.body)
+    
+    title = data.get('title')
+    chart_type = data.get('chart_type')
+    data_source = data.get('data_source')
+    data_config = data.get('data_config', {})
+    grid_position = data.get('grid_position', {})
+    
+    # Validate
+    if not title or not chart_type or not data_source:
+        return JsonResponse({
+            'success': False,
+            'error': 'Title, chart type, and data source are required'
+        }, status=400)
+    
+    # Create widget
+    widget = ChartWidget.objects.create(
+        dashboard=dashboard,
+        title=title,
+        chart_type=chart_type,
+        data_source=data_source,
+        data_config=data_config,
+        grid_position=grid_position
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Widget added successfully',
+        'widget_id': widget.id
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def widget_delete(request, widget_id):
+    """
+    Delete a widget
+    """
+    from .models import ChartWidget
+    
+    widget = get_object_or_404(ChartWidget, id=widget_id)
+    
+    # Check ownership
+    if widget.dashboard.created_by != request.user and not request.user.is_superuser:
+        messages.error(request, 'Access denied.')
+        return redirect('dashboard_builder')
+    
+    dashboard_id = widget.dashboard.id
+    widget.delete()
+    
+    messages.success(request, 'Widget deleted successfully.')
+    return redirect('dashboard_edit', dashboard_id=dashboard_id)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def dashboard_delete(request, dashboard_id):
+    """
+    Delete a dashboard
+    """
+    from .models import DashboardLayout
+    
+    dashboard = get_object_or_404(DashboardLayout, id=dashboard_id)
+    
+    # Check ownership
+    if dashboard.created_by != request.user and not request.user.is_superuser:
+        messages.error(request, 'You can only delete your own dashboards.')
+        return redirect('dashboard_builder')
+    
+    name = dashboard.name
+    dashboard.delete()
+    
+    messages.success(request, f'Dashboard "{name}" deleted successfully.')
+    return redirect('dashboard_builder')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def widget_preview(request):
+    """
+    AJAX endpoint to preview widget data
+    """
+    from . import visualization_engine
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    data = json.loads(request.body)
+    
+    chart_type = data.get('chart_type')
+    data_source = data.get('data_source')
+    data_config = data.get('data_config', {})
+    
+    care_home = request.user.care_home if not request.user.is_superuser else None
+    
+    try:
+        if chart_type == 'STAT_CARD':
+            result = visualization_engine.generate_stat_card_data(
+                data_source,
+                data_config,
+                care_home=care_home
+            )
+            chart_config = None
+        else:
+            result = visualization_engine.fetch_widget_data(
+                data_source,
+                data_config,
+                care_home=care_home
+            )
+            chart_config = result['chart_config']
+        
+        return JsonResponse({
+            'success': True,
+            'data': result,
+            'chart_config': chart_config
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

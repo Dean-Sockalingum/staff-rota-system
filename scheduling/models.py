@@ -2418,3 +2418,238 @@ class KPIMeasurement(models.Model):
         return f"{self.kpi.name} - {self.measurement_date}: {self.measured_value} ({self.status})"
 
 
+# ==========================================================================================
+# DATA VISUALIZATION MODELS (PHASE 3 - TASK 29)
+# Interactive dashboard builder with customizable widgets
+# ==========================================================================================
+
+class DashboardLayout(models.Model):
+    """
+    Custom dashboard layout configuration
+    Allows managers to create personalized dashboards with widgets
+    """
+    name = models.CharField(max_length=200, help_text="Dashboard name")
+    description = models.TextField(blank=True, help_text="Dashboard description")
+    
+    # Owner
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='dashboards',
+        help_text="Dashboard creator"
+    )
+    
+    # Scope
+    care_home = models.ForeignKey(
+        'CareHome',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='dashboards',
+        help_text="Specific care home (null for system-wide)"
+    )
+    
+    # Layout configuration (JSON)
+    layout_config = models.JSONField(
+        default=dict,
+        help_text="Grid layout configuration (rows, columns, widget positions)"
+    )
+    
+    # Sharing
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Share with other managers"
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Set as default dashboard for care home"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Dashboard Layout'
+        verbose_name_plural = 'Dashboard Layouts'
+    
+    def __str__(self):
+        scope = f" - {self.care_home.name}" if self.care_home else " (System)"
+        return f"{self.name}{scope}"
+
+
+class ChartWidget(models.Model):
+    """
+    Individual chart/visualization widget
+    Can be added to dashboards for custom views
+    """
+    CHART_TYPES = [
+        ('LINE', 'Line Chart'),
+        ('BAR', 'Bar Chart'),
+        ('PIE', 'Pie Chart'),
+        ('DOUGHNUT', 'Doughnut Chart'),
+        ('RADAR', 'Radar Chart'),
+        ('HEATMAP', 'Heat Map'),
+        ('GAUGE', 'Gauge'),
+        ('TABLE', 'Data Table'),
+        ('STAT_CARD', 'Stat Card'),
+    ]
+    
+    DATA_SOURCES = [
+        ('STAFF_COUNT', 'Staff Count'),
+        ('SHIFT_COUNT', 'Shift Count'),
+        ('OCCUPANCY', 'Occupancy Rate'),
+        ('LEAVE_REQUESTS', 'Leave Requests'),
+        ('TRAINING_STATUS', 'Training Status'),
+        ('AGENCY_USAGE', 'Agency Usage'),
+        ('OVERTIME_HOURS', 'Overtime Hours'),
+        ('TURNOVER_RATE', 'Staff Turnover'),
+        ('COMPLIANCE_RATE', 'Compliance Rate'),
+        ('INCIDENT_COUNT', 'Incident Count'),
+        ('KPI_METRIC', 'KPI Metric'),
+        ('CUSTOM_QUERY', 'Custom Query'),
+    ]
+    
+    REFRESH_INTERVALS = [
+        ('MANUAL', 'Manual Only'),
+        ('REALTIME', 'Real-time'),
+        ('5MIN', 'Every 5 Minutes'),
+        ('15MIN', 'Every 15 Minutes'),
+        ('1HOUR', 'Every Hour'),
+        ('1DAY', 'Daily'),
+    ]
+    
+    # Widget identification
+    dashboard = models.ForeignKey(
+        'DashboardLayout',
+        on_delete=models.CASCADE,
+        related_name='widgets',
+        help_text="Parent dashboard"
+    )
+    title = models.CharField(max_length=200, help_text="Widget title")
+    
+    # Visualization type
+    chart_type = models.CharField(
+        max_length=20,
+        choices=CHART_TYPES,
+        default='LINE',
+        help_text="Type of chart/visualization"
+    )
+    
+    # Data configuration
+    data_source = models.CharField(
+        max_length=50,
+        choices=DATA_SOURCES,
+        help_text="Primary data source"
+    )
+    data_config = models.JSONField(
+        default=dict,
+        help_text="Data source configuration (filters, aggregation, grouping)"
+    )
+    
+    # Chart styling (JSON)
+    chart_config = models.JSONField(
+        default=dict,
+        help_text="Chart.js configuration (colors, labels, options)"
+    )
+    
+    # Position & size
+    grid_position = models.JSONField(
+        default=dict,
+        help_text="Position in dashboard grid (row, col, rowspan, colspan)"
+    )
+    
+    # Behavior
+    refresh_interval = models.CharField(
+        max_length=20,
+        choices=REFRESH_INTERVALS,
+        default='MANUAL',
+        help_text="How often to refresh data"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['dashboard', 'grid_position']
+        verbose_name = 'Chart Widget'
+        verbose_name_plural = 'Chart Widgets'
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_chart_type_display()}) - {self.dashboard.name}"
+
+
+class DataVisualization(models.Model):
+    """
+    Saved visualization configuration for reuse
+    Can be shared across dashboards
+    """
+    VISUALIZATION_TYPES = [
+        ('STAFFING_HEATMAP', 'Staffing Heat Map'),
+        ('SHIFT_TIMELINE', 'Shift Timeline'),
+        ('OCCUPANCY_TREND', 'Occupancy Trend'),
+        ('TRAINING_MATRIX', 'Training Matrix'),
+        ('LEAVE_CALENDAR', 'Leave Calendar'),
+        ('AGENCY_BREAKDOWN', 'Agency Breakdown'),
+        ('COST_ANALYSIS', 'Cost Analysis'),
+        ('PERFORMANCE_RADAR', 'Performance Radar'),
+        ('CUSTOM', 'Custom Visualization'),
+    ]
+    
+    # Identification
+    name = models.CharField(max_length=200, help_text="Visualization name")
+    description = models.TextField(blank=True)
+    visualization_type = models.CharField(
+        max_length=50,
+        choices=VISUALIZATION_TYPES,
+        help_text="Type of visualization"
+    )
+    
+    # Configuration
+    config = models.JSONField(
+        default=dict,
+        help_text="Complete visualization configuration"
+    )
+    
+    # Sharing
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='visualizations',
+        help_text="Creator"
+    )
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Share with other managers"
+    )
+    
+    # Scope
+    care_home = models.ForeignKey(
+        'CareHome',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='visualizations',
+        help_text="Specific care home (null for system-wide)"
+    )
+    
+    # Usage tracking
+    use_count = models.IntegerField(
+        default=0,
+        help_text="Number of times used in dashboards"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Data Visualization'
+        verbose_name_plural = 'Data Visualizations'
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_visualization_type_display()})"

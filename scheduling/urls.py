@@ -211,7 +211,16 @@ urlpatterns = [
     path('kpi/calculate/', views.kpi_calculate, name='kpi_calculate'),
     path('kpi/<int:kpi_id>/targets/', views.kpi_target_manage, name='kpi_target_manage'),
     path('kpi/executive/', views.kpi_executive_summary, name='kpi_executive_summary'),
-
+    
+    # Data Visualization Suite (Phase 3 - Task 29)
+    path('dashboards/', views.dashboard_builder, name='dashboard_builder'),
+    path('dashboards/create/', views.dashboard_create, name='dashboard_create'),
+    path('dashboards/<int:dashboard_id>/', views.dashboard_view, name='dashboard_view'),
+    path('dashboards/<int:dashboard_id>/edit/', views.dashboard_edit, name='dashboard_edit'),
+    path('dashboards/<int:dashboard_id>/delete/', views.dashboard_delete, name='dashboard_delete'),
+    path('dashboards/<int:dashboard_id>/widget/add/', views.widget_add, name='widget_add'),
+    path('dashboards/widget/<int:widget_id>/delete/', views.widget_delete, name='widget_delete'),
+    path('dashboards/widget/preview/', views.widget_preview, name='widget_preview'),
     
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
