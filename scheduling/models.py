@@ -4624,5 +4624,42 @@ from .models_health_monitoring import (
 )
 
 
+# ===== Task 49: Search Analytics Model =====
 
-
+class SearchAnalytics(models.Model):
+    """
+    Track search queries for analytics and improvement
+    Used to identify popular searches, failed searches, and search patterns
+    """
+    query = models.CharField(max_length=255, help_text="Search query entered by user")
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="User who performed the search"
+    )
+    search_type = models.CharField(
+        max_length=50,
+        default='all',
+        help_text="Type of search: all, staff, shifts, leave, homes"
+    )
+    result_count = models.IntegerField(
+        default=0,
+        help_text="Number of results returned"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'scheduling_search_analytics'
+        verbose_name = 'Search Analytics'
+        verbose_name_plural = 'Search Analytics'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['query']),
+            models.Index(fields=['user']),
+        ]
+    
+    def __str__(self):
+        return f"{self.query} ({self.result_count} results) - {self.timestamp}"

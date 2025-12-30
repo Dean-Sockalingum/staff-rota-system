@@ -112,6 +112,11 @@ from .views_2fa import (
     regenerate_backup_codes,
     two_factor_status
 )
+from .views_search import (
+    global_search,
+    autocomplete,
+    advanced_search
+)
 
 urlpatterns = [
     # Authentication
@@ -125,6 +130,11 @@ urlpatterns = [
     path('2fa/disable/', two_factor_disable, name='two_factor_disable'),
     path('2fa/regenerate-backup-codes/', regenerate_backup_codes, name='regenerate_backup_codes'),
     path('api/2fa/status/', two_factor_status, name='two_factor_status'),
+    
+    # Task 49: Advanced Search with Elasticsearch
+    path('search/', global_search, name='global_search'),
+    path('search/autocomplete/', autocomplete, name='search_autocomplete'),
+    path('search/advanced/', advanced_search, name='advanced_search'),
     
     # PWA Offline Page
     path('offline/', views.offline_view, name='offline'),

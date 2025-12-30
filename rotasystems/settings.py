@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',  # Backup codes
+    # Task 49: Advanced Search
+    'django_elasticsearch_dsl',
     # Core apps
     'scheduling',
     'scheduling.management',
@@ -806,3 +808,25 @@ REQUIRED_2FA_ROLES = [
     'is_superuser',  # Django superusers
     'Manager',  # Staff with Manager role
 ]
+
+# ===== Task 49: Elasticsearch Configuration =====
+
+# Elasticsearch DSL settings
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': os.environ.get('ELASTICSEARCH_URL', 'localhost:9200'),
+        'http_auth': (
+            os.environ.get('ELASTICSEARCH_USER', ''),
+            os.environ.get('ELASTICSEARCH_PASSWORD', '')
+        ) if os.environ.get('ELASTICSEARCH_USER') else None,
+        'timeout': 30,
+        'max_retries': 3,
+        'retry_on_timeout': True,
+    },
+}
+
+# Search settings
+SEARCH_RESULTS_PER_PAGE = 20
+SEARCH_AUTOCOMPLETE_MIN_LENGTH = 2
+SEARCH_HIGHLIGHT_ENABLED = True
+SEARCH_ANALYTICS_ENABLED = True  # Track search queries for analytics
