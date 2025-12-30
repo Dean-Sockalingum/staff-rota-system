@@ -8,7 +8,8 @@ from .models import (
     TrainingCourse, TrainingRecord, InductionProgress,
     SupervisionRecord, IncidentReport,
     CostAnalysis, AgencyCostComparison, BudgetForecast,
-    StaffCertification, AuditTrail
+    StaffCertification, AuditTrail,
+    AttendanceRecord, StaffPerformance, PerformanceReview
 )
 
 @admin.register(Role)
@@ -394,6 +395,36 @@ class AuditTrailAdmin(admin.ModelAdmin):
     search_fields = ['user__first_name', 'user__last_name', 'description']
     readonly_fields = ['timestamp', 'reviewed_at']
     date_hierarchy = 'timestamp'
+
+
+# Task 34: Staff Performance Tracking Admin
+@admin.register(AttendanceRecord)
+class AttendanceRecordAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'date', 'shift_type', 'status', 'minutes_late', 'shift_completed']
+    list_filter = ['status', 'shift_type', 'shift_completed', 'date']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name']
+    readonly_fields = ['minutes_late', 'minutes_early_departure']
+    date_hierarchy = 'date'
+
+@admin.register(StaffPerformance)
+class StaffPerformanceAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'period_start', 'period_end', 'overall_score', 'attendance_rate']
+    list_filter = ['period_start', 'care_home']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name']
+    readonly_fields = ['overall_score', 'attendance_rate', 'punctuality_rate', 'completion_rate']
+
+@admin.register(PerformanceReview)
+class PerformanceReviewAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'review_date', 'review_type', 'average_score_display', 'outcome', 'staff_acknowledged']
+    list_filter = ['review_type', 'outcome', 'staff_acknowledged', 'review_date', 'care_home']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name', 'achievements', 'concerns']
+    readonly_fields = ['staff_acknowledged_at']
+    date_hierarchy = 'review_date'
+    
+    def average_score_display(self, obj):
+        return f"{obj.average_score():.1f}/10"
+    average_score_display.short_description = 'Avg Score'
+
 
 
 # Import automated workflow admin configurations

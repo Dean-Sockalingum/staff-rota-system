@@ -14387,6 +14387,286 @@ def audit_trail_view(request):
     return render(request, 'scheduling/audit_trail.html', context)
 
 
+# ============================================================================
+# TASK 34: STAFF PERFORMANCE TRACKING VIEWS
+# ============================================================================
+
+@login_required
+def performance_dashboard(request):
+    """Performance tracking dashboard"""
+    from . import performance_tracking
+    from .models import StaffPerformance, AttendanceRecord
+    
+    care_home = request.user.care_home
+    
+    # Date range (default: last 30 days)
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    # Get team performance comparison
+    team_data = performance_tracking.get_team_performance_comparison(
+        care_home, start_date, end_date, limit=5
+    )
+    
+    # Get recent attendance records
+    recent_attendance = AttendanceRecord.objects.filter(
+        staff_member__care_home=care_home,
+        date__gte=start_date
+    ).select_related('staff_member', 'shift').order_by('-date')[:10]
+    
+    # Get recent performance reviews
+    from .models import PerformanceReview
+    recent_reviews = PerformanceReview.objects.filter(
+        care_home=care_home,
+        review_date__gte=start_date
+    ).select_related('staff_member', 'reviewer').order_by('-review_date')[:5]
+    
+    # Performance alerts
+    alerts = []
+    for performer in team_data['bottom_performers']:
+        if performer['overall_score'] < 60:
+            alerts.append({
+                'type': 'danger',
+                'staff': performer['staff_member'],
+                'message': f"{performer['staff_member'].get_full_name()} has low performance ({performer['overall_score']:.1f})",
+            })
+    
+    context = {
+        'top_performers': team_data['top_performers'],
+        'bottom_performers': team_data['bottom_performers'],
+        'average_score': team_data['average_score'],
+        'total_staff': team_data['total_staff'],
+        'recent_attendance': recent_attendance,
+        'recent_reviews': recent_reviews,
+        'alerts': alerts,
+        'start_date': start_date,
+        'end_date': end_date,
+    }
+    return render(request, 'scheduling/performance_dashboard.html', context)
+
+
+@login_required
+def record_attendance_view(request, shift_id):
+    """Record attendance for a shift"""
+    from .models import Shift, AttendanceRecord
+    from . import performance_tracking
+    
+    shift = get_object_or_404(Shift, id=shift_id)
+    
+    if request.method == 'POST':
+        status = request.POST.get('status', 'PRESENT')
+        
+        # Parse times
+        actual_start = request.POST.get('actual_start')
+        actual_end = request.POST.get('actual_end')
+        
+        if actual_start:
+            actual_start = datetime.strptime(actual_start, '%H:%M').time()
+        if actual_end:
+            actual_end = datetime.strptime(actual_end, '%H:%M').time()
+        
+        reason = request.POST.get('reason_for_absence', '')
+        documentation = request.POST.get('documentation_provided') == 'on'
+        shift_completed = request.POST.get('shift_completed') == 'on'
+        
+        # Record attendance
+        record = performance_tracking.record_attendance(
+            staff_member=shift.staff_member,
+            shift=shift,
+            status=status,
+            actual_start=actual_start,
+            actual_end=actual_end,
+            reason_for_absence=reason,
+            documentation_provided=documentation
+        )
+        
+        record.shift_completed = shift_completed
+        if request.POST.get('completion_notes'):
+            record.completion_notes = request.POST.get('completion_notes')
+        record.save()
+        
+        messages.success(request, 'Attendance recorded successfully')
+        return redirect('performance_dashboard')
+    
+    context = {
+        'shift': shift,
+        'status_choices': AttendanceRecord.STATUS_CHOICES,
+    }
+    return render(request, 'scheduling/record_attendance.html', context)
+
+
+@login_required
+def staff_performance_detail(request, staff_id):
+    """View detailed performance for a staff member"""
+    from . import performance_tracking
+    from .models import StaffPerformance, PerformanceReview
+    
+    staff = get_object_or_404(User, id=staff_id)
+    
+    # Date range from request or default
+    days_back = int(request.GET.get('days', 30))
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=days_back)
+    
+    # Calculate current metrics
+    metrics = performance_tracking.calculate_performance_metrics(
+        staff, start_date, end_date
+    )
+    
+    # Identify issues
+    analysis = performance_tracking.identify_performance_issues(
+        staff, start_date, end_date
+    )
+    
+    # Get performance history
+    performance_history = StaffPerformance.objects.filter(
+        staff_member=staff
+    ).order_by('-period_end')[:12]
+    
+    # Get review history
+    review_history = PerformanceReview.objects.filter(
+        staff_member=staff
+    ).order_by('-review_date')[:10]
+    
+    # Get attendance calendar
+    calendar_data = performance_tracking.get_attendance_calendar(staff)
+    
+    context = {
+        'staff': staff,
+        'metrics': metrics,
+        'issues': analysis['issues'],
+        'recommendations': analysis['recommendations'],
+        'performance_history': performance_history,
+        'review_history': review_history,
+        'calendar_data': calendar_data,
+        'start_date': start_date,
+        'end_date': end_date,
+        'days_back': days_back,
+    }
+    return render(request, 'scheduling/staff_performance_detail.html', context)
+
+
+@login_required
+def generate_performance_report(request):
+    """Generate performance report for staff member"""
+    from . import performance_tracking
+    
+    if request.method == 'POST':
+        staff_id = request.POST.get('staff_id')
+        start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-%d').date()
+        end_date = datetime.strptime(request.POST.get('end_date'), '%Y-%m-%d').date()
+        
+        staff = get_object_or_404(User, id=staff_id)
+        
+        # Generate performance record
+        performance = performance_tracking.generate_performance_record(
+            staff, start_date, end_date
+        )
+        
+        messages.success(request, f'Performance report generated for {staff.get_full_name()}')
+        return redirect('staff_performance_detail', staff_id=staff.id)
+    
+    # GET request - show form
+    care_home = request.user.care_home
+    staff_list = User.objects.filter(care_home=care_home, is_active=True)
+    
+    context = {
+        'staff_list': staff_list,
+    }
+    return render(request, 'scheduling/generate_performance_report.html', context)
+
+
+@login_required
+def create_performance_review_view(request):
+    """Create a performance review"""
+    from . import performance_tracking
+    from .models import PerformanceReview
+    
+    if request.method == 'POST':
+        staff_id = request.POST.get('staff_id')
+        staff = get_object_or_404(User, id=staff_id)
+        
+        review = performance_tracking.create_performance_review(
+            staff_member=staff,
+            review_type=request.POST.get('review_type', 'QUARTERLY'),
+            reviewer=request.user,
+            quality_of_work=int(request.POST.get('quality_of_work', 5)),
+            reliability=int(request.POST.get('reliability', 5)),
+            teamwork=int(request.POST.get('teamwork', 5)),
+            communication=int(request.POST.get('communication', 5)),
+            professionalism=int(request.POST.get('professionalism', 5)),
+            achievements=request.POST.get('achievements', ''),
+            concerns=request.POST.get('concerns', ''),
+            development_goals=request.POST.get('development_goals', ''),
+            action_plan=request.POST.get('action_plan', ''),
+            outcome=request.POST.get('outcome', 'CONTINUE'),
+        )
+        
+        messages.success(request, f'Performance review created for {staff.get_full_name()}')
+        return redirect('performance_review_detail', review_id=review.id)
+    
+    # GET request - show form
+    care_home = request.user.care_home
+    staff_list = User.objects.filter(care_home=care_home, is_active=True)
+    
+    context = {
+        'staff_list': staff_list,
+        'review_types': PerformanceReview.REVIEW_TYPES,
+        'outcome_choices': PerformanceReview.OUTCOME_CHOICES,
+    }
+    return render(request, 'scheduling/create_performance_review.html', context)
+
+
+@login_required
+def performance_review_detail(request, review_id):
+    """View performance review details"""
+    from .models import PerformanceReview
+    
+    review = get_object_or_404(PerformanceReview, id=review_id)
+    
+    # Staff acknowledgment
+    if request.method == 'POST' and request.POST.get('acknowledge'):
+        if request.user == review.staff_member:
+            review.staff_acknowledged = True
+            review.staff_acknowledged_at = timezone.now()
+            review.staff_comments = request.POST.get('staff_comments', '')
+            review.save()
+            messages.success(request, 'Review acknowledged')
+    
+    context = {
+        'review': review,
+    }
+    return render(request, 'scheduling/performance_review_detail.html', context)
+
+
+@login_required
+def team_performance_comparison(request):
+    """Compare performance across team"""
+    from . import performance_tracking
+    
+    care_home = request.user.care_home
+    
+    # Date range
+    days_back = int(request.GET.get('days', 30))
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=days_back)
+    
+    # Get comparison data
+    team_data = performance_tracking.get_team_performance_comparison(
+        care_home, start_date, end_date, limit=20
+    )
+    
+    context = {
+        'all_performers': team_data['top_performers'],
+        'average_score': team_data['average_score'],
+        'total_staff': team_data['total_staff'],
+        'start_date': start_date,
+        'end_date': end_date,
+        'days_back': days_back,
+    }
+    return render(request, 'scheduling/team_performance_comparison.html', context)
+
+
 @login_required
 def compliance_report_view(request):
     """Generate compliance report"""

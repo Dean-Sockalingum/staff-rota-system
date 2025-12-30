@@ -256,6 +256,15 @@ urlpatterns = [
     path('compliance/audit-trail/', views.audit_trail_view, name='audit_trail_view'),
     path('compliance/report/', views.compliance_report_view, name='compliance_report_view'),
     
+    # Task 34: Staff Performance Tracking URLs
+    path('performance/', views.performance_dashboard, name='performance_dashboard'),
+    path('performance/attendance/<int:shift_id>/', views.record_attendance_view, name='record_attendance'),
+    path('performance/staff/<int:staff_id>/', views.staff_performance_detail, name='staff_performance_detail'),
+    path('performance/generate-report/', views.generate_performance_report, name='generate_performance_report'),
+    path('performance/review/create/', views.create_performance_review_view, name='create_performance_review'),
+    path('performance/review/<int:review_id>/', views.performance_review_detail, name='performance_review_detail'),
+    path('performance/team-comparison/', views.team_performance_comparison, name='team_performance_comparison'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
