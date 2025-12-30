@@ -24,6 +24,18 @@ from .views_onboarding import (
     mark_onboarding_step_complete,
     get_user_tips
 )
+from .views_analytics import (
+    executive_dashboard,
+    manager_dashboard as analytics_manager_dashboard,
+    staff_performance_view,
+    unit_analytics_view,
+    budget_analysis_view,
+    trends_analysis_view,
+    api_dashboard_summary,
+    api_unit_staffing,
+    api_budget_analysis,
+    api_weekly_trends
+)
 
 urlpatterns = [
     # Authentication
@@ -94,6 +106,21 @@ urlpatterns = [
     path('audit/reports/', views.audit_report_list, name='audit_report_list'),
     path('audit/reports/<int:report_id>/', views.audit_report_detail, name='audit_report_detail'),
     path('audit/reports/generate/', views.generate_audit_report, name='generate_audit_report'),
+    
+    # Advanced Analytics Dashboard (Task 39)
+    path('analytics/executive/', executive_dashboard, name='analytics_executive_dashboard'),
+    path('analytics/manager/', analytics_manager_dashboard, name='analytics_manager_dashboard'),
+    path('analytics/staff/<str:sap>/', staff_performance_view, name='analytics_staff_performance'),
+    path('analytics/unit/<int:unit_id>/', unit_analytics_view, name='analytics_unit'),
+    path('analytics/budget/', budget_analysis_view, name='analytics_budget'),
+    path('analytics/budget/<int:care_home_id>/', budget_analysis_view, name='analytics_budget_home'),
+    path('analytics/trends/', trends_analysis_view, name='analytics_trends'),
+    
+    # Analytics API Endpoints
+    path('api/analytics/dashboard/', api_dashboard_summary, name='api_dashboard_summary'),
+    path('api/analytics/unit/<int:unit_id>/staffing/', api_unit_staffing, name='api_unit_staffing'),
+    path('api/analytics/budget/<int:care_home_id>/', api_budget_analysis, name='api_budget_analysis'),
+    path('api/analytics/trends/weekly/', api_weekly_trends, name='api_weekly_trends'),
     
     # AI Assistant API
     path('ai-assistant/', views.ai_assistant_page, name='ai_assistant_page'),
