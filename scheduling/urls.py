@@ -184,6 +184,12 @@ urlpatterns = [
     path('bulk/ajax/units/', views.get_units_for_home_ajax, name='get_units_for_home_ajax'),
     path('bulk/ajax/staff/', views.get_staff_for_home_ajax, name='get_staff_for_home_ajax'),
     
+    # Analytics & Reporting (Phase 3 - Task 25)
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    path('analytics/report/', views.analytics_detailed_report, name='analytics_detailed_report'),
+    path('analytics/export/', views.analytics_export_data, name='analytics_export_data'),
+    path('analytics/kpi/<str:kpi_type>/', views.analytics_kpi_widget, name='analytics_kpi_widget'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

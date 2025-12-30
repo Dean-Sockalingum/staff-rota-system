@@ -11869,3 +11869,203 @@ def get_staff_for_home_ajax(request):
     ]
     
     return JsonResponse({'staff': staff_list})
+
+
+# ============================================================================
+# ANALYTICS & REPORTING VIEWS (Phase 3)
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def analytics_dashboard(request):
+    """
+    Main analytics dashboard with KPIs and charts
+    """
+    from .analytics import get_dashboard_summary, get_trending_data
+    
+    # Get filter parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    date_range = request.GET.get('date_range', 'week')
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Get dashboard data
+    dashboard_data = get_dashboard_summary(care_home, unit, date_range)
+    
+    # Get trending data for charts
+    staffing_trend = get_trending_data(care_home, unit, 'staffing', periods=12)
+    costs_trend = get_trending_data(care_home, unit, 'costs', periods=12)
+    occupancy_trend = get_trending_data(care_home, unit, 'occupancy', periods=12)
+    compliance_trend = get_trending_data(care_home, unit, 'compliance', periods=12)
+    
+    context = {
+        'dashboard_data': dashboard_data,
+        'staffing_trend': staffing_trend,
+        'costs_trend': costs_trend,
+        'occupancy_trend': occupancy_trend,
+        'compliance_trend': compliance_trend,
+        'care_homes': CareHome.objects.all(),
+        'units': Unit.objects.all() if not care_home else care_home.units.all(),
+        'selected_care_home': care_home,
+        'selected_unit': unit,
+        'selected_date_range': date_range,
+    }
+    
+    return render(request, 'scheduling/analytics_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def analytics_detailed_report(request):
+    """
+    Detailed analytics report with drill-down
+    """
+    from .analytics import (
+        calculate_staffing_levels,
+        calculate_overtime_metrics,
+        calculate_cost_metrics,
+        calculate_compliance_metrics,
+        get_shift_distribution
+    )
+    
+    # Get parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Parse dates
+    try:
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            # Default to current month
+            from .analytics import get_date_range
+            start_date, end_date = get_date_range('month')
+    except ValueError:
+        messages.error(request, "Invalid date format. Using current month.")
+        from .analytics import get_date_range
+        start_date, end_date = get_date_range('month')
+    
+    # Get detailed metrics
+    staffing = calculate_staffing_levels(care_home, unit, start_date, end_date)
+    overtime = calculate_overtime_metrics(care_home, unit, start_date, end_date)
+    costs = calculate_cost_metrics(care_home, unit, start_date, end_date)
+    compliance = calculate_compliance_metrics(care_home, unit, start_date, end_date)
+    distribution = get_shift_distribution(care_home, unit, start_date, end_date)
+    
+    context = {
+        'staffing': staffing,
+        'overtime': overtime,
+        'costs': costs,
+        'compliance': compliance,
+        'distribution': distribution,
+        'start_date': start_date,
+        'end_date': end_date,
+        'care_homes': CareHome.objects.all(),
+        'units': Unit.objects.all() if not care_home else care_home.units.all(),
+        'selected_care_home': care_home,
+        'selected_unit': unit,
+    }
+    
+    return render(request, 'scheduling/analytics_detailed_report.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def analytics_export_data(request):
+    """
+    Export analytics data to JSON (for charts/API)
+    """
+    from .analytics import get_dashboard_summary, get_trending_data
+    
+    # Get parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    date_range = request.GET.get('date_range', 'week')
+    metric = request.GET.get('metric', 'all')
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    if metric == 'all':
+        # Full dashboard data
+        data = get_dashboard_summary(care_home, unit, date_range)
+    else:
+        # Specific trending data
+        data = get_trending_data(care_home, unit, metric, periods=12)
+    
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def analytics_kpi_widget(request, kpi_type):
+    """
+    Get single KPI widget data (AJAX endpoint)
+    """
+    from .analytics import (
+        calculate_occupancy_rate,
+        calculate_staffing_levels,
+        calculate_overtime_metrics,
+        calculate_cost_metrics,
+        calculate_compliance_metrics
+    )
+    
+    # Get parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    date_range = request.GET.get('date_range', 'week')
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Get date range
+    from .analytics import get_date_range
+    start_date, end_date = get_date_range(date_range)
+    
+    # Get KPI data based on type
+    if kpi_type == 'occupancy':
+        data = calculate_occupancy_rate(care_home, unit, start_date, end_date)
+    elif kpi_type == 'staffing':
+        data = calculate_staffing_levels(care_home, unit, start_date, end_date)
+    elif kpi_type == 'overtime':
+        data = calculate_overtime_metrics(care_home, unit, start_date, end_date)
+    elif kpi_type == 'costs':
+        data = calculate_cost_metrics(care_home, unit, start_date, end_date)
+    elif kpi_type == 'compliance':
+        data = calculate_compliance_metrics(care_home, unit, start_date, end_date)
+    else:
+        return JsonResponse({'error': 'Invalid KPI type'}, status=400)
+    
+    return JsonResponse(data)

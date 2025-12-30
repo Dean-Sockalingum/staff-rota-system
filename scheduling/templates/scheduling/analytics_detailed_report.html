@@ -1,0 +1,477 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Detailed Analytics Report - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 8px;
+    }
+    
+    .metric-section {
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .metric-section h3 {
+        color: #667eea;
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    
+    .metric-row:last-child {
+        border-bottom: none;
+    }
+    
+    .metric-label {
+        font-weight: 500;
+        color: #666;
+    }
+    
+    .metric-value {
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .metric-value.success {
+        color: #28a745;
+    }
+    
+    .metric-value.warning {
+        color: #ffc107;
+    }
+    
+    .metric-value.danger {
+        color: #dc3545;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .distribution-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .distribution-table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        font-weight: 600;
+        text-align: left;
+        color: #666;
+    }
+    
+    .distribution-table td {
+        padding: 12px;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .progress-bar-custom {
+        background-color: #e9ecef;
+        height: 20px;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .alert-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .alert-list li {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-header">
+    <div class="container">
+        <h1 class="mb-2">
+            <i class="fas fa-file-alt"></i> Detailed Analytics Report
+        </h1>
+        <p class="mb-0">
+            Comprehensive staffing and operations report
+            {% if selected_unit %}
+                for {{ selected_unit.name }}
+            {% elif selected_care_home %}
+                for {{ selected_care_home.name }}
+            {% else %}
+                across all care homes
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filters -->
+    <div class="filter-bar">
+        <form method="get">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="care_home">Care Home</label>
+                    <select class="form-control" name="care_home" id="care_home">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                            <option value="{{ home.id }}" {% if selected_care_home.id == home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="unit">Unit</label>
+                    <select class="form-control" name="unit" id="unit">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_unit.id == unit.id %}selected{% endif %}>
+                                {{ unit.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="start_date">Start Date</label>
+                    <input type="date" class="form-control" name="start_date" id="start_date" value="{{ start_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="end_date">End Date</label>
+                    <input type="date" class="form-control" name="end_date" id="end_date" value="{{ end_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Report Period -->
+    <div class="alert alert-info">
+        <i class="fas fa-calendar-alt"></i>
+        <strong>Report Period:</strong> {{ start_date }} to {{ end_date }}
+    </div>
+    
+    <!-- Staffing Metrics -->
+    <div class="metric-section">
+        <h3><i class="fas fa-users"></i> Staffing Metrics</h3>
+        
+        <div class="metric-row">
+            <span class="metric-label">Required Shifts</span>
+            <span class="metric-value">{{ staffing.required_shifts }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Scheduled Shifts</span>
+            <span class="metric-value">{{ staffing.scheduled_shifts }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Fill Rate</span>
+            <span class="metric-value {% if staffing.fill_rate >= 95 %}success{% elif staffing.fill_rate >= 85 %}warning{% else %}danger{% endif %}">
+                {{ staffing.fill_rate }}%
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Open Vacancies</span>
+            <span class="metric-value {% if staffing.vacancies == 0 %}success{% else %}danger{% endif %}">
+                {{ staffing.vacancies }}
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Average Staff per Day</span>
+            <span class="metric-value">{{ staffing.avg_staff_per_day }}</span>
+        </div>
+        
+        <div class="mt-3">
+            <div class="progress-bar-custom">
+                <div class="progress-fill" style="width: {{ staffing.fill_rate }}%">
+                    {{ staffing.fill_rate }}% Filled
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overtime Metrics -->
+    <div class="metric-section">
+        <h3><i class="fas fa-clock"></i> Overtime Metrics</h3>
+        
+        <div class="metric-row">
+            <span class="metric-label">Total Overtime Hours</span>
+            <span class="metric-value">{{ overtime.total_overtime_hours }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Overtime Shifts</span>
+            <span class="metric-value">{{ overtime.overtime_shifts }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Percentage Overtime</span>
+            <span class="metric-value {% if overtime.percentage_overtime < 10 %}success{% elif overtime.percentage_overtime < 20 %}warning{% else %}danger{% endif %}">
+                {{ overtime.percentage_overtime }}%
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Estimated Overtime Cost</span>
+            <span class="metric-value danger">£{{ overtime.estimated_overtime_cost }}</span>
+        </div>
+    </div>
+    
+    <!-- Cost Metrics -->
+    <div class="metric-section">
+        <h3><i class="fas fa-pound-sign"></i> Cost Metrics</h3>
+        
+        <div class="metric-row">
+            <span class="metric-label">Total Shifts</span>
+            <span class="metric-value">{{ costs.total_shifts }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Estimated Regular Cost</span>
+            <span class="metric-value">£{{ costs.estimated_regular_cost }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Estimated Overtime Cost</span>
+            <span class="metric-value">£{{ costs.estimated_overtime_cost }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Estimated Total Cost</span>
+            <span class="metric-value" style="font-size: 20px; color: #667eea;">
+                £{{ costs.estimated_total_cost }}
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Cost per Shift</span>
+            <span class="metric-value">£{{ costs.cost_per_shift }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Cost per Day</span>
+            <span class="metric-value">£{{ costs.cost_per_day }}</span>
+        </div>
+    </div>
+    
+    <!-- Compliance Metrics -->
+    <div class="metric-section">
+        <h3><i class="fas fa-check-circle"></i> Compliance Metrics</h3>
+        
+        <div class="metric-row">
+            <span class="metric-label">Total Staff Monitored</span>
+            <span class="metric-value">{{ compliance.total_staff }}</span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Compliance Rate</span>
+            <span class="metric-value {% if compliance.compliance_rate >= 95 %}success{% elif compliance.compliance_rate >= 85 %}warning{% else %}danger{% endif %}">
+                {{ compliance.compliance_rate }}%
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Violations</span>
+            <span class="metric-value {% if compliance.violations == 0 %}success{% else %}danger{% endif %}">
+                {{ compliance.violations }}
+            </span>
+        </div>
+        
+        <div class="metric-row">
+            <span class="metric-label">Warnings</span>
+            <span class="metric-value {% if compliance.warnings == 0 %}success{% else %}warning{% endif %}">
+                {{ compliance.warnings }}
+            </span>
+        </div>
+        
+        {% if compliance.at_risk_staff %}
+        <div class="mt-3">
+            <strong>At-Risk Staff:</strong>
+            <ul class="alert-list mt-2">
+                {% for staff in compliance.at_risk_staff %}
+                <li>
+                    <strong>{{ staff.staff_name }}</strong> - {{ staff.issue }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Shift Distribution by Type -->
+    <div class="metric-section">
+        <h3><i class="fas fa-chart-pie"></i> Shift Distribution by Type</h3>
+        
+        <table class="distribution-table">
+            <thead>
+                <tr>
+                    <th>Shift Type</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                    <th>Distribution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in distribution.by_type %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>{{ item.percentage }}%</td>
+                    <td>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: {{ item.percentage }}%">
+                                {{ item.percentage }}%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if distribution.by_unit %}
+    <!-- Shift Distribution by Unit -->
+    <div class="metric-section">
+        <h3><i class="fas fa-building"></i> Shift Distribution by Unit</h3>
+        
+        <table class="distribution-table">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                    <th>Distribution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in distribution.by_unit %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>{{ item.percentage }}%</td>
+                    <td>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: {{ item.percentage }}%">
+                                {{ item.percentage }}%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <!-- Shift Distribution by Day of Week -->
+    <div class="metric-section">
+        <h3><i class="fas fa-calendar-week"></i> Shift Distribution by Day of Week</h3>
+        
+        <table class="distribution-table">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Count</th>
+                    <th>Distribution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in distribution.by_day_of_week %}
+                <tr>
+                    <td>{{ item.day }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: {% widthratio item.count 100 100 %}%">
+                                {{ item.count }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row mt-4 mb-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-primary mr-2">
+                        <i class="fas fa-chart-line"></i> Back to Dashboard
+                    </a>
+                    <button onclick="window.print()" class="btn btn-info mr-2">
+                        <i class="fas fa-print"></i> Print Report
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Main Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit on filter change (optional)
+document.getElementById('care_home').addEventListener('change', function() {
+    // Clear unit if care home changes
+    document.getElementById('unit').value = '';
+});
+</script>
+{% endblock %}
