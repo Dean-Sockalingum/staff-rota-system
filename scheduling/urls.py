@@ -195,6 +195,16 @@ urlpatterns = [
     path('predictive/week/', views.predictive_week_forecast, name='predictive_week_forecast'),
     path('predictive/day/', views.predictive_single_day, name='predictive_single_day'),
     
+    # Custom Report Builder (Phase 3 - Task 27)
+    path('reports/', views.report_builder_dashboard, name='report_builder_dashboard'),
+    path('reports/create/', views.report_builder_create, name='report_builder_create'),
+    path('reports/execute/', views.report_execute, name='report_execute'),
+    path('reports/preview/', views.report_preview, name='report_preview'),
+    path('reports/template/save/', views.report_template_save, name='report_template_save'),
+    path('reports/template/<int:template_id>/delete/', views.report_template_delete, name='report_template_delete'),
+    path('reports/schedule/create/', views.report_schedule_create, name='report_schedule_create'),
+    path('reports/schedule/<int:schedule_id>/delete/', views.report_schedule_delete, name='report_schedule_delete'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

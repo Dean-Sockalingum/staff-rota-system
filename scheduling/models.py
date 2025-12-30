@@ -1990,3 +1990,172 @@ class ProphetModelMetrics(models.Model):
 
 from .feedback_learning import AIQueryFeedback, UserPreference
 
+
+# ============================================================================
+# TASK 27: CUSTOM REPORT BUILDER
+# Models for saving report templates and scheduling automated reports
+# ============================================================================
+
+class SavedReport(models.Model):
+    """Store custom report templates created by users"""
+    REPORT_TYPE_CHOICES = [
+        ('STAFFING', 'Staffing Report'),
+        ('LEAVE', 'Leave Report'),
+        ('SHIFTS', 'Shift Report'),
+        ('TRAINING', 'Training Report'),
+        ('COMPLIANCE', 'Compliance Report'),
+        ('INCIDENTS', 'Incident Report'),
+        ('RESIDENTS', 'Resident Report'),
+        ('CUSTOM', 'Custom Report'),
+    ]
+    
+    OUTPUT_FORMAT_CHOICES = [
+        ('PDF', 'PDF Document'),
+        ('EXCEL', 'Excel Spreadsheet'),
+        ('CSV', 'CSV File'),
+    ]
+    
+    name = models.CharField(max_length=200, help_text="Template name")
+    description = models.TextField(blank=True, null=True)
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES, default='CUSTOM')
+    created_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='created_reports')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Report Configuration (stored as JSON)
+    selected_fields = models.JSONField(
+        default=list,
+        help_text="List of field names to include in report"
+    )
+    filters = models.JSONField(
+        default=dict,
+        help_text="Filter criteria (date ranges, homes, units, staff, etc.)"
+    )
+    grouping = models.JSONField(
+        default=dict,
+        help_text="Grouping and aggregation settings"
+    )
+    sorting = models.JSONField(
+        default=list,
+        help_text="Sort order for report data"
+    )
+    
+    output_format = models.CharField(max_length=10, choices=OUTPUT_FORMAT_CHOICES, default='PDF')
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Allow other managers to use this template"
+    )
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Saved Report Template'
+        verbose_name_plural = 'Saved Report Templates'
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_report_type_display()})"
+
+
+class ScheduledReport(models.Model):
+    """Schedule automated report generation and delivery"""
+    FREQUENCY_CHOICES = [
+        ('DAILY', 'Daily'),
+        ('WEEKLY', 'Weekly'),
+        ('MONTHLY', 'Monthly'),
+        ('QUARTERLY', 'Quarterly'),
+    ]
+    
+    WEEKDAY_CHOICES = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+    
+    report_template = models.ForeignKey(
+        SavedReport,
+        on_delete=models.CASCADE,
+        related_name='schedules'
+    )
+    created_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='scheduled_reports')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='WEEKLY')
+    weekday = models.IntegerField(
+        choices=WEEKDAY_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Day of week for weekly reports (0=Monday, 6=Sunday)"
+    )
+    day_of_month = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        null=True,
+        blank=True,
+        help_text="Day of month for monthly reports"
+    )
+    time_of_day = models.TimeField(default=time(9, 0), help_text="Time to generate report")
+    
+    recipients = models.JSONField(
+        default=list,
+        help_text="List of email addresses to send report to"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    last_run = models.DateTimeField(null=True, blank=True)
+    next_run = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['next_run']
+        verbose_name = 'Scheduled Report'
+        verbose_name_plural = 'Scheduled Reports'
+    
+    def __str__(self):
+        return f"{self.report_template.name} - {self.get_frequency_display()}"
+    
+    def calculate_next_run(self):
+        """Calculate next run time based on frequency"""
+        from datetime import datetime, timedelta
+        now = timezone.now()
+        
+        if self.frequency == 'DAILY':
+            next_run = now.replace(hour=self.time_of_day.hour, minute=self.time_of_day.minute, second=0, microsecond=0)
+            if next_run <= now:
+                next_run += timedelta(days=1)
+        
+        elif self.frequency == 'WEEKLY':
+            days_ahead = self.weekday - now.weekday()
+            if days_ahead <= 0:
+                days_ahead += 7
+            next_run = now + timedelta(days=days_ahead)
+            next_run = next_run.replace(hour=self.time_of_day.hour, minute=self.time_of_day.minute, second=0, microsecond=0)
+        
+        elif self.frequency == 'MONTHLY':
+            next_run = now.replace(day=self.day_of_month, hour=self.time_of_day.hour, minute=self.time_of_day.minute, second=0, microsecond=0)
+            if next_run <= now:
+                # Move to next month
+                if now.month == 12:
+                    next_run = next_run.replace(year=now.year + 1, month=1)
+                else:
+                    next_run = next_run.replace(month=now.month + 1)
+        
+        elif self.frequency == 'QUARTERLY':
+            # Find next quarter start (Jan, Apr, Jul, Oct)
+            quarter_months = [1, 4, 7, 10]
+            current_quarter_month = min([m for m in quarter_months if m >= now.month], default=quarter_months[0])
+            if current_quarter_month <= now.month:
+                next_year = now.year + 1
+                next_month = quarter_months[0]
+            else:
+                next_year = now.year
+                next_month = current_quarter_month
+            next_run = now.replace(year=next_year, month=next_month, day=self.day_of_month or 1, hour=self.time_of_day.hour, minute=self.time_of_day.minute, second=0, microsecond=0)
+        
+        else:
+            next_run = now + timedelta(days=7)
+        
+        self.next_run = next_run
+        self.save(update_fields=['next_run'])
+        return next_run
+

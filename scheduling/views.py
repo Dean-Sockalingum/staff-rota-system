@@ -12225,3 +12225,378 @@ def predictive_single_day(request):
     prediction = predict_staffing_needs(target_date, care_home, unit, leave_count)
     
     return JsonResponse(prediction)
+
+
+# ============================================================================
+# TASK 27: CUSTOM REPORT BUILDER VIEWS
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_builder_dashboard(request):
+    """
+    Main report builder dashboard - shows saved templates and recent reports
+    """
+    from .models import SavedReport, ScheduledReport
+    
+    # Get user's saved reports
+    user_reports = SavedReport.objects.filter(created_by=request.user)
+    
+    # Get public reports from other users
+    public_reports = SavedReport.objects.filter(is_public=True).exclude(created_by=request.user)
+    
+    # Get scheduled reports
+    scheduled_reports = ScheduledReport.objects.filter(
+        created_by=request.user,
+        is_active=True
+    ).select_related('report_template')
+    
+    context = {
+        'user_reports': user_reports,
+        'public_reports': public_reports,
+        'scheduled_reports': scheduled_reports,
+        'report_types': SavedReport.REPORT_TYPE_CHOICES,
+    }
+    
+    return render(request, 'scheduling/report_builder_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_builder_create(request):
+    """
+    Report builder interface - drag-and-drop field selection and filters
+    """
+    from .models import SavedReport
+    from .report_builder import AVAILABLE_FIELDS
+    
+    # Get filter options
+    care_homes = CareHome.objects.all()
+    units = Unit.objects.all()
+    roles = Role.objects.all()
+    
+    # Get report type from query params or default to CUSTOM
+    report_type = request.GET.get('type', 'CUSTOM')
+    
+    # Get template if editing existing
+    template_id = request.GET.get('template')
+    template = None
+    if template_id:
+        template = SavedReport.objects.filter(id=template_id).first()
+    
+    # Get available fields for selected report type
+    available_fields = AVAILABLE_FIELDS.get(report_type, {})
+    
+    context = {
+        'report_types': SavedReport.REPORT_TYPE_CHOICES,
+        'output_formats': SavedReport.OUTPUT_FORMAT_CHOICES,
+        'available_fields': available_fields,
+        'care_homes': care_homes,
+        'units': units,
+        'roles': roles,
+        'template': template,
+        'selected_report_type': report_type,
+    }
+    
+    return render(request, 'scheduling/report_builder_create.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_execute(request):
+    """
+    Execute a report and return results in selected format
+    """
+    from .models import SavedReport
+    from .report_builder import (
+        build_report_query,
+        extract_report_data,
+        generate_csv_report,
+        generate_excel_report,
+        generate_pdf_report,
+        calculate_report_summary
+    )
+    from django.http import HttpResponse
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+    
+    # Get report configuration from POST data
+    data = json.loads(request.body)
+    
+    report_type = data.get('report_type', 'CUSTOM')
+    selected_fields = data.get('selected_fields', [])
+    filters = data.get('filters', {})
+    output_format = data.get('output_format', 'PDF')
+    report_name = data.get('report_name', 'Custom Report')
+    
+    # Validate
+    if not selected_fields:
+        return JsonResponse({'error': 'No fields selected'}, status=400)
+    
+    # Build query
+    queryset = build_report_query(report_type, selected_fields, filters)
+    
+    if queryset is None:
+        return JsonResponse({'error': 'Invalid report type'}, status=400)
+    
+    # Extract data
+    report_data = extract_report_data(queryset, selected_fields, report_type)
+    
+    # Calculate summary
+    summary = calculate_report_summary(report_data, report_type)
+    
+    # Generate output
+    try:
+        if output_format == 'CSV':
+            output = generate_csv_report(report_data)
+            content_type = 'text/csv'
+            filename = f'{report_name.replace(" ", "_")}.csv'
+        
+        elif output_format == 'EXCEL':
+            output = generate_excel_report(report_data, report_name)
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            filename = f'{report_name.replace(" ", "_")}.xlsx'
+        
+        elif output_format == 'PDF':
+            output = generate_pdf_report(report_data, report_name, filters)
+            content_type = 'application/pdf'
+            filename = f'{report_name.replace(" ", "_")}.pdf'
+        
+        else:
+            return JsonResponse({'error': 'Invalid output format'}, status=400)
+        
+        # Return file response
+        response = HttpResponse(output.read(), content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    except ImportError as e:
+        return JsonResponse({
+            'error': f'Required library not installed: {str(e)}',
+            'suggestion': 'Install openpyxl for Excel or reportlab for PDF support'
+        }, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_preview(request):
+    """
+    Preview report data (AJAX) - returns JSON for display
+    """
+    from .report_builder import build_report_query, extract_report_data, calculate_report_summary
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+    
+    # Get report configuration
+    data = json.loads(request.body)
+    
+    report_type = data.get('report_type', 'CUSTOM')
+    selected_fields = data.get('selected_fields', [])
+    filters = data.get('filters', {})
+    
+    if not selected_fields:
+        return JsonResponse({'error': 'No fields selected'}, status=400)
+    
+    # Build query
+    queryset = build_report_query(report_type, selected_fields, filters)
+    
+    if queryset is None:
+        return JsonResponse({'error': 'Invalid report type'}, status=400)
+    
+    # Limit preview to 100 rows
+    queryset = queryset[:100]
+    
+    # Extract data
+    report_data = extract_report_data(queryset, selected_fields, report_type)
+    
+    # Calculate summary
+    summary = calculate_report_summary(report_data, report_type)
+    
+    return JsonResponse({
+        'data': report_data,
+        'summary': summary,
+        'preview_limit': 100,
+        'total_available': queryset.count() if hasattr(queryset, 'count') else len(report_data)
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_template_save(request):
+    """
+    Save report configuration as template (AJAX)
+    """
+    from .models import SavedReport
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+    
+    # Get template configuration
+    data = json.loads(request.body)
+    
+    template_id = data.get('template_id')
+    template_name = data.get('name')
+    description = data.get('description', '')
+    report_type = data.get('report_type', 'CUSTOM')
+    selected_fields = data.get('selected_fields', [])
+    filters = data.get('filters', {})
+    grouping = data.get('grouping', {})
+    sorting = data.get('sorting', [])
+    output_format = data.get('output_format', 'PDF')
+    is_public = data.get('is_public', False)
+    
+    # Validate
+    if not template_name:
+        return JsonResponse({'error': 'Template name required'}, status=400)
+    
+    if not selected_fields:
+        return JsonResponse({'error': 'No fields selected'}, status=400)
+    
+    # Create or update template
+    if template_id:
+        # Update existing
+        template = SavedReport.objects.filter(id=template_id, created_by=request.user).first()
+        if not template:
+            return JsonResponse({'error': 'Template not found'}, status=404)
+        
+        template.name = template_name
+        template.description = description
+        template.report_type = report_type
+        template.selected_fields = selected_fields
+        template.filters = filters
+        template.grouping = grouping
+        template.sorting = sorting
+        template.output_format = output_format
+        template.is_public = is_public
+        template.save()
+        
+        message = 'Template updated successfully'
+    else:
+        # Create new
+        template = SavedReport.objects.create(
+            name=template_name,
+            description=description,
+            report_type=report_type,
+            created_by=request.user,
+            selected_fields=selected_fields,
+            filters=filters,
+            grouping=grouping,
+            sorting=sorting,
+            output_format=output_format,
+            is_public=is_public
+        )
+        
+        message = 'Template saved successfully'
+    
+    return JsonResponse({
+        'success': True,
+        'message': message,
+        'template_id': template.id
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_template_delete(request, template_id):
+    """
+    Delete a saved report template
+    """
+    from .models import SavedReport
+    
+    template = SavedReport.objects.filter(id=template_id, created_by=request.user).first()
+    
+    if not template:
+        messages.error(request, 'Template not found or access denied.')
+        return redirect('report_builder_dashboard')
+    
+    template_name = template.name
+    template.delete()
+    
+    messages.success(request, f'Template "{template_name}" deleted successfully.')
+    return redirect('report_builder_dashboard')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_schedule_create(request):
+    """
+    Create a scheduled report
+    """
+    from .models import SavedReport, ScheduledReport
+    from datetime import time
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+    
+    data = json.loads(request.body)
+    
+    template_id = data.get('template_id')
+    frequency = data.get('frequency', 'WEEKLY')
+    weekday = data.get('weekday')
+    day_of_month = data.get('day_of_month')
+    time_str = data.get('time', '09:00')
+    recipients = data.get('recipients', [])
+    
+    # Validate
+    template = SavedReport.objects.filter(id=template_id).first()
+    if not template:
+        return JsonResponse({'error': 'Template not found'}, status=404)
+    
+    # Parse time
+    try:
+        hour, minute = map(int, time_str.split(':'))
+        time_of_day = time(hour, minute)
+    except:
+        return JsonResponse({'error': 'Invalid time format'}, status=400)
+    
+    # Create scheduled report
+    scheduled = ScheduledReport.objects.create(
+        report_template=template,
+        created_by=request.user,
+        frequency=frequency,
+        weekday=weekday,
+        day_of_month=day_of_month,
+        time_of_day=time_of_day,
+        recipients=recipients,
+        is_active=True
+    )
+    
+    # Calculate first run time
+    scheduled.calculate_next_run()
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Report scheduled successfully',
+        'schedule_id': scheduled.id,
+        'next_run': scheduled.next_run.strftime('%Y-%m-%d %H:%M') if scheduled.next_run else None
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def report_schedule_delete(request, schedule_id):
+    """
+    Delete a scheduled report
+    """
+    from .models import ScheduledReport
+    
+    scheduled = ScheduledReport.objects.filter(id=schedule_id, created_by=request.user).first()
+    
+    if not scheduled:
+        messages.error(request, 'Scheduled report not found or access denied.')
+        return redirect('report_builder_dashboard')
+    
+    template_name = scheduled.report_template.name
+    scheduled.delete()
+    
+    messages.success(request, f'Scheduled report "{template_name}" deleted successfully.')
+    return redirect('report_builder_dashboard')
+
