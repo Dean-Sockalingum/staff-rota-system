@@ -48,6 +48,19 @@ from .views_report_builder import (
     api_get_data_sources,
     api_preview_report
 )
+from .views_health_monitoring import (
+    health_dashboard,
+    health_metrics_api,
+    performance_logs_view,
+    error_logs_view,
+    error_detail,
+    uptime_history,
+    health_checks_view,
+    run_health_check,
+    alert_rules_view,
+    collect_metrics_now,
+    system_info_api
+)
 from .views_integration_api import (
     api_get_token,
     api_list_staff,
@@ -388,4 +401,17 @@ urlpatterns = [
     path("api/v1/integration/webhooks", api_create_webhook, name="api_create_webhook"),
     # System info
     path("api/v1/integration/info", api_get_info, name="api_get_info"),
+
+    # Task 42: Health Monitoring URLs
+    path("health/", health_dashboard, name="health_dashboard"),
+    path("health/metrics/api/", health_metrics_api, name="health_metrics_api"),
+    path("health/performance/", performance_logs_view, name="performance_logs"),
+    path("health/errors/", error_logs_view, name="error_logs"),
+    path("health/errors/<int:error_id>/", error_detail, name="error_detail"),
+    path("health/uptime/", uptime_history, name="uptime_history"),
+    path("health/checks/", health_checks_view, name="health_checks"),
+    path("health/checks/<int:endpoint_id>/run/", run_health_check, name="run_health_check"),
+    path("health/alerts/", alert_rules_view, name="alert_rules"),
+    path("health/collect-now/", collect_metrics_now, name="collect_metrics_now"),
+    path("health/system-info/", system_info_api, name="system_info_api"),
 ]
