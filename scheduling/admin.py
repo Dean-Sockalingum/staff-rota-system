@@ -6,7 +6,8 @@ from .models import (
     ComplianceRule, ComplianceCheck, ComplianceViolation, 
     AuditReport, DataChangeLog, SystemAccessLog,
     TrainingCourse, TrainingRecord, InductionProgress,
-    SupervisionRecord, IncidentReport
+    SupervisionRecord, IncidentReport,
+    CostAnalysis, AgencyCostComparison, BudgetForecast
 )
 
 @admin.register(Role)
@@ -345,6 +346,31 @@ class UserPreferenceAdmin(admin.ModelAdmin):
         ('Preference Flags', {'fields': ('prefers_examples', 'prefers_step_by_step', 'prefers_visualizations')}),
         ('Statistics', {'fields': ('total_queries', 'total_feedback_count', 'last_updated')}),
     )
+
+
+# Cost Analytics Admin (Phase 3 - Task 32)
+@admin.register(CostAnalysis)
+class CostAnalysisAdmin(admin.ModelAdmin):
+    list_display = ['name', 'care_home', 'start_date', 'end_date', 'total_cost', 'agency_percentage', 'cost_efficiency_score']
+    list_filter = ['care_home', 'analyzed_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['analyzed_at']
+    date_hierarchy = 'start_date'
+    
+@admin.register(AgencyCostComparison)
+class AgencyCostComparisonAdmin(admin.ModelAdmin):
+    list_display = ['care_home', 'start_date', 'end_date', 'agency_premium', 'potential_monthly_savings', 'priority']
+    list_filter = ['care_home', 'priority', 'analyzed_at']
+    readonly_fields = ['analyzed_at']
+    date_hierarchy = 'start_date'
+
+@admin.register(BudgetForecast)
+class BudgetForecastAdmin(admin.ModelAdmin):
+    list_display = ['name', 'care_home', 'forecast_months', 'forecast_method', 'forecasted_total_cost', 'trend_direction', 'risk_level']
+    list_filter = ['care_home', 'forecast_method', 'trend_direction', 'risk_level']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'created_at'
 
 
 # Import automated workflow admin configurations

@@ -12,6 +12,14 @@ redis
 # Communications
 twilio
 
+# Phase 2: PDF/Excel Export
+WeasyPrint>=60.0  # PDF generation from HTML/CSS
+openpyxl>=3.1.0  # Excel file generation
+
+# Phase 2: Email & Calendar
+django-anymail[mailgun]>=10.0  # Email backend
+icalendar>=5.0.0  # iCal/ICS calendar export
+
 # Phase 6: Security Hardening Dependencies
 django-axes>=6.1.0  # Brute force protection & account lockout
 django-auditlog>=2.3.0  # Comprehensive audit logging

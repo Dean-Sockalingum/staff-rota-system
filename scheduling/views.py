@@ -13863,3 +13863,339 @@ def shift_pattern_heat_map(request):
     return render(request, 'scheduling/shift_pattern_heat_map.html', context)
 
 
+# ======================
+# Cost Analytics Views
+# Phase 3 - Task 32
+# ======================
+
+@login_required
+def cost_analytics_dashboard(request):
+    """Cost analytics dashboard"""
+    care_home = request.user.care_home
+    
+    # Get recent cost analyses
+    recent_analyses = CostAnalysis.objects.filter(
+        care_home=care_home
+    )[:5]
+    
+    # Get recent agency comparisons
+    recent_comparisons = AgencyCostComparison.objects.filter(
+        care_home=care_home
+    )[:5]
+    
+    # Get recent budget forecasts
+    recent_forecasts = BudgetForecast.objects.filter(
+        care_home=care_home
+    )[:5]
+    
+    # Get cost optimization opportunities
+    from .cost_analytics import identify_cost_optimization_opportunities
+    opportunities = identify_cost_optimization_opportunities(care_home)[:5]
+    
+    # Calculate high-cost alerts
+    high_agency_analyses = CostAnalysis.objects.filter(
+        care_home=care_home,
+        agency_percentage__gt=30
+    ).count()
+    
+    low_efficiency_analyses = CostAnalysis.objects.filter(
+        care_home=care_home,
+        cost_efficiency_score__lt=60
+    ).count()
+    
+    context = {
+        'recent_analyses': recent_analyses,
+        'recent_comparisons': recent_comparisons,
+        'recent_forecasts': recent_forecasts,
+        'opportunities': opportunities,
+        'high_agency_count': high_agency_analyses,
+        'low_efficiency_count': low_efficiency_analyses,
+    }
+    return render(request, 'scheduling/cost_analytics_dashboard.html', context)
+
+
+@login_required
+def cost_analysis_run(request):
+    """Run cost analysis"""
+    from .cost_analytics import analyze_costs
+    
+    if request.method == 'POST':
+        care_home = request.user.care_home
+        
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        name = request.POST.get('name', f"Cost Analysis - {timezone.now().strftime('%Y-%m-%d')}")
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run analysis
+        result = analyze_costs(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if 'error' in result:
+            messages.error(request, result['error'])
+            return redirect('cost_analytics_dashboard')
+        
+        # Save analysis
+        analysis = CostAnalysis.objects.create(
+            name=name,
+            description=f"Cost analysis from {result['start_date']} to {result['end_date']}",
+            care_home=care_home,
+            unit=unit,
+            start_date=result['start_date'],
+            end_date=result['end_date'],
+            total_cost=result['total_cost'],
+            permanent_staff_cost=result['permanent_staff_cost'],
+            agency_staff_cost=result['agency_staff_cost'],
+            overtime_cost=result['overtime_cost'],
+            total_shifts=result['total_shifts'],
+            permanent_shifts=result['permanent_shifts'],
+            agency_shifts=result['agency_shifts'],
+            overtime_shifts=result['overtime_shifts'],
+            cost_per_shift=result['cost_per_shift'],
+            permanent_cost_per_shift=result['permanent_cost_per_shift'],
+            agency_cost_per_shift=result['agency_cost_per_shift'],
+            agency_percentage=result['agency_percentage'],
+            cost_efficiency_score=result['cost_efficiency_score'],
+            cost_breakdown_data=result['cost_breakdown_data'],
+            cost_by_category=result['cost_by_category'],
+            potential_savings=result['potential_savings'],
+            savings_recommendations=result['savings_recommendations'],
+            analyzed_by=request.user,
+        )
+        
+        messages.success(request, f'Cost analysis completed. Total cost: £{result["total_cost"]:,.2f}')
+        return redirect('cost_analysis_detail', analysis_id=analysis.id)
+    
+    # GET request - show form
+    units = Unit.objects.filter(care_home=request.user.care_home)
+    context = {'units': units}
+    return render(request, 'scheduling/cost_analysis_form.html', context)
+
+
+@login_required
+def cost_analysis_detail(request, analysis_id):
+    """View cost analysis details"""
+    analysis = get_object_or_404(CostAnalysis, id=analysis_id, care_home=request.user.care_home)
+    
+    # Prepare chart data
+    cost_breakdown_labels = list(analysis.cost_by_category.keys()) if analysis.cost_by_category else []
+    cost_breakdown_data = list(analysis.cost_by_category.values()) if analysis.cost_by_category else []
+    
+    # Daily cost trend
+    if analysis.cost_breakdown_data:
+        daily_labels = sorted(analysis.cost_breakdown_data.keys())
+        daily_data = [float(analysis.cost_breakdown_data[label]) for label in daily_labels]
+    else:
+        daily_labels = []
+        daily_data = []
+    
+    context = {
+        'analysis': analysis,
+        'cost_breakdown_labels': cost_breakdown_labels,
+        'cost_breakdown_data': cost_breakdown_data,
+        'daily_labels': daily_labels,
+        'daily_data': daily_data,
+    }
+    return render(request, 'scheduling/cost_analysis_detail.html', context)
+
+
+@login_required
+def agency_comparison_run(request):
+    """Run agency vs permanent comparison"""
+    from .cost_analytics import compare_agency_vs_permanent
+    
+    if request.method == 'POST':
+        care_home = request.user.care_home
+        
+        unit_id = request.POST.get('unit')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run comparison
+        result = compare_agency_vs_permanent(
+            care_home=care_home,
+            unit=unit,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if 'error' in result:
+            messages.error(request, result['error'])
+            return redirect('cost_analytics_dashboard')
+        
+        # Save comparison
+        comparison = AgencyCostComparison.objects.create(
+            care_home=care_home,
+            unit=unit,
+            start_date=result['start_date'],
+            end_date=result['end_date'],
+            agency_total_cost=result['agency_total_cost'],
+            agency_shift_count=result['agency_shift_count'],
+            agency_cost_per_shift=result['agency_cost_per_shift'],
+            agency_hourly_rate=result['agency_hourly_rate'],
+            permanent_total_cost=result['permanent_total_cost'],
+            permanent_shift_count=result['permanent_shift_count'],
+            permanent_cost_per_shift=result['permanent_cost_per_shift'],
+            permanent_hourly_rate=result['permanent_hourly_rate'],
+            cost_difference=result['cost_difference'],
+            cost_difference_percentage=result['cost_difference_percentage'],
+            agency_premium=result['agency_premium'],
+            total_premium_paid=result['total_premium_paid'],
+            if_all_permanent_cost=result['if_all_permanent_cost'],
+            potential_monthly_savings=result['potential_monthly_savings'],
+            recommendation=result['recommendation'],
+            priority=result['priority'],
+        )
+        
+        messages.success(request, f'Comparison completed. Potential savings: £{result["potential_monthly_savings"]:,.2f}')
+        return redirect('agency_comparison_detail', comparison_id=comparison.id)
+    
+    # GET request - show form
+    units = Unit.objects.filter(care_home=request.user.care_home)
+    context = {'units': units}
+    return render(request, 'scheduling/agency_comparison_form.html', context)
+
+
+@login_required
+def agency_comparison_detail(request, comparison_id):
+    """View agency comparison details"""
+    comparison = get_object_or_404(AgencyCostComparison, id=comparison_id, care_home=request.user.care_home)
+    
+    # Prepare chart data for cost comparison
+    comparison_labels = ['Agency', 'Permanent']
+    total_cost_data = [
+        float(comparison.agency_total_cost),
+        float(comparison.permanent_total_cost)
+    ]
+    shift_count_data = [
+        comparison.agency_shift_count,
+        comparison.permanent_shift_count
+    ]
+    cost_per_shift_data = [
+        float(comparison.agency_cost_per_shift),
+        float(comparison.permanent_cost_per_shift)
+    ]
+    
+    context = {
+        'comparison': comparison,
+        'comparison_labels': comparison_labels,
+        'total_cost_data': total_cost_data,
+        'shift_count_data': shift_count_data,
+        'cost_per_shift_data': cost_per_shift_data,
+    }
+    return render(request, 'scheduling/agency_comparison_detail.html', context)
+
+
+@login_required
+def budget_forecast_create(request):
+    """Create budget forecast"""
+    from .cost_analytics import forecast_budget
+    
+    if request.method == 'POST':
+        care_home = request.user.care_home
+        
+        unit_id = request.POST.get('unit')
+        name = request.POST.get('name', f"Budget Forecast - {timezone.now().strftime('%Y-%m-%d')}")
+        historical_months = int(request.POST.get('historical_months', 3))
+        forecast_months = int(request.POST.get('forecast_months', 3))
+        method = request.POST.get('method', 'LINEAR')
+        budget_target = request.POST.get('budget_target')
+        
+        unit = Unit.objects.get(id=unit_id) if unit_id else None
+        
+        # Run forecast
+        result = forecast_budget(
+            care_home=care_home,
+            unit=unit,
+            historical_months=historical_months,
+            forecast_months=forecast_months,
+            method=method
+        )
+        
+        if 'error' in result:
+            messages.error(request, result['error'])
+            return redirect('cost_analytics_dashboard')
+        
+        # Calculate budget variance if target provided
+        if budget_target:
+            budget_target_decimal = Decimal(budget_target)
+            budget_variance = result['forecasted_total_cost'] - budget_target_decimal
+            is_within_budget = budget_variance <= 0
+        else:
+            budget_target_decimal = None
+            budget_variance = None
+            is_within_budget = None
+        
+        # Save forecast
+        forecast = BudgetForecast.objects.create(
+            name=name,
+            description=f"Budget forecast for {forecast_months} months using {method} method",
+            care_home=care_home,
+            unit=unit,
+            historical_start_date=result['historical_start_date'],
+            historical_end_date=result['historical_end_date'],
+            forecast_start_date=result['forecast_start_date'],
+            forecast_end_date=result['forecast_end_date'],
+            forecast_months=result['forecast_months'],
+            forecast_method=result['forecast_method'],
+            historical_total_cost=result['historical_total_cost'],
+            historical_average_monthly=result['historical_average_monthly'],
+            forecasted_total_cost=result['forecasted_total_cost'],
+            forecasted_monthly_average=result['forecasted_monthly_average'],
+            monthly_forecast=result['monthly_forecast'],
+            confidence_level=result['confidence_level'],
+            margin_of_error=result['margin_of_error'],
+            budget_target=budget_target_decimal,
+            budget_variance=budget_variance,
+            is_within_budget=is_within_budget,
+            trend_direction=result['trend_direction'],
+            trend_percentage=result['trend_percentage'],
+            recommendations=result['recommendations'],
+            risk_level=result['risk_level'],
+            created_by=request.user,
+        )
+        
+        messages.success(request, f'Budget forecast created. Forecasted total: £{result["forecasted_total_cost"]:,.2f}')
+        return redirect('budget_forecast_detail', forecast_id=forecast.id)
+    
+    # GET request - show form
+    units = Unit.objects.filter(care_home=request.user.care_home)
+    context = {'units': units}
+    return render(request, 'scheduling/budget_forecast_form.html', context)
+
+
+@login_required
+def budget_forecast_detail(request, forecast_id):
+    """View budget forecast details"""
+    forecast = get_object_or_404(BudgetForecast, id=forecast_id, care_home=request.user.care_home)
+    
+    # Prepare chart data
+    if forecast.monthly_forecast:
+        forecast_labels = sorted(forecast.monthly_forecast.keys())
+        forecast_data = [float(forecast.monthly_forecast[label]) for label in forecast_labels]
+    else:
+        forecast_labels = []
+        forecast_data = []
+    
+    # Add confidence interval bands
+    upper_bound = [val * (1 + float(forecast.margin_of_error) / 100) for val in forecast_data]
+    lower_bound = [val * (1 - float(forecast.margin_of_error) / 100) for val in forecast_data]
+    
+    context = {
+        'forecast': forecast,
+        'forecast_labels': forecast_labels,
+        'forecast_data': forecast_data,
+        'upper_bound': upper_bound,
+        'lower_bound': lower_bound,
+    }
+    return render(request, 'scheduling/budget_forecast_detail.html', context)
+
+

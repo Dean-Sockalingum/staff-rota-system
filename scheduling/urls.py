@@ -238,6 +238,15 @@ urlpatterns = [
     path('patterns/workload/<int:distribution_id>/', views.workload_distribution_detail, name='workload_distribution_detail'),
     path('patterns/heatmap/', views.shift_pattern_heat_map, name='shift_pattern_heat_map'),
     
+    # Cost Analytics (Phase 3 - Task 32)
+    path('costs/', views.cost_analytics_dashboard, name='cost_analytics_dashboard'),
+    path('costs/analyze/', views.cost_analysis_run, name='cost_analysis_run'),
+    path('costs/<int:analysis_id>/', views.cost_analysis_detail, name='cost_analysis_detail'),
+    path('costs/agency/', views.agency_comparison_run, name='agency_comparison_run'),
+    path('costs/agency/<int:comparison_id>/', views.agency_comparison_detail, name='agency_comparison_detail'),
+    path('costs/forecast/create/', views.budget_forecast_create, name='budget_forecast_create'),
+    path('costs/forecast/<int:forecast_id>/', views.budget_forecast_detail, name='budget_forecast_detail'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

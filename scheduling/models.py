@@ -3220,3 +3220,315 @@ class WorkloadDistribution(models.Model):
     def __str__(self):
         return f"Workload Distribution ({self.start_date} to {self.end_date})"
 
+
+# ============================================================================
+# COST ANALYTICS MODELS (Phase 3 - Task 32)
+# ============================================================================
+
+class CostAnalysis(models.Model):
+    """
+    Store cost analysis results for staffing expenses
+    """
+    COST_CATEGORY_CHOICES = [
+        ('TOTAL', 'Total Staffing Cost'),
+        ('PERMANENT', 'Permanent Staff Cost'),
+        ('AGENCY', 'Agency Staff Cost'),
+        ('OVERTIME', 'Overtime Cost'),
+        ('TRAINING', 'Training Cost'),
+        ('BENEFITS', 'Benefits Cost'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, null=True, blank=True)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Analysis period
+    start_date = models.DateField()
+    end_date = models.DateField()
+    
+    # Cost breakdown
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    permanent_staff_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    agency_staff_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    overtime_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    training_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    benefits_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Shift counts
+    total_shifts = models.IntegerField(default=0)
+    permanent_shifts = models.IntegerField(default=0)
+    agency_shifts = models.IntegerField(default=0)
+    overtime_shifts = models.IntegerField(default=0)
+    
+    # Cost per shift metrics
+    cost_per_shift = models.DecimalField(max_digits=8, decimal_places=2)
+    permanent_cost_per_shift = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    agency_cost_per_shift = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    
+    # Efficiency metrics
+    agency_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text='Percentage of shifts filled by agency staff'
+    )
+    cost_efficiency_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text='Cost efficiency score (0-100, higher is better)'
+    )
+    
+    # Detailed cost data (JSON)
+    cost_breakdown_data = models.JSONField(
+        default=dict,
+        help_text='Daily cost breakdown and trends'
+    )
+    
+    # Cost categories distribution
+    cost_by_category = models.JSONField(
+        default=dict,
+        help_text='Cost distribution by category'
+    )
+    
+    # Savings opportunities
+    potential_savings = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text='Potential cost savings identified'
+    )
+    savings_recommendations = models.TextField(blank=True)
+    
+    # Metadata
+    analyzed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Cost Analysis'
+        verbose_name_plural = 'Cost Analyses'
+        ordering = ['-analyzed_at']
+        indexes = [
+            models.Index(fields=['care_home', '-analyzed_at']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} (£{self.total_cost:,.2f})"
+
+
+class AgencyCostComparison(models.Model):
+    """
+    Compare agency vs permanent staff costs
+    """
+    cost_analysis = models.ForeignKey(
+        CostAnalysis,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='agency_comparisons'
+    )
+    
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Analysis period
+    start_date = models.DateField()
+    end_date = models.DateField()
+    
+    # Agency costs
+    agency_total_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    agency_shift_count = models.IntegerField()
+    agency_cost_per_shift = models.DecimalField(max_digits=8, decimal_places=2)
+    agency_hourly_rate = models.DecimalField(max_digits=6, decimal_places=2)
+    
+    # Permanent costs
+    permanent_total_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    permanent_shift_count = models.IntegerField()
+    permanent_cost_per_shift = models.DecimalField(max_digits=8, decimal_places=2)
+    permanent_hourly_rate = models.DecimalField(max_digits=6, decimal_places=2)
+    
+    # Comparison metrics
+    cost_difference = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Agency cost - Permanent cost'
+    )
+    cost_difference_percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text='Percentage difference'
+    )
+    
+    # Premium analysis
+    agency_premium = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text='Agency premium over permanent (percentage)'
+    )
+    total_premium_paid = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Total extra cost paid for agency staff'
+    )
+    
+    # Potential savings
+    if_all_permanent_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Cost if all shifts were permanent'
+    )
+    potential_monthly_savings = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Potential savings per month'
+    )
+    
+    # Recommendations
+    recommendation = models.TextField(blank=True)
+    priority = models.CharField(
+        max_length=20,
+        choices=[
+            ('LOW', 'Low Priority'),
+            ('MEDIUM', 'Medium Priority'),
+            ('HIGH', 'High Priority'),
+            ('CRITICAL', 'Critical Priority'),
+        ],
+        default='MEDIUM'
+    )
+    
+    # Metadata
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Agency Cost Comparison'
+        verbose_name_plural = 'Agency Cost Comparisons'
+        ordering = ['-analyzed_at']
+        indexes = [
+            models.Index(fields=['care_home', '-analyzed_at']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return f"Agency vs Permanent ({self.start_date} to {self.end_date})"
+
+
+class BudgetForecast(models.Model):
+    """
+    Budget forecasting for staffing costs
+    """
+    FORECAST_METHOD_CHOICES = [
+        ('LINEAR', 'Linear Regression'),
+        ('AVERAGE', 'Historical Average'),
+        ('SEASONAL', 'Seasonal Adjustment'),
+        ('TREND', 'Trend Analysis'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE, null=True, blank=True)
+    unit = models.ForeignKey('Unit', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Historical period
+    historical_start_date = models.DateField()
+    historical_end_date = models.DateField()
+    
+    # Forecast period
+    forecast_start_date = models.DateField()
+    forecast_end_date = models.DateField()
+    forecast_months = models.IntegerField(help_text='Number of months forecasted')
+    
+    # Forecast method
+    forecast_method = models.CharField(max_length=20, choices=FORECAST_METHOD_CHOICES)
+    
+    # Historical costs
+    historical_total_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    historical_average_monthly = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Forecasted costs
+    forecasted_total_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    forecasted_monthly_average = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Forecast breakdown (JSON)
+    monthly_forecast = models.JSONField(
+        default=dict,
+        help_text='Month-by-month forecast data'
+    )
+    
+    # Confidence and accuracy
+    confidence_level = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text='Forecast confidence (0-100%)'
+    )
+    margin_of_error = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text='Margin of error (±%)'
+    )
+    
+    # Budget targets
+    budget_target = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Target budget for period'
+    )
+    budget_variance = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Forecast - Target'
+    )
+    is_within_budget = models.BooleanField(
+        default=False,
+        help_text='True if forecast is within budget'
+    )
+    
+    # Trend analysis
+    trend_direction = models.CharField(
+        max_length=20,
+        choices=[
+            ('INCREASING', 'Increasing'),
+            ('DECREASING', 'Decreasing'),
+            ('STABLE', 'Stable'),
+        ],
+        default='STABLE'
+    )
+    trend_percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text='Trend change percentage'
+    )
+    
+    # Recommendations
+    recommendations = models.TextField(blank=True)
+    risk_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('LOW', 'Low Risk'),
+            ('MEDIUM', 'Medium Risk'),
+            ('HIGH', 'High Risk'),
+            ('CRITICAL', 'Critical Risk'),
+        ],
+        default='LOW'
+    )
+    
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Budget Forecast'
+        verbose_name_plural = 'Budget Forecasts'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['care_home', '-created_at']),
+            models.Index(fields=['forecast_start_date', 'forecast_end_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} (£{self.forecasted_total_cost:,.2f})"
+
