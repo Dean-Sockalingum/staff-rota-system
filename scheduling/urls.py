@@ -97,6 +97,14 @@ from .views_datatable import (
     enhanced_staff_table,
     enhanced_leave_table
 )
+from .views_executive_summary import (
+    executive_summary_dashboard,
+    executive_summary_export_pdf,
+    executive_summary_api_kpis,
+    executive_summary_api_trends,
+    executive_summary_api_forecast,
+    executive_summary_api_insights
+)
 
 urlpatterns = [
     # Authentication
@@ -177,6 +185,14 @@ urlpatterns = [
     path('tables/shifts/', enhanced_shifts_table, name='enhanced_shifts_table'),
     path('tables/staff/', enhanced_staff_table, name='enhanced_staff_table'),
     path('tables/leave/', enhanced_leave_table, name='enhanced_leave_table'),
+    
+    # Executive Summary Dashboard (Task 46)
+    path('executive-summary/', executive_summary_dashboard, name='executive_summary_dashboard'),
+    path('executive-summary/export-pdf/', executive_summary_export_pdf, name='executive_summary_export_pdf'),
+    path('executive-summary/api/kpis/', executive_summary_api_kpis, name='executive_summary_api_kpis'),
+    path('executive-summary/api/trends/', executive_summary_api_trends, name='executive_summary_api_trends'),
+    path('executive-summary/api/forecast/', executive_summary_api_forecast, name='executive_summary_api_forecast'),
+    path('executive-summary/api/insights/', executive_summary_api_insights, name='executive_summary_api_insights'),
     
     # Advanced Analytics Dashboard (Task 39)
     path('analytics/executive/', executive_dashboard, name='analytics_executive_dashboard'),
