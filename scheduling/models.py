@@ -4668,3 +4668,14 @@ class SearchAnalytics(models.Model):
     
     def __str__(self):
         return f"{self.query} ({self.result_count} results) - {self.timestamp}"
+
+
+# Import workflow models (Task 52)
+from .models_workflow import (
+    WorkflowTemplate,
+    Workflow,
+    WorkflowStep,
+    WorkflowExecution,
+    WorkflowStepExecution,
+    WorkflowTrigger
+)

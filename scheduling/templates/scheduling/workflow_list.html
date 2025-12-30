@@ -1,0 +1,360 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Workflow Automation - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .workflow-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: white;
+        transition: all 0.3s;
+    }
+    
+    .workflow-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-paused {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-draft {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+    
+    .status-completed {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .status-failed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .workflow-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .template-card {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .template-card:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .template-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .workflow-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-icon {
+        padding: 0.375rem 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-project-diagram"></i>
+            Workflow Automation
+        </h2>
+        <a href="{% url 'scheduling:workflow_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Workflow
+        </a>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Workflows</h5>
+                    <h2 class="text-primary">{{ total_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Active</h5>
+                    <h2 class="text-success">{{ active_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Drafts</h5>
+                    <h2 class="text-secondary">{{ draft_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Templates</h5>
+                    <h2 class="text-info">{{ templates.count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        class="form-control" 
+                        placeholder="Search workflows..." 
+                        value="{{ search_query }}"
+                    >
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                        <option value="paused" {% if status_filter == 'paused' %}selected{% endif %}>Paused</option>
+                        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Workflow List -->
+    {% if workflows %}
+        {% for workflow in workflows %}
+        <div class="workflow-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h4>
+                        <a href="{% url 'scheduling:workflow_detail' workflow.id %}" class="text-decoration-none text-dark">
+                            {{ workflow.name }}
+                        </a>
+                    </h4>
+                    <p class="text-muted mb-2">{{ workflow.description|truncatewords:30 }}</p>
+                    
+                    <div class="d-flex gap-3 mb-2">
+                        <span class="status-badge status-{{ workflow.status }}">
+                            {{ workflow.get_status_display }}
+                        </span>
+                        <span class="text-muted">
+                            <i class="fas fa-clock"></i>
+                            Created {{ workflow.created_at|date:"M d, Y" }}
+                        </span>
+                        {% if workflow.last_run %}
+                        <span class="text-muted">
+                            <i class="fas fa-play"></i>
+                            Last run: {{ workflow.last_run|date:"M d, Y H:i" }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="workflow-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Runs</span>
+                            <span class="stat-value">{{ workflow.run_count }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Steps</span>
+                            <span class="stat-value">{{ workflow.steps.count }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Triggers</span>
+                            <span class="stat-value">{{ workflow.triggers.count }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Recent Executions</span>
+                            <span class="stat-value">{{ workflow.execution_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="workflow-actions flex-column">
+                    {% if workflow.status == 'active' %}
+                    <form method="post" action="{% url 'scheduling:workflow_toggle_status' workflow.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-warning btn-icon" title="Pause">
+                            <i class="fas fa-pause"></i> Pause
+                        </button>
+                    </form>
+                    {% elif workflow.status in 'draft,paused' %}
+                    <form method="post" action="{% url 'scheduling:workflow_toggle_status' workflow.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success btn-icon" title="Activate">
+                            <i class="fas fa-play"></i> Activate
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'scheduling:workflow_builder' workflow.id %}" class="btn btn-sm btn-primary btn-icon" title="Edit">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    
+                    <a href="{% url 'scheduling:workflow_detail' workflow.id %}" class="btn btn-sm btn-info btn-icon" title="View Details">
+                        <i class="fas fa-eye"></i> Details
+                    </a>
+                    
+                    <form method="post" action="{% url 'scheduling:workflow_execute' workflow.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-secondary btn-icon" title="Run Now">
+                            <i class="fas fa-play-circle"></i> Run
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="{% url 'scheduling:workflow_delete' workflow.id %}" class="d-inline" onsubmit="return confirm('Delete this workflow?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if workflows.has_other_pages %}
+        <nav aria-label="Workflow pagination">
+            <ul class="pagination justify-content-center">
+                {% if workflows.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ workflows.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ workflows.number }} of {{ workflows.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if workflows.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ workflows.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> No workflows yet</h5>
+            <p>Get started by creating a workflow from scratch or using one of our templates.</p>
+        </div>
+        
+        <!-- Workflow Templates -->
+        {% if templates %}
+        <h4 class="mt-4 mb-3">Quick Start Templates</h4>
+        <div class="template-grid">
+            {% for template in templates|slice:":6" %}
+            <a href="{% url 'scheduling:workflow_create' %}?template_id={{ template.id }}" class="template-card text-decoration-none">
+                <div class="template-icon">
+                    {% if template.category == 'leave' %}
+                    <i class="fas fa-calendar-alt text-primary"></i>
+                    {% elif template.category == 'shift' %}
+                    <i class="fas fa-clock text-success"></i>
+                    {% elif template.category == 'compliance' %}
+                    <i class="fas fa-shield-alt text-warning"></i>
+                    {% elif template.category == 'notification' %}
+                    <i class="fas fa-bell text-info"></i>
+                    {% elif template.category == 'approval' %}
+                    <i class="fas fa-check-circle text-success"></i>
+                    {% else %}
+                    <i class="fas fa-cogs text-secondary"></i>
+                    {% endif %}
+                </div>
+                <h6 class="text-dark">{{ template.name }}</h6>
+                <p class="text-muted small mb-0">{{ template.description|truncatewords:15 }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh workflow status every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
+{% endblock %}

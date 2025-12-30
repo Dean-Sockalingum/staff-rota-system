@@ -126,6 +126,22 @@ from .views_preferences import (
 from .views_errors import (
     trigger_error
 )
+from .views_workflow import (
+    workflow_list,
+    workflow_create,
+    workflow_builder,
+    workflow_detail,
+    workflow_execute,
+    workflow_toggle_status,
+    workflow_delete,
+    workflow_execution_detail,
+    workflow_execution_list,
+    workflow_template_list,
+    workflow_template_create,
+    workflow_add_step,
+    workflow_update_step,
+    workflow_delete_step
+)
 
 urlpatterns = [
     # Authentication
@@ -524,4 +540,21 @@ urlpatterns = [
     path("audit/reports/<int:report_id>/", view_audit_report, name="view_audit_report"),
     path("audit/export/", export_audit_data, name="export_audit_data"),
     path("audit/suspicious-activity/api/", suspicious_activity_api, name="suspicious_activity_api"),
+    
+    # Task 52: Workflow Automation Engine
+    path('workflows/', workflow_list, name='workflow_list'),
+    path('workflows/create/', workflow_create, name='workflow_create'),
+    path('workflows/<int:workflow_id>/', workflow_detail, name='workflow_detail'),
+    path('workflows/<int:workflow_id>/builder/', workflow_builder, name='workflow_builder'),
+    path('workflows/<int:workflow_id>/execute/', workflow_execute, name='workflow_execute'),
+    path('workflows/<int:workflow_id>/toggle/', workflow_toggle_status, name='workflow_toggle_status'),
+    path('workflows/<int:workflow_id>/delete/', workflow_delete, name='workflow_delete'),
+    path('workflows/executions/', workflow_execution_list, name='workflow_execution_list'),
+    path('workflows/executions/<int:execution_id>/', workflow_execution_detail, name='workflow_execution_detail'),
+    path('workflows/templates/', workflow_template_list, name='workflow_template_list'),
+    path('workflows/templates/create/', workflow_template_create, name='workflow_template_create'),
+    # Workflow API endpoints
+    path('workflows/<int:workflow_id>/steps/add/', workflow_add_step, name='workflow_add_step'),
+    path('workflows/steps/<int:step_id>/update/', workflow_update_step, name='workflow_update_step'),
+    path('workflows/steps/<int:step_id>/', workflow_delete_step, name='workflow_delete_step'),
 ]

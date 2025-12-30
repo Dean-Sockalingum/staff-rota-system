@@ -1,0 +1,534 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Workflow Builder: {{ workflow.name }} - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .builder-container {
+        background: #f8f9fa;
+        min-height: calc(100vh - 200px);
+        padding: 2rem;
+    }
+    
+    .workflow-canvas {
+        background: white;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        min-height: 400px;
+        padding: 2rem;
+        position: relative;
+    }
+    
+    .step-node {
+        background: white;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+        cursor: move;
+    }
+    
+    .step-node.action {
+        border-color: #28a745;
+    }
+    
+    .step-node.condition {
+        border-color: #ffc107;
+    }
+    
+    .step-node.delay {
+        border-color: #6c757d;
+    }
+    
+    .step-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-title {
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .step-type-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .toolbox {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    
+    .tool-item {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .tool-item:hover {
+        border-color: #007bff;
+        background: #e9ecef;
+    }
+    
+    .tool-icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    .config-panel {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .step-connection {
+        border-left: 2px solid #6c757d;
+        margin-left: 20px;
+        padding-left: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-edit"></i>
+                Workflow Builder: {{ workflow.name }}
+            </h2>
+            <p class="text-muted mb-0">Design your workflow by adding steps and configuring triggers</p>
+        </div>
+        <div>
+            <a href="{% url 'scheduling:workflow_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Workflows
+            </a>
+            <button type="button" class="btn btn-primary" onclick="saveWorkflow()">
+                <i class="fas fa-save"></i> Save Workflow
+            </button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Toolbox -->
+        <div class="col-md-3">
+            <div class="toolbox">
+                <h5 class="mb-3">
+                    <i class="fas fa-toolbox"></i>
+                    Components
+                </h5>
+                
+                <div class="tool-item" onclick="addStep('action', 'send_email')">
+                    <i class="fas fa-envelope tool-icon text-primary"></i>
+                    <strong>Send Email</strong>
+                    <p class="mb-0 small text-muted">Send email notification</p>
+                </div>
+                
+                <div class="tool-item" onclick="addStep('action', 'create_shift')">
+                    <i class="fas fa-calendar-plus tool-icon text-success"></i>
+                    <strong>Create Shift</strong>
+                    <p class="mb-0 small text-muted">Create a new shift</p>
+                </div>
+                
+                <div class="tool-item" onclick="addStep('action', 'approve_leave')">
+                    <i class="fas fa-check tool-icon text-success"></i>
+                    <strong>Approve Leave</strong>
+                    <p class="mb-0 small text-muted">Approve leave request</p>
+                </div>
+                
+                <div class="tool-item" onclick="addStep('action', 'reject_leave')">
+                    <i class="fas fa-times tool-icon text-danger"></i>
+                    <strong>Reject Leave</strong>
+                    <p class="mb-0 small text-muted">Reject leave request</p>
+                </div>
+                
+                <div class="tool-item" onclick="addStep('condition', '')">
+                    <i class="fas fa-code-branch tool-icon text-warning"></i>
+                    <strong>Condition</strong>
+                    <p class="mb-0 small text-muted">If/then logic</p>
+                </div>
+                
+                <div class="tool-item" onclick="addStep('delay', '')">
+                    <i class="fas fa-hourglass tool-icon text-secondary"></i>
+                    <strong>Delay</strong>
+                    <p class="mb-0 small text-muted">Wait for a period</p>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mt-3 mb-2">Triggers</h6>
+                
+                <div class="tool-item" onclick="addTrigger('schedule')">
+                    <i class="fas fa-clock tool-icon text-info"></i>
+                    <strong>Schedule</strong>
+                    <p class="mb-0 small text-muted">Run on schedule</p>
+                </div>
+                
+                <div class="tool-item" onclick="addTrigger('event')">
+                    <i class="fas fa-bolt tool-icon text-warning"></i>
+                    <strong>Event</strong>
+                    <p class="mb-0 small text-muted">Trigger on event</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Workflow Canvas -->
+        <div class="col-md-6">
+            <div class="builder-container">
+                <h5 class="mb-3">Workflow Steps</h5>
+                <div class="workflow-canvas" id="workflowCanvas">
+                    {% if steps %}
+                        {% for step in steps %}
+                        <div class="step-node {{ step.step_type }}" data-step-id="{{ step.id }}">
+                            <div class="step-header">
+                                <div>
+                                    <span class="step-type-badge bg-{{ step.step_type }}">
+                                        {{ step.get_step_type_display }}
+                                    </span>
+                                    <span class="step-title">{{ step.name }}</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editStep({{ step.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteStep({{ step.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% if step.description %}
+                            <p class="text-muted small mb-0">{{ step.description }}</p>
+                            {% endif %}
+                            {% if step.action_type %}
+                            <p class="mb-0 small">
+                                <strong>Action:</strong> {{ step.get_action_type_display }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                            <p>Drag components from the toolbox to build your workflow</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configuration Panel -->
+        <div class="col-md-3">
+            <div class="config-panel">
+                <h5 class="mb-3">
+                    <i class="fas fa-cog"></i>
+                    Configuration
+                </h5>
+                
+                <div id="configForm">
+                    <div class="mb-3">
+                        <label class="form-label">Workflow Name</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="workflowName" 
+                            value="{{ workflow.name }}"
+                        >
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea 
+                            class="form-control" 
+                            id="workflowDescription" 
+                            rows="3"
+                        >{{ workflow.description }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="workflowStatus">
+                            <option value="draft" {% if workflow.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="active" {% if workflow.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="paused" {% if workflow.status == 'paused' %}selected{% endif %}>Paused</option>
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Triggers ({{ triggers.count }})</h6>
+                    {% for trigger in triggers %}
+                    <div class="alert alert-info small">
+                        <strong>{{ trigger.get_trigger_type_display }}</strong><br>
+                        {% if trigger.event_type %}
+                        Event: {{ trigger.get_event_type_display }}
+                        {% endif %}
+                        {% if trigger.schedule_expression %}
+                        Schedule: {{ trigger.schedule_expression }}
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted small">No triggers configured</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Step Modal -->
+<div class="modal fade" id="addStepModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Workflow Step</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addStepForm">
+                    <input type="hidden" id="stepType" name="step_type">
+                    <input type="hidden" id="actionType" name="action_type">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Step Name</label>
+                        <input type="text" class="form-control" id="stepName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="stepDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div id="stepConfigFields">
+                        <!-- Dynamic fields based on step type -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveStep()">Add Step</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Trigger Modal -->
+<div class="modal fade" id="addTriggerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Workflow Trigger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTriggerForm">
+                    <input type="hidden" id="triggerType" name="trigger_type">
+                    
+                    <div class="mb-3" id="eventTypeField" style="display:none;">
+                        <label class="form-label">Event Type</label>
+                        <select class="form-select" id="eventType">
+                            <option value="shift_created">Shift Created</option>
+                            <option value="shift_updated">Shift Updated</option>
+                            <option value="leave_requested">Leave Requested</option>
+                            <option value="leave_approved">Leave Approved</option>
+                            <option value="leave_rejected">Leave Rejected</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="scheduleField" style="display:none;">
+                        <label class="form-label">Schedule (Cron Expression)</label>
+                        <input type="text" class="form-control" id="scheduleExpression" placeholder="0 9 * * *">
+                        <small class="text-muted">Example: "0 9 * * *" = Daily at 9 AM</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTrigger()">Add Trigger</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let stepCounter = {{ steps.count }};
+    
+    function addStep(stepType, actionType) {
+        document.getElementById('stepType').value = stepType;
+        document.getElementById('actionType').value = actionType;
+        
+        // Clear form
+        document.getElementById('stepName').value = '';
+        document.getElementById('stepDescription').value = '';
+        
+        // Show type-specific fields
+        const configFields = document.getElementById('stepConfigFields');
+        configFields.innerHTML = '';
+        
+        if (stepType === 'action' && actionType === 'send_email') {
+            configFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Recipients (comma-separated emails)</label>
+                    <input type="text" class="form-control" id="recipients">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Subject</label>
+                    <input type="text" class="form-control" id="emailSubject">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-control" id="emailMessage" rows="4"></textarea>
+                </div>
+            `;
+        } else if (stepType === 'condition') {
+            configFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Condition Expression</label>
+                    <input type="text" class="form-control" id="conditionExpr" placeholder="\${context.hours} > 8">
+                    <small class="text-muted">Use variables like \${context.field_name}</small>
+                </div>
+            `;
+        } else if (stepType === 'delay') {
+            configFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Duration</label>
+                    <input type="number" class="form-control" id="delayDuration" value="1">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Unit</label>
+                    <select class="form-select" id="delayUnit">
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                    </select>
+                </div>
+            `;
+        }
+        
+        // Show modal
+        new bootstrap.Modal(document.getElementById('addStepModal')).show();
+    }
+    
+    function saveStep() {
+        const stepType = document.getElementById('stepType').value;
+        const actionType = document.getElementById('actionType').value;
+        const name = document.getElementById('stepName').value;
+        const description = document.getElementById('stepDescription').value;
+        
+        // Build configuration based on step type
+        let configuration = {};
+        
+        if (stepType === 'action' && actionType === 'send_email') {
+            configuration = {
+                recipients: document.getElementById('recipients').value,
+                subject: document.getElementById('emailSubject').value,
+                message: document.getElementById('emailMessage').value
+            };
+        } else if (stepType === 'condition') {
+            configuration = {
+                condition: document.getElementById('conditionExpr').value
+            };
+        } else if (stepType === 'delay') {
+            configuration = {
+                duration: parseInt(document.getElementById('delayDuration').value),
+                unit: document.getElementById('delayUnit').value
+            };
+        }
+        
+        // Send AJAX request to add step
+        fetch('{% url "scheduling:workflow_add_step" workflow.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                step_type: stepType,
+                action_type: actionType,
+                name: name,
+                description: description,
+                configuration: configuration,
+                order: stepCounter++
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Error adding step: ' + data.message);
+            }
+        });
+    }
+    
+    function addTrigger(triggerType) {
+        document.getElementById('triggerType').value = triggerType;
+        
+        // Show/hide relevant fields
+        if (triggerType === 'schedule') {
+            document.getElementById('scheduleField').style.display = 'block';
+            document.getElementById('eventTypeField').style.display = 'none';
+        } else if (triggerType === 'event') {
+            document.getElementById('scheduleField').style.display = 'none';
+            document.getElementById('eventTypeField').style.display = 'block';
+        }
+        
+        new bootstrap.Modal(document.getElementById('addTriggerModal')).show();
+    }
+    
+    function saveTrigger() {
+        // Implementation for saving trigger
+        alert('Trigger save functionality would be implemented here');
+    }
+    
+    function editStep(stepId) {
+        // Implementation for editing step
+        alert('Edit step ' + stepId);
+    }
+    
+    function deleteStep(stepId) {
+        if (confirm('Delete this step?')) {
+            fetch(`/scheduling/workflows/steps/${stepId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        }
+    }
+    
+    function saveWorkflow() {
+        const name = document.getElementById('workflowName').value;
+        const description = document.getElementById('workflowDescription').value;
+        
+        // Save workflow metadata
+        alert('Workflow saved: ' + name);
+        
+        // In production, send AJAX request to save
+    }
+</script>
+{% endblock %}
