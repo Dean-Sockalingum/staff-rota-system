@@ -92,6 +92,11 @@ from .views_cache import (
     clear_cache_view,
     warm_cache_view
 )
+from .views_datatable import (
+    enhanced_shifts_table,
+    enhanced_staff_table,
+    enhanced_leave_table
+)
 
 urlpatterns = [
     # Authentication
@@ -167,6 +172,11 @@ urlpatterns = [
     path('cache/stats/', cache_stats_view, name='cache_stats'),
     path('cache/clear/', clear_cache_view, name='clear_cache'),
     path('cache/warm/', warm_cache_view, name='warm_cache'),
+    
+    # Enhanced Data Tables (Task 45)
+    path('tables/shifts/', enhanced_shifts_table, name='enhanced_shifts_table'),
+    path('tables/staff/', enhanced_staff_table, name='enhanced_staff_table'),
+    path('tables/leave/', enhanced_leave_table, name='enhanced_leave_table'),
     
     # Advanced Analytics Dashboard (Task 39)
     path('analytics/executive/', executive_dashboard, name='analytics_executive_dashboard'),
