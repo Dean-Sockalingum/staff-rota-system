@@ -12069,3 +12069,159 @@ def analytics_kpi_widget(request, kpi_type):
         return JsonResponse({'error': 'Invalid KPI type'}, status=400)
     
     return JsonResponse(data)
+
+
+# ============================================================================
+# PREDICTIVE STAFFING VIEWS (Phase 3 - Task 26)
+# ============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def predictive_staffing_dashboard(request):
+    """
+    Predictive staffing dashboard with ML forecasts
+    """
+    from .predictive_staffing import (
+        get_ml_model_stats,
+        get_staffing_recommendations,
+        detect_staffing_patterns
+    )
+    
+    # Get filter parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    days_ahead = int(request.GET.get('days_ahead', 14))
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Get ML model stats
+    model_stats = get_ml_model_stats(care_home, unit)
+    
+    # Get staffing recommendations
+    recommendations = get_staffing_recommendations(care_home, unit, days_ahead)
+    
+    # Get staffing patterns
+    patterns = detect_staffing_patterns(care_home, unit)
+    
+    context = {
+        'model_stats': model_stats,
+        'recommendations': recommendations,
+        'patterns': patterns,
+        'care_homes': CareHome.objects.all(),
+        'units': Unit.objects.all() if not care_home else care_home.units.all(),
+        'selected_care_home': care_home,
+        'selected_unit': unit,
+        'days_ahead': days_ahead,
+    }
+    
+    return render(request, 'scheduling/predictive_staffing_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def predictive_week_forecast(request):
+    """
+    Weekly staffing forecast view
+    """
+    from .predictive_staffing import predict_week_staffing
+    from datetime import datetime, timedelta
+    
+    # Get parameters
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    week_start_str = request.GET.get('week_start')
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+        care_home = unit.care_home if unit else None
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Parse week start (default to next Monday)
+    if week_start_str:
+        try:
+            week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+        except ValueError:
+            week_start = timezone.now().date()
+            # Adjust to next Monday
+            days_ahead = (7 - week_start.weekday()) % 7
+            week_start = week_start + timedelta(days=days_ahead)
+    else:
+        week_start = timezone.now().date()
+        days_ahead = (7 - week_start.weekday()) % 7
+        week_start = week_start + timedelta(days=days_ahead)
+    
+    # Get predictions
+    predictions = predict_week_staffing(week_start, care_home, unit)
+    
+    # Calculate summary
+    total_predicted = sum(p['predicted_shifts'] for p in predictions)
+    total_scheduled = sum(p['current_scheduled'] for p in predictions)
+    total_gap = sum(p['gap'] for p in predictions)
+    
+    summary = {
+        'total_predicted': total_predicted,
+        'total_scheduled': total_scheduled,
+        'total_gap': total_gap,
+        'avg_confidence': round(sum(p['confidence'] for p in predictions) / len(predictions), 2) if predictions else 0
+    }
+    
+    context = {
+        'predictions': predictions,
+        'summary': summary,
+        'week_start': week_start,
+        'week_end': week_start + timedelta(days=6),
+        'care_homes': CareHome.objects.all(),
+        'units': Unit.objects.all() if not care_home else care_home.units.all(),
+        'selected_care_home': care_home,
+        'selected_unit': unit,
+    }
+    
+    return render(request, 'scheduling/predictive_week_forecast.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_manager or u.is_head_of_service or u.is_superuser)
+def predictive_single_day(request):
+    """
+    Single day prediction (AJAX endpoint)
+    """
+    from .predictive_staffing import predict_staffing_needs
+    from datetime import datetime
+    
+    # Get parameters
+    date_str = request.GET.get('date')
+    care_home_id = request.GET.get('care_home')
+    unit_id = request.GET.get('unit')
+    leave_count = int(request.GET.get('leave_count', 0))
+    
+    if not date_str:
+        return JsonResponse({'error': 'Date required'}, status=400)
+    
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format'}, status=400)
+    
+    care_home = None
+    unit = None
+    
+    if unit_id:
+        unit = Unit.objects.filter(id=unit_id).first()
+    elif care_home_id:
+        care_home = CareHome.objects.filter(id=care_home_id).first()
+    
+    # Get prediction
+    prediction = predict_staffing_needs(target_date, care_home, unit, leave_count)
+    
+    return JsonResponse(prediction)

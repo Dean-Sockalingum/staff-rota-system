@@ -190,6 +190,11 @@ urlpatterns = [
     path('analytics/export/', views.analytics_export_data, name='analytics_export_data'),
     path('analytics/kpi/<str:kpi_type>/', views.analytics_kpi_widget, name='analytics_kpi_widget'),
     
+    # Predictive Staffing (Phase 3 - Task 26)
+    path('predictive/', views.predictive_staffing_dashboard, name='predictive_staffing_dashboard'),
+    path('predictive/week/', views.predictive_week_forecast, name='predictive_week_forecast'),
+    path('predictive/day/', views.predictive_single_day, name='predictive_single_day'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),
