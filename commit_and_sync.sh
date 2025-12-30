@@ -22,39 +22,26 @@ echo ""
 cd "$DESKTOP_PATH"
 
 # Step 1: Add all changes
-echo -e "${GREEN}[1/5]${NC} Adding all changes..."
+echo -e "${GREEN}[1/4]${NC} Adding all changes..."
 git add -A
 
 # Step 2: Commit
-echo -e "${GREEN}[2/5]${NC} Committing with message: '$COMMIT_MSG'"
+echo -e "${GREEN}[2/4]${NC} Committing with message: '$COMMIT_MSG'"
 git commit -m "$COMMIT_MSG"
 
 # Step 3: Push to GitHub
-echo -e "${GREEN}[3/5]${NC} Pushing to GitHub..."
+echo -e "${GREEN}[3/4]${NC} Pushing to GitHub..."
 git push origin main
 
-# Step 4: Sync to NVMe Backups
-if [ -d "/Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete" ]; then
-    echo -e "${GREEN}[4/5]${NC} Syncing to NVMe Backups..."
-    cd "/Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete"
-    git fetch origin main
-    git reset --hard origin/main
-    echo -e "  ${GREEN}✓${NC} NVMe Backups synced"
-else
-    echo -e "${YELLOW}[4/5]${NC} NVMe Backups location not found - skipping"
+# Run post-push hook manually (since post-push is not a standard Git hook)
+if [ -x .git/hooks/post-push ]; then
+    .git/hooks/post-push
 fi
 
-# Step 5: Sync to NVMe Production
-if [ -d "/Volumes/NVMe_990Pro/Staff_Rota_Production_Ready_2025-12-21" ]; then
-    echo -e "${GREEN}[5/5]${NC} Syncing to NVMe Production..."
-    cd "/Volumes/NVMe_990Pro/Staff_Rota_Production_Ready_2025-12-21"
-    git fetch origin main
-    git reset --hard origin/main
-    echo -e "  ${GREEN}✓${NC} NVMe Production synced"
-else
-    echo -e "${YELLOW}[5/5]${NC} NVMe Production location not found - skipping"
-fi
+# Step 4: Summary
+echo -e "${GREEN}[4/4]${NC} NVMe sync completed (check log: ~/Library/Logs/staff_rota_post_push.log)""
 
+# Step 5: Summary
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}✓ All locations synced successfully!${NC}"

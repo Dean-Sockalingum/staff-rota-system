@@ -14,15 +14,30 @@ Your Staff Rota system now automatically syncs to NVMe locations in **two ways**
 
 ### Immediate Sync (New!)
 
-When you push changes to GitHub from the Desktop location, a Git post-push hook automatically:
-1. Detects the successful push
-2. Syncs to `/Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete`
-3. Syncs to `/Volumes/NVMe_990Pro/Staff_Rota_Production_Ready_2025-12-21`
+**Two ways to trigger automatic NVMe sync:**
+
+#### 1. Use the wrapper script (Recommended)
+```bash
+./commit_and_sync.sh "Your commit message"
+```
+This automatically runs the sync hook after pushing.
+
+#### 2. Use Git alias
+```bash
+git pushsync origin main
+```
+This is a Git alias that pushes and then syncs NVMe.
+
+**What happens:**
+1. Pushes your changes to GitHub
+2. Runs `.git/hooks/post-push` hook
+3. Syncs to `/Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete`
+4. Syncs to `/Volumes/NVMe_990Pro/Staff_Rota_Production_Ready_2025-12-21`
 
 **Files:**
-- Hook: `.git/hooks/post-push` (runs after `git push`)
-- Hook: `.git/hooks/post-commit` (legacy, can be removed)
+- Hook: `.git/hooks/post-push` (custom hook, not standard Git)
 - Log: `~/Library/Logs/staff_rota_post_push.log`
+- Git alias: `pushsync` (configured in `.git/config`)
 
 ### Nightly Sync (Existing)
 
@@ -53,21 +68,34 @@ From the `Staff_Rota_Backups` directory:
 4. Syncs both NVMe locations
 5. Shows colorful progress output
 
-### Option 2: Standard Git Commands
+### Option 2: Git Alias
 
-The post-push hook works with normal Git commands:
+Use the configured Git alias:
 
 ```bash
 cd /Users/deansockalingum/Desktop/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete
 
 git add -A
 git commit -m "Your commit message"
-git push origin main  # ← NVMe sync happens automatically after this
+git pushsync origin main  # ← Pushes AND syncs NVMe automatically
 ```
 
-The NVMe sync happens **automatically** after a successful push.
+### Option 3: Manual Git + Hook
 
-### Option 3: Manual Sync
+If you use standard `git push`, you can manually trigger the hook:
+
+```bash
+cd /Users/deansockalingum/Desktop/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete
+
+git add -A
+git commit -m "Your commit message"
+git push origin main
+
+# Then manually run the hook:
+./.git/hooks/post-push
+```
+
+### Option 4: Manual Sync
 
 If you need to sync without committing:
 
