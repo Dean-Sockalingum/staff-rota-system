@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
+from django.core.exceptions import ValidationError
 from datetime import datetime, time, timedelta
 
 # This class manages the creation of users and superusers
@@ -108,7 +109,20 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('NIGHT_ASSISTANT', 'Night Shift (SCA)'),
     ]
     
-    sap = models.CharField(max_length=50, unique=True, primary_key=True)
+    # SAP number validator - must be exactly 6 digits
+    sap_validator = RegexValidator(
+        regex=r'^\d{6}$',
+        message='SAP number must be exactly 6 digits (e.g., 123456)',
+        code='invalid_sap'
+    )
+    
+    sap = models.CharField(
+        max_length=6, 
+        unique=True, 
+        primary_key=True,
+        validators=[sap_validator],
+        help_text='6-digit SAP number (e.g., 123456)'
+    )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -141,6 +155,24 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'sap'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'email']
+
+    def clean(self):
+        """Validate SAP number is exactly 6 digits"""
+        super().clean()
+        if self.sap:
+            # Remove any whitespace
+            self.sap = str(self.sap).strip()
+            
+            # Check if it's exactly 6 digits
+            if not self.sap.isdigit() or len(self.sap) != 6:
+                raise ValidationError({
+                    'sap': 'SAP number must be exactly 6 digits (e.g., 123456). Please do not use alphanumeric codes like "SCW1081".'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation"""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.sap})"
