@@ -9,7 +9,8 @@ from .models import (
     SupervisionRecord, IncidentReport,
     CostAnalysis, AgencyCostComparison, BudgetForecast,
     StaffCertification, AuditTrail,
-    AttendanceRecord, StaffPerformance, PerformanceReview
+    AttendanceRecord, StaffPerformance, PerformanceReview,
+    LeaveForecast, LeavePattern, LeaveImpactAnalysis
 )
 
 @admin.register(Role)
@@ -424,6 +425,30 @@ class PerformanceReviewAdmin(admin.ModelAdmin):
     def average_score_display(self, obj):
         return f"{obj.average_score():.1f}/10"
     average_score_display.short_description = 'Avg Score'
+
+
+# Task 35: Predictive Leave Forecasting Admin
+@admin.register(LeaveForecast)
+class LeaveForecastAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'forecast_type', 'forecast_start', 'forecast_end', 'predicted_days', 'confidence_level', 'impact_level']
+    list_filter = ['forecast_type', 'confidence_level', 'impact_level', 'care_home']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name']
+    readonly_fields = ['created_at']
+    date_hierarchy = 'forecast_date'
+
+@admin.register(LeavePattern)
+class LeavePatternAdmin(admin.ModelAdmin):
+    list_display = ['staff_member', 'pattern_type', 'pattern_name', 'pattern_strength', 'frequency_per_year']
+    list_filter = ['pattern_type', 'care_home']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name', 'pattern_name']
+    readonly_fields = ['created_at', 'updated_at']
+
+@admin.register(LeaveImpactAnalysis)
+class LeaveImpactAnalysisAdmin(admin.ModelAdmin):
+    list_display = ['care_home', 'period_start', 'period_end', 'impact_severity', 'risk_level', 'staff_on_leave_count', 'estimated_cost_impact']
+    list_filter = ['impact_severity', 'risk_level', 'care_home']
+    readonly_fields = ['analysis_date']
+    date_hierarchy = 'analysis_date'
 
 
 

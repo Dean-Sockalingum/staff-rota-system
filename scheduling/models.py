@@ -4093,3 +4093,177 @@ class PerformanceReview(models.Model):
         return sum(scores) / len(scores) if scores else 0
 
 
+# =============================================================================
+# TASK 35: PREDICTIVE LEAVE FORECASTING
+# =============================================================================
+
+class LeaveForecast(models.Model):
+    """Predictive leave forecast for a staff member"""
+    
+    FORECAST_TYPE_CHOICES = [
+        ('ANNUAL', 'Annual Leave'),
+        ('SICK', 'Sick Leave'),
+        ('PERSONAL', 'Personal Leave'),
+        ('ALL', 'All Leave Types'),
+    ]
+    
+    CONFIDENCE_LEVEL_CHOICES = [
+        ('HIGH', 'High (>80%)'),
+        ('MEDIUM', 'Medium (60-80%)'),
+        ('LOW', 'Low (<60%)'),
+    ]
+    
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_forecasts')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    forecast_type = models.CharField(max_length=20, choices=FORECAST_TYPE_CHOICES, default='ALL')
+    
+    # Forecast period
+    forecast_date = models.DateField()
+    forecast_start = models.DateField()
+    forecast_end = models.DateField()
+    
+    # Predictions
+    predicted_days = models.IntegerField(help_text="Predicted leave days in period")
+    predicted_peak_month = models.CharField(max_length=20, blank=True, help_text="Month with highest predicted leave")
+    predicted_pattern = models.TextField(blank=True, help_text="Description of predicted pattern")
+    
+    # Historical data used
+    historical_period_months = models.IntegerField(default=12, help_text="Months of history analyzed")
+    total_historical_days = models.IntegerField(default=0)
+    average_days_per_month = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    
+    # Confidence & accuracy
+    confidence_level = models.CharField(max_length=10, choices=CONFIDENCE_LEVEL_CHOICES, default='MEDIUM')
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="0-100%")
+    prediction_range_min = models.IntegerField(help_text="Minimum predicted days")
+    prediction_range_max = models.IntegerField(help_text="Maximum predicted days")
+    
+    # Factors influencing forecast
+    seasonal_factor = models.BooleanField(default=False, help_text="Seasonal pattern detected")
+    trend_factor = models.CharField(max_length=20, blank=True, help_text="INCREASING/DECREASING/STABLE")
+    special_events = models.TextField(blank=True, help_text="Known events affecting forecast")
+    
+    # Recommendations
+    impact_level = models.CharField(max_length=20, default='MEDIUM', 
+                                   choices=[('LOW', 'Low'), ('MEDIUM', 'Medium'), ('HIGH', 'High'), ('CRITICAL', 'Critical')])
+    recommended_actions = models.TextField(blank=True)
+    coverage_requirements = models.TextField(blank=True, help_text="Suggested coverage needs")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-forecast_date', '-created_at']
+        indexes = [
+            models.Index(fields=['staff_member', 'forecast_date']),
+            models.Index(fields=['care_home', 'forecast_type']),
+            models.Index(fields=['confidence_level', 'impact_level']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.get_forecast_type_display()} ({self.forecast_start} to {self.forecast_end})"
+
+
+class LeavePattern(models.Model):
+    """Identified leave patterns for analytics"""
+    
+    PATTERN_TYPE_CHOICES = [
+        ('SEASONAL', 'Seasonal (e.g., summer, winter)'),
+        ('MONTHLY', 'Monthly recurring'),
+        ('WEEKLY', 'Weekly recurring'),
+        ('EVENT_BASED', 'Event-based (e.g., school holidays)'),
+        ('RANDOM', 'No clear pattern'),
+    ]
+    
+    staff_member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_patterns')
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    
+    pattern_type = models.CharField(max_length=20, choices=PATTERN_TYPE_CHOICES)
+    pattern_name = models.CharField(max_length=100)
+    pattern_description = models.TextField()
+    
+    # Pattern details
+    typical_duration_days = models.IntegerField(help_text="Typical leave duration")
+    frequency_per_year = models.DecimalField(max_digits=5, decimal_places=2, help_text="How often per year")
+    preferred_months = models.JSONField(default=list, blank=True, help_text="List of preferred months (1-12)")
+    preferred_days_of_week = models.JSONField(default=list, blank=True, help_text="List of preferred days (0-6)")
+    
+    # Statistical data
+    occurrences_found = models.IntegerField(default=0, help_text="Number of times pattern occurred")
+    pattern_strength = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="0-100% strength")
+    last_occurrence = models.DateField(null=True, blank=True)
+    
+    # Analysis period
+    analyzed_from = models.DateField()
+    analyzed_to = models.DateField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-pattern_strength', '-created_at']
+        indexes = [
+            models.Index(fields=['staff_member', 'pattern_type']),
+            models.Index(fields=['care_home', '-pattern_strength']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.pattern_name}"
+
+
+class LeaveImpactAnalysis(models.Model):
+    """Analysis of leave impact on staffing and operations"""
+    
+    IMPACT_SEVERITY_CHOICES = [
+        ('MINIMAL', 'Minimal (<10% impact)'),
+        ('MODERATE', 'Moderate (10-25% impact)'),
+        ('SIGNIFICANT', 'Significant (25-50% impact)'),
+        ('SEVERE', 'Severe (>50% impact)'),
+    ]
+    
+    care_home = models.ForeignKey('CareHome', on_delete=models.CASCADE)
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Analysis period
+    analysis_date = models.DateField(auto_now_add=True)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    
+    # Leave statistics
+    total_leave_days = models.IntegerField(default=0)
+    staff_on_leave_count = models.IntegerField(default=0)
+    concurrent_leave_peak = models.IntegerField(default=0, help_text="Max staff on leave at once")
+    concurrent_leave_peak_date = models.DateField(null=True, blank=True)
+    
+    # Impact metrics
+    impact_severity = models.CharField(max_length=20, choices=IMPACT_SEVERITY_CHOICES, default='MINIMAL')
+    coverage_gap_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    overtime_hours_required = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    agency_shifts_needed = models.IntegerField(default=0)
+    estimated_cost_impact = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Risk assessment
+    understaffing_days = models.IntegerField(default=0, help_text="Days below minimum staffing")
+    critical_skill_gaps = models.TextField(blank=True, help_text="Missing critical skills/roles")
+    risk_level = models.CharField(max_length=20, default='LOW',
+                                  choices=[('LOW', 'Low'), ('MEDIUM', 'Medium'), ('HIGH', 'High'), ('CRITICAL', 'Critical')])
+    
+    # Recommendations
+    mitigation_strategies = models.TextField(blank=True)
+    recommended_hires = models.IntegerField(default=0, help_text="Suggested additional staff")
+    suggested_policy_changes = models.TextField(blank=True)
+    
+    # Detailed data
+    impact_by_day = models.JSONField(default=dict, blank=True, help_text="Daily impact breakdown")
+    affected_staff_list = models.JSONField(default=list, blank=True, help_text="List of affected staff IDs")
+    
+    class Meta:
+        ordering = ['-analysis_date', '-risk_level']
+        indexes = [
+            models.Index(fields=['care_home', 'period_start']),
+            models.Index(fields=['risk_level', 'impact_severity']),
+        ]
+    
+    def __str__(self):
+        return f"{self.care_home.name} - Impact Analysis ({self.period_start} to {self.period_end})"
+
+

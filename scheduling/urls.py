@@ -265,6 +265,16 @@ urlpatterns = [
     path('performance/review/<int:review_id>/', views.performance_review_detail, name='performance_review_detail'),
     path('performance/team-comparison/', views.team_performance_comparison, name='team_performance_comparison'),
     
+    # Task 35: Predictive Leave Forecasting URLs
+    path('leave-forecast/', views.leave_forecast_dashboard, name='leave_forecast_dashboard'),
+    path('leave-forecast/generate/', views.generate_staff_forecast, name='generate_staff_forecast'),
+    path('leave-forecast/<int:forecast_id>/', views.leave_forecast_detail, name='leave_forecast_detail'),
+    path('leave-forecast/team/', views.team_leave_forecast, name='team_leave_forecast'),
+    path('leave-forecast/impact/run/', views.leave_impact_analysis_run, name='leave_impact_analysis_run'),
+    path('leave-forecast/impact/<int:analysis_id>/', views.leave_impact_detail, name='leave_impact_detail'),
+    path('leave-forecast/patterns/<int:staff_id>/', views.leave_pattern_analysis, name='leave_pattern_analysis'),
+    path('leave-forecast/conflicts/', views.leave_conflict_detection, name='leave_conflict_detection'),
+    
     # Staffing Alert URLs
     path('staffing/alerts/', views.staffing_my_alerts, name='staffing_my_alerts'),
     path('staffing/respond/<uuid:token>/<str:action>/', views.staffing_alert_respond, name='staffing_alert_respond'),

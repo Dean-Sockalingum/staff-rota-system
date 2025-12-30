@@ -14695,3 +14695,219 @@ def compliance_report_view(request):
     return render(request, 'scheduling/compliance_report.html', context)
 
 
+# ============================================================================
+# TASK 35: PREDICTIVE LEAVE FORECASTING VIEWS
+# ============================================================================
+
+@login_required
+def leave_forecast_dashboard(request):
+    """Predictive leave forecasting dashboard"""
+    from . import predictive_leave
+    from .models import LeaveForecast, LeaveImpactAnalysis
+    
+    care_home = request.user.care_home
+    
+    # Get recent forecasts
+    recent_forecasts = LeaveForecast.objects.filter(
+        care_home=care_home
+    ).select_related('staff_member').order_by('-forecast_date')[:10]
+    
+    # Get high-impact forecasts
+    high_impact = LeaveForecast.objects.filter(
+        care_home=care_home,
+        impact_level__in=['HIGH', 'CRITICAL']
+    ).select_related('staff_member')[:5]
+    
+    # Get recent impact analyses
+    recent_analyses = LeaveImpactAnalysis.objects.filter(
+        care_home=care_home
+    ).order_by('-analysis_date')[:5]
+    
+    # Calculate summary stats
+    total_predicted_days = recent_forecasts.aggregate(
+        total=Sum('predicted_days')
+    )['total'] or 0
+    
+    avg_confidence = recent_forecasts.aggregate(
+        avg=Avg('confidence_score')
+    )['avg'] or 0
+    
+    context = {
+        'recent_forecasts': recent_forecasts,
+        'high_impact_forecasts': high_impact,
+        'recent_analyses': recent_analyses,
+        'total_predicted_days': total_predicted_days,
+        'average_confidence': avg_confidence,
+    }
+    return render(request, 'scheduling/leave_forecast_dashboard.html', context)
+
+
+@login_required
+def generate_staff_forecast(request):
+    """Generate leave forecast for a staff member"""
+    from . import predictive_leave
+    
+    if request.method == 'POST':
+        staff_id = request.POST.get('staff_id')
+        months = int(request.POST.get('months', 3))
+        forecast_type = request.POST.get('forecast_type', 'ALL')
+        
+        staff = get_object_or_404(User, id=staff_id)
+        
+        # Generate forecast
+        forecast = predictive_leave.forecast_leave(staff, forecast_months=months, forecast_type=forecast_type)
+        
+        messages.success(request, f'Forecast generated for {staff.get_full_name()}')
+        return redirect('leave_forecast_detail', forecast_id=forecast.id)
+    
+    # GET - show form
+    care_home = request.user.care_home
+    staff_list = User.objects.filter(care_home=care_home, is_active=True)
+    
+    from .models import LeaveForecast
+    context = {
+        'staff_list': staff_list,
+        'forecast_types': LeaveForecast.FORECAST_TYPE_CHOICES,
+    }
+    return render(request, 'scheduling/generate_forecast.html', context)
+
+
+@login_required
+def leave_forecast_detail(request, forecast_id):
+    """View leave forecast details"""
+    from .models import LeaveForecast, LeavePattern
+    
+    forecast = get_object_or_404(LeaveForecast, id=forecast_id)
+    
+    # Get patterns for this staff member
+    patterns = LeavePattern.objects.filter(
+        staff_member=forecast.staff_member
+    ).order_by('-pattern_strength')
+    
+    context = {
+        'forecast': forecast,
+        'patterns': patterns,
+    }
+    return render(request, 'scheduling/leave_forecast_detail.html', context)
+
+
+@login_required
+def team_leave_forecast(request):
+    """Generate forecast for entire team"""
+    from . import predictive_leave
+    
+    care_home = request.user.care_home
+    months = int(request.GET.get('months', 3))
+    
+    # Generate team forecast
+    team_data = predictive_leave.get_team_leave_forecast(care_home, months_ahead=months)
+    
+    context = {
+        'team_forecast': team_data,
+        'months_ahead': months,
+    }
+    return render(request, 'scheduling/team_leave_forecast.html', context)
+
+
+@login_required
+def leave_impact_analysis_run(request):
+    """Run leave impact analysis"""
+    from . import predictive_leave
+    
+    if request.method == 'POST':
+        start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-%d').date()
+        end_date = datetime.strptime(request.POST.get('end_date'), '%Y-%m-%d').date()
+        unit_id = request.POST.get('unit_id')
+        
+        unit = None
+        if unit_id:
+            unit = get_object_or_404(Unit, id=unit_id)
+        
+        # Run analysis
+        analysis = predictive_leave.analyze_leave_impact(
+            request.user.care_home, start_date, end_date, unit
+        )
+        
+        messages.success(request, 'Leave impact analysis completed')
+        return redirect('leave_impact_detail', analysis_id=analysis.id)
+    
+    # GET - show form
+    care_home = request.user.care_home
+    units = Unit.objects.filter(care_home=care_home)
+    
+    context = {
+        'units': units,
+    }
+    return render(request, 'scheduling/run_impact_analysis.html', context)
+
+
+@login_required
+def leave_impact_detail(request, analysis_id):
+    """View leave impact analysis details"""
+    from .models import LeaveImpactAnalysis
+    
+    analysis = get_object_or_404(LeaveImpactAnalysis, id=analysis_id)
+    
+    # Parse impact by day for chart
+    impact_by_day = analysis.impact_by_day or {}
+    chart_dates = sorted(impact_by_day.keys())
+    chart_values = [impact_by_day[date] for date in chart_dates]
+    
+    context = {
+        'analysis': analysis,
+        'chart_dates': chart_dates,
+        'chart_values': chart_values,
+    }
+    return render(request, 'scheduling/leave_impact_detail.html', context)
+
+
+@login_required
+def leave_pattern_analysis(request, staff_id):
+    """Analyze leave patterns for a staff member"""
+    from . import predictive_leave
+    from .models import LeavePattern
+    
+    staff = get_object_or_404(User, id=staff_id)
+    months_back = int(request.GET.get('months', 12))
+    
+    # Analyze patterns
+    pattern_data = predictive_leave.analyze_leave_patterns(staff, months_back=months_back)
+    
+    # Get existing patterns
+    patterns = LeavePattern.objects.filter(staff_member=staff)
+    
+    context = {
+        'staff': staff,
+        'pattern_data': pattern_data,
+        'patterns': patterns,
+        'months_back': months_back,
+    }
+    return render(request, 'scheduling/leave_pattern_analysis.html', context)
+
+
+@login_required
+def leave_conflict_detection(request):
+    """Detect leave conflicts and overlaps"""
+    from . import predictive_leave
+    
+    care_home = request.user.care_home
+    
+    # Default to next 60 days
+    start_date = timezone.now().date()
+    end_date = start_date + timedelta(days=60)
+    
+    if request.GET.get('start_date'):
+        start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
+    if request.GET.get('end_date'):
+        end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
+    
+    # Detect conflicts
+    conflicts = predictive_leave.identify_leave_conflicts(care_home, start_date, end_date)
+    
+    context = {
+        'conflicts': conflicts,
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_conflicts': len(conflicts),
+    }
+    return render(request, 'scheduling/leave_conflicts.html', context)
