@@ -75,16 +75,11 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',  # Task 48: 2FA verification
-    'scheduling.middleware.two_factor_middleware.TwoFactorAuthMiddleware',  # Task 48: 2FA enforcement
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'scheduling.middleware.cache_middleware.CacheInvalidationMiddleware',  # Task 44: Cache management
     # Phase 6: Security middleware
     'axes.middleware.AxesMiddleware',  # Account lockout protection
     'csp.middleware.CSPMiddleware',  # Content Security Policy
-    # Task 51: Sentry error tracking and performance monitoring
-    'scheduling.middleware.sentry_middleware.SentryContextMiddleware',
-    'scheduling.middleware.sentry_middleware.SentryPerformanceMiddleware',
     # Custom middleware
     'scheduling.middleware.AuditLoggingMiddleware',  # Automatic audit logging
 ]
