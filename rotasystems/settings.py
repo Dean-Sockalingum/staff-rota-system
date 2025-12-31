@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',  # Backup codes
     # Task 49: Advanced Search
-    'django_elasticsearch_dsl',
+    # 'django_elasticsearch_dsl',  # Temporarily disabled - ES not running
     # Core apps
     'scheduling',
     'scheduling.management',
@@ -813,12 +813,12 @@ REQUIRED_2FA_ROLES = [
 # Elasticsearch DSL settings
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': os.environ.get('ELASTICSEARCH_URL', 'localhost:9200'),
+        'hosts': os.environ.get('ELASTICSEARCH_URL', 'http://localhost:9200'),
         'http_auth': (
             os.environ.get('ELASTICSEARCH_USER', ''),
             os.environ.get('ELASTICSEARCH_PASSWORD', '')
         ) if os.environ.get('ELASTICSEARCH_USER') else None,
-        'timeout': 30,
+        'request_timeout': 30,
         'max_retries': 3,
         'retry_on_timeout': True,
     },

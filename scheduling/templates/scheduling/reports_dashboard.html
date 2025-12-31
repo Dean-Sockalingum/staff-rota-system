@@ -14,9 +14,9 @@
 <div class="row">
     {% for report in available_reports %}
         <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="card-title mb-0 text-white fw-bold">
                         <i class="fas {% if report.icon %}{{ report.icon }}{% else %}fa-file-alt{% endif %}"></i> {{ report.name }}
                     </h5>
                 </div>

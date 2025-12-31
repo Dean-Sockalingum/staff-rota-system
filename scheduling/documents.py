@@ -57,7 +57,7 @@ class UserDocument(Document):
     
     def prepare_full_name(self, instance):
         """Generate full name for search"""
-        return instance.get_full_name()
+        return f"{instance.first_name} {instance.last_name}".strip()
 
 
 @registry.register_document

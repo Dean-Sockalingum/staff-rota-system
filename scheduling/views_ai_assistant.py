@@ -664,24 +664,63 @@ def ai_assistant_api(request):
                 optimal = get_optimal_leave_period(request.user, month, duration_days)
                 
                 if optimal:
-                    answer = f"**🎯 Optimal Leave Period Found!**\n\n"
-                    answer += f"**Best dates:** {optimal['start_date'].strftime('%A, %B %d')} - {optimal['end_date'].strftime('%A, %B %d, %Y')}\n\n"
-                    answer += f"**Approval likelihood:** {optimal['score']}% ✅\n\n"
-                    answer += "This period has the best staffing coverage and highest chance of approval.\n\n"
-                    answer += "Would you like to check detailed factors or submit a request for these dates?"
+                    # Format month name for display
+                    month_name = optimal['start_date'].strftime('%B')
                     
-                    return JsonResponse({
-                        'answer': answer,
-                        'related': ['Request Leave', 'Check Other Dates'],
-                        'category': 'leave_optimization',
-                        'action_button': {
-                            'text': '📝 Request These Dates',
-                            'url': f'/request-leave/?start={optimal["start_date"].isoformat()}&end={optimal["end_date"].isoformat()}'
-                        }
-                    })
+                    if optimal['available']:
+                        # Less than 3 staff off - dates available
+                        answer = f"**✅ Great News! Leave Available in {month_name}**\n\n"
+                        answer += f"**Best dates:** {optimal['start_date'].strftime('%A, %B %d')} - {optimal['end_date'].strftime('%A, %B %d, %Y')}\n\n"
+                        
+                        if optimal['staff_off'] == 0:
+                            answer += f"**Availability:** Excellent! No staff currently off during this period. ✅\n\n"
+                        elif optimal['staff_off'] == 1:
+                            answer += f"**Availability:** Very Good - Only 1 staff member off during this period. ✅\n\n"
+                        else:
+                            answer += f"**Availability:** Good - {optimal['staff_off']} staff members off during this period. ✅\n\n"
+                        
+                        answer += f"**Approval likelihood:** {optimal['score']}%\n\n"
+                        
+                        if optimal['available_periods'] > 1:
+                            answer += f"💡 **Note:** Found {optimal['available_periods']} available periods in {month_name}. This is the best option.\n\n"
+                        
+                        answer += "Would you like to submit a leave request for these dates?"
+                        
+                        return JsonResponse({
+                            'answer': answer,
+                            'related': ['Request Leave', 'Check Other Dates', 'View Leave Balance'],
+                            'category': 'leave_optimization',
+                            'action_button': {
+                                'text': '📝 Request These Dates',
+                                'url': f'/request-leave/?start={optimal["start_date"].isoformat()}&end={optimal["end_date"].isoformat()}'
+                            }
+                        })
+                    else:
+                        # 3 or more staff off - busy period
+                        answer = f"**⚠️ {month_name} is Quite Busy**\n\n"
+                        answer += f"**Least busy dates:** {optimal['start_date'].strftime('%A, %B %d')} - {optimal['end_date'].strftime('%A, %B %d, %Y')}\n\n"
+                        answer += f"**Staff already off:** {optimal['staff_off']} people during this period\n\n"
+                        answer += f"**Approval likelihood:** {optimal['score']}% (Lower due to high demand)\n\n"
+                        
+                        if optimal['available_periods'] == 0:
+                            answer += f"⚠️ **All periods in {month_name} have 3+ staff off.** This is the quietest option available.\n\n"
+                        else:
+                            answer += f"💡 **Recommendation:** Consider these dates or check {optimal['available_periods']} quieter periods in other months.\n\n"
+                        
+                        answer += "You can still request these dates, but approval may be subject to operational needs."
+                        
+                        return JsonResponse({
+                            'answer': answer,
+                            'related': ['Check Other Months', 'View Leave Calendar', 'Request Anyway'],
+                            'category': 'leave_optimization',
+                            'action_button': {
+                                'text': '📝 Request Despite Busy Period',
+                                'url': f'/request-leave/?start={optimal["start_date"].isoformat()}&end={optimal["end_date"].isoformat()}'
+                            }
+                        })
                 else:
-                    answer = "I couldn't find optimal leave dates. Please specify:\n"
-                    answer += "• Which month? (e.g., 'January', 'next month')\n"
+                    answer = "I couldn't find any future dates in the specified month. Please specify:\n"
+                    answer += "• A future month (e.g., 'January', 'next month', 'March')\n"
                     answer += "• How many days? (e.g., '5 days', '1 week')\n\n"
                     answer += "Example: 'When is the best time for 5 days leave in March?'"
                     

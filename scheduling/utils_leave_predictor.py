@@ -288,7 +288,7 @@ def find_better_leave_dates(user, original_start, original_end):
 
 def get_optimal_leave_period(user, month=None, duration_days=5):
     """
-    Find the best period in a given month for taking leave.
+    Find the best period in a given month for taking leave based on actual staff absence data.
     
     Args:
         user: User object
@@ -296,8 +296,9 @@ def get_optimal_leave_period(user, month=None, duration_days=5):
         duration_days: How many days leave needed
     
     Returns:
-        dict with best date range and likelihood score
+        dict with best date range, staff off count, and availability status
     """
+    from scheduling.models import LeaveRequest
     
     if month is None:
         target_date = timezone.now().date() + timedelta(days=30)
@@ -311,26 +312,49 @@ def get_optimal_leave_period(user, month=None, duration_days=5):
     from calendar import monthrange
     _, last_day = monthrange(year, month)
     
-    best_option = None
-    best_score = 0
+    all_options = []
     
-    # Try each week of the month
-    for start_day in range(1, last_day - duration_days, 7):
+    # Check every potential start date in the month
+    for start_day in range(1, last_day - duration_days + 2):
         test_start = date(year, month, start_day)
         test_end = test_start + timedelta(days=duration_days - 1)
         
+        # Skip past dates
         if test_start < timezone.now().date():
             continue
         
-        prediction = predict_leave_approval_likelihood(user, test_start, test_end)
+        # Count how many staff are off during this period
+        overlapping_leave = LeaveRequest.objects.filter(
+            status='approved',
+            start_date__lte=test_end,
+            end_date__gte=test_start
+        ).exclude(user=user).count()
         
-        if prediction['likelihood_score'] > best_score:
-            best_score = prediction['likelihood_score']
-            best_option = {
-                'start_date': test_start,
-                'end_date': test_end,
-                'score': prediction['likelihood_score'],
-                'description': f'{test_start.strftime("%b %d")} - {test_end.strftime("%b %d")}'
-            }
+        # Calculate availability score (lower staff off = better)
+        available = overlapping_leave < 3
+        score = 100 - (overlapping_leave * 20)  # Each person off reduces score by 20
+        if score < 0:
+            score = 0
+        
+        all_options.append({
+            'start_date': test_start,
+            'end_date': test_end,
+            'staff_off': overlapping_leave,
+            'available': available,
+            'score': score,
+            'description': f'{test_start.strftime("%b %d")} - {test_end.strftime("%b %d")}'
+        })
+    
+    # If no options (all dates in past), return None
+    if not all_options:
+        return None
+    
+    # Sort by fewest staff off, then earliest date
+    all_options.sort(key=lambda x: (x['staff_off'], x['start_date']))
+    best_option = all_options[0]
+    
+    # Add additional info
+    best_option['total_options'] = len(all_options)
+    best_option['available_periods'] = sum(1 for opt in all_options if opt['available'])
     
     return best_option
