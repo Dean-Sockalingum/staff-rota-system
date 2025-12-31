@@ -1,6 +1,11 @@
 {% extends 'scheduling/base.html' %}
+{% load static %}
 
 {% block title %}Request Annual Leave - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -52,7 +57,7 @@
                     </ul>
                 </div>
                 
-                <form method="post">
+                <form method="post" id="leave-request-form" data-autosave="true" data-autosave-key="leave-request">
                     {% csrf_token %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -177,4 +182,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<script src="{% static 'js/form-autosave.js' %}"></script>
 {% endblock %}

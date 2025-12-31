@@ -3,13 +3,17 @@
 
 {% block title %}Create Supervision Record{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
         <div class="col-lg-10 mx-auto">
             <h2><i class="fas fa-user-check"></i> Create Supervision Record</h2>
             
-            <form method="post">
+            <form method="post" id="supervision-form" data-autosave="true" data-autosave-key="supervision-record">
                 {% csrf_token %}
                 
                 {% if messages %}
@@ -314,4 +318,5 @@ searchInput.addEventListener('focus', function() {
     this.select();
 });
 </script>
+<script src="{% static 'js/form-autosave.js' %}"></script>
 {% endblock %}

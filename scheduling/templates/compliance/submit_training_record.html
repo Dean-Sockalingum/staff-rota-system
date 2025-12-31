@@ -4,6 +4,7 @@
 {% block title %}Submit Training Record{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
 <style>
     .form-section {
         background-color: #f8f9fa;
@@ -33,7 +34,7 @@
                     <h4 class="mb-0"><i class="fas fa-graduation-cap"></i> Submit Training Record</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="training-form" data-autosave="true" data-autosave-key="training-record">
                         {% csrf_token %}
                         
                         {% if messages %}
@@ -149,4 +150,6 @@
         </div>
     </div>
 </div>
+
+<script src="{% static 'js/form-autosave.js' %}"></script>
 {% endblock %}

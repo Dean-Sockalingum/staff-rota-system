@@ -4,6 +4,7 @@
 {% block title %}Report Incident{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
 <style>
     .incident-form .form-section {
         background-color: #f8f9fa;
@@ -50,7 +51,7 @@
                     <small>Complete this form as soon as possible after the incident occurs</small>
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data" id="incident-form">
+                    <form method="post" enctype="multipart/form-data" id="incident-form" data-autosave="true" data-autosave-key="incident-report">
                         {% csrf_token %}
                         
                         {% if messages %}
@@ -324,4 +325,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<script src="{% static 'js/form-autosave.js' %}"></script>
 {% endblock %}
