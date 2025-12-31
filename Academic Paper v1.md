@@ -2758,15 +2758,17 @@ This appendix presents the complete database schema for the Staff Rota System, c
 | **created_at** | DATETIME | DEFAULT NOW | Record creation timestamp |
 
 **Care Home Values:**
-- `ORCHARD_GROVE` (3 units: Mulberry, Willow, Hawthorn)
-- `SERENITY_GARDENS` (2 units: Primrose, Lavender)
-- `VICTORIA_GARDENS` (2 units: Rose, Sunflower)
-- `MAPLE_CREST` (1 unit: Heather)
-- `RIVERSIDE_HAVEN` (1 unit: Haven)
+- `ORCHARD_GROVE` (8 units + MGMT: Bramley, Cherry, Grape, Orange, Peach, Pear, Plum, Strawberry, MGMT - fruit-themed)
+- `HAWTHORN_HOUSE` (8 units + MGMT: Bluebell, Daisy, Heather, Iris, Primrose, Snowdrop SRD, Thistle SRD, Violet, MGMT)
+- `MEADOWBURN` (8 units + MGMT: Aster, Bluebell, Cornflower, Daisy, Foxglove, Honeysuckle, Marigold, Poppy SRD, MGMT)
+- `RIVERSIDE` (8 units + MGMT: Daffodil, Heather, Jasmine, Lily, Lotus, Maple, Orchid, Rose, MGMT)
+- `VICTORIA_GARDENS` (5 units + MGMT: Azalea, Crocus, Lily, Rose, Tulip, MGMT)
 
 **Business Rules:**
-1. `unit_code` format: `{HOME_ABBREV}_{UNIT_NAME}` (e.g., `OG_MULBERRY`)
-2. Total system capacity: 235 beds across 5 homes
+1. `unit_code` format: `{HOME_ABBREV}_{UNIT_NAME}` (e.g., `OG_BRAMLEY`)
+2. Total system capacity: 550 beds across 5 homes (42 active units total)
+   - OG/HH/MB/RS: 120 beds each (8 units × 15 beds + MGMT)
+   - Victoria Gardens: 70 beds (4 units × 15 beds + 1 unit × 10 beds + MGMT)
 3. Units cannot be deleted (soft delete via `is_active=FALSE` for audit trail)
 
 **Calculated Fields:**
