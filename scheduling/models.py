@@ -4742,3 +4742,10 @@ from .models_compliance_widgets import (
     ComplianceMetric,
     ComplianceWidget
 )
+
+# Overtime preference and coverage models
+from .models_overtime import (
+    StaffOvertimePreference,
+    OvertimeCoverageRequest,
+    OvertimeCoverageResponse
+)
