@@ -142,6 +142,12 @@ from .views_workflow import (
     workflow_update_step,
     workflow_delete_step
 )
+from .views_leave_calendar import (
+    leave_calendar_view,
+    team_leave_calendar_view,
+    leave_calendar_data_api,
+    leave_coverage_report_api
+)
 from .views_documents import (
     document_list,
     document_upload,
@@ -267,6 +273,12 @@ urlpatterns = [
     path('request-leave/', views.request_annual_leave, name='request_annual_leave'),
     path('request-swap/', views.request_shift_swap, name='request_shift_swap'),
     path('leave-approvals/', views.leave_approval_dashboard, name='leave_approval_dashboard'),
+    
+    # Leave Calendar Views (Task 59)
+    path('leave/calendar/', leave_calendar_view, name='leave_calendar'),
+    path('leave/calendar/team/', team_leave_calendar_view, name='team_leave_calendar'),
+    path('leave/calendar/api/data/', leave_calendar_data_api, name='leave_calendar_data_api'),
+    path('leave/calendar/api/coverage/', leave_coverage_report_api, name='leave_coverage_report_api'),
     
     # Staff Management URLs
     path('staff-management/', views.staff_management, name='staff_management'),
