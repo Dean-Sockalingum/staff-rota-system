@@ -875,14 +875,13 @@ def rota_view(request):
         night_shifts = [s for s in date_shifts if s.shift_type.name in ['NIGHT_SENIOR', 'NIGHT_ASSISTANT']]
 
         # Management staff (SM, OM) - always at top with pink background
+        # NOTE: Management never works night shifts, so we exclude them from night_management
         day_management = [
             s for s in day_shifts
             if getattr(getattr(s.user, 'role', None), 'name', '') in ['SM', 'OM']
         ]
-        night_management = [
-            s for s in night_shifts
-            if getattr(getattr(s.user, 'role', None), 'name', '') in ['SM', 'OM']
-        ]
+        # MGMT never works nightshift - empty list to avoid taking up space
+        night_management = []
 
         # Supernumerary duty staff (SSCW, SSCWN)
         day_supernumerary_duty = [
@@ -993,18 +992,171 @@ def rota_view(request):
             'night': [serialize_shift(shift) for shift in shifts_data['night']],
         }
     
-    # Calculate daily staffing summary
+    # Calculate daily staffing summary and intelligent reallocation suggestions
     daily_summary = {}
     staffing_alerts = []  # Track staffing shortages for dashboard
+    within_home_suggestions = {}  # Suggested staff moves within same home
+    cross_home_availability = {}  # Staff available to help other homes
     
     # Home-specific staffing thresholds (care staff only, not including SSCW/SSCWN)
     home_staffing_config = {
-        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2},
-        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
-        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
-        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2},
-        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1},
+        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
+        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
+        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
+        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
+        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1, 'units_count': 5},
     }
+    
+    def calculate_within_home_reallocations(date, care_home_name, shift_period='DAY'):
+        """
+        Calculate fair staff redistribution within a single home.
+        Returns: {
+            'suggestions': [(from_unit, to_unit, staff_name, shift_id), ...],
+            'excess_after_balancing': [shift_objects that are truly excess]
+        }
+        """
+        from collections import defaultdict
+        
+        home_config = home_staffing_config.get(care_home_name, {})
+        ideal_total = home_config.get(f'{shift_period.lower()}_ideal', 17)
+        units_count = home_config.get('units_count', 9)
+        ideal_per_unit = ideal_total // units_count  # Fair distribution target
+        
+        # Get all units for this home
+        home_units = Unit.objects.filter(
+            care_home__name=care_home_name,
+            is_active=True
+        ).exclude(name='ADMIN')
+        
+        # Count staff per unit
+        unit_staffing = {}
+        unit_shifts = {}
+        
+        shift_type_filter = 'DAY' if shift_period == 'DAY' else 'NIGHT'
+        
+        for unit in home_units:
+            shifts = Shift.objects.filter(
+                date=date,
+                unit=unit,
+                shift_type__name__icontains=shift_type_filter,
+                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
+            ).select_related('user', 'shift_type', 'user__role')
+            
+            unit_staffing[unit.name] = shifts.count()
+            unit_shifts[unit.name] = list(shifts)
+        
+        # Identify excess and shortage units
+        excess_units = {}
+        shortage_units = {}
+        
+        for unit_name, count in unit_staffing.items():
+            if count > ideal_per_unit:
+                excess_units[unit_name] = count - ideal_per_unit
+            elif count < ideal_per_unit:
+                shortage_units[unit_name] = ideal_per_unit - count
+        
+        # Generate reallocation suggestions
+        suggestions = []
+        
+        for shortage_unit, needed in list(shortage_units.items()):
+            for excess_unit, available in list(excess_units.items()):
+                if needed <= 0 or available <= 0:
+                    continue
+                
+                # Move staff from excess to shortage unit
+                can_move = min(needed, available)
+                shifts_to_move = unit_shifts[excess_unit][:can_move]
+                
+                for shift in shifts_to_move:
+                    suggestions.append({
+                        'from_unit': excess_unit,
+                        'to_unit': shortage_unit,
+                        'staff_name': shift.user.full_name,
+                        'staff_sap': shift.user.sap,
+                        'role': shift.user.role.get_name_display(),
+                        'shift_id': shift.id,
+                        'shift_time': f"{shift.shift_type.start_time} - {shift.shift_type.end_time}"
+                    })
+                    unit_shifts[excess_unit].remove(shift)
+                
+                excess_units[excess_unit] -= can_move
+                shortage_units[shortage_unit] -= can_move
+                needed -= can_move
+        
+        # After balancing, check if home has true excess (more than ideal_total)
+        total_staff = sum(unit_staffing.values())
+        excess_after_balancing = []
+        
+        if total_staff > ideal_total:
+            # Collect remaining excess staff
+            excess_count = total_staff - ideal_total
+            all_remaining_shifts = []
+            for shifts_list in unit_shifts.values():
+                all_remaining_shifts.extend(shifts_list)
+            
+            # Take the first excess_count shifts as available for cross-home
+            excess_after_balancing = all_remaining_shifts[:excess_count]
+        
+        return {
+            'suggestions': suggestions,
+            'excess_after_balancing': excess_after_balancing
+        }
+    
+    def find_cross_home_matches(date, shift_period='DAY'):
+        """
+        Match excess staff from over-staffed homes with shortages in other homes.
+        Returns dict of {shortage_home: [available_staff_from_other_homes]}
+        """
+        from collections import defaultdict
+        
+        all_homes_status = {}
+        
+        # First pass: Calculate each home's status
+        for home_name, config in home_staffing_config.items():
+            ideal_total = config.get(f'{shift_period.lower()}_ideal', 17)
+            
+            home_shifts = Shift.objects.filter(
+                date=date,
+                unit__care_home__name=home_name,
+                shift_type__name__icontains=shift_period,
+                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
+            ).select_related('user', 'user__role', 'unit')
+            
+            total_staff = home_shifts.count()
+            
+            realloc_result = calculate_within_home_reallocations(date, home_name, shift_period)
+            
+            all_homes_status[home_name] = {
+                'total_staff': total_staff,
+                'ideal': ideal_total,
+                'excess_staff': realloc_result['excess_after_balancing'],
+                'shortage': max(0, ideal_total - total_staff),
+                'within_home_suggestions': realloc_result['suggestions']
+            }
+        
+        # Second pass: Match excess with shortages
+        matches = defaultdict(list)
+        
+        for home_name, status in all_homes_status.items():
+            if status['shortage'] > 0:
+                # This home needs staff - check other homes for excess
+                for other_home, other_status in all_homes_status.items():
+                    if other_home != home_name and other_status['excess_staff']:
+                        # Add available staff to matches
+                        for shift in other_status['excess_staff'][:status['shortage']]:
+                            matches[home_name].append({
+                                'from_home': other_home,
+                                'staff_name': shift.user.full_name,
+                                'staff_sap': shift.user.sap,
+                                'role': shift.user.role.get_name_display(),
+                                'current_unit': shift.unit.get_name_display(),
+                                'shift_id': shift.id
+                            })
+        
+        return matches, all_homes_status
+    
+    # Store reallocation data for each date
+    reallocation_data = {}
     
     for current_date, shifts_data in shifts_by_date.items():
         # Break down by role groups
@@ -1012,6 +1164,38 @@ def rota_view(request):
         day_care = len(shifts_data['day_care'])
         night_sscw = len(shifts_data['night_supernumerary'])
         night_care = len(shifts_data['night_care'])
+
+        # Calculate intelligent reallocations if viewing a specific home
+        date_reallocations = {'day': {}, 'night': {}}
+        
+        if selected_home != 'all' and selected_home in home_staffing_config:
+            # Within-home reallocation for this specific home
+            day_realloc = calculate_within_home_reallocations(current_date, selected_home, 'DAY')
+            night_realloc = calculate_within_home_reallocations(current_date, selected_home, 'NIGHT')
+            
+            date_reallocations['day'] = {
+                'within_home': day_realloc['suggestions'],
+                'excess_available': len(day_realloc['excess_after_balancing'])
+            }
+            date_reallocations['night'] = {
+                'within_home': night_realloc['suggestions'],
+                'excess_available': len(night_realloc['excess_after_balancing'])
+            }
+        elif selected_home == 'all':
+            # Cross-home view - show all homes and potential cross-home matches
+            day_matches, day_status = find_cross_home_matches(current_date, 'DAY')
+            night_matches, night_status = find_cross_home_matches(current_date, 'NIGHT')
+            
+            date_reallocations['day'] = {
+                'all_homes_status': day_status,
+                'cross_home_matches': day_matches
+            }
+            date_reallocations['night'] = {
+                'all_homes_status': night_status,
+                'cross_home_matches': night_matches
+            }
+        
+        reallocation_data[current_date] = date_reallocations
 
         # Determine staffing requirements based on selected filters
         if selected_home != 'all':
@@ -1074,6 +1258,7 @@ def rota_view(request):
         'shifts_by_date': shifts_by_date,
         'daily_summary': daily_summary,
         'staffing_alerts': staffing_alerts,
+        'reallocation_data': reallocation_data,  # NEW: Intelligent reallocation suggestions
         'view_start_date': view_start_date,
         'view_end_date': view_end_date,
         'week_offset': week_offset,

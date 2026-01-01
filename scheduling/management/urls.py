@@ -73,6 +73,14 @@ from scheduling.views_executive_dashboards import (
     export_ci_performance,
     export_predictive_budget
 )
+from scheduling.views_executive_summary import (
+    executive_summary_dashboard,
+    executive_summary_export_pdf,
+    executive_summary_api_kpis,
+    executive_summary_api_trends,
+    executive_summary_api_forecast,
+    executive_summary_api_insights
+)
 from scheduling.views_overtime_management import (
     overtime_preferences_list,
     overtime_preference_form,
@@ -151,6 +159,12 @@ urlpatterns = [
     path('optimization/comparison/', optimization_comparison, name='optimization_comparison'),
     
     # Executive Dashboards (Advanced Analytics for Senior Leadership)
+    path('executive/summary/', executive_summary_dashboard, name='executive_summary_dashboard'),
+    path('executive/summary/export-pdf/', executive_summary_export_pdf, name='executive_summary_export_pdf'),
+    path('executive/summary/api/kpis/', executive_summary_api_kpis, name='executive_summary_api_kpis'),
+    path('executive/summary/api/trends/', executive_summary_api_trends, name='executive_summary_api_trends'),
+    path('executive/summary/api/forecast/', executive_summary_api_forecast, name='executive_summary_api_forecast'),
+    path('executive/summary/api/insights/', executive_summary_api_insights, name='executive_summary_api_insights'),
     path('executive/budget/', budget_dashboard, name='budget_dashboard'),
     path('executive/budget/export/', export_budget_excel, name='export_budget_excel'),
     path('executive/early-warning/', early_warning_dashboard, name='early_warning_dashboard'),

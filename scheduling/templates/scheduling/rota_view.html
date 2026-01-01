@@ -689,6 +689,136 @@ td.calendar-day .shift-card.role-scan {
     </div>
 </div>
 
+<!-- Intelligent Staff Reallocation Suggestions -->
+{% if reallocation_data %}
+<div class="row mb-3 no-print">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-sync-alt"></i> Intelligent Staff Reallocation Suggestions
+                    <small class="float-end">Auto-balancing within homes, then cross-home before overtime/agency</small>
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for date, realloc in reallocation_data.items %}
+                    {% if realloc.day.within_home or realloc.night.within_home or realloc.day.cross_home_matches or realloc.night.cross_home_matches %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <strong class="text-primary">{{ date|date:"l, j F Y" }}</strong>
+                        
+                        <!-- Within-Home Reallocations (Day) -->
+                        {% if realloc.day.within_home %}
+                        <div class="mt-2">
+                            <span class="badge bg-info">Day Shift - Within {{ selected_home_label }}</span>
+                            <ul class="list-unstyled ms-3 mt-1">
+                                {% for suggestion in realloc.day.within_home %}
+                                <li class="small">
+                                    <i class="fas fa-arrow-right text-success"></i>
+                                    Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                    from <span class="text-danger">{{ suggestion.from_unit }}</span>
+                                    to <span class="text-success">{{ suggestion.to_unit }}</span>
+                                    <span class="text-muted">({{ suggestion.shift_time }})</span>
+                                    <button class="btn btn-xs btn-success ms-2" onclick="applyReallocation({{ suggestion.shift_id }}, '{{ suggestion.to_unit }}')" title="Apply this reallocation">
+                                        <i class="fas fa-check"></i> Apply
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% if realloc.day.excess_available > 0 %}
+                            <div class="alert alert-warning alert-sm ms-3 mb-0">
+                                <i class="fas fa-exclamation-circle"></i> After balancing, <strong>{{ realloc.day.excess_available }} staff</strong> available for cross-home deployment
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Within-Home Reallocations (Night) -->
+                        {% if realloc.night.within_home %}
+                        <div class="mt-2">
+                            <span class="badge bg-warning text-dark">Night Shift - Within {{ selected_home_label }}</span>
+                            <ul class="list-unstyled ms-3 mt-1">
+                                {% for suggestion in realloc.night.within_home %}
+                                <li class="small">
+                                    <i class="fas fa-arrow-right text-success"></i>
+                                    Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                    from <span class="text-danger">{{ suggestion.from_unit }}</span>
+                                    to <span class="text-success">{{ suggestion.to_unit }}</span>
+                                    <span class="text-muted">({{ suggestion.shift_time }})</span>
+                                    <button class="btn btn-xs btn-success ms-2" onclick="applyReallocation({{ suggestion.shift_id }}, '{{ suggestion.to_unit }}')" title="Apply this reallocation">
+                                        <i class="fas fa-check"></i> Apply
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% if realloc.night.excess_available > 0 %}
+                            <div class="alert alert-warning alert-sm ms-3 mb-0">
+                                <i class="fas fa-exclamation-circle"></i> After balancing, <strong>{{ realloc.night.excess_available }} staff</strong> available for cross-home deployment
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Cross-Home Matches (All Homes View) -->
+                        {% if realloc.day.cross_home_matches %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">Day Shift - Cross-Home Opportunities</span>
+                            {% for shortage_home, available_staff in realloc.day.cross_home_matches.items %}
+                            <div class="ms-3 mt-1">
+                                <strong>{{ shortage_home }}</strong> needs staff:
+                                <ul class="list-unstyled ms-3">
+                                    {% for staff in available_staff %}
+                                    <li class="small">
+                                        <i class="fas fa-building text-primary"></i>
+                                        <strong>{{ staff.staff_name }}</strong> ({{ staff.role }}) from {{ staff.from_home }}
+                                        currently at {{ staff.current_unit }}
+                                        <button class="btn btn-xs btn-primary ms-2" onclick="offerCrossHome({{ staff.shift_id }}, '{{ shortage_home }}')" title="Offer to this home">
+                                            <i class="fas fa-share"></i> Offer
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if realloc.night.cross_home_matches %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">Night Shift - Cross-Home Opportunities</span>
+                            {% for shortage_home, available_staff in realloc.night.cross_home_matches.items %}
+                            <div class="ms-3 mt-1">
+                                <strong>{{ shortage_home }}</strong> needs staff:
+                                <ul class="list-unstyled ms-3">
+                                    {% for staff in available_staff %}
+                                    <li class="small">
+                                        <i class="fas fa-building text-primary"></i>
+                                        <strong>{{ staff.staff_name }}</strong> ({{ staff.role }}) from {{ staff.from_home }}
+                                        currently at {{ staff.current_unit }}
+                                        <button class="btn btn-xs btn-primary ms-2" onclick="offerCrossHome({{ staff.shift_id }}, '{{ shortage_home }}')" title="Offer to this home">
+                                            <i class="fas fa-share"></i> Offer
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if not reallocation_data %}
+                <div class="text-muted text-center py-2">
+                    <i class="fas fa-check-circle text-success"></i> All homes are optimally staffed - no reallocations needed
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Main Rota Grid -->
 <div class="row">
     <div class="col-12">
@@ -991,6 +1121,120 @@ td.calendar-day .shift-card.role-scan {
         </div>
     </div>
 </div>
+
+<!-- Intelligent Reallocation Suggestions -->
+{% if reallocation_data %}
+{% for date, realloc in reallocation_data.items %}
+    {% if realloc.day.within_home or realloc.night.within_home or realloc.day.cross_home_matches or realloc.night.cross_home_matches %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="fas fa-lightbulb"></i> Smart Staffing Suggestions for {{ date|date:"l, j F Y" }}
+                </h6>
+                <hr>
+                
+                <!-- Within-Home Reallocations (when viewing specific home) -->
+                {% if realloc.day.within_home %}
+                    <div class="mb-3">
+                        <strong class="text-primary"><i class="fas fa-exchange-alt"></i> Day Shift - Within-Home Rebalancing:</strong>
+                        <ul class="mt-2 mb-0">
+                            {% for suggestion in realloc.day.within_home %}
+                            <li>
+                                Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                from <span class="badge bg-warning text-dark">{{ suggestion.from_unit }}</span>
+                                to <span class="badge bg-success">{{ suggestion.to_unit }}</span>
+                                <small class="text-muted">({{ suggestion.shift_time }})</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if realloc.day.excess_available > 0 %}
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <i class="fas fa-info-circle text-success"></i>
+                            After rebalancing, <strong>{{ realloc.day.excess_available }} staff member(s)</strong> available to assist other homes
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                {% if realloc.night.within_home %}
+                    <div class="mb-3">
+                        <strong class="text-warning"><i class="fas fa-exchange-alt"></i> Night Shift - Within-Home Rebalancing:</strong>
+                        <ul class="mt-2 mb-0">
+                            {% for suggestion in realloc.night.within_home %}
+                            <li>
+                                Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                from <span class="badge bg-warning text-dark">{{ suggestion.from_unit }}</span>
+                                to <span class="badge bg-success">{{ suggestion.to_unit }}</span>
+                                <small class="text-muted">({{ suggestion.shift_time }})</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if realloc.night.excess_available > 0 %}
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <i class="fas fa-info-circle text-success"></i>
+                            After rebalancing, <strong>{{ realloc.night.excess_available }} staff member(s)</strong> available to assist other homes
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                <!-- Cross-Home Matches (when viewing all homes) -->
+                {% if realloc.day.cross_home_matches %}
+                    <div class="mb-3">
+                        <strong class="text-primary"><i class="fas fa-hospital"></i> Day Shift - Cross-Home Support Available:</strong>
+                        {% for shortage_home, available_staff in realloc.day.cross_home_matches.items %}
+                        <div class="mt-2 p-2 border rounded">
+                            <strong>{{ shortage_home }}</strong> can receive support from:
+                            <ul class="mt-1 mb-0">
+                                {% for staff in available_staff %}
+                                <li>
+                                    <strong>{{ staff.staff_name }}</strong> ({{ staff.role }})
+                                    from <span class="badge bg-info">{{ staff.from_home }}</span>
+                                    - currently at {{ staff.current_unit }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-check-circle"></i> These staff are excess after within-home balancing and available before resorting to overtime/agency
+                            </small>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if realloc.night.cross_home_matches %}
+                    <div class="mb-3">
+                        <strong class="text-warning"><i class="fas fa-hospital"></i> Night Shift - Cross-Home Support Available:</strong>
+                        {% for shortage_home, available_staff in realloc.night.cross_home_matches.items %}
+                        <div class="mt-2 p-2 border rounded">
+                            <strong>{{ shortage_home }}</strong> can receive support from:
+                            <ul class="mt-1 mb-0">
+                                {% for staff in available_staff %}
+                                <li>
+                                    <strong>{{ staff.staff_name }}</strong> ({{ staff.role }})
+                                    from <span class="badge bg-info">{{ staff.from_home }}</span>
+                                    - currently at {{ staff.current_unit }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-check-circle"></i> These staff are excess after within-home balancing and available before resorting to overtime/agency
+                            </small>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endif %}
 
 <!-- Staffing Alerts -->
 {% if staffing_alerts %}
@@ -2271,6 +2515,72 @@ function updateAgencyRate() {
             rateInput.value = parseFloat(rate).toFixed(2);
         }
     }
+}
+
+// Intelligent Reallocation Functions
+function applyReallocation(shiftId, toUnit) {
+    if (!confirm('Apply this reallocation? This will move the staff member to the suggested unit.')) {
+        return;
+    }
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/shifts/${shiftId}/reallocate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            to_unit: toUnit
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`Staff member successfully moved to ${toUnit}`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert(data.error || 'Failed to apply reallocation', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Reallocation error:', error);
+        showAlert('Error applying reallocation', 'danger');
+    });
+}
+
+function offerCrossHome(shiftId, targetHome) {
+    if (!confirm(`Offer this staff member to ${targetHome}? This will create a reallocation request.`)) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/shifts/${shiftId}/offer-cross-home/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            target_home: targetHome
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`Staff member offered to ${targetHome}. Awaiting approval.`, 'info');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert(data.error || 'Failed to create cross-home offer', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Cross-home offer error:', error);
+        showAlert('Error creating cross-home offer', 'danger');
+    });
 }
 </script>
 {% endblock %}

@@ -6,10 +6,25 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date
 from .executive_summary_service import ExecutiveSummaryService
 from .models import CareHome
 import json
+
+
+class DateEncoder(json.JSONEncoder):
+    """Custom JSON encoder for date and model objects"""
+    def default(self, obj):
+        if isinstance(obj, date):
+            return obj.isoformat()
+        # Handle Django model instances
+        if hasattr(obj, '_meta'):
+            # For CareHome and other models, return a dict with basic info
+            return {
+                'id': obj.pk,
+                'name': str(obj)
+            }
+        return super().default(obj)
 
 
 @login_required
@@ -26,7 +41,7 @@ def executive_summary_dashboard(request):
         - AI-powered insights
     """
     # Permission check
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return render(request, 'error.html', {
             'message': 'Access denied. Senior management only.'
         })
@@ -80,11 +95,19 @@ def executive_summary_dashboard(request):
     # Get all care homes for filter dropdown
     care_homes = CareHome.objects.filter(is_active=True).order_by('name')
     
+    # JSON-encode data for JavaScript
+    trends_json = json.dumps(trends, cls=DateEncoder)
+    forecasts_list_json = json.dumps(forecasts.get('forecasts', []), cls=DateEncoder)
+    comparison_json = json.dumps(comparison, cls=DateEncoder)
+    
     context = {
         'kpis': kpis,
         'trends': trends,
+        'trends_json': trends_json,
         'forecasts': forecasts,
+        'forecasts_list_json': forecasts_list_json,
         'comparison': comparison,
+        'comparison_json': comparison_json,
         'insights': insights,
         'care_homes': care_homes,
         'selected_home': care_home,
@@ -112,7 +135,7 @@ def executive_summary_export_pdf(request):
     
     Requires: reportlab (pip install reportlab)
     """
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     try:
@@ -307,7 +330,7 @@ def executive_summary_api_kpis(request):
     Returns:
         JSON: Executive KPIs with trends
     """
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     end_date = timezone.now().date()
@@ -357,7 +380,7 @@ def executive_summary_api_trends(request):
     Returns:
         JSON: Weekly trend data
     """
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     care_home = None
@@ -390,7 +413,7 @@ def executive_summary_api_forecast(request):
     Returns:
         JSON: Forecast data
     """
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     care_home = None
@@ -423,7 +446,7 @@ def executive_summary_api_insights(request):
     Returns:
         JSON: Insights and recommendations
     """
-    if not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     care_home = None

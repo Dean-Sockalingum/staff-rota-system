@@ -412,7 +412,20 @@
     <!-- Trend Chart -->
     <div class="chart-section">
         <h2>📈 12-Week Trend Analysis</h2>
+        <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 15px;">
+            Green: Overall Fill Rate | Blue: Day Shifts | Purple: Night Shifts | Orange: Agency Usage
+        </p>
         <canvas id="trendChart" height="80"></canvas>
+        
+        <!-- Current Week Staffing Status by Home -->
+        <div id="currentStaffingStatus" style="margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+            <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: #374151;">
+                Current Week Staffing by Care Home
+            </h3>
+            <div id="homeStaffingBars" style="display: grid; gap: 8px;">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
     </div>
     
     <!-- Forecast Chart -->
@@ -473,8 +486,8 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    // Trend Chart
-    const trendData = {{ trends|safe }};
+    // Trend Chart with Day/Night Breakdown
+    const trendData = {{ trends_json|safe }};
     const trendLabels = trendData.map(t => {
         const start = new Date(t.week_start);
         return start.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
@@ -486,12 +499,31 @@
             labels: trendLabels,
             datasets: [
                 {
-                    label: 'Fill Rate (%)',
+                    label: 'Overall Fill Rate (%)',
                     data: trendData.map(t => t.fill_rate),
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     tension: 0.4,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Day Shifts Fill Rate (%)',
+                    data: trendData.map(t => t.day_fill_rate),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Night Shifts Fill Rate (%)',
+                    data: trendData.map(t => t.night_fill_rate),
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    borderWidth: 2
                 },
                 {
                     label: 'Agency Rate (%)',
@@ -530,7 +562,30 @@
                     callbacks: {
                         afterLabel: function(context) {
                             const idx = context.dataIndex;
-                            return `Total Shifts: ${trendData[idx].total_shifts}`;
+                            const week = trendData[idx];
+                            
+                            let tooltip = `Total Shifts: ${week.total_shifts}\n`;
+                            tooltip += `Day Shifts: ${week.day_shifts_total} | Night Shifts: ${week.night_shifts_total}\n`;
+                            
+                            // Show home-specific data if available
+                            if (week.homes && week.homes.length > 0) {
+                                tooltip += '\n--- Staffing by Care Home ---\n';
+                                
+                                // Sort homes by fill rate (lowest first - most urgent)
+                                const sortedHomes = [...week.homes].sort((a, b) => a.fill_rate - b.fill_rate);
+                                
+                                sortedHomes.forEach(home => {
+                                    const statusIcon = home.fill_rate < 85 ? '⚠️ ' : home.fill_rate < 95 ? '⚡ ' : '✓ ';
+                                    tooltip += `${statusIcon}${home.name}: ${home.fill_rate}%\n`;
+                                    tooltip += `  Day: ${home.day_fill_rate}% | Night: ${home.night_fill_rate}%`;
+                                    if (home.vacancies > 0) {
+                                        tooltip += ` (${home.vacancies} vacancies)`;
+                                    }
+                                    tooltip += '\n';
+                                });
+                            }
+                            
+                            return tooltip.split('\n');
                         }
                     }
                 }
@@ -540,7 +595,7 @@
     
     // Forecast Chart
     {% if forecasts.forecasts %}
-    const forecastData = {{ forecasts.forecasts|safe }};
+    const forecastData = {{ forecasts_list_json|safe }};
     const forecastLabels = forecastData.map(f => {
         const start = new Date(f.week_start);
         return start.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
@@ -597,6 +652,75 @@
         }
     });
     {% endif %}
+    
+    // Populate current week staffing status bars
+    (function() {
+        if (trendData.length > 0) {
+            const currentWeek = trendData[trendData.length - 1]; // Most recent week
+            const container = document.getElementById('homeStaffingBars');
+            
+            if (currentWeek.homes && currentWeek.homes.length > 0) {
+                // Sort homes by fill rate (lowest first - most urgent)
+                const sortedHomes = [...currentWeek.homes].sort((a, b) => a.fill_rate - b.fill_rate);
+                
+                sortedHomes.forEach(home => {
+                    const bar = document.createElement('div');
+                    bar.style.cssText = 'display: flex; align-items: center; gap: 10px;';
+                    
+                    // Home name with status icon
+                    const statusIcon = home.fill_rate < 85 ? '⚠️' : home.fill_rate < 95 ? '⚡' : '✓';
+                    const statusColor = home.fill_rate < 85 ? '#dc2626' : home.fill_rate < 95 ? '#f59e0b' : '#10b981';
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.style.cssText = `width: 150px; font-size: 0.85rem; font-weight: 500; color: ${statusColor};`;
+                    nameDiv.textContent = `${statusIcon} ${home.name}`;
+                    
+                    // Fill rate bar container
+                    const barContainer = document.createElement('div');
+                    barContainer.style.cssText = 'flex: 1; height: 30px; background: #e5e7eb; border-radius: 6px; position: relative; overflow: hidden;';
+                    
+                    // Day shift portion (left side)
+                    const dayBar = document.createElement('div');
+                    const dayWidth = (home.day_shifts / (home.day_shifts + home.night_shifts)) * 100;
+                    dayBar.style.cssText = `position: absolute; left: 0; top: 0; bottom: 0; width: ${dayWidth}%; background: linear-gradient(90deg, #3b82f6 0%, #3b82f6 ${home.day_fill_rate}%, #e5e7eb ${home.day_fill_rate}%); border-right: 1px solid white;`;
+                    
+                    // Night shift portion (right side)
+                    const nightBar = document.createElement('div');
+                    const nightWidth = (home.night_shifts / (home.day_shifts + home.night_shifts)) * 100;
+                    nightBar.style.cssText = `position: absolute; right: 0; top: 0; bottom: 0; width: ${nightWidth}%; background: linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 ${home.night_fill_rate}%, #e5e7eb ${home.night_fill_rate}%);`;
+                    
+                    // Labels in bar
+                    const labelDiv = document.createElement('div');
+                    labelDiv.style.cssText = 'position: absolute; inset: 0; display: flex; justify-content: space-around; align-items: center; font-size: 0.75rem; font-weight: 600; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5);';
+                    labelDiv.innerHTML = `<span>Day: ${home.day_fill_rate}%</span><span>Night: ${home.night_fill_rate}%</span>`;
+                    
+                    barContainer.appendChild(dayBar);
+                    barContainer.appendChild(nightBar);
+                    barContainer.appendChild(labelDiv);
+                    
+                    // Overall fill rate
+                    const rateDiv = document.createElement('div');
+                    rateDiv.style.cssText = 'width: 80px; text-align: right; font-size: 0.85rem; font-weight: 600;';
+                    rateDiv.textContent = `${home.fill_rate}%`;
+                    rateDiv.style.color = statusColor;
+                    
+                    // Vacancies
+                    const vacancyDiv = document.createElement('div');
+                    vacancyDiv.style.cssText = 'width: 100px; text-align: right; font-size: 0.75rem; color: #6b7280;';
+                    vacancyDiv.textContent = home.vacancies > 0 ? `${home.vacancies} vacant` : 'Fully staffed';
+                    
+                    bar.appendChild(nameDiv);
+                    bar.appendChild(barContainer);
+                    bar.appendChild(rateDiv);
+                    bar.appendChild(vacancyDiv);
+                    
+                    container.appendChild(bar);
+                });
+            } else {
+                container.innerHTML = '<p style="color: #6b7280; font-size: 0.85rem; text-align: center;">No per-home data available (viewing single care home)</p>';
+            }
+        }
+    })();
     
     // Filter functions
     function applyFilters() {

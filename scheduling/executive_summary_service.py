@@ -27,7 +27,8 @@ class ExecutiveSummaryService:
         Returns:
             dict: Executive KPIs with current period and trends
         """
-        from scheduling.models import Shift, Staff, LeaveRequest, CareHome
+        from scheduling.models import Shift, User, LeaveRequest
+        from scheduling.models_multi_home import CareHome
         
         if not end_date:
             end_date = timezone.now().date()
@@ -37,24 +38,24 @@ class ExecutiveSummaryService:
         # Base queryset
         shifts = Shift.objects.filter(date__range=[start_date, end_date])
         if care_home:
-            shifts = shifts.filter(home=care_home)
+            shifts = shifts.filter(unit__care_home=care_home)
         
         # Total shifts
         total_shifts = shifts.count()
         
         # Staffed vs vacant
-        staffed_shifts = shifts.filter(staff__isnull=False).count()
+        staffed_shifts = shifts.filter(user__isnull=False).count()
         vacant_shifts = total_shifts - staffed_shifts
         fill_rate = (staffed_shifts / total_shifts * 100) if total_shifts > 0 else 0
         
         # Agency usage
-        agency_shifts = shifts.filter(staff__user__isnull=True).count()
+        agency_shifts = shifts.filter(agency_company__isnull=False).count()
         agency_rate = (agency_shifts / total_shifts * 100) if total_shifts > 0 else 0
         
         # Staff metrics
-        staff_queryset = Staff.objects.filter(is_active=True)
+        staff_queryset = User.objects.filter(is_active=True)
         if care_home:
-            staff_queryset = staff_queryset.filter(home=care_home)
+            staff_queryset = staff_queryset.filter(unit__care_home=care_home)
         total_staff = staff_queryset.count()
         
         # Leave requests
@@ -63,7 +64,7 @@ class ExecutiveSummaryService:
             end_date__gte=start_date
         )
         if care_home:
-            leave_requests = leave_requests.filter(staff__home=care_home)
+            leave_requests = leave_requests.filter(user__unit__care_home=care_home)
         
         pending_leave = leave_requests.filter(status='pending').count()
         approved_leave = leave_requests.filter(status='approved').count()
@@ -135,24 +136,24 @@ class ExecutiveSummaryService:
     @staticmethod
     def _get_period_kpis(care_home, start_date, end_date):
         """Get KPIs for a specific period (internal helper)"""
-        from scheduling.models import Shift, Staff, LeaveRequest
+        from scheduling.models import Shift, User, LeaveRequest
         
         shifts = Shift.objects.filter(date__range=[start_date, end_date])
         if care_home:
-            shifts = shifts.filter(home=care_home)
+            shifts = shifts.filter(unit__care_home=care_home)
         
         total_shifts = shifts.count()
         if total_shifts == 0:
             return {}
         
-        staffed_shifts = shifts.filter(staff__isnull=False).count()
-        agency_shifts = shifts.filter(staff__user__isnull=True).count()
+        staffed_shifts = shifts.filter(user__isnull=False).count()
+        agency_shifts = shifts.filter(agency_company__isnull=False).count()
         fill_rate = (staffed_shifts / total_shifts * 100)
         agency_rate = (agency_shifts / total_shifts * 100)
         
-        staff_queryset = Staff.objects.filter(is_active=True)
+        staff_queryset = User.objects.filter(is_active=True)
         if care_home:
-            staff_queryset = staff_queryset.filter(home=care_home)
+            staff_queryset = staff_queryset.filter(unit__care_home=care_home)
         
         leave_requests = LeaveRequest.objects.filter(
             start_date__lte=end_date,
@@ -160,7 +161,7 @@ class ExecutiveSummaryService:
             status='pending'
         )
         if care_home:
-            leave_requests = leave_requests.filter(staff__home=care_home)
+            leave_requests = leave_requests.filter(user__unit__care_home=care_home)
         
         total_cost = staffed_shifts * Decimal('120') + agency_shifts * Decimal('180')
         
@@ -198,12 +199,15 @@ class ExecutiveSummaryService:
             weeks: Number of weeks to analyze
         
         Returns:
-            dict: Weekly trends with fill rate, agency rate, costs
+            dict: Weekly trends with fill rate, agency rate, costs, day/night breakdown, and per-home data
         """
-        from scheduling.models import Shift
+        from scheduling.models import Shift, CareHome
         
         end_date = timezone.now().date()
         start_date = end_date - timedelta(weeks=weeks)
+        
+        # Day shift types: DAY, EARLY, LATE, LONG_DAY
+        # Night shift types: NIGHT
         
         trends = []
         current_date = start_date
@@ -215,20 +219,63 @@ class ExecutiveSummaryService:
                 date__range=[current_date, week_end]
             )
             if care_home:
-                shifts = shifts.filter(home=care_home)
+                shifts = shifts.filter(unit__care_home=care_home)
             
             total = shifts.count()
             if total > 0:
-                staffed = shifts.filter(staff__isnull=False).count()
-                agency = shifts.filter(staff__user__isnull=True).count()
+                staffed = shifts.filter(user__isnull=False).count()
+                agency = shifts.filter(agency_company__isnull=False).count()
+                
+                # Day shift metrics
+                day_shifts = shifts.filter(shift_type__name__in=['DAY', 'EARLY', 'LATE', 'LONG_DAY'])
+                day_total = day_shifts.count()
+                day_staffed = day_shifts.filter(user__isnull=False).count() if day_total > 0 else 0
+                day_fill_rate = round((day_staffed / day_total * 100), 1) if day_total > 0 else 0
+                
+                # Night shift metrics
+                night_shifts = shifts.filter(shift_type__name='NIGHT')
+                night_total = night_shifts.count()
+                night_staffed = night_shifts.filter(user__isnull=False).count() if night_total > 0 else 0
+                night_fill_rate = round((night_staffed / night_total * 100), 1) if night_total > 0 else 0
+                
+                # Per-home breakdown (only if not filtering by specific home)
+                homes_data = []
+                if not care_home:
+                    for home in CareHome.objects.filter(is_active=True):
+                        home_shifts = shifts.filter(unit__care_home=home)
+                        home_total = home_shifts.count()
+                        if home_total > 0:
+                            home_staffed = home_shifts.filter(user__isnull=False).count()
+                            home_day_shifts = home_shifts.filter(shift_type__name__in=['DAY', 'EARLY', 'LATE', 'LONG_DAY'])
+                            home_night_shifts = home_shifts.filter(shift_type__name='NIGHT')
+                            home_day_total = home_day_shifts.count()
+                            home_night_total = home_night_shifts.count()
+                            home_day_staffed = home_day_shifts.filter(user__isnull=False).count() if home_day_total > 0 else 0
+                            home_night_staffed = home_night_shifts.filter(user__isnull=False).count() if home_night_total > 0 else 0
+                            
+                            homes_data.append({
+                                'name': home.name,
+                                'fill_rate': round((home_staffed / home_total * 100), 1),
+                                'day_fill_rate': round((home_day_staffed / home_day_total * 100), 1) if home_day_total > 0 else 0,
+                                'night_fill_rate': round((home_night_staffed / home_night_total * 100), 1) if home_night_total > 0 else 0,
+                                'total_shifts': home_total,
+                                'day_shifts': home_day_total,
+                                'night_shifts': home_night_total,
+                                'vacancies': home_total - home_staffed
+                            })
                 
                 trends.append({
                     'week_start': current_date,
                     'week_end': week_end,
                     'total_shifts': total,
                     'fill_rate': round((staffed / total * 100), 1),
+                    'day_fill_rate': day_fill_rate,
+                    'night_fill_rate': night_fill_rate,
+                    'day_shifts_total': day_total,
+                    'night_shifts_total': night_total,
                     'agency_rate': round((agency / total * 100), 1),
-                    'cost': float(staffed * Decimal('120') + agency * Decimal('180'))
+                    'cost': float(staffed * Decimal('120') + agency * Decimal('180')),
+                    'homes': homes_data
                 })
             
             current_date = week_end + timedelta(days=1)
