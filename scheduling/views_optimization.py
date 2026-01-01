@@ -181,7 +181,7 @@ def run_optimization(request):
         start_date = date.fromisoformat(start_date_str)
         
         # Permission check: OM can only optimize their own home
-        if not request.user.role.is_senior_management_team:
+        if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
             if not request.user.can_access_home(care_home):
                 return JsonResponse({'error': 'Unauthorized for this care home'}, status=403)
         

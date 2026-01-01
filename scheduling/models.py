@@ -65,16 +65,19 @@ class Role(models.Model):
 
     def save(self, *args, **kwargs):
         """Auto-set management permissions based on role name"""
-        # Only SM and OM should have management permissions
-        if self.name in ['SM', 'OM']:
+        # SM, OM, and ADMIN should have full management permissions
+        if self.name in ['SM', 'OM', 'ADMIN']:
             self.is_management = True
             self.can_approve_leave = True
             self.can_manage_rota = True
             self.permission_level = 'FULL'
+            # ADMIN should also be senior management team
+            if self.name == 'ADMIN':
+                self.is_senior_management_team = True
         else:
             # All other roles should NOT have management permissions
             self.is_management = False
-            if self.name not in ['SM', 'OM', 'HOS', 'IDI']:
+            if self.name not in ['SM', 'OM', 'HOS', 'IDI', 'ADMIN']:
                 self.is_senior_management_team = False
         
         super().save(*args, **kwargs)
@@ -258,50 +261,51 @@ class User(AbstractBaseUser, PermissionsMixin):
 # Table 3: Units/Departments
 class Unit(models.Model):
     UNIT_CHOICES = [
-        # Orchard Grove units (9 units - 8 care units + 1 management)
-        ('OG_PEAR', 'Pear'),
+        # Orchard Grove units (9 units: 8 care + 1 MGMT)
+        ('OG_BRAMLEY', 'Bramley'),
+        ('OG_CHERRY', 'Cherry'),
         ('OG_GRAPE', 'Grape'),
         ('OG_ORANGE', 'Orange'),
-        ('OG_CHERRY', 'Cherry'),
-        ('OG_BRAMLEY', 'Bramley'),
-        ('OG_PLUM', 'Plum'),
         ('OG_PEACH', 'Peach'),
+        ('OG_PEAR', 'Pear'),
+        ('OG_PLUM', 'Plum'),
         ('OG_STRAWBERRY', 'Strawberry'),
         ('OG_MGMT', 'Mgmt'),
         
-        # Meadowburn units (9 units - 8 care units + 1 SRD)
-        ('MB_DAISY', 'Daisy'),
-        ('MB_ASTER', 'Aster'),
-        ('MB_POPPY_SRD', 'Poppy (SRD)'),
-        ('MB_BLUEBELL', 'Bluebell'),
-        ('MB_MARIGOLD', 'Marigold'),
-        ('MB_FOXGLOVE', 'Foxglove'),
-        ('MB_CORNFLOWER', 'Cornflower'),
-        ('MB_HONEYSUCKLE', 'Honeysuckle'),
-        ('MB_PRIMROSE', 'Primrose'),
-        
-        # Hawthorn House units (9 units - 7 care units + 2 SRD)
-        ('HH_THISTLE_SRD', 'Thistle (SRD)'),
-        ('HH_VIOLET', 'Violet'),
-        ('HH_IRIS', 'Iris'),
-        ('HH_HEATHER', 'Heather'),
-        ('HH_SNOWDROP_SRD', 'Snowdrop (SRD)'),
+        # Hawthorn House units (9 units: 8 care + 1 MGMT)
         ('HH_BLUEBELL', 'Bluebell'),
         ('HH_DAISY', 'Daisy'),
+        ('HH_HEATHER', 'Heather'),
+        ('HH_IRIS', 'Iris'),
         ('HH_PRIMROSE', 'Primrose'),
-        ('HH_ROWAN', 'Rowan'),
+        ('HH_SNOWDROP_SRD', 'Snowdrop (SRD)'),
+        ('HH_THISTLE_SRD', 'Thistle (SRD)'),
+        ('HH_VIOLET', 'Violet'),
+        ('HH_MGMT', 'Mgmt'),
         
-        # Riverside units (8 units)
+        # Meadowburn units (9 units: 8 care + 1 MGMT)
+        ('MB_ASTER', 'Aster'),
+        ('MB_BLUEBELL', 'Bluebell'),
+        ('MB_CORNFLOWER', 'Cornflower'),
+        ('MB_DAISY', 'Daisy'),
+        ('MB_FOXGLOVE', 'Foxglove'),
+        ('MB_HONEYSUCKLE', 'Honeysuckle'),
+        ('MB_MARIGOLD', 'Marigold'),
+        ('MB_POPPY_SRD', 'Poppy (SRD)'),
+        ('MB_MGMT', 'Mgmt'),
+        
+        # Riverside units (9 units: 8 care + 1 MGMT)
         ('RS_DAFFODIL', 'Daffodil'),
-        ('RS_MAPLE', 'Maple'),
-        ('RS_ROSE', 'Rose'),
+        ('RS_HEATHER', 'Heather'),
+        ('RS_JASMINE', 'Jasmine'),
         ('RS_LILY', 'Lily'),
         ('RS_LOTUS', 'Lotus'),
+        ('RS_MAPLE', 'Maple'),
         ('RS_ORCHID', 'Orchid'),
-        ('RS_JASMINE', 'Jasmine'),
-        ('RS_POPLAR', 'Poplar'),
+        ('RS_ROSE', 'Rose'),
+        ('RS_MGMT', 'Mgmt'),
         
-        # Victoria Gardens units (6 units - 5 care units + 1 management)
+        # Victoria Gardens units (6 units: 5 care + 1 MGMT)
         ('VG_AZALEA', 'Azalea'),
         ('VG_CROCUS', 'Crocus'),
         ('VG_LILY', 'Lily'),

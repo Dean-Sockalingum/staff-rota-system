@@ -123,10 +123,11 @@ td.calendar-day .shift-card.role-scan {
 }
 
 .shift-card {
-    margin-bottom: 5px;
-    padding: 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
+    margin-bottom: 1px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    line-height: 1.2;
 }
 
 /* Ensure shift-day and shift-night don't have default backgrounds */
@@ -135,20 +136,20 @@ td.calendar-day .shift-card.role-scan {
 }
 
 .role-badge {
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 3px;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 2px;
     font-weight: bold;
-    margin-left: 5px;
+    margin-left: 3px;
     background-color: rgba(0,0,0,0.2);
 }
 
 .team-badge {
     display: inline-block;
-    margin-left: 5px;
-    font-size: 0.65rem;
-    padding: 2px 6px;
-    border-radius: 3px;
+    margin-left: 3px;
+    font-size: 0.6rem;
+    padding: 1px 4px;
+    border-radius: 2px;
     font-weight: 600;
     background-color: #f8f9fa;
     color: #343a40;
@@ -311,35 +312,38 @@ td.calendar-day .shift-card.role-scan {
     margin-bottom: 15px;
 }
 
-/* Unit group alignment - ensures units align horizontally across columns */
+/* Unit group alignment - flexible vertical layout */
 .calendar-day {
-    display: grid;
-    grid-template-rows: repeat(8, auto); /* 8 units */
-    align-content: start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.25rem;
+}
+
+/* Section positioning for consistent alignment */
+.management-section, .duty-sscw-section { 
+    margin-bottom: 0.25rem;
+}
+
+/* Section headers - compact height */
+.section-header {
+    margin-bottom: 0.15rem;
+    line-height: 1.1;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 .unit-group {
     position: relative;
-    margin-bottom: 0.5rem !important;
-    min-height: 40px;
+    margin-bottom: 0 !important;
+    padding: 0.1rem 0;
 }
-
-/* Assign grid rows based on unit name for consistent positioning */
-.unit-group[data-unit="BLUE"] { grid-row: 1; }
-.unit-group[data-unit="DEMENTIA"] { grid-row: 2; }
-.unit-group[data-unit="GRAPE"] { grid-row: 3; }
-.unit-group[data-unit="GREEN"] { grid-row: 4; }
-.unit-group[data-unit="ORANGE"] { grid-row: 5; }
-.unit-group[data-unit="PEACH"] { grid-row: 6; }
-.unit-group[data-unit="ROSE"] { grid-row: 7; }
-.unit-group[data-unit="VIOLET"] { grid-row: 8; }
 
 .unit-header {
     position: relative;
-    padding: 6px 8px;
-    margin-bottom: 5px;
-    height: 28px;
-    font-size: 0.875rem;
+    padding: 2px 6px;
+    margin-bottom: 2px;
+    font-size: 0.75rem;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -868,47 +872,46 @@ td.calendar-day .shift-card.role-scan {
                                                     </div>
                                                 {% endif %}
 
-                                                {% if shift_data.day_management %}
-                                                    <div class="text-danger fw-semibold small mb-1">Management</div>
-                                                    {% for shift in shift_data.day_management %}
-                                                        <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
-                                                            <div class="d-flex justify-content-between align-items-start">
-                                                                <div>
-                                                                    <strong>{{ shift.user.full_name }}</strong>
-                                                                    <span class="role-badge">{{ shift.user.role.name }}</span>
-                                                                    {% if shift.user.team %}
-                                                                        <span class="team-badge">Team {{ shift.user.team }}</span>
-                                                                    {% endif %}
-                                                                    <br>
-                                                                    <small>{{ shift.unit.get_name_display }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
-                                                                </div>
-                                                                <div class="shift-edit-btn">
-                                                                    <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
+                                                <!-- Management Section - Always show for alignment -->
+                                                <div class="management-section">
+                                                    {% if shift_data.day_management %}
+                                                        <div class="section-header text-danger fw-semibold small">Management</div>
+                                                        {% for shift in shift_data.day_management %}
+                                                            <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div style="flex: 1; min-width: 0;">
+                                                                        <strong>{{ shift.user.full_name }}</strong>
+                                                                        <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                        {% if shift.user.team %}
+                                                                            <span class="team-badge">T{{ shift.user.team }}</span>
+                                                                        {% endif %}
+                                                                        <span style="font-size: 0.7rem; margin-left: 4px;">{{ shift.unit.name }}</span>
+                                                                    </div>
+                                                                    <div class="shift-edit-btn">
+                                                                        <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    {% endfor %}
-                                                {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
 
-                                                {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}
-                                                    <div class="text-primary fw-semibold small mb-1">Duty SSCW (Supernumerary)</div>
+                                                <!-- Duty SSCW Section - Always show for alignment -->
+                                                <div class="duty-sscw-section">
+                                                    {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}
+                                                        <div class="section-header text-primary fw-semibold small">Duty SSCW (Supernumerary)</div>
                                                     {% for shift in shift_data.day_supernumerary_duty %}
                                                         <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
-                                                            <div class="d-flex justify-content-between align-items-start">
-                                                                <div>
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div style="flex: 1; min-width: 0;">
                                                                     <strong>{{ shift.user.full_name }}</strong>
                                                                     <span class="role-badge">{{ shift.user.role.name }}</span>
                                                                     {% if shift.user.team %}
-                                                                        <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                        <span class="team-badge">T{{ shift.user.team }}</span>
                                                                     {% endif %}
-                                                                    <br>
-                                                                    <small>{{ shift.unit.get_name_display }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                    <span style="font-size: 0.7rem; margin-left: 4px;">{{ shift.unit.name }}</span>
                                                                 </div>
                                                                 <div class="shift-edit-btn">
                                                                     <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
@@ -935,25 +938,25 @@ td.calendar-day .shift-card.role-scan {
                                                             {% endfor %}
                                                         </div>
                                                     {% endif %}
-                                                {% endif %}
+                                                    {% endif %}
+                                                </div>
 
                                                 {% for unit_name, unit_shifts in shift_data.day_care_by_unit.items %}
-                                                    <div class="unit-group mb-3" data-unit="{{ unit_name }}">
-                                                        <div class="unit-header unit-header-day">
-                                                            <small class="fw-bold text-primary">{{ unit_name }}</small>
-                                                        </div>
-                                                        {% if unit_shifts %}
+                                                    {% if unit_shifts %}
+                                                        <div class="unit-group mb-2" data-unit="{{ unit_name }}">
+                                                            <div class="unit-header unit-header-day">
+                                                                <small class="fw-bold text-primary">{{ unit_name }}</small>
+                                                            </div>
                                                             {% for shift in unit_shifts %}
                                                                 <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
-                                                                    <div class="d-flex justify-content-between align-items-start">
-                                                                        <div>
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <div style="flex: 1; min-width: 0;">
                                                                             <strong>{{ shift.user.full_name }}</strong>
                                                                             <span class="role-badge">{{ shift.user.role.name }}</span>
                                                                             {% if shift.user.team %}
-                                                                                <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                                <span class="team-badge">T{{ shift.user.team }}</span>
                                                                             {% endif %}
-                                                                            <br>
-                                                                            <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                            <span class="text-muted" style="font-size: 0.7rem; margin-left: 4px;">{{ shift.shift_type.start_time|date:"H:i" }}-{{ shift.shift_type.end_time|date:"H:i" }}</span>
                                                                         </div>
                                                                         <div class="shift-edit-btn">
                                                                             <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
@@ -963,12 +966,8 @@ td.calendar-day .shift-card.role-scan {
                                                                     </div>
                                                                 </div>
                                                             {% endfor %}
-                                                        {% else %}
-                                                            <div class="text-muted small unit-empty">
-                                                                <em>No staff</em>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+                                                        </div>
+                                                    {% endif %}
                                                 {% endfor %}
 
                                                 {% for shift in shift_data.day_other %}
@@ -1004,34 +1003,39 @@ td.calendar-day .shift-card.role-scan {
                                     <td class="calendar-day">
                                         {% for shift_date, shift_data in shifts_by_date.items %}
                                             {% if shift_date == date %}
-                                                {% if shift_data.night_management %}
-                                                    <div class="text-danger fw-semibold small mb-1">Management</div>
-                                                    {% for shift in shift_data.night_management %}
-                                                        <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
-                                                            <div class="d-flex justify-content-between align-items-start">
-                                                                <div>
-                                                                    <strong>{{ shift.user.full_name }}</strong>
-                                                                    <span class="role-badge">{{ shift.user.role.name }}</span>
-                                                                    {% if shift.user.team %}
-                                                                        <span class="team-badge">Team {{ shift.user.team }}</span>
-                                                                    {% endif %}
-                                                                    <br>
-                                                                    <small>{{ shift.unit.get_name_display }}</small>
-                                                                    <br>
-                                                                    <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
-                                                                </div>
-                                                                <div class="shift-edit-btn">
-                                                                    <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
+                                                <!-- Management Section - Always show for alignment -->
+                                                <div class="management-section">
+                                                    {% if shift_data.night_management %}
+                                                        <div class="section-header text-danger fw-semibold small">Management</div>
+                                                        {% for shift in shift_data.night_management %}
+                                                            <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                <div class="d-flex justify-content-between align-items-start">
+                                                                    <div>
+                                                                        <strong>{{ shift.user.full_name }}</strong>
+                                                                        <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                        {% if shift.user.team %}
+                                                                            <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                        {% endif %}
+                                                                        <br>
+                                                                        <small>{{ shift.unit.get_name_display }}</small>
+                                                                        <br>
+                                                                        <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                    </div>
+                                                                    <div class="shift-edit-btn">
+                                                                        <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    {% endfor %}
-                                                {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
 
-                                                {% if shift_data.night_supernumerary %}
-                                                    <div class="text-primary fw-semibold small mb-1">Duty SSCWN (Supernumerary)</div>
+                                                <!-- Duty SSCWN Section - Always show for alignment -->
+                                                <div class="duty-sscw-section">
+                                                    {% if shift_data.night_supernumerary %}
+                                                        <div class="section-header text-primary fw-semibold small">Duty SSCWN (Supernumerary)</div>
                                                     {% for shift in shift_data.night_supernumerary %}
                                                         <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
                                                             <div class="d-flex justify-content-between align-items-start">
@@ -1051,25 +1055,25 @@ td.calendar-day .shift-card.role-scan {
                                                             </div>
                                                         </div>
                                                     {% endfor %}
-                                                {% endif %}
+                                                    {% endif %}
+                                                </div>
 
                                                 {% for unit_name, unit_shifts in shift_data.night_care_by_unit.items %}
-                                                    <div class="unit-group mb-3" data-unit="{{ unit_name }}">
-                                                        <div class="unit-header unit-header-night">
-                                                            <small class="fw-bold text-warning">{{ unit_name }}</small>
-                                                        </div>
-                                                        {% if unit_shifts %}
+                                                    {% if unit_shifts %}
+                                                        <div class="unit-group mb-2" data-unit="{{ unit_name }}">
+                                                            <div class="unit-header unit-header-night">
+                                                                <small class="fw-bold text-warning">{{ unit_name }}</small>
+                                                            </div>
                                                             {% for shift in unit_shifts %}
                                                                 <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
-                                                                    <div class="d-flex justify-content-between align-items-start">
-                                                                        <div>
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <div style="flex: 1; min-width: 0;">
                                                                             <strong>{{ shift.user.full_name }}</strong>
                                                                             <span class="role-badge">{{ shift.user.role.name }}</span>
                                                                             {% if shift.user.team %}
-                                                                                <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                                <span class="team-badge">T{{ shift.user.team }}</span>
                                                                             {% endif %}
-                                                                            <br>
-                                                                            <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                            <span class="text-muted" style="font-size: 0.7rem; margin-left: 4px;">{{ shift.shift_type.start_time|date:"H:i" }}-{{ shift.shift_type.end_time|date:"H:i" }}</span>
                                                                         </div>
                                                                         <div class="shift-edit-btn">
                                                                             <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
@@ -1079,12 +1083,8 @@ td.calendar-day .shift-card.role-scan {
                                                                     </div>
                                                                 </div>
                                                             {% endfor %}
-                                                        {% else %}
-                                                            <div class="text-muted small unit-empty">
-                                                                <em>No staff</em>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+                                                        </div>
+                                                    {% endif %}
                                                 {% endfor %}
 
                                                 {% for shift in shift_data.night_other %}

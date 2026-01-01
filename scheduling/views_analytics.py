@@ -34,7 +34,7 @@ def executive_dashboard(request):
     Accessible by senior management team.
     """
     # Check if user has executive access
-    if not request.user.role or not request.user.role.is_senior_management_team:
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return render(request, 'scheduling/error.html', {
             'message': 'Access denied. Executive dashboard requires senior management privileges.'
         })

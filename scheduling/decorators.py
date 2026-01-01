@@ -144,7 +144,7 @@ def require_management():
             if not request.user.is_authenticated:
                 return redirect('login')
             
-            if not (request.user.role and request.user.role.is_management):
+            if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
                 messages.error(request, "Management access required.")
                 raise PermissionDenied
             

@@ -417,6 +417,8 @@ def ci_performance_dashboard(request):
     - 6-month trend analysis
     - Improvement recommendations
     """
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
     
     # Get care home filter
     care_home_id = request.GET.get('care_home')
@@ -434,8 +436,12 @@ def ci_performance_dashboard(request):
     # Get CI performance data
     ci_data = get_ci_performance_executive_dashboard(care_home)
     
+    # Serialize ci_data to JSON for JavaScript consumption (using DjangoJSONEncoder to handle dates)
+    ci_data_json = json.dumps(ci_data, cls=DjangoJSONEncoder)
+    
     context = {
         'ci_data': ci_data,
+        'ci_data_json': ci_data_json,
         'care_homes': CareHome.objects.all(),
         'selected_care_home': care_home,
     }

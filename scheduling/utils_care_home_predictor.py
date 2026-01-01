@@ -74,7 +74,7 @@ class CareHomePerformancePredictor:
         'supervision_completion': 20, # Max 20 points
         'incident_frequency': 20,     # Max 20 points
         'turnover_rate': 20,          # Max 20 points
-        'skill_mix': 10,              # Max 10 points
+        'staffing_levels': 10,        # Max 10 points - monitoring against minimum requirements
         'overtime_usage': 10          # Max 10 points
     }
     
@@ -130,7 +130,7 @@ class CareHomePerformancePredictor:
             'supervision_completion': self._score_supervision_completion(),
             'incident_frequency': self._score_incident_frequency(),
             'turnover_rate': self._score_turnover_rate(),
-            'skill_mix': self._score_skill_mix(),
+            'staffing_levels': self._score_staffing_levels(),
             'overtime_usage': self._score_overtime_usage()
         }
         
@@ -363,53 +363,60 @@ class CareHomePerformancePredictor:
         return score
     
     
-    def _score_skill_mix(self) -> int:
+    def _score_staffing_levels(self) -> int:
         """
-        Score skill mix quality (0-10 points).
+        Score staffing levels against minimum requirements (0-10 points).
         
         Logic:
-        - Calculate % of RNs in active workforce
-        - Target: 35% RNs (CI recommended)
-        - Close to target = high score
+        - Calculate actual staffing vs minimum required
+        - Target: ≥100% of minimum staffing requirements
+        - Meeting/exceeding minimum = high score
         
         Returns:
             int: 0-10 score
         """
-        # Get active staff by role
-        total_staff = User.objects.filter(
+        from datetime import datetime, timedelta
+        
+        # Get recent shifts (last 30 days)
+        cutoff_date = timezone.now() - timedelta(days=30)
+        
+        total_shifts = Shift.objects.filter(
             unit__care_home=self.care_home,
-            is_active=True
+            date__gte=cutoff_date
         ).count()
         
-        if total_staff == 0:
-            return 0
+        if total_shifts == 0:
+            return 5  # Neutral score if no data
         
-        rn_staff = User.objects.filter(
+        # Count filled shifts (shifts with assigned staff)
+        filled_shifts = Shift.objects.filter(
             unit__care_home=self.care_home,
-            is_active=True,
-            role__name='SSCW'
+            date__gte=cutoff_date,
+            user__isnull=False
         ).count()
         
-        # Calculate RN ratio
-        rn_ratio = (rn_staff / total_staff) * 100 if total_staff > 0 else 0
+        # Calculate staffing level as percentage
+        staffing_level = (filled_shifts / total_shifts) * 100 if total_shifts > 0 else 0
         
-        # Score based on proximity to 35% target
-        # 30-40% = 10 points
-        # 25-30% or 40-45% = 7 points
-        # 20-25% or 45-50% = 5 points
-        # <20% or >50% = 0 points
-        target = self.TARGET_RN_RATIO * 100
+        # Score based on staffing level
+        # ≥100% = 10 points (all shifts filled)
+        # 95-99% = 8 points (nearly all filled)
+        # 90-94% = 6 points (acceptable)
+        # 85-89% = 4 points (needs attention)
+        # <85% = 0 points (critical shortage)
         
-        if 30 <= rn_ratio <= 40:
+        if staffing_level >= 100:
             score = 10
-        elif 25 <= rn_ratio <= 45:
-            score = 7
-        elif 20 <= rn_ratio <= 50:
-            score = 5
+        elif staffing_level >= 95:
+            score = 8
+        elif staffing_level >= 90:
+            score = 6
+        elif staffing_level >= 85:
+            score = 4
         else:
             score = 0
         
-        logger.info(f"Skill mix: {rn_ratio:.1f}% RNs (target {target}%) = {score}/10 points")
+        logger.info(f"Staffing levels: {staffing_level:.1f}% (filled {filled_shifts}/{total_shifts} shifts) = {score}/10 points")
         return score
     
     
@@ -561,10 +568,14 @@ class CareHomePerformancePredictor:
                 "⚠️ Turnover rate above target. Review staff satisfaction and benefits."
             )
         
-        # Skill mix
-        if factor_scores['skill_mix'] < 5:
+        # Staffing levels
+        if factor_scores['staffing_levels'] < 5:
             recommendations.append(
-                "❗ Skill mix imbalance. Review SSCW ratio (CI recommends 35%)."
+                "❗ CRITICAL: Staffing levels below minimum. Review shift fill rates and recruitment."
+            )
+        elif factor_scores['staffing_levels'] < 7:
+            recommendations.append(
+                "⚠️ Staffing levels below target. Monitor shift coverage and fill vacant positions."
             )
         
         # Overtime
@@ -603,12 +614,12 @@ class CareHomePerformancePredictor:
             return 'High'
         
         # Check for any critically low factors
-        critical_low = any(
+        critical_low = any([
             factor_scores['training_compliance'] < 12,
             factor_scores['supervision_completion'] < 12,
             factor_scores['incident_frequency'] < 10,
             factor_scores['turnover_rate'] < 10
-        )
+        ])
         
         if critical_low:
             return 'High'
@@ -761,7 +772,7 @@ Staff Rota System - AI Performance Monitoring
                     'supervision_completion': 16,
                     'incident_frequency': 15,
                     'turnover_rate': 14,
-                    'skill_mix': 7,
+                    'staffing_levels': 7,
                     'overtime_usage': 5
                 }
             })
@@ -1140,7 +1151,7 @@ def get_ci_performance_executive_dashboard(care_home):
         },
         'peer_benchmarking': peer_data,
         'trend_6month': trend,
-        'key_factors': [(name.replace('_', ' ').title(), score) for name, score in list(prediction['factor_scores'].items())[:5]],
+        'key_factors': [(name.replace('_', ' ').title(), round((score / 20) * 100, 1)) for name, score in list(prediction['factor_scores'].items())[:5]],
         'improvement_areas': _identify_improvement_areas(prediction),
         'recommendations': [{'priority': 'HIGH', 'icon': '📊', 'title': 'Maintain excellence in key metrics', 'action': 'Continue current practices, monitor trends monthly', 'impact': 'Sustain high CI rating'}],
     }

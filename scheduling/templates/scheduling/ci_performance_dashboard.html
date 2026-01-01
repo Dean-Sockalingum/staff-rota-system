@@ -563,6 +563,9 @@
 </style>
 
 <script>
+// Pass backend ci_data to JavaScript
+const ciData = {{ ci_data_json|safe }};
+
 function updateFilters() {
     const careHome = document.getElementById('care_home_filter').value;
     window.location.href = `?care_home=${careHome}`;
@@ -577,45 +580,63 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadCIPerformanceCharts() {
     try {
-        // Generate last 6 months labels
-        const last6Months = [];
-        for (let i = 5; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - i);
-            last6Months.push(date.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+        console.log('=== CI Performance Charts Debug ===');
+        console.log('CI Data:', ciData);
+        console.log('Trend Data:', ciData.trend_6month);
+        console.log('Peer Data:', ciData.peer_benchmarking);
+        
+        // Extract trend data from backend
+        const trendData = ciData.trend_6month || [];
+        console.log(`Trend data length: ${trendData.length}`);
+        
+        if (trendData.length === 0) {
+            console.error('No trend data available!');
+            return;
         }
         
-        // Chart 1: Inspection Scores Trend (Line Chart - 6 Month Metrics)
-        // Shows trends in key compliance metrics: Training, Supervision, Incidents, Turnover, Staffing, Care Plans
-        const trainingData = [92, 94, 93, 95, 96, 97]; // Training compliance %
-        const supervisionData = [88, 89, 90, 91, 92, 93]; // Supervision completion %
-        const staffingData = [96, 97, 98, 99, 100, 101]; // Staffing level %
-        const carePlanData = [91, 92, 94, 95, 96, 97]; // Care plan reviews %
+        const last6Months = trendData.map(item => item.month);
+        console.log('Months:', last6Months);
         
+        // Extract actual metrics from trend data
+        const trainingData = trendData.map(item => item.training_compliance);
+        const supervisionData = trendData.map(item => item.supervision_completion);
+        const staffingData = trendData.map(item => item.staffing_level);
+        const carePlanData = trendData.map(item => item.care_plan_reviews);
+        
+        console.log('Training Data:', trainingData);
+        console.log('Supervision Data:', supervisionData);
+        
+        // Hide skeleton loaders
+        document.querySelectorAll('.skeleton-chart').forEach(el => {
+            console.log('Hiding skeleton:', el);
+            el.style.display = 'none';
+        });
+        
+        console.log('Creating inspection scores trend chart...');
         inspectionScoresTrendChart = ChartHelpers.createLineChart('inspectionScoresTrendChart', {
             labels: last6Months,
             datasets: [
                 {
                     label: 'Training Compliance (%)',
                     data: trainingData,
-                    borderColor: ChartHelpers.getPrimary(),
-                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.getPrimary(), 0.1),
+                    borderColor: ChartHelpers.colors.primary[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.primary[500], 0.1),
                     fill: true,
                     tension: 0.3
                 },
                 {
                     label: 'Supervision Completion (%)',
                     data: supervisionData,
-                    borderColor: ChartHelpers.getSecondary(),
-                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.getSecondary(), 0.1),
+                    borderColor: ChartHelpers.colors.secondary[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.secondary[500], 0.1),
                     fill: true,
                     tension: 0.3
                 },
                 {
                     label: 'Staffing Level (%)',
                     data: staffingData,
-                    borderColor: ChartHelpers.getAccent(),
-                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.getAccent(), 0.1),
+                    borderColor: ChartHelpers.colors.accent[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.accent[500], 0.1),
                     fill: true,
                     tension: 0.3
                 },
@@ -676,23 +697,51 @@ async function loadCIPerformanceCharts() {
         });
         
         // Chart 2: Quality Indicators Breakdown (Doughnut Chart)
-        // Shows current status of compliance metrics: Compliant vs Non-Compliant vs At-Risk
-        const compliantCount = 72; // Number of compliant indicators
-        const atRiskCount = 15; // Indicators approaching non-compliance
-        const nonCompliantCount = 8; // Non-compliant indicators
+        // Extract peer benchmarking data to calculate compliant vs at-risk indicators
+        const peerData = ciData.peer_benchmarking || [];
+        console.log('Peer data for quality indicators:', peerData);
+        
+        // Find current home - it's the first one in the peer data (always sorted with current home first)
+        const currentHome = peerData.length > 0 ? peerData[0] : null;
+        console.log('Current home for quality indicators:', currentHome);
+        
+        // Calculate compliance status based on CI ratings
+        // Rating 5-6 = Compliant, 3-4 = At Risk, 1-2 = Non-Compliant
+        let compliantCount = 0;
+        let atRiskCount = 0;
+        let nonCompliantCount = 0;
+        
+        if (currentHome) {
+            const themes = [
+                currentHome.theme1_care_support,
+                currentHome.theme2_environment,
+                currentHome.theme3_staffing,
+                currentHome.theme4_management
+            ];
+            
+            console.log('Theme ratings:', themes);
+            
+            themes.forEach(rating => {
+                if (rating >= 5) compliantCount++;
+                else if (rating >= 3) atRiskCount++;
+                else nonCompliantCount++;
+            });
+        }
+        
+        console.log('Quality indicator counts:', {compliantCount, atRiskCount, nonCompliantCount});
         
         qualityIndicatorsChart = ChartHelpers.createDoughnutChart('qualityIndicatorsChart', {
             labels: ['Compliant', 'At Risk', 'Non-Compliant'],
             datasets: [{
                 data: [compliantCount, atRiskCount, nonCompliantCount],
                 backgroundColor: [
-                    ChartHelpers.addAlpha(ChartHelpers.getSecondary(), 0.8), // Green for compliant
-                    ChartHelpers.addAlpha(ChartHelpers.getAccent(), 0.8), // Orange for at risk
+                    ChartHelpers.addAlpha(ChartHelpers.colors.secondary[500], 0.8), // Green for compliant
+                    ChartHelpers.addAlpha(ChartHelpers.colors.accent[500], 0.8), // Orange for at risk
                     ChartHelpers.addAlpha('#ef4444', 0.8) // Red for non-compliant
                 ],
                 borderColor: [
-                    ChartHelpers.getSecondary(),
-                    ChartHelpers.getAccent(),
+                    ChartHelpers.colors.secondary[500],
+                    ChartHelpers.colors.accent[500],
                     '#ef4444'
                 ],
                 borderWidth: 2
@@ -723,8 +772,35 @@ async function loadCIPerformanceCharts() {
         // Chart 3: Peer Benchmarking Comparison (Bar Chart)
         // Compares this home's theme ratings against sector averages for the 4 CI themes
         const ciThemes = ['Care & Support', 'Environment', 'Staffing', 'Management & Leadership'];
-        const thisHomeScores = [5.2, 4.8, 5.0, 4.9]; // This home's predicted scores (out of 6)
-        const sectorAverages = [4.5, 4.3, 4.2, 4.4]; // Scotland sector averages
+        
+        // Extract this home's scores from peer benchmarking data (first entry is always current home)
+        let thisHomeScores = [0, 0, 0, 0];
+        if (peerData.length > 0) {
+            const currentHomeData = peerData[0];
+            thisHomeScores = [
+                currentHomeData.theme1_care_support || 0,
+                currentHomeData.theme2_environment || 0,
+                currentHomeData.theme3_staffing || 0,
+                currentHomeData.theme4_management || 0
+            ];
+        }
+        
+        console.log('This home scores for benchmarking:', thisHomeScores);
+        
+        // Calculate sector averages from all peer homes
+        const sectorAverages = [0, 0, 0, 0];
+        if (peerData.length > 0) {
+            peerData.forEach(peer => {
+                sectorAverages[0] += peer.theme1_care_support || 0;
+                sectorAverages[1] += peer.theme2_environment || 0;
+                sectorAverages[2] += peer.theme3_staffing || 0;
+                sectorAverages[3] += peer.theme4_management || 0;
+            });
+            sectorAverages[0] = parseFloat((sectorAverages[0] / peerData.length).toFixed(1));
+            sectorAverages[1] = parseFloat((sectorAverages[1] / peerData.length).toFixed(1));
+            sectorAverages[2] = parseFloat((sectorAverages[2] / peerData.length).toFixed(1));
+            sectorAverages[3] = parseFloat((sectorAverages[3] / peerData.length).toFixed(1));
+        }
         
         peerBenchmarkingChart = ChartHelpers.createBarChart('peerBenchmarkingChart', {
             labels: ciThemes,
@@ -732,8 +808,8 @@ async function loadCIPerformanceCharts() {
                 {
                     label: 'This Home',
                     data: thisHomeScores,
-                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.getPrimary(), 0.8),
-                    borderColor: ChartHelpers.getPrimary(),
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.primary[500], 0.8),
+                    borderColor: ChartHelpers.colors.primary[500],
                     borderWidth: 2
                 },
                 {
@@ -750,7 +826,22 @@ async function loadCIPerformanceCharts() {
                     display: false
                 },
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        generateLabels: function(chart) {
+                            const datasets = chart.data.datasets;
+                            return datasets.map((dataset, i) => ({
+                                text: dataset.label,
+                                fillStyle: dataset.borderColor,
+                                strokeStyle: dataset.borderColor,
+                                lineWidth: 0,
+                                hidden: !chart.isDatasetVisible(i),
+                                index: i
+                            }));
+                        }
+                    }
                 },
                 tooltip: {
                     callbacks: {

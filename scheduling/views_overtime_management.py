@@ -21,7 +21,7 @@ def overtime_preferences_list(request):
     List all staff overtime preferences with filtering
     """
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('staff_dashboard')
     
@@ -80,7 +80,7 @@ def overtime_preference_form(request, preference_id=None):
     Add or edit overtime preference for a staff member
     """
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('staff_dashboard')
     
@@ -187,7 +187,7 @@ def overtime_preference_delete(request, preference_id):
     Delete an overtime preference
     """
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to perform this action.')
         return redirect('staff_dashboard')
     
@@ -209,7 +209,7 @@ def overtime_coverage_request(request, shift_id):
     Uses smart ranking to contact best candidates
     """
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to request OT coverage.')
         return redirect('staff_dashboard')
     
@@ -249,7 +249,7 @@ def overtime_coverage_detail(request, request_id):
     from .models_overtime import OvertimeCoverageRequest
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to view this page.')
         return redirect('staff_dashboard')
     

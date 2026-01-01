@@ -47,7 +47,8 @@ def senior_management_dashboard(request):
     
     # Check if user has Head of Service team permissions
     # HOS team (SM, OM, HOS, IDI) sits above home-level staff and provides governance oversight across all 5 homes
-    if not (request.user.role and request.user.role.is_senior_management_team):
+    # Superusers also have full access regardless of role
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_senior_management_team)):
         return render(request, 'scheduling/access_denied.html', {
             'message': 'This dashboard is restricted to Head of Service team members only (SM, OM, HOS, IDI). Access provides governance oversight across all care homes.'
         })

@@ -148,7 +148,7 @@ def manager_dashboard(request):
     """Dashboard for Operations Manager, Service Manager, and Admin (Screen 1.1)"""
     
     # Check if user has management permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return redirect('staff_dashboard')
     
     # Widget A: Manual Review Required
@@ -583,7 +583,7 @@ def staff_guidance(request):
     """Display operational guidance and checklists for management users."""
     import markdown
 
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return redirect('staff_dashboard')
 
     # BASE_DIR is /path/to/rotasystems, docs is at /path/to/docs
@@ -855,7 +855,10 @@ def rota_view(request):
     shifts_by_date = {}
     all_shifts_list = list(shifts_query)
     
-    care_roles = {'SCW', 'SCA', 'SCWN', 'SCAN'}
+    # Day roles: HOS, SM, OM, SSCW, SCW, SCA
+    # Night roles: SSCWN, SCWN, SCAN
+    day_care_roles = {'SCW', 'SCA'}
+    night_care_roles = {'SCWN', 'SCAN'}
     
     # Get all active units for consistent ordering across all days
     # If filtering by MGMT unit, exclude care units from display to keep it clean
@@ -870,9 +873,9 @@ def rota_view(request):
         date_shifts = [shift for shift in all_shifts_list if shift.date == current_date]
 
         day_shifts = [
-            s for s in date_shifts if s.shift_type.name in ['DAY_SENIOR', 'DAY_ASSISTANT', 'ADMIN']
+            s for s in date_shifts if s.shift_type.name in ['DAY', 'EARLY', 'LATE', 'LONG_DAY']
         ]
-        night_shifts = [s for s in date_shifts if s.shift_type.name in ['NIGHT_SENIOR', 'NIGHT_ASSISTANT']]
+        night_shifts = [s for s in date_shifts if s.shift_type.name == 'NIGHT']
 
         # Management staff (SM, OM) - always at top with pink background
         # NOTE: Management never works night shifts, so we exclude them from night_management
@@ -886,12 +889,9 @@ def rota_view(request):
         # Supernumerary duty staff (SSCW, SSCWN)
         day_supernumerary_duty = [
             s for s in day_shifts
-            if getattr(getattr(s.user, 'role', None), 'name', '') in ['SSCW'] and s.shift_type.name != 'ADMIN' and s not in day_management
+            if getattr(getattr(s.user, 'role', None), 'name', '') in ['SSCW'] and s not in day_management
         ]
-        day_supernumerary_admin = [
-            s for s in date_shifts
-            if s.shift_type.name == 'ADMIN' and getattr(getattr(s.user, 'role', None), 'name', '') in ['SSCW'] and s not in day_management
-        ]
+        day_supernumerary_admin = []  # No ADMIN shift type in database
         day_supernumerary = day_supernumerary_duty + day_supernumerary_admin
         night_supernumerary = [
             s for s in night_shifts 
@@ -900,9 +900,9 @@ def rota_view(request):
 
         day_care = [
             s for s in day_shifts
-            if getattr(getattr(s.user, 'role', None), 'name', '') in care_roles and s.shift_type.name != 'ADMIN'
+            if getattr(getattr(s.user, 'role', None), 'name', '') in day_care_roles
         ]
-        night_care = [s for s in night_shifts if getattr(getattr(s.user, 'role', None), 'name', '') in care_roles]
+        night_care = [s for s in night_shifts if getattr(getattr(s.user, 'role', None), 'name', '') in night_care_roles]
 
         # Group care shifts by unit
         day_care_by_unit = defaultdict(list)
@@ -998,13 +998,14 @@ def rota_view(request):
     within_home_suggestions = {}  # Suggested staff moves within same home
     cross_home_availability = {}  # Staff available to help other homes
     
-    # Home-specific staffing thresholds (care staff only, not including SSCW/SSCWN)
+    # Home-specific staffing thresholds (care staff only, not including SSCW/SSCWN or MGMT)
+    # MGMT units are excluded from reallocation as they can only be filled by SM/OM
     home_staffing_config = {
-        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
-        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
-        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
-        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 9},
-        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1, 'units_count': 5},
+        'HAWTHORN_HOUSE': {'day_ideal': 18, 'night_ideal': 18, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 8},  # 8 care units (MGMT excluded)
+        'MEADOWBURN': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 8},  # 8 care units (MGMT excluded)
+        'ORCHARD_GROVE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 8},  # 8 care units (MGMT excluded)
+        'RIVERSIDE': {'day_ideal': 17, 'night_ideal': 17, 'day_sscw': 2, 'night_sscw': 2, 'units_count': 8},  # 8 care units (MGMT excluded)
+        'VICTORIA_GARDENS': {'day_ideal': 10, 'night_ideal': 10, 'day_sscw': 1, 'night_sscw': 1, 'units_count': 5},  # 5 care units (MGMT excluded)
     }
     
     def calculate_within_home_reallocations(date, care_home_name, shift_period='DAY'):
@@ -1022,11 +1023,12 @@ def rota_view(request):
         units_count = home_config.get('units_count', 9)
         ideal_per_unit = ideal_total // units_count  # Fair distribution target
         
-        # Get all units for this home
+        # Get all units for this home - EXCLUDE MGMT units from reallocation
+        # MGMT units can only be filled by SM/OM and should not participate in balancing
         home_units = Unit.objects.filter(
             care_home__name=care_home_name,
             is_active=True
-        ).exclude(name='ADMIN')
+        ).exclude(name='ADMIN').exclude(name__icontains='MGMT')
         
         # Count staff per unit
         unit_staffing = {}
@@ -1039,7 +1041,7 @@ def rota_view(request):
                 date=date,
                 unit=unit,
                 shift_type__name__icontains=shift_type_filter,
-                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN']
+                user__role__name__in=['SCW', 'SCA', 'SCWN', 'SCAN', 'SSCW', 'SSCWN']  # Exclude SM/OM from reallocation
             ).select_related('user', 'shift_type', 'user__role')
             
             unit_staffing[unit.name] = shifts.count()
@@ -1254,6 +1256,15 @@ def rota_view(request):
             'night_status': 'good' if not night_shortage else 'shortage',
         }
     
+    # DEBUG: Log shift counts for troubleshooting
+    if selected_home != 'all':
+        first_date = view_start_date
+        if first_date in shifts_by_date:
+            day_care_units = shifts_by_date[first_date]['day_care_by_unit']
+            print(f"\n=== DEBUG: {selected_home} on {first_date} ===")
+            for unit_name, unit_shifts in day_care_units.items():
+                print(f"  {unit_name}: {len(unit_shifts)} shifts")
+    
     context = {
         'shifts_by_date': shifts_by_date,
         'daily_summary': daily_summary,
@@ -1284,7 +1295,7 @@ def reports_dashboard(request):
     """Reports Dashboard (Screen 1.3)"""
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return redirect('staff_dashboard')
     
     # Calculate some basic statistics for the dashboard
@@ -1395,7 +1406,7 @@ def get_annual_leave_report(request):
     from datetime import date
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return JsonResponse({'error': 'Permission denied'}, status=403)
     
     # Get current leave year (2025)
@@ -2248,7 +2259,7 @@ def staff_management(request):
     from .models_multi_home import CareHome
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to manage staff.')
         return redirect('staff_dashboard')
     
@@ -2466,7 +2477,7 @@ def staff_detail(request, sap):
     """Individual staff member details and management"""
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to view staff details.')
         return redirect('staff_dashboard')
     
@@ -2511,7 +2522,7 @@ def add_staff(request):
     """Add new staff member"""
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to add staff.')
         return redirect('staff_dashboard')
     
@@ -2671,7 +2682,7 @@ def auto_assign_teams(request):
     """Automatically assign staff to teams across units"""
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     
     if request.method != 'POST':
@@ -2751,7 +2762,7 @@ def team_management(request):
     """Team Management Dashboard showing balanced team structures"""
     
     # Check permissions
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, 'You do not have permission to view team management.')
         return redirect('staff_dashboard')
     
@@ -2869,7 +2880,7 @@ def team_management(request):
 def team_shift_summary(request):
     """Return per-team shift coverage metrics for the requested window."""
 
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     weeks_param = request.GET.get('weeks')
@@ -2992,7 +3003,7 @@ def team_shift_summary(request):
 def update_team_assignment(request):
     """Update a staff member's team or shift override from the team dashboard."""
 
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
     try:
@@ -6851,7 +6862,7 @@ def daily_additional_staffing_report(request):
     """Generate daily report of overtime and agency usage"""
     
     # Check permissions
-    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+    if not (request.user.is_superuser or (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management))):
         return JsonResponse({'error': 'Permission denied'}, status=403)
     
     target_date_str = request.GET.get('date')
@@ -6929,7 +6940,7 @@ def weekly_additional_staffing_report(request):
     """Generate weekly report (Sunday to Saturday) of overtime and agency usage"""
     
     # Check permissions
-    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+    if not (request.user.is_superuser or (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management))):
         return JsonResponse({'error': 'Permission denied'}, status=403)
     
     # Get target week - default to previous week (for Monday morning reports)
@@ -7047,7 +7058,7 @@ def ot_agency_report(request):
     from decimal import Decimal
     
     # Check permissions
-    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+    if not (request.user.is_superuser or (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management))):
         messages.error(request, 'You do not have permission to view this report.')
         return redirect('manager_dashboard')
     
@@ -7429,7 +7440,7 @@ def staff_vacancies_report(request):
     from staff_records.models import StaffProfile
     
     # Check permissions
-    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+    if not (request.user.is_superuser or (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management))):
         messages.error(request, 'You do not have permission to view this report.')
         return redirect('manager_dashboard')
     
@@ -7549,7 +7560,7 @@ def staff_vacancies_report_csv(request):
     import csv
     
     # Check permissions
-    if not (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management)):
+    if not (request.user.is_superuser or (request.user.role and (request.user.role.can_manage_rota or request.user.role.is_management))):
         messages.error(request, 'You do not have permission to export this report.')
         return redirect('manager_dashboard')
     
@@ -8315,7 +8326,7 @@ def leave_usage_targets(request):
     from decimal import Decimal
     
     # Check permissions - management only
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         return redirect('staff_dashboard')
     
     # Get year parameter
@@ -8802,7 +8813,7 @@ def careplan_manager_dashboard(request):
     - Quick statistics
     """
     # Check if user is a manager
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, "Access denied. This page is for managers only.")
         return redirect('careplan_overview')
     
@@ -8952,7 +8963,7 @@ def careplan_approve_review(request, review_id):
     """
     Manager approves a care plan review
     """
-    if not (request.user.role and request.user.role.is_management):
+    if not (request.user.is_superuser or (request.user.role and request.user.role.is_management)):
         messages.error(request, "Access denied. Only managers can approve reviews.")
         return redirect('careplan_overview')
     
@@ -10570,7 +10581,7 @@ def export_staff_schedule_pdf(request, staff_id):
     staff = get_object_or_404(User, pk=staff_id)
     
     # Staff can only export their own schedule unless they're management
-    if not (request.user == staff or (request.user.role and request.user.role.is_management)):
+    if not (request.user.is_superuser or request.user == staff or (request.user.role and request.user.role.is_management)):
         messages.error(request, "You don't have permission to view this schedule")
         return redirect('staff_dashboard')
     
