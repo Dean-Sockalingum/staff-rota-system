@@ -44,12 +44,12 @@ def ot_intelligence_dashboard(request):
     ot_shifts = Shift.objects.filter(
         date__gte=thirty_days_ago,
         shift_classification='OVERTIME'
-    ).values('staff').annotate(
+    ).values('user').annotate(
         ot_count=Count('id')
     ).order_by('-ot_count')
     
     # Create staff OT distribution map
-    ot_distribution = {item['staff']: item['ot_count'] for item in ot_shifts}
+    ot_distribution = {item['user']: item['ot_count'] for item in ot_shifts}
     
     # Calculate fairness score (0-100, higher is more fair)
     if ot_distribution:
@@ -170,7 +170,7 @@ def ot_fairness_report(request):
     staff_data = []
     for pref in ot_staff:
         ot_shifts = Shift.objects.filter(
-            staff=pref.staff,
+            user=pref.staff,
             date__gte=start_date,
             shift_classification='OVERTIME'
         ).count()
@@ -281,7 +281,7 @@ def ot_staff_detail(request, sap):
     # Get OT history (last 6 months)
     six_months_ago = timezone.now().date() - timedelta(days=180)
     ot_shifts = Shift.objects.filter(
-        staff=staff,
+        user=staff,
         date__gte=six_months_ago,
         shift_classification='OVERTIME'
     ).select_related('unit', 'shift_type').order_by('-date')
