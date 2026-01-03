@@ -8,12 +8,9 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
-from scheduling.models import (
-    CareHome, Unit, StaffProfile,
-    ActivityLog, ActivityCategory, UserNotification,
-    LeaveRequest, Shift
-)
-from scheduling.models_activity import ACTIVITY_TYPES
+from scheduling.models import Unit, LeaveRequest, Shift
+from scheduling.models_multi_home import CareHome
+from scheduling.models_activity import ActivityLog, ActivityCategory, UserNotification, ACTIVITY_TYPES
 
 User = get_user_model()
 
