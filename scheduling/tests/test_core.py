@@ -9,6 +9,7 @@ from scheduling.models import (
     Role, Unit, ShiftType, Shift, LeaveRequest, 
     Resident, CarePlanReview
 )
+from scheduling.models_multi_home import CareHome
 
 User = get_user_model()
 
@@ -24,6 +25,15 @@ class AuthenticationTestCase(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a care home (required for Unit FK)
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
+        
         # Create a role
         self.role = Role.objects.create(
             name='SSCW',
@@ -34,12 +44,13 @@ class AuthenticationTestCase(TestCase):
         # Create a unit
         self.unit = Unit.objects.create(
             name='DEMENTIA',
-            is_active=True
+            is_active=True,
+            care_home=self.care_home
         )
         
         # Create test user
         self.user = User.objects.create_user(
-            sap='TEST001',
+            sap='100001',
             first_name='Test',
             last_name='User',
             email='test@example.com',
@@ -57,7 +68,7 @@ class AuthenticationTestCase(TestCase):
         )
         
         self.manager = User.objects.create_user(
-            sap='MGR001',
+            sap='100002',
             first_name='Manager',
             last_name='User',
             email='manager@example.com',
@@ -72,26 +83,26 @@ class AuthenticationTestCase(TestCase):
     
     def test_user_creation(self):
         """Test that users are created correctly"""
-        self.assertEqual(self.user.sap, 'TEST001')
+        self.assertEqual(self.user.sap, '100001')
         self.assertEqual(self.user.full_name, 'Test User')
         self.assertTrue(self.user.is_active)
         self.assertFalse(self.user.is_staff)
     
     def test_user_login(self):
         """Test user can log in with SAP ID"""
-        logged_in = self.client.login(sap='TEST001', password='testpass123')
+        logged_in = self.client.login(sap='100001', password='testpass123')
         self.assertTrue(logged_in)
     
     def test_user_login_wrong_password(self):
         """Test user cannot log in with wrong password"""
-        logged_in = self.client.login(sap='TEST001', password='wrongpass')
+        logged_in = self.client.login(sap='100001', password='wrongpass')
         self.assertFalse(logged_in)
     
     def test_inactive_user_cannot_login(self):
         """Test inactive users cannot log in"""
         self.user.is_active = False
         self.user.save()
-        logged_in = self.client.login(sap='TEST001', password='testpass123')
+        logged_in = self.client.login(sap='100001', password='testpass123')
         self.assertFalse(logged_in)
     
     def test_manager_permissions(self):
@@ -109,10 +120,17 @@ class DashboardAccessTestCase(TestCase):
     """Test dashboard access and redirects"""
     
     def setUp(self):
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
         self.role = Role.objects.create(name='SCA')
-        self.unit = Unit.objects.create(name='BLUE', is_active=True)
+        self.unit = Unit.objects.create(name='BLUE', is_active=True, care_home=self.care_home)
         self.user = User.objects.create_user(
-            sap='DASH001',
+            sap='100003',
             first_name='Dashboard',
             last_name='Tester',
             email='dash@example.com',
@@ -130,7 +148,7 @@ class DashboardAccessTestCase(TestCase):
     
     def test_dashboard_accessible_when_logged_in(self):
         """Test dashboard is accessible after login"""
-        self.client.login(sap='DASH001', password='testpass123')
+        self.client.force_login(self.user)
         response = self.client.get('/staff-dashboard/')
         self.assertEqual(response.status_code, 200)
 
@@ -140,11 +158,18 @@ class AIAssistantTestCase(TestCase):
     
     def setUp(self):
         # Create test data
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
         self.role = Role.objects.create(name='SSCW')
-        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True)
+        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True, care_home=self.care_home)
         
         self.user1 = User.objects.create_user(
-            sap='AI001',
+            sap='100004',
             first_name='Alice',
             last_name='Smith',
             email='alice@example.com',
@@ -156,7 +181,7 @@ class AIAssistantTestCase(TestCase):
         )
         
         self.user2 = User.objects.create_user(
-            sap='AI002',
+            sap='100005',
             first_name='Bob',
             last_name='Jones',
             email='bob@example.com',
@@ -166,7 +191,8 @@ class AIAssistantTestCase(TestCase):
         )
         
         self.client = Client()
-        self.client.login(sap='AI001', password='testpass123')
+        # Use force_login to avoid axes backend issues
+        self.client.force_login(self.user1)
     
     def test_ai_assistant_requires_login(self):
         """Test AI Assistant API requires authentication"""
@@ -212,10 +238,17 @@ class ShiftModelTestCase(TestCase):
     """Test Shift model functionality"""
     
     def setUp(self):
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
         self.role = Role.objects.create(name='SCA')
-        self.unit = Unit.objects.create(name='GREEN', is_active=True)
+        self.unit = Unit.objects.create(name='GREEN', is_active=True, care_home=self.care_home)
         self.user = User.objects.create_user(
-            sap='SHF001',
+            sap='100006',
             first_name='Shift',
             last_name='Worker',
             email='shift@example.com',
@@ -279,10 +312,17 @@ class LeaveRequestTestCase(TestCase):
     """Test leave request functionality"""
     
     def setUp(self):
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
         self.role = Role.objects.create(name='SCA')
-        self.unit = Unit.objects.create(name='ROSE', is_active=True)
+        self.unit = Unit.objects.create(name='ROSE', is_active=True, care_home=self.care_home)
         self.user = User.objects.create_user(
-            sap='LVE001',
+            sap='100007',
             first_name='Leave',
             last_name='Requester',
             email='leave@example.com',
@@ -330,7 +370,14 @@ class CarePlanReviewTestCase(TestCase):
     """Test care plan review functionality"""
     
     def setUp(self):
-        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True)
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
+        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True, care_home=self.care_home)
         
         self.resident = Resident.objects.create(
             resident_id='DEM01',
@@ -344,7 +391,7 @@ class CarePlanReviewTestCase(TestCase):
         
         self.role = Role.objects.create(name='SSCW')
         self.keyworker = User.objects.create_user(
-            sap='KW001',
+            sap='100008',
             first_name='Key',
             last_name='Worker',
             email='keyworker@example.com',
@@ -381,10 +428,17 @@ class SecurityTestCase(TestCase):
     """Test security features and CSRF protection"""
     
     def setUp(self):
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
         self.role = Role.objects.create(name='OPERATIONS_MANAGER', can_manage_rota=True)
-        self.unit = Unit.objects.create(name='VIOLET', is_active=True)
+        self.unit = Unit.objects.create(name='VIOLET', is_active=True, care_home=self.care_home)
         self.user = User.objects.create_user(
-            sap='SEC001',
+            sap='100009',
             first_name='Security',
             last_name='Tester',
             email='security@example.com',
@@ -396,7 +450,7 @@ class SecurityTestCase(TestCase):
     
     def test_csrf_protection_on_ai_assistant(self):
         """Test AI Assistant API requires CSRF token"""
-        self.client.login(sap='SEC001', password='testpass123')
+        self.client.force_login(self.user)
         
         # Without enforce_csrf_checks, Django test client doesn't check CSRF
         # We verify the decorator is absent by checking the view requires POST
@@ -445,6 +499,15 @@ class CarePlanManagerTestCase(TestCase):
     
     def setUp(self):
         """Set up test data for care plan manager tests"""
+        # Create care home
+        self.care_home = CareHome.objects.create(
+            name='ORCHARD_GROVE',
+            bed_capacity=60,
+            location_address='123 Main St',
+            postcode='G12 8QQ',
+            care_inspectorate_id='CS2012345678'
+        )
+        
         # Create roles and units
         self.manager_role = Role.objects.create(
             name='OPERATIONS_MANAGER',
@@ -453,11 +516,11 @@ class CarePlanManagerTestCase(TestCase):
             can_manage_rota=True
         )
         self.staff_role = Role.objects.create(name='SSCW')
-        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True)
+        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True, care_home=self.care_home)
         
         # Create manager user
         self.manager = User.objects.create_user(
-            sap='MGR001',
+            sap='100002',
             first_name='Manager',
             last_name='Test',
             email='manager@test.com',
@@ -469,7 +532,7 @@ class CarePlanManagerTestCase(TestCase):
         
         # Create keyworker user
         self.keyworker = User.objects.create_user(
-            sap='KW001',
+            sap='100008',
             first_name='Key',
             last_name='Worker',
             email='keyworker@test.com',
@@ -480,7 +543,7 @@ class CarePlanManagerTestCase(TestCase):
         
         # Create resident
         self.resident = Resident.objects.create(
-            resident_id='TEST001',
+            resident_id='100001',
             first_name='Test',
             last_name='Resident',
             date_of_birth=date(1950, 1, 1),
@@ -511,14 +574,14 @@ class CarePlanManagerTestCase(TestCase):
     
     def test_manager_dashboard_accessible_to_managers(self):
         """Test manager dashboard is accessible to management users"""
-        self.client.login(sap='MGR001', password='testpass123')
+        self.client.force_login(self.manager)
         response = self.client.get('/careplan/manager-dashboard/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Care Plan Manager Dashboard')
     
     def test_manager_dashboard_shows_pending_approvals(self):
         """Test dashboard displays pending approvals"""
-        self.client.login(sap='MGR001', password='testpass123')
+        self.client.force_login(self.manager)
         response = self.client.get('/careplan/manager-dashboard/')
         self.assertEqual(response.status_code, 200)
         # Dashboard loads successfully
@@ -526,7 +589,7 @@ class CarePlanManagerTestCase(TestCase):
     
     def test_non_manager_cannot_access_dashboard(self):
         """Test non-management users cannot access manager dashboard"""
-        self.client.login(sap='KW001', password='testpass123')
+        self.client.force_login(self.keyworker)
         response = self.client.get('/careplan/manager-dashboard/')
         # Should redirect or show error
         self.assertIn(response.status_code, [302, 403])
@@ -538,7 +601,7 @@ class CarePlanManagerTestCase(TestCase):
     
     def test_manager_can_approve_review(self):
         """Test manager can access approval page"""
-        self.client.login(sap='MGR001', password='testpass123')
+        self.client.force_login(self.manager)
         response = self.client.get(f'/careplan/approve/{self.review.id}/')
         # Can access the approval page
         self.assertEqual(response.status_code, 200)
@@ -546,7 +609,7 @@ class CarePlanManagerTestCase(TestCase):
     
     def test_manager_can_reject_review(self):
         """Test manager can access rejection workflow"""
-        self.client.login(sap='MGR001', password='testpass123')
+        self.client.force_login(self.manager)
         response = self.client.get(f'/careplan/approve/{self.review.id}/')
         self.assertEqual(response.status_code, 200)
         # Page loads with form
@@ -563,7 +626,7 @@ class CarePlanManagerTestCase(TestCase):
             status='OVERDUE'
         )
         
-        self.client.login(sap='MGR001', password='testpass123')
+        self.client.login(sap='100002', password='testpass123')
         response = self.client.get('/careplan/manager-dashboard/')
         self.assertEqual(response.status_code, 200)
         # Dashboard loads and shows statistics
