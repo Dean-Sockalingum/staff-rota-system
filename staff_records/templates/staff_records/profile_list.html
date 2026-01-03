@@ -14,11 +14,11 @@
     <div class="card-body" style="overflow: visible;">
         <!-- Saved Filters -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <div style="position: relative;">
-                <button class="btn btn-outline-secondary" type="button" id="savedFiltersDropdown" onclick="toggleFiltersDropdown()">
+            <div style="position: relative; z-index: 1000;">
+                <button class="btn btn-outline-secondary" type="button" id="savedFiltersDropdown">
                     <i class="fas fa-bookmark"></i> My Saved Filters <i class="fas fa-chevron-down ms-1"></i>
                 </button>
-                <div id="savedFiltersList" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1050; background: white; border: 1px solid rgba(0,0,0,.15); border-radius: 0.25rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,.175); min-width: 350px; max-height: 400px; overflow-y: auto; margin-top: 2px;">
+                <div id="savedFiltersList" style="display: none; position: fixed; z-index: 9999; background: white; border: 1px solid rgba(0,0,0,.15); border-radius: 0.25rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,.175); min-width: 350px; max-height: 400px; overflow-y: auto;">
                     <div class="p-2 text-muted"><em>Loading...</em></div>
                 </div>
             </div>
@@ -147,24 +147,77 @@
 </div>
 
 <script>
-// Toggle filters dropdown
-function toggleFiltersDropdown() {
-    const dropdown = document.getElementById('savedFiltersList');
-    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    const dropdown = document.getElementById('savedFiltersList');
-    const button = document.getElementById('savedFiltersDropdown');
-    
-    if (dropdown && button && !dropdown.contains(e.target) && !button.contains(e.target)) {
-        dropdown.style.display = 'none';
-    }
-});
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Saved filters script loaded');
+    const dropdownButton = document.getElementById('savedFiltersDropdown');
+    const dropdownMenu = document.getElementById('savedFiltersList');
+    
+    // Move dropdown to body to avoid any parent clipping issues
+    document.body.appendChild(dropdownMenu);
+    
+    // Position dropdown below button
+    function positionDropdown() {
+        const rect = dropdownButton.getBoundingClientRect();
+        const top = rect.bottom + 2;
+        const left = rect.left;
+        
+        dropdownMenu.style.top = top + 'px';
+        dropdownMenu.style.left = left + 'px';
+        dropdownMenu.style.visibility = 'visible';
+        dropdownMenu.style.opacity = '1';
+    }
+    
+    // Close dropdown when clicking outside
+    function handleOutsideClick(e) {
+        if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            dropdownMenu.style.display = 'none';
+            document.removeEventListener('click', handleOutsideClick);
+        }
+    }
+    
+    // Toggle dropdown when button is clicked
+    dropdownButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const isVisible = dropdownMenu.style.display === 'block';
+        
+        if (isVisible) {
+            dropdownMenu.style.display = 'none';
+            document.removeEventListener('click', handleOutsideClick);
+        } else {
+            positionDropdown();
+            dropdownMenu.style.display = 'block';
+            
+            // Force reflow before setting visibility
+            void dropdownMenu.offsetHeight;
+            
+            // Use requestAnimationFrame to ensure proper rendering
+            requestAnimationFrame(function() {
+                dropdownMenu.style.visibility = 'visible';
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.pointerEvents = 'auto';
+                
+                // Force hardware acceleration for smooth rendering
+                dropdownMenu.style.transform = 'translate3d(0, 0, 0)';
+                dropdownMenu.style.backfaceVisibility = 'hidden';
+                
+                // Add outside click listener after rendering
+                setTimeout(function() {
+                    document.addEventListener('click', handleOutsideClick);
+                }, 300);
+            });
+        }
+    });
+    
+    // Prevent dropdown from closing when clicking inside it
+    dropdownMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Also prevent clicks on dropdown children from propagating
+    dropdownMenu.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+    });
     
     // Load saved filters on page load
     function loadSavedFilters() {
@@ -196,7 +249,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.querySelectorAll('.filter-name').forEach(el => {
                         el.addEventListener('click', function(e) {
                             e.preventDefault();
+                            e.stopPropagation();
+                            
                             const filterId = this.dataset.filterId;
+                            
+                            // Remove outside click listener before closing
+                            document.removeEventListener('click', handleOutsideClick);
                             
                             // Close dropdown
                             dropdown.style.display = 'none';
@@ -211,9 +269,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         btn.addEventListener('click', function(e) {
                             e.preventDefault();
                             e.stopPropagation();
+                            
                             const filterId = this.dataset.filterId;
                             
                             if (confirm('Delete this saved filter?')) {
+                                // Remove outside click listener
+                                document.removeEventListener('click', handleOutsideClick);
                                 deleteFilter(filterId);
                             }
                         });

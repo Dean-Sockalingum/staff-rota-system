@@ -4,6 +4,9 @@
 {% block title %}Add Staff Training Record{% endblock %}
 
 {% block content %}
+<!-- Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
@@ -32,19 +35,73 @@
                             </div>
                         </div>
 
-                        <!-- Staff Member Selection -->
+                        <!-- Staff Member Selection with Bulk Option -->
                         <div class="mb-3">
                             <label for="staff_member" class="form-label">Staff Member <span class="text-danger">*</span></label>
-                            <select name="staff_member" id="staff_member" class="form-select" required>
-                                <option value="">Select a staff member...</option>
-                                {% for staff in staff_members %}
-                                    <option value="{{ staff.id }}" 
-                                            data-home="{{ staff.unit.care_home.name }}"
-                                            {% if selected_staff_id == staff.id %}selected{% endif %}>
-                                        {{ staff.full_name }} - {{ staff.role.name }} ({{ staff.unit.care_home.name|title }})
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            
+                            <!-- Toggle between single and bulk mode -->
+                            <div class="btn-group mb-2 w-100" role="group">
+                                <button type="button" class="btn btn-outline-primary active" id="singleModeBtn" onclick="switchToSingleMode()">
+                                    Single Staff Member
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="bulkModeBtn" onclick="switchToBulkMode()">
+                                    <i class="fas fa-users"></i> Bulk Assignment
+                                </button>
+                            </div>
+
+                            <!-- Single Mode: Dropdown -->
+                            <div id="singleModeContainer">
+                                <select name="staff_member" id="staff_member" class="form-select" required>
+                                    <option value="">Select a staff member...</option>
+                                    {% for staff in staff_members %}
+                                        <option value="{{ staff.pk }}" 
+                                                data-home="{{ staff.unit.care_home.name }}"
+                                                {% if selected_staff_id == staff.pk %}selected{% endif %}>
+                                            {{ staff.full_name }} - {{ staff.role.name }} ({{ staff.unit.care_home.name|title }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Bulk Mode: Checkboxes -->
+                            <div id="bulkModeContainer" style="display: none;">
+                                <!-- Search Box -->
+                                <div class="mb-3">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="staffSearchInput" 
+                                           placeholder="🔍 Search staff by name, SAP, or role..."
+                                           onkeyup="filterStaffList()">
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="selectAllStaff">
+                                    <label class="form-check-label fw-bold" for="selectAllStaff">
+                                        Select All Visible (<span id="selectedStaffCount">0</span> selected)
+                                    </label>
+                                </div>
+                                <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;" id="staffCheckboxList">
+                                    {% for staff in staff_members %}
+                                    <div class="form-check staff-checkbox-item" 
+                                         data-home="{{ staff.unit.care_home.name }}"
+                                         data-name="{{ staff.full_name|lower }}"
+                                         data-sap="{{ staff.sap }}"
+                                         data-role="{{ staff.role.name|lower }}">
+                                        <input class="form-check-input staff-checkbox" 
+                                               type="checkbox" 
+                                               value="{{ staff.pk }}" 
+                                               id="staff_{{ staff.pk }}">
+                                        <label class="form-check-label" for="staff_{{ staff.pk }}">
+                                            {{ staff.full_name }} ({{ staff.sap }}) - {{ staff.role.name }} 
+                                            <span class="text-muted">({{ staff.unit.care_home.name|title }})</span>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="text-muted small mt-2" id="staffCountDisplay">
+                                    Showing <span id="visibleStaffCount">{{ staff_members.count }}</span> of {{ staff_members.count }} staff
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Course Selection -->
@@ -133,9 +190,14 @@
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-1"></i>Cancel
                             </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i>Add Training Record
-                            </button>
+                            <div>
+                                <button type="submit" class="btn btn-success" id="singleSubmitBtn">
+                                    <i class="fas fa-save me-1"></i>Add Training Record
+                                </button>
+                                <button type="button" class="btn btn-success" id="bulkSubmitBtn" style="display: none;" onclick="bulkAssignTraining()">
+                                    <i class="fas fa-users-cog me-1"></i>Assign to <span id="bulkCountDisplay">0</span> Staff
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -159,6 +221,48 @@
 </div>
 
 <script>
+let isBulkMode = false;
+
+// Filter staff list by search text
+function filterStaffList() {
+    const searchText = document.getElementById('staffSearchInput').value.toLowerCase();
+    const checkboxItems = document.querySelectorAll('.staff-checkbox-item');
+    const homeFilter = document.getElementById('filter_home').value;
+    
+    let visibleCount = 0;
+    
+    checkboxItems.forEach(item => {
+        const name = item.getAttribute('data-name');
+        const sap = item.getAttribute('data-sap');
+        const role = item.getAttribute('data-role');
+        const home = item.getAttribute('data-home');
+        
+        // Check if matches search
+        const matchesSearch = !searchText || 
+            name.includes(searchText) || 
+            sap.includes(searchText) || 
+            role.includes(searchText);
+        
+        // Check if matches home filter
+        const matchesHome = !homeFilter || home === homeFilter;
+        
+        if (matchesSearch && matchesHome) {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+            // Uncheck hidden items
+            const checkbox = item.querySelector('.staff-checkbox');
+            if (checkbox.checked) {
+                checkbox.checked = false;
+            }
+        }
+    });
+    
+    document.getElementById('visibleStaffCount').textContent = visibleCount;
+    updateSelectedCount();
+}
+
 // Filter staff by home
 function filterStaff() {
     const selectedHome = document.getElementById('filter_home').value;
@@ -176,6 +280,7 @@ function filterStaff() {
         window.history.pushState({}, '', url);
     }
     
+    // Filter dropdown options
     options.forEach(option => {
         if (option.value === '') {
             option.style.display = 'block';
@@ -196,6 +301,198 @@ function filterStaff() {
         if (currentOption && currentOption.style.display === 'none') {
             staffSelect.value = '';
         }
+    }
+    
+    // Apply filter to bulk mode checkboxes too
+    filterStaffList();
+}
+
+// Switch to single mode
+function switchToSingleMode() {
+    isBulkMode = false;
+    document.getElementById('singleModeBtn').classList.add('active');
+    document.getElementById('bulkModeBtn').classList.remove('active');
+    document.getElementById('singleModeContainer').style.display = 'block';
+    document.getElementById('bulkModeContainer').style.display = 'none';
+    document.getElementById('singleSubmitBtn').style.display = 'inline-block';
+    document.getElementById('bulkSubmitBtn').style.display = 'none';
+    document.getElementById('staff_member').required = true;
+}
+
+// Switch to bulk mode
+function switchToBulkMode() {
+    isBulkMode = true;
+    document.getElementById('singleModeBtn').classList.remove('active');
+    document.getElementById('bulkModeBtn').classList.add('active');
+    document.getElementById('singleModeContainer').style.display = 'none';
+    document.getElementById('bulkModeContainer').style.display = 'block';
+    document.getElementById('singleSubmitBtn').style.display = 'none';
+    document.getElementById('bulkSubmitBtn').style.display = 'inline-block';
+    document.getElementById('staff_member').required = false;
+}
+
+// Update selected staff count
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.staff-checkbox:checked');
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.staff-checkbox')).filter(cb => 
+        cb.closest('.staff-checkbox-item').style.display !== 'none'
+    );
+    const count = checkboxes.length;
+    
+    document.getElementById('selectedStaffCount').textContent = count;
+    document.getElementById('bulkCountDisplay').textContent = count;
+    
+    // Update "Select All" checkbox state
+    const selectAllCheckbox = document.getElementById('selectAllStaff');
+    if (count === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (count === visibleCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+    
+    // Enable/disable bulk submit button
+    document.getElementById('bulkSubmitBtn').disabled = count === 0;
+}
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All checkbox
+    document.getElementById('selectAllStaff').addEventListener('change', function() {
+        const checked = this.checked;
+        const checkboxes = document.querySelectorAll('.staff-checkbox');
+        checkboxes.forEach(cb => {
+            // Only select visible checkboxes
+            if (cb.closest('.staff-checkbox-item').style.display !== 'none') {
+                cb.checked = checked;
+            }
+        });
+        updateSelectedCount();
+    });
+    
+    // Individual checkboxes
+    document.querySelectorAll('.staff-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+});
+
+// Bulk assign training
+function bulkAssignTraining() {
+    // Don't use parseInt - staff IDs are SAP strings like "000745"
+    const selectedStaff = Array.from(document.querySelectorAll('.staff-checkbox:checked'))
+        .filter(cb => cb.closest('.staff-checkbox-item').style.display !== 'none')
+        .map(cb => cb.value);
+    
+    if (selectedStaff.length === 0) {
+        alert('Please select at least one staff member');
+        return;
+    }
+    
+    // Get form values
+    const courseId = document.getElementById('course').value;
+    const completionDate = document.getElementById('completion_date').value;
+    
+    if (!courseId || !completionDate) {
+        alert('Please select a course and completion date');
+        return;
+    }
+    
+    if (!confirm(`Assign training to ${selectedStaff.length} staff member(s)?`)) {
+        return;
+    }
+    
+    // Get all form data
+    const formData = {
+        staff_ids: selectedStaff,
+        course_id: courseId,
+        completion_date: completionDate,
+        trainer_name: document.getElementById('trainer_name').value,
+        training_provider: document.getElementById('training_provider').value,
+        certificate_number: document.getElementById('certificate_number').value,
+        sssc_cpd_hours: document.getElementById('sssc_cpd_hours').value,
+        notes: document.getElementById('notes').value
+    };
+    
+    // Show loading state
+    const bulkBtn = document.getElementById('bulkSubmitBtn');
+    const originalText = bulkBtn.innerHTML;
+    bulkBtn.disabled = true;
+    bulkBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Assigning...';
+    
+    // Send POST request
+    fetch('/api/bulk/training/assign/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', `Assigned training to ${data.success_count} staff member(s)`, 'success');
+            
+            // Redirect after short delay
+            setTimeout(() => {
+                window.location.href = '{% url "training_compliance_dashboard" %}';
+            }, 1500);
+        } else {
+            showToast('Error', data.error || 'Failed to assign training', 'danger');
+            bulkBtn.disabled = false;
+            bulkBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error', 'An error occurred while assigning training', 'danger');
+        bulkBtn.disabled = false;
+        bulkBtn.innerHTML = originalText;
+    });
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Show toast notification
+function showToast(title, message, type = 'info') {
+    // Try to use Bootstrap toast if available
+    const toastContainer = document.querySelector('.toast-container');
+    if (toastContainer) {
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong>${title}</strong><br>${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = toastContainer.lastElementChild;
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+    } else {
+        // Fallback to alert
+        alert(`${title}: ${message}`);
     }
 }
 

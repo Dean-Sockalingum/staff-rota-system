@@ -196,10 +196,7 @@ def bulk_approve_leave(request):
         
         for request_id in request_ids:
             try:
-                leave_request = LeaveRequest.objects.get(
-                    id=request_id,
-                    care_home=request.user.care_home
-                )
+                leave_request = LeaveRequest.objects.get(id=request_id)
                 
                 # Check if already approved/rejected
                 if leave_request.status in ['approved', 'rejected']:
@@ -220,6 +217,7 @@ def bulk_approve_leave(request):
         BulkOperationLog.objects.create(
             user=request.user,
             operation_type='leave_approve',
+            item_count=len(request_ids),
             success_count=success_count,
             failure_count=failure_count,
             details={
@@ -267,10 +265,7 @@ def bulk_reject_leave(request):
         
         for request_id in request_ids:
             try:
-                leave_request = LeaveRequest.objects.get(
-                    id=request_id,
-                    care_home=request.user.care_home
-                )
+                leave_request = LeaveRequest.objects.get(id=request_id)
                 
                 # Check if already approved/rejected
                 if leave_request.status in ['approved', 'rejected']:
@@ -292,6 +287,7 @@ def bulk_reject_leave(request):
         BulkOperationLog.objects.create(
             user=request.user,
             operation_type='leave_reject',
+            item_count=len(request_ids),
             success_count=success_count,
             failure_count=failure_count,
             details={
@@ -325,18 +321,35 @@ def bulk_assign_training(request):
     try:
         data = json.loads(request.body)
         staff_ids = data.get('staff_ids', [])
-        training_type = data.get('training_type')
-        due_date = data.get('due_date')
+        course_id = data.get('course_id')
+        completion_date = data.get('completion_date')
+        trainer_name = data.get('trainer_name', '')
+        training_provider = data.get('training_provider', '')
+        certificate_number = data.get('certificate_number', '')
+        sssc_cpd_hours = data.get('sssc_cpd_hours')
+        notes = data.get('notes', '')
         
-        # Check permissions
-        if not request.user.role or not request.user.role.can_manage_training:
+        # Check permissions - managers can assign training
+        if not request.user.role or not request.user.role.is_management:
             return JsonResponse({
                 'success': False,
                 'error': 'You do not have permission to assign training'
             }, status=403)
         
-        from .models import TrainingRecord
-        from datetime import datetime
+        from .models import TrainingRecord, TrainingCourse
+        from datetime import datetime, timedelta
+        
+        # Get the course
+        try:
+            course = TrainingCourse.objects.get(id=course_id)
+        except TrainingCourse.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Training course not found'
+            }, status=404)
+        
+        completion_date_obj = datetime.fromisoformat(completion_date).date()
+        expiry_date = completion_date_obj + timedelta(days=course.validity_months * 30)
         
         success_count = 0
         failure_count = 0
@@ -344,18 +357,21 @@ def bulk_assign_training(request):
         
         for staff_id in staff_ids:
             try:
-                staff = User.objects.get(
-                    id=staff_id,
-                    care_home=request.user.care_home
-                )
+                # Use pk instead of id since User model uses sap as primary key
+                staff = User.objects.get(pk=staff_id)
                 
                 # Create training record
                 TrainingRecord.objects.create(
-                    staff=staff,
-                    training_type=training_type,
-                    status='assigned',
-                    due_date=datetime.fromisoformat(due_date) if due_date else None,
-                    assigned_by=request.user
+                    staff_member=staff,
+                    course=course,
+                    completion_date=completion_date_obj,
+                    expiry_date=expiry_date,
+                    trainer_name=trainer_name,
+                    training_provider=training_provider,
+                    certificate_number=certificate_number,
+                    sssc_cpd_hours_claimed=float(sssc_cpd_hours) if sssc_cpd_hours else None,
+                    notes=notes,
+                    created_by=request.user
                 )
                 success_count += 1
                 
@@ -366,17 +382,19 @@ def bulk_assign_training(request):
                 failure_count += 1
                 failed_ids.append(staff_id)
         
-        # Log the bulk operation
+        # Log the bulk operation - ADD item_count field
         BulkOperationLog.objects.create(
             user=request.user,
             operation_type='training_assign',
+            item_count=len(staff_ids),
             success_count=success_count,
             failure_count=failure_count,
             details={
                 'staff_ids': staff_ids,
                 'failed_ids': failed_ids,
-                'training_type': training_type,
-                'due_date': due_date
+                'course_id': course_id,
+                'course_name': course.name,
+                'completion_date': completion_date
             }
         )
         
@@ -385,7 +403,7 @@ def bulk_assign_training(request):
             'success_count': success_count,
             'failure_count': failure_count,
             'failed_ids': failed_ids,
-            'message': f'Assigned training to {success_count} staff members'
+            'message': f'Assigned training to {success_count} staff member(s)'
         })
         
     except Exception as e:
