@@ -9,10 +9,9 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
-from scheduling.models import Unit
+from scheduling.models import Unit, TrainingRecord, SupervisionRecord, TrainingCourse
 from scheduling.models_multi_home import CareHome
 from scheduling.models_compliance_widgets import ComplianceMetric, ComplianceWidget
-from scheduling.models_compliance import TrainingRecord, SupervisionRecord, TrainingCourse
 
 User = get_user_model()
 

@@ -10,7 +10,7 @@ from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
 import json
-from scheduling.models import Unit, LeaveRequest, LeaveType
+from scheduling.models import Unit, LeaveRequest
 from scheduling.models_multi_home import CareHome
 
 User = get_user_model()

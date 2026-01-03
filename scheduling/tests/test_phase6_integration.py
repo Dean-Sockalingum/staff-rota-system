@@ -9,11 +9,11 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
-from scheduling.models import Unit, LeaveRequest, LeaveType
+from scheduling.models import Unit, LeaveRequest, Notification
 from scheduling.models_multi_home import CareHome
-from scheduling.models_activity import ActivityLog, UserNotification
+from scheduling.models_activity import RecentActivity
 from scheduling.models_compliance_widgets import ComplianceMetric, ComplianceWidget
-from scheduling.models_compliance import TrainingRecord, SupervisionRecord, TrainingCourse
+from scheduling.models import TrainingRecord, SupervisionRecord, TrainingCourse
 
 User = get_user_model()
 
@@ -86,7 +86,7 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
         leave_request.save()
         
         # Check if activity log was created
-        activities = ActivityLog.objects.filter(
+        activities = RecentActivity.objects.filter(
             care_home=self.care_home,
             category__code='LEAVE'
         )
@@ -108,7 +108,7 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
         )
         
         # Check for notifications (if signal is implemented)
-        notifications = UserNotification.objects.filter(
+        notifications = Notification.objects.filter(
             user=self.manager_user,
             is_read=False
         )
@@ -389,14 +389,14 @@ class DashboardIntegrationTests(TestCase):
         self.client.login(username='manager', password='testpass123')
         
         # Create test data
-        ActivityLog.objects.create(
+        RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
             activity_type='LEAVE_APPROVED',
             title='Test Activity'
         )
         
-        UserNotification.objects.create(
+        Notification.objects.create(
             user=self.user,
             notification_type='INFO',
             title='Test Notification',

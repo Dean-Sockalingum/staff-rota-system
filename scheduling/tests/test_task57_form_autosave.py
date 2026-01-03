@@ -8,9 +8,8 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta, date
-from scheduling.models import Unit, LeaveRequest, LeaveType
+from scheduling.models import Unit, LeaveRequest, IncidentReport, SupervisionRecord, TrainingRecord, TrainingCourse
 from scheduling.models_multi_home import CareHome
-from scheduling.models_compliance import IncidentReport, SupervisionRecord, TrainingRecord, TrainingCourse
 
 User = get_user_model()
 

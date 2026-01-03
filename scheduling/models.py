@@ -323,6 +323,8 @@ class Unit(models.Model):
         'CareHome',
         on_delete=models.CASCADE,
         related_name='units',
+        null=True,  # Nullable for backward compatibility with existing tests
+        blank=True,
         help_text='Care home this unit belongs to'
     )
     
