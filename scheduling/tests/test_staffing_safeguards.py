@@ -44,7 +44,7 @@ class StaffingAlertSafeguardsTestCase(TestCase):
         self.users = []
         for i in range(10):
             user = User.objects.create_user(
-                sap=f'TEST{i:03d}',
+                sap=f'10{i:04d}',
                 password='testpass123',
                 first_name=f'Test{i}',
                 last_name='User',
@@ -378,7 +378,7 @@ class StaffingAlertEdgeCasesTestCase(TestCase):
             duration_hours=12.0
         )
         self.user = User.objects.create_user(
-            sap='TEST001',
+            sap='100001', email='test@example.com', first_name='Test', last_name='User',
             password='test',
             role=self.role
         )

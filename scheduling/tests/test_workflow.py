@@ -115,7 +115,7 @@ class WorkflowTestBase(TransactionTestCase):
     def _create_staff_member(self, first_name, last_name, role):
         """Helper to create a staff member"""
         import random
-        sap = f"TEST{random.randint(1000, 9999)}"
+        sap = f"{random.randint(100000, 999999)}"
         
         user = User.objects.create_user(
             sap=sap,

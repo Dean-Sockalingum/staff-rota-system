@@ -63,7 +63,7 @@ def find_eligible_staff_for_reallocation(shift, source_care_home=None):
         is_active=True,
         role__isnull=False
     ).exclude(
-        id__in=list(scheduled_ids) + list(on_leave_ids)
+        pk__in=list(scheduled_ids) + list(on_leave_ids)
     ).exclude(
         unit=shift.unit  # Not from same unit
     ).exclude(
