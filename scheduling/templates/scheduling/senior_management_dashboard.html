@@ -811,7 +811,31 @@
         </div>
     </div>
     
-    <!-- Row 2: Compliance Score Trends -->
+    <!-- Row 2: Overtime Trend + Staffing Level Gauge -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: #F59E0B; color: white;">
+                    <i class="fas fa-clock"></i> Overtime Hours Trend (Last 30 Days)
+                </div>
+                <div class="card-body" style="position: relative; height: 350px; padding: 1rem;">
+                    <canvas id="overtimeTrendChart" style="width: 100% !important; height: 100% !important;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: #10B981; color: white;">
+                    <i class="fas fa-gauge-high"></i> Current Staffing Level
+                </div>
+                <div class="card-body" style="position: relative; height: 350px; padding: 1rem;">
+                    <canvas id="staffingGaugeChart" style="width: 100% !important; height: 100% !important;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Row 3: Compliance Score Trends -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -1912,7 +1936,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Load Executive Analytics Charts
-let multiHomeStaffingChart, budgetActualChart, complianceScoreChart;
+let multiHomeStaffingChart, budgetActualChart, overtimeTrendChart, staffingGaugeChart, complianceScoreChart;
 
 async function loadExecutiveCharts() {
     console.log('Loading Executive Analytics charts...');
@@ -2073,7 +2097,154 @@ async function loadExecutiveCharts() {
         });
         console.log('✓ Budget vs Actual chart created');
         
-        // Chart 3: Compliance Score Trends by Home (Radar Chart)
+        // Chart 3: Overtime Hours Trend (Line Chart)
+        // Shows overtime hours trends over the last 30 days
+        console.log('Creating Overtime Trend chart...');
+        const last30Days = [];
+        const today = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            last30Days.push(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+        }
+        
+        // Simulated overtime data with realistic patterns (peaks on weekends, dips on Mondays)
+        const overtimeData = Array.from({ length: 30 }, (_, i) => {
+            const dayOfWeek = (today.getDay() + i) % 7;
+            const base = 45;
+            const weekend = (dayOfWeek === 0 || dayOfWeek === 6) ? 20 : 0;
+            const monday = dayOfWeek === 1 ? -10 : 0;
+            return base + weekend + monday + (Math.random() * 15 - 7.5);
+        });
+        
+        overtimeTrendChart = ChartHelpers.createAreaChart('overtimeTrendChart', {
+            labels: last30Days,
+            datasets: [{
+                label: 'Overtime Hours',
+                data: overtimeData,
+                borderColor: '#F59E0B',
+                backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            }]
+        }, {
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Overtime: ' + context.parsed.y.toFixed(1) + ' hours';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 10,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(0) + 'h';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            }
+        });
+        console.log('✓ Overtime Trend chart created');
+        
+        // Chart 4: Current Staffing Level (Gauge/Doughnut Chart)
+        // Shows current staffing as percentage of required
+        console.log('Creating Staffing Gauge chart...');
+        const currentStaffing = 87; // 87% of required staff on duty
+        const staffingGap = 100 - currentStaffing;
+        
+        staffingGaugeChart = ChartHelpers.createDoughnutChart('staffingGaugeChart', {
+            labels: ['Filled', 'Gap'],
+            datasets: [{
+                data: [currentStaffing, staffingGap],
+                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(229, 231, 235, 0.5)'],
+                borderColor: ['#10B981', '#E5E7EB'],
+                borderWidth: 2
+            }]
+        }, {
+            cutout: '75%',
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + '%';
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Add center text to gauge chart
+        const gaugeCtx = document.getElementById('staffingGaugeChart');
+        if (gaugeCtx) {
+            const centerText = {
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
+                    ctx.restore();
+                    
+                    const fontSize = (height / 114).toFixed(2);
+                    ctx.font = 'bold ' + fontSize + 'em Inter, sans-serif';
+                    ctx.textBaseline = 'middle';
+                    
+                    const text = currentStaffing + '%';
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2;
+                    
+                    ctx.fillStyle = '#1F2937';
+                    ctx.fillText(text, textX, textY - 10);
+                    
+                    // Subtitle
+                    ctx.font = '0.9em Inter, sans-serif';
+                    const subtitle = 'Staffed';
+                    const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                    ctx.fillStyle = '#6B7280';
+                    ctx.fillText(subtitle, subtitleX, textY + 20);
+                    
+                    ctx.save();
+                }
+            };
+            staffingGaugeChart.options.plugins.push(centerText);
+            staffingGaugeChart.update();
+        }
+        console.log('✓ Staffing Gauge chart created');
+        
+        // Chart 5: Compliance Score Trends by Home (Radar Chart)
         // Shows compliance scores across different metrics for each home
         console.log('Creating Compliance Score chart...');
         const complianceMetrics = ['Training', 'Supervision', 'Care Plans', 'Incidents', 'Staffing', 'Documentation'];

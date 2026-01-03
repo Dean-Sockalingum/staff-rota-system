@@ -126,8 +126,24 @@
 <div class="row">
     <div class="col-12">
         <div class="card mb-4 request-section">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Pending and Manual Review</h5>
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Pending and Manual Review</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="checkbox" id="selectAllLeave">
+                        <label class="form-check-label" for="selectAllLeave">
+                            Select All
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" id="bulkApproveBtn" disabled>
+                        <i class="fas fa-check-double"></i> Approve Selected (<span id="selectedCount">0</span>)
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" id="bulkRejectBtn" disabled>
+                        <i class="fas fa-times-circle"></i> Reject Selected (<span id="selectedCountReject">0</span>)
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 {% if pending_requests %}
@@ -135,29 +151,34 @@
                         {% for leave in pending_requests %}
                             <div class="list-group-item request-card status-{{ leave.status|lower }}">
                                 <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h5 class="mb-1">{{ leave.user.full_name }}</h5>
-                                        <div class="text-muted small">
-                                            {{ leave.get_leave_type_display }} · {{ leave.start_date|date:"M j" }} → {{ leave.end_date|date:"M j, Y" }} ({{ leave.days_requested }} day{% if leave.days_requested > 1 %}s{% endif %})
+                                    <div class="d-flex align-items-start">
+                                        <div class="form-check me-3">
+                                            <input class="form-check-input leave-checkbox" type="checkbox" value="{{ leave.id }}" id="leave_{{ leave.id }}">
                                         </div>
-                                        <div class="mt-2 small">
-                                            {% if leave.is_blackout_period %}
-                                                <span class="badge bg-warning text-dark me-1">Blackout</span>
-                                            {% endif %}
-                                            {% if leave.causes_staffing_shortfall %}
-                                                <span class="badge bg-danger me-1">Staffing Risk</span>
-                                            {% endif %}
-                                            <span class="status-badge status-{{ leave.status|lower }}">
-                                                {% if leave.status == 'MANUAL_REVIEW' %}
-                                                    <i class="fas fa-exclamation-triangle"></i> Manual Review
-                                                {% elif leave.status == 'PENDING' %}
-                                                    <i class="fas fa-hourglass-half"></i> Pending
+                                        <div>
+                                            <h5 class="mb-1">{{ leave.user.full_name }}</h5>
+                                            <div class="text-muted small">
+                                                {{ leave.get_leave_type_display }} · {{ leave.start_date|date:"M j" }} → {{ leave.end_date|date:"M j, Y" }} ({{ leave.days_requested }} day{% if leave.days_requested > 1 %}s{% endif %})
+                                            </div>
+                                            <div class="mt-2 small">
+                                                {% if leave.is_blackout_period %}
+                                                    <span class="badge bg-warning text-dark me-1">Blackout</span>
                                                 {% endif %}
-                                            </span>
+                                                {% if leave.causes_staffing_shortfall %}
+                                                    <span class="badge bg-danger me-1">Staffing Risk</span>
+                                                {% endif %}
+                                                <span class="status-badge status-{{ leave.status|lower }}">
+                                                    {% if leave.status == 'MANUAL_REVIEW' %}
+                                                        <i class="fas fa-exclamation-triangle"></i> Manual Review
+                                                    {% elif leave.status == 'PENDING' %}
+                                                        <i class="fas fa-hourglass-half"></i> Pending
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                            {% if leave.reason %}
+                                                <div class="mt-2"><strong>Reason:</strong> {{ leave.reason }}</div>
+                                            {% endif %}
                                         </div>
-                                        {% if leave.reason %}
-                                            <div class="mt-2"><strong>Reason:</strong> {{ leave.reason }}</div>
-                                        {% endif %}
                                     </div>
                                     <div class="text-end">
                                         <form method="post" class="mb-2">
@@ -243,4 +264,171 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Bulk leave approval script loaded');
+    
+    const selectAllCheckbox = document.getElementById('selectAllLeave');
+    const leaveCheckboxes = document.querySelectorAll('.leave-checkbox');
+    const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+    const bulkRejectBtn = document.getElementById('bulkRejectBtn');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectedCountReject = document.getElementById('selectedCountReject');
+    
+    // Update selected count and button states
+    function updateSelection() {
+        const selected = Array.from(leaveCheckboxes).filter(cb => cb.checked);
+        const count = selected.length;
+        
+        selectedCount.textContent = count;
+        selectedCountReject.textContent = count;
+        
+        bulkApproveBtn.disabled = count === 0;
+        bulkRejectBtn.disabled = count === 0;
+        
+        // Update "Select All" checkbox state
+        if (count === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (count === leaveCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+    
+    // Select All functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            leaveCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateSelection();
+        });
+    }
+    
+    // Individual checkbox change
+    leaveCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelection);
+    });
+    
+    // Bulk Approve
+    if (bulkApproveBtn) {
+        bulkApproveBtn.addEventListener('click', function() {
+            const selected = Array.from(leaveCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.value));
+            
+            if (selected.length === 0) return;
+            
+            if (!confirm(`Are you sure you want to approve ${selected.length} leave request(s)?`)) {
+                return;
+            }
+            
+            console.log('Approving leave requests:', selected);
+            
+            fetch('/api/bulk/leave/approve/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ request_ids: selected })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Approve response:', data);
+                if (data.success) {
+                    showToast('Success', `Successfully approved ${data.success_count} request(s)`, 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast('Error', data.error || 'Failed to approve requests', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Bulk approve error:', error);
+                showToast('Error', 'Failed to approve requests: ' + error.message, 'danger');
+            });
+        });
+    }
+    
+    // Bulk Reject
+    if (bulkRejectBtn) {
+        bulkRejectBtn.addEventListener('click', function() {
+            const selected = Array.from(leaveCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.value));
+            
+            if (selected.length === 0) return;
+            
+            if (!confirm(`Are you sure you want to reject ${selected.length} leave request(s)?`)) {
+                return;
+            }
+            
+            console.log('Rejecting leave requests:', selected);
+            
+            fetch('/api/bulk/leave/reject/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ request_ids: selected })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Reject response:', data);
+                if (data.success) {
+                    showToast('Success', `Successfully rejected ${data.success_count} request(s)`, 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast('Error', data.error || 'Failed to reject requests', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Bulk reject error:', error);
+                showToast('Error', 'Failed to reject requests: ' + error.message, 'danger');
+            });
+        });
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Toast notification helper
+    function showToast(title, message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <strong>${title}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // Initialize
+    updateSelection();
+});
+</script>
 {% endblock %}

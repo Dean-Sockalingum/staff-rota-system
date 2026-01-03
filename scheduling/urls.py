@@ -126,6 +126,16 @@ from .views_preferences import (
 from .views_errors import (
     trigger_error
 )
+from .views_week6 import (
+    get_widget_preferences,
+    save_widget_preferences,
+    get_saved_filters,
+    save_search_filter,
+    delete_saved_filter,
+    bulk_approve_leave,
+    bulk_reject_leave,
+    bulk_assign_training
+)
 from .views_workflow import (
     workflow_list,
     workflow_create,
@@ -229,6 +239,21 @@ urlpatterns = [
     
     # Task 51: Error Tracking - Test Error View (DEBUG only)
     path('test-sentry-error/', trigger_error, name='trigger_error'),
+    
+    # Week 6: Power User Features
+    # Task 21: Dashboard Widget Customization
+    path('api/widget-preferences/', get_widget_preferences, name='get_widget_preferences'),
+    path('api/widget-preferences/save/', save_widget_preferences, name='save_widget_preferences'),
+    
+    # Task 22: Saved Search Filters
+    path('api/saved-filters/', get_saved_filters, name='get_saved_filters'),
+    path('api/saved-filters/save/', save_search_filter, name='save_search_filter'),
+    path('api/saved-filters/<int:filter_id>/delete/', delete_saved_filter, name='delete_saved_filter'),
+    
+    # Task 23-24: Bulk Operations
+    path('api/bulk/leave/approve/', bulk_approve_leave, name='bulk_approve_leave'),
+    path('api/bulk/leave/reject/', bulk_reject_leave, name='bulk_reject_leave'),
+    path('api/bulk/training/assign/', bulk_assign_training, name='bulk_assign_training'),
     
     # PWA Offline Page
     path('offline/', views.offline_view, name='offline'),
@@ -673,4 +698,12 @@ urlpatterns = [
     path('compliance/widgets/create/', create_widget, name='create_compliance_widget'),
     path('compliance/widgets/<int:widget_id>/delete/', delete_widget, name='delete_compliance_widget'),
     path('compliance/report/', compliance_report, name='compliance_report'),
+    
+    # Export Endpoints (PDF & Excel) - Week 5
+    path('exports/ci-performance/pdf/', views.export_ci_performance_pdf, name='export_ci_pdf'),
+    path('exports/ci-performance/excel/', views.export_ci_performance_excel, name='export_ci_excel'),
+    path('exports/staffing-analysis/pdf/', views.export_staffing_analysis_pdf, name='export_staffing_pdf'),
+    path('exports/staffing-analysis/excel/', views.export_staffing_analysis_excel, name='export_staffing_excel'),
+    path('exports/overtime-summary/pdf/', views.export_overtime_summary_pdf, name='export_overtime_pdf'),
+    path('exports/overtime-summary/excel/', views.export_overtime_summary_excel, name='export_overtime_excel'),
 ]

@@ -17,8 +17,9 @@ except ImportError:
 try:
     from weasyprint import HTML
     PDF_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError) as e:
     PDF_AVAILABLE = False
+    print(f"WeasyPrint not available in views_cost_analysis: {e}")
 
 from scheduling.models import Shift, Unit
 from scheduling.models_overtime import OvertimeCoverageRequest

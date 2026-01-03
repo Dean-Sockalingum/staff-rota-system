@@ -47,6 +47,16 @@ from scheduling.views_compliance import (
     # Task 10: Natural Language Query Interface API endpoints
     ai_assistant_query_api, ai_assistant_suggestions_api
 )
+from scheduling.views_week6 import (
+    get_widget_preferences,
+    save_widget_preferences,
+    get_saved_filters,
+    save_search_filter,
+    delete_saved_filter,
+    bulk_approve_leave,
+    bulk_reject_leave,
+    bulk_assign_training
+)
 from scheduling.views_senior_dashboard import senior_management_dashboard, senior_dashboard_export, custom_report_builder
 from scheduling.views_forecasting import (
     forecasting_dashboard,
@@ -325,4 +335,19 @@ urlpatterns = [
     # Task 10: Natural Language Query Interface - Phase 3 API Endpoints
     path('api/ai-assistant/query/', ai_assistant_query_api, name='ai_assistant_query_api'),
     path('api/ai-assistant/suggestions/', ai_assistant_suggestions_api, name='ai_assistant_suggestions_api'),
+    
+    # Week 6: Power User Features
+    # Task 21: Dashboard Widget Customization
+    path('api/widget-preferences/', get_widget_preferences, name='get_widget_preferences'),
+    path('api/widget-preferences/save/', save_widget_preferences, name='save_widget_preferences'),
+    
+    # Task 22: Saved Search Filters
+    path('api/saved-filters/', get_saved_filters, name='get_saved_filters'),
+    path('api/saved-filters/save/', save_search_filter, name='save_search_filter'),
+    path('api/saved-filters/<int:filter_id>/delete/', delete_saved_filter, name='delete_saved_filter'),
+    
+    # Task 23-24: Bulk Operations
+    path('api/bulk/leave/approve/', bulk_approve_leave, name='bulk_approve_leave'),
+    path('api/bulk/leave/reject/', bulk_reject_leave, name='bulk_reject_leave'),
+    path('api/bulk/training/assign/', bulk_assign_training, name='bulk_assign_training'),
 ]

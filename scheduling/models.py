@@ -4753,3 +4753,10 @@ from .models_overtime import (
     OvertimeCoverageRequest,
     OvertimeCoverageResponse
 )
+
+# Week 6: Power User Features
+from .models_week6 import (
+    DashboardWidgetPreference,
+    SavedSearchFilter,
+    BulkOperationLog
+)

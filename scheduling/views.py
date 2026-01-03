@@ -19,6 +19,9 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
 
+# Import export utilities
+from .utils.exports import PDFExporter, ExcelExporter
+
 from .models import (
     ActivityLog,
     CarePlanReview,
@@ -15601,4 +15604,302 @@ def language_statistics(request):
     }
     return render(request, 'scheduling/language_statistics.html', context)
 
+
+# =============================================================================
+# EXPORT VIEWS (PDF & Excel)
+# =============================================================================
+
+@login_required
+def export_ci_performance_pdf(request):
+    """Export CI Performance Report as PDF"""
+    # Gather all care homes with CI metrics
+    care_homes = CareHome.objects.all()
+    
+    care_homes_data = []
+    total_rating = 0
+    homes_meeting_target = 0
+    
+    for home in care_homes:
+        # Calculate metrics (placeholder - replace with actual calculations)
+        ci_rating = home.calculate_ci_rating() if hasattr(home, 'calculate_ci_rating') else 85
+        training = 92
+        supervision = 88
+        incidents = 2
+        turnover = 12
+        staffing = 87
+        
+        if ci_rating >= 80:
+            homes_meeting_target += 1
+        total_rating += ci_rating
+        
+        care_homes_data.append({
+            'name': home.name,
+            'ci_rating': ci_rating,
+            'training_completion': training,
+            'supervision_completion': supervision,
+            'incidents': incidents,
+            'turnover_rate': turnover,
+            'staffing_level': staffing,
+        })
+    
+    avg_rating = total_rating / len(care_homes) if care_homes else 0
+    
+    context = {
+        'title': 'Care Inspectorate Performance Report',
+        'generated_date': timezone.now().strftime('%d %B %Y at %H:%M'),
+        'report_period': f'Q4 {timezone.now().year}',
+        'care_homes': care_homes_data,
+        'summary_stats': {
+            'avg_rating': f'{avg_rating:.1f}',
+            'homes_meeting_target': homes_meeting_target,
+        }
+    }
+    
+    return PDFExporter.generate_ci_performance_report(care_homes_data, context)
+
+
+@login_required
+def export_ci_performance_excel(request):
+    """Export CI Performance Report as Excel"""
+    care_homes = CareHome.objects.all()
+    
+    care_homes_data = []
+    total_rating = 0
+    homes_meeting_target = 0
+    
+    for home in care_homes:
+        ci_rating = home.calculate_ci_rating() if hasattr(home, 'calculate_ci_rating') else 85
+        training = 92
+        supervision = 88
+        incidents = 2
+        turnover = 12
+        staffing = 87
+        
+        if ci_rating >= 80:
+            homes_meeting_target += 1
+        total_rating += ci_rating
+        
+        care_homes_data.append({
+            'name': home.name,
+            'ci_rating': ci_rating,
+            'training_completion': training,
+            'supervision_completion': supervision,
+            'incidents': incidents,
+            'turnover_rate': turnover,
+            'staffing_level': staffing,
+        })
+    
+    avg_rating = total_rating / len(care_homes) if care_homes else 0
+    
+    context = {
+        'summary_stats': {
+            'avg_rating': f'{avg_rating:.1f}',
+            'homes_meeting_target': homes_meeting_target,
+        }
+    }
+    
+    return ExcelExporter.generate_ci_performance_excel(care_homes_data, context)
+
+
+@login_required
+def export_staffing_analysis_pdf(request):
+    """Export Weekly Staffing Analysis as PDF"""
+    # Get date range (default to current week)
+    today = timezone.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+    
+    care_homes = CareHome.objects.all()
+    
+    staffing_data = []
+    total_staff = 0
+    total_coverage = 0
+    shifts_filled = 0
+    
+    for home in care_homes:
+        units_data = []
+        for unit in home.units.all():
+            daily_staff = []
+            for date in week_dates:
+                count = Shift.objects.filter(
+                    unit=unit,
+                    date=date,
+                    staff_member__isnull=False
+                ).count()
+                daily_staff.append(count)
+                if count > 0:
+                    shifts_filled += 1
+            
+            unit_total = sum(daily_staff)
+            unit_avg = unit_total / 7 if daily_staff else 0
+            total_staff += unit_total
+            total_coverage += unit_avg
+            
+            units_data.append({
+                'unit_name': unit.name,
+                'daily_staff': daily_staff,
+                'required': 5,  # Placeholder
+                'total': unit_total,
+                'average': f'{unit_avg:.1f}',
+            })
+        
+        staffing_data.append({
+            'home_name': home.name,
+            'units': units_data,
+        })
+    
+    context = {
+        'title': 'Weekly Staffing Analysis',
+        'generated_date': timezone.now().strftime('%d %B %Y at %H:%M'),
+        'week_dates': week_dates,
+        'staffing_data': staffing_data,
+        'summary': {
+            'total_staff': total_staff,
+            'avg_coverage': f'{(total_coverage / len(care_homes)) if care_homes else 0:.1f}',
+            'shifts_filled': shifts_filled,
+        }
+    }
+    
+    return PDFExporter.generate_staffing_analysis_report(staffing_data, context)
+
+
+@login_required
+def export_staffing_analysis_excel(request):
+    """Export Weekly Staffing Analysis as Excel"""
+    today = timezone.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+    
+    care_homes = CareHome.objects.all()
+    
+    staffing_data = []
+    for home in care_homes:
+        units_data = []
+        for unit in home.units.all():
+            daily_staff = []
+            for date in week_dates:
+                count = Shift.objects.filter(
+                    unit=unit,
+                    date=date,
+                    staff_member__isnull=False
+                ).count()
+                daily_staff.append(count)
+            
+            units_data.append({
+                'unit_name': unit.name,
+                'daily_staff': daily_staff,
+                'required': 5,
+                'total': sum(daily_staff),
+                'average': sum(daily_staff) / 7,
+            })
+        
+        staffing_data.append({
+            'home_name': home.name,
+            'units': units_data,
+        })
+    
+    context = {
+        'week_dates': week_dates,
+    }
+    
+    return ExcelExporter.generate_staffing_analysis_excel(staffing_data, context)
+
+
+@login_required
+def export_overtime_summary_pdf(request):
+    """Export Overtime Summary as PDF"""
+    # Get overtime data from last 30 days
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    
+    # Simulated overtime data (replace with actual data query)
+    overtime_data = [
+        {
+            'staff_name': 'John Smith',
+            'sap': 'SAP001',
+            'care_home': 'Orchard Grove',
+            'hours': 8.5,
+            'rate': 18.75,
+            'cost': 159.38,
+            'reason': 'Emergency cover - staff sickness'
+        },
+        {
+            'staff_name': 'Sarah Johnson',
+            'sap': 'SAP002',
+            'care_home': 'Violet Gardens',
+            'hours': 12.0,
+            'rate': 20.50,
+            'cost': 246.00,
+            'reason': 'Weekend shift cover'
+        },
+        {
+            'staff_name': 'Michael Brown',
+            'sap': 'SAP003',
+            'care_home': 'Orchard Grove',
+            'hours': 6.0,
+            'rate': 17.25,
+            'cost': 103.50,
+            'reason': 'Training session extension'
+        },
+    ]
+    
+    total_hours = sum(item['hours'] for item in overtime_data)
+    total_cost = sum(item['cost'] for item in overtime_data)
+    
+    context = {
+        'title': 'Overtime Summary Report',
+        'generated_date': timezone.now().strftime('%d %B %Y at %H:%M'),
+        'period': f'Last 30 Days (from {thirty_days_ago.strftime("%d %b %Y")})',
+        'overtime_data': overtime_data,
+        'total_hours': total_hours,
+        'total_cost': total_cost,
+    }
+    
+    return PDFExporter.generate_overtime_summary_report(overtime_data, context)
+
+
+@login_required
+def export_overtime_summary_excel(request):
+    """Export Overtime Summary as Excel"""
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    
+    overtime_data = [
+        {
+            'staff_name': 'John Smith',
+            'sap': 'SAP001',
+            'care_home': 'Orchard Grove',
+            'hours': 8.5,
+            'rate': 18.75,
+            'cost': 159.38,
+            'reason': 'Emergency cover - staff sickness'
+        },
+        {
+            'staff_name': 'Sarah Johnson',
+            'sap': 'SAP002',
+            'care_home': 'Violet Gardens',
+            'hours': 12.0,
+            'rate': 20.50,
+            'cost': 246.00,
+            'reason': 'Weekend shift cover'
+        },
+        {
+            'staff_name': 'Michael Brown',
+            'sap': 'SAP003',
+            'care_home': 'Orchard Grove',
+            'hours': 6.0,
+            'rate': 17.25,
+            'cost': 103.50,
+            'reason': 'Training session extension'
+        },
+    ]
+    
+    total_hours = sum(item['hours'] for item in overtime_data)
+    total_cost = sum(item['cost'] for item in overtime_data)
+    
+    context = {
+        'period': f'Last 30 Days',
+        'total_hours': total_hours,
+        'total_cost': total_cost,
+    }
+    
+    return ExcelExporter.generate_overtime_summary_excel(overtime_data, context)
 

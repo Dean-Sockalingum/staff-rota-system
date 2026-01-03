@@ -5,8 +5,15 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-tachometer-alt"></i> Dashboard - {{ user.role.get_name_display }}</h2>
-        <p class="text-muted">Welcome back, {{ user.full_name }}. Here's what needs your attention today.</p>
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h2><i class="fas fa-tachometer-alt"></i> Dashboard - {{ user.role.get_name_display }}</h2>
+                <p class="text-muted">Welcome back, {{ user.full_name }}. Here's what needs your attention today.</p>
+            </div>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#customizeDashboardModal">
+                <i class="fas fa-cog"></i> Customize Dashboard
+            </button>
+        </div>
         
         {% if user_home %}
             <div class="alert alert-info mb-3">
@@ -39,7 +46,7 @@
     </div>
 </div>
 
-<div class="row mb-4">
+<div class="row mb-4" data-widget-id="sickness_widget">
     <div class="col-12">
         <div class="card widget-card">
             <div class="card-header bg-danger text-white">
@@ -72,7 +79,7 @@
 
 <!-- Training Compliance Widget -->
 {% if training_compliance_summary %}
-<div class="row mb-4">
+<div class="row mb-4" data-widget-id="training_widget">
     <div class="col-12">
         <div class="card widget-card {% if training_compliance_summary.percentage >= 90 %}border-success{% elif training_compliance_summary.percentage >= 75 %}border-warning{% else %}border-danger{% endif %}">
             <div class="card-header {% if training_compliance_summary.percentage >= 90 %}bg-success{% elif training_compliance_summary.percentage >= 75 %}bg-warning{% else %}bg-danger{% endif %} text-white">
@@ -646,4 +653,211 @@
         </div>
     </div>
 </div>
+
+<!-- Dashboard Customization Modal -->
+<div class="modal fade" id="customizeDashboardModal" tabindex="-1" aria-labelledby="customizeDashboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customizeDashboardModalLabel">
+                    <i class="fas fa-cog"></i> Customize Dashboard
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Select which widgets you want to display on your dashboard:</p>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="sickness_widget_toggle" data-widget-id="sickness_widget" checked>
+                    <label class="form-check-label" for="sickness_widget_toggle">
+                        <i class="fas fa-thermometer"></i> Sickness Overview
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="training_widget_toggle" data-widget-id="training_widget" checked>
+                    <label class="form-check-label" for="training_widget_toggle">
+                        <i class="fas fa-graduation-cap"></i> Training Status
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="pending_actions_widget_toggle" data-widget-id="pending_actions_widget" checked>
+                    <label class="form-check-label" for="pending_actions_widget_toggle">
+                        <i class="fas fa-tasks"></i> Pending Actions
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="rota_health_widget_toggle" data-widget-id="rota_health_widget" checked>
+                    <label class="form-check-label" for="rota_health_widget_toggle">
+                        <i class="fas fa-heartbeat"></i> Rota Health
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="leave_requests_widget_toggle" data-widget-id="leave_requests_widget" checked>
+                    <label class="form-check-label" for="leave_requests_widget_toggle">
+                        <i class="fas fa-calendar-times"></i> Leave Requests
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input widget-toggle" type="checkbox" id="compliance_widget_toggle" data-widget-id="compliance_widget" checked>
+                    <label class="form-check-label" for="compliance_widget_toggle">
+                        <i class="fas fa-clipboard-check"></i> Compliance
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="resetWidgets">
+                    <i class="fas fa-undo"></i> Reset to Default
+                </button>
+                <button type="button" class="btn btn-primary" id="saveWidgetPreferences">
+                    <i class="fas fa-save"></i> Save Preferences
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard customization script loaded');
+    
+    // Load saved widget preferences
+    function loadWidgetPreferences() {
+        fetch('/api/widget-preferences/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.preferences) {
+                data.preferences.forEach(pref => {
+                    const checkbox = document.querySelector(`.widget-toggle[data-widget-id="${pref.widget_id}"]`);
+                    if (checkbox) {
+                        checkbox.checked = pref.is_visible;
+                        toggleWidget(pref.widget_id, pref.is_visible, false);
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.log('Using default widget visibility:', error);
+        });
+    }
+
+    // Toggle widget visibility
+    function toggleWidget(widgetId, isVisible, animate) {
+        const widget = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (!widget) return;
+        
+        if (animate) {
+            widget.style.transition = 'opacity 0.3s';
+            widget.style.opacity = isVisible ? '1' : '0';
+            setTimeout(() => {
+                widget.style.display = isVisible ? '' : 'none';
+            }, isVisible ? 0 : 300);
+        } else {
+            widget.style.display = isVisible ? '' : 'none';
+        }
+    }
+
+    // Handle checkbox changes
+    document.querySelectorAll('.widget-toggle').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const widgetId = this.dataset.widgetId;
+            const isVisible = this.checked;
+            toggleWidget(widgetId, isVisible, true);
+        });
+    });
+
+    // Save widget preferences
+    const saveButton = document.getElementById('saveWidgetPreferences');
+    if (saveButton) {
+        saveButton.addEventListener('click', function() {
+            console.log('Save button clicked');
+            const preferences = [];
+            document.querySelectorAll('.widget-toggle').forEach(checkbox => {
+                preferences.push({
+                    widget_id: checkbox.dataset.widgetId,
+                    is_visible: checkbox.checked
+                });
+            });
+            console.log('Preferences to save:', preferences);
+
+            fetch('/api/widget-preferences/save/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ preferences: preferences })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Save response:', data);
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('customizeDashboardModal'));
+                    if (modal) modal.hide();
+                    showToast('Success', 'Your dashboard preferences have been saved', 'success');
+                } else {
+                    showToast('Error', 'Failed to save preferences', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+                showToast('Error', 'Failed to save preferences: ' + error.message, 'danger');
+            });
+        });
+    }
+
+    // Reset to default
+    const resetButton = document.getElementById('resetWidgets');
+    if (resetButton) {
+        resetButton.addEventListener('click', function() {
+            console.log('Reset button clicked');
+            document.querySelectorAll('.widget-toggle').forEach(checkbox => {
+                checkbox.checked = true;
+                const widgetId = checkbox.dataset.widgetId;
+                toggleWidget(widgetId, true, true);
+            });
+            showToast('Success', 'All widgets have been shown', 'info');
+        });
+    }
+
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Toast notification helper
+    function showToast(title, message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <strong>${title}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Load preferences on page load
+    loadWidgetPreferences();
+});
+</script>
+
 {% endblock %}

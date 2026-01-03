@@ -30,10 +30,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Load allowed hosts from environment (comma-separated list)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# For PWA testing: Allow local network access for mobile testing
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.125', cast=Csv())
+
+# For development: Allow all local network IPs
+if DEBUG:
+    ALLOWED_HOSTS.append('*')  # Allow all hosts in debug mode for mobile testing
 
 
 # Application definition
@@ -189,9 +194,11 @@ SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 
 # Phase 6: CSRF Protection
+# PWA Compatibility: Allow JavaScript access to CSRF token for fetch requests
 CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
-CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for PWA/AJAX (was True)
 CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000', cast=Csv())
 
 # Phase 6: Security Headers
 SECURE_BROWSER_XSS_FILTER = True
