@@ -212,6 +212,16 @@ from .views_compliance_widgets import (
     compliance_report
 )
 
+# Intelligent OT Distribution views
+from .views_ot_intelligence import (
+    ot_intelligence_dashboard,
+    ot_staff_rankings,
+    ot_fairness_report,
+    ot_request_coverage_api,
+    ot_staff_detail,
+    ot_analytics_api
+)
+
 
 urlpatterns = [
     # Authentication
@@ -706,4 +716,12 @@ urlpatterns = [
     path('exports/staffing-analysis/excel/', views.export_staffing_analysis_excel, name='export_staffing_excel'),
     path('exports/overtime-summary/pdf/', views.export_overtime_summary_pdf, name='export_overtime_pdf'),
     path('exports/overtime-summary/excel/', views.export_overtime_summary_excel, name='export_overtime_excel'),
+    
+    # Intelligent OT Distribution System
+    path('ot-intelligence/', ot_intelligence_dashboard, name='ot_intelligence_dashboard'),
+    path('ot-intelligence/rankings/', ot_staff_rankings, name='ot_staff_rankings'),
+    path('ot-intelligence/fairness/', ot_fairness_report, name='ot_fairness_report'),
+    path('ot-intelligence/staff/<str:sap>/', ot_staff_detail, name='ot_staff_detail'),
+    path('api/ot-intelligence/request-coverage/', ot_request_coverage_api, name='ot_request_coverage_api'),
+    path('api/ot-intelligence/analytics/', ot_analytics_api, name='ot_analytics_api'),
 ]

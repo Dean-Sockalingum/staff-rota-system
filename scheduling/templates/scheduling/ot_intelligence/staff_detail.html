@@ -1,0 +1,151 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ staff.full_name }} - OT Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #3b82f6;
+    }
+    .stat-label {
+        color: #6b7280;
+        margin-top: 0.5rem;
+    }
+    .shift-row {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .shift-row:hover {
+        background: #f9fafb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <a href="{% url 'scheduling:ot_intelligence_dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <h2>{{ staff.full_name }}</h2>
+            <p class="text-muted">{{ staff.role.name }} • SAP: {{ staff.sap_number }}</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_ot_hours }}</div>
+                <div class="stat-label">Total OT Hours (90 days)</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ ot_shifts|length }}</div>
+                <div class="stat-label">OT Shifts Worked</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ acceptance_rate|floatformat:0 }}%</div>
+                <div class="stat-label">Acceptance Rate</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">
+                    {% if avg_response_time %}
+                        {{ avg_response_time|floatformat:0 }}m
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="stat-label">Avg Response Time</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preferences -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> OT Preferences</h5>
+                </div>
+                <div class="card-body">
+                    {% if preference %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Availability:</strong>
+                            <span class="badge badge-{% if preference.is_available %}success{% else %}secondary{% endif %}">
+                                {% if preference.is_available %}Available{% else %}Not Available{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Preferred Homes:</strong>
+                            {% if preference.preferred_homes.all %}
+                                {% for home in preference.preferred_homes.all %}
+                                    <span class="badge badge-info">{{ home.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Any home</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Last Updated:</strong> {{ preference.updated_at|date:"M d, Y" }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No OT preferences set for this staff member.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent OT Shifts -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent OT Shifts (Last 90 Days)</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for shift in ot_shifts %}
+                    <div class="shift-row">
+                        <div>
+                            <strong>{{ shift.date|date:"D, M d, Y" }}</strong>
+                            <div class="text-muted small">{{ shift.shift_type }} • {{ shift.home.name }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="badge badge-primary">{{ shift.start_time }} - {{ shift.end_time }}</span>
+                            <div class="text-muted small">{{ shift.hours }} hours</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted">
+                        No OT shifts worked in the last 90 days
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
