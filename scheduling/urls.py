@@ -236,9 +236,6 @@ urlpatterns = [
     path('2fa/regenerate-backup-codes/', regenerate_backup_codes, name='regenerate_backup_codes'),
     path('api/2fa/status/', two_factor_status, name='two_factor_status'),
     
-    # Test endpoint for pre-commit hook validation (should be BLOCKED)
-    path('api/test-insecure/', views.test_insecure_api, name='test_insecure_api'),
-    
     # Task 49: Advanced Search with Elasticsearch
     path('search/', global_search, name='global_search'),
     path('search/autocomplete/', autocomplete, name='search_autocomplete'),

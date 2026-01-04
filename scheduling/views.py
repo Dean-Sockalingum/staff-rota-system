@@ -10658,17 +10658,6 @@ def export_monthly_rota_pdf(request, home_id):
 def export_staff_schedule_pdf(request, staff_id):
     """Export individual staff schedule as PDF"""
     from datetime import datetime, timedelta
-
-
-# Test endpoint for pre-commit hook validation
-@require_http_methods(["GET"])
-@api_login_required
-def test_insecure_api(request):
-    """Test endpoint WITHOUT @api_login_required - should be blocked by pre-commit hook"""
-    return JsonResponse({
-        'status': 'error',
-        'message': 'This endpoint is intentionally insecure for testing'
-    })
     
     staff = get_object_or_404(User, pk=staff_id)
     
