@@ -114,7 +114,7 @@ class PreferenceLearningTests(TestCase):
         """Create test user with multiple feedback entries"""
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST002',
+            sap='100002',
             password='testpass123',
             first_name='Jane',
             last_name='Smith',
@@ -214,7 +214,7 @@ class PersonalizationTests(TestCase):
         """Create test user with preferences"""
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST003',
+            sap='100003',
             password='testpass123',
             first_name='Bob',
             last_name='Jones',
@@ -294,7 +294,7 @@ class AnalyticsTests(TestCase):
         """Create test data"""
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user1 = User.objects.create_user(
-            sap='TEST004',
+            sap='100004',
             password='testpass123',
             first_name='User',
             last_name='One',
@@ -302,7 +302,7 @@ class AnalyticsTests(TestCase):
             role=self.role
         )
         self.user2 = User.objects.create_user(
-            sap='TEST005',
+            sap='100005',
             password='testpass123',
             first_name='User',
             last_name='Two',
@@ -406,7 +406,7 @@ class InsightsTests(TestCase):
         """Create test data with varied performance"""
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST006',
+            sap='100006',
             password='testpass123',
             first_name='Test',
             last_name='User',
@@ -486,7 +486,7 @@ class APIEndpointTests(TestCase):
         self.client = Client()
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST007',
+            sap='100007',
             password='testpass123',
             first_name='API',
             last_name='User',
@@ -622,7 +622,7 @@ class IntegrationTests(TestCase):
         self.client = Client()
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST008',
+            sap='100008',
             password='testpass123',
             first_name='Integration',
             last_name='Test',
