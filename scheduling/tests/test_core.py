@@ -167,7 +167,7 @@ class AIAssistantTestCase(TestCase):
             care_inspectorate_id='CS2012345678'
         )
         self.role = Role.objects.create(name='SSCW')
-        self.unit = Unit.objects.create(name='DEMENTIA', is_active=True, care_home=self.care_home)
+        self.unit = Unit.objects.create(name='OG_BRAMLEY', is_active=True, care_home=self.care_home)
         
         self.user1 = User.objects.create_user(
             sap='100004',

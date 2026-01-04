@@ -37,7 +37,7 @@ class FeedbackRecordingTests(TestCase):
         """Create test user"""
         self.role = Role.objects.create(name='Carer', is_management=False)
         self.user = User.objects.create_user(
-            sap='TEST001',
+            sap='100001',
             password='testpass123',
             first_name='Test',
             last_name='User',

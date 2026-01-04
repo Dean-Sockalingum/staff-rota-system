@@ -301,8 +301,8 @@ def search_messages(user, query, limit=20):
         QuerySet of matching messages
     """
     return Message.objects.filter(
-        recipients=user,
-        Q(subject__icontains=query) | Q(content__icontains=query)
+        Q(subject__icontains=query) | Q(content__icontains=query),
+        recipients=user
     ).select_related('sender')[:limit]
 
 
