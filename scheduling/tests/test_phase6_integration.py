@@ -23,8 +23,9 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -123,8 +124,9 @@ class CalendarCoverageIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -217,8 +219,9 @@ class FormSubmissionAutosaveClearIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -281,8 +284,9 @@ class ComplianceWidgetCalculationIntegrationTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -362,8 +366,9 @@ class DashboardIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -433,8 +438,9 @@ class PermissionsIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            bed_capacity=30,
+            location_address="123 Test St"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
