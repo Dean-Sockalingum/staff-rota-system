@@ -1,0 +1,44 @@
+name: API Authentication Check
+
+on:
+  pull_request:
+    paths:
+      - 'scheduling/**/*.py'
+      - 'scheduling/urls.py'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scheduling/**/*.py'
+      - 'scheduling/urls.py'
+
+jobs:
+  check-api-auth:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Check API authentication decorators
+        run: |
+          cd 2025-12-12_Multi-Home_Complete
+          python3 tools/check_api_decorators.py --strict
+      
+      - name: Comment on PR if check fails
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **API Authentication Check Failed**\n\nSome API endpoints are missing `@api_login_required` decorator.\n\nRun `python3 tools/check_api_decorators.py` locally to see details.'
+            })

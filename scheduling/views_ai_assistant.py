@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from .decorators_api import api_login_required
 from django.utils import timezone
 from datetime import timedelta, date, datetime
 import json
@@ -571,6 +572,7 @@ class ReportGenerator:
         return None
 
 
+@api_login_required
 @require_http_methods(["POST"])
 def ai_assistant_api(request):
     """
