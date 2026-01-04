@@ -572,6 +572,7 @@ urlpatterns = [
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('notifications/read/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/read-all/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('notifications/count/', views.unread_notifications_count, name='unread_notifications_count'),
     path('messages/', views.messages_inbox, name='messages_inbox'),
     path('messages/<int:message_id>/', views.message_detail, name='message_detail'),
     path('messages/send/', views.send_message_view, name='send_message'),

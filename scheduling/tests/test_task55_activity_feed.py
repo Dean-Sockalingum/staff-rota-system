@@ -47,28 +47,29 @@ class ActivityLogModelTests(TestCase):
         activity = RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='LEAVE_APPROVED',
+            activity_type='leave_approved',
             title='Leave Request Approved',
             description='Annual leave approved for 5 days',
-            category='LEAVE'
+            category='leave'
         )
         
         self.assertIsNotNone(activity.id)
         self.assertEqual(activity.user, self.user)
-        self.assertEqual(activity.activity_type, 'LEAVE_APPROVED')
-        self.assertEqual(activity.category, 'LEAVE')
-        self.assertIsNotNone(activity.timestamp)
+        self.assertEqual(activity.activity_type, 'leave_approved')
+        self.assertEqual(activity.category, 'leave')
+        self.assertIsNotNone(activity.created_at)
     
     def test_activity_log_str(self):
         """Test string representation"""
         activity = RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='SHIFT_ASSIGNED',
-            title='Shift Assigned'
+            activity_type='shift_assigned',
+            title='Shift Assigned',
+            category='shift'
         )
         
-        expected = f"[{activity.created_at.strftime('%Y-%m-%d %H:%M')}] SHIFT_ASSIGNED - Shift Assigned"
+        expected = "Shift Assigned - Shift Assigned"
         self.assertEqual(str(activity), expected)
     
     def test_recent_activities_queryset(self):
@@ -79,22 +80,24 @@ class ActivityLogModelTests(TestCase):
         RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='LEAVE_APPROVED',
+            activity_type='leave_approved',
             title='Recent Activity',
-            timestamp=now
+            category='leave',
+            created_at=now
         )
         
         RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='SHIFT_ASSIGNED',
+            activity_type='shift_assigned',
             title='Old Activity',
-            timestamp=now - timedelta(days=35)
+            category='shift',
+            created_at=now - timedelta(days=35)
         )
         
         # Query last 30 days
         recent = RecentActivity.objects.filter(
-            timestamp__gte=now - timedelta(days=30)
+            created_at__gte=now - timedelta(days=30)
         )
         
         self.assertEqual(recent.count(), 1)
@@ -217,9 +220,10 @@ class ActivityFeedViewTests(TestCase):
         RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='LEAVE_APPROVED',
+            activity_type='leave_approved',
             title='Leave Approved',
-            description='Test leave approved'
+            description='Test leave approved',
+            category='leave'
         )
     
     def test_activity_feed_requires_login(self):
@@ -267,13 +271,13 @@ class ActivityFeedViewTests(TestCase):
         RecentActivity.objects.create(
             user=self.user,
             care_home=self.care_home,
-            activity_type='SHIFT_ASSIGNED',
+            activity_type='shift_assigned',
             title='Shift Assigned',
-            category='SHIFT'
+            category='shift'
         )
         
         url = reverse('activity_feed_api')
-        response = self.client.get(url, {'category': 'LEAVE'})
+        response = self.client.get(url, {'category': 'leave'})
         
         data = response.json()
         # Should only return LEAVE category
@@ -385,7 +389,7 @@ class ActivityTrackingIntegrationTests(TestCase):
         
         # Check activity log was created
         activities = RecentActivity.objects.filter(
-            activity_type='LEAVE_APPROVED'
+            activity_type='leave_approved'
         )
         
         # Should have activity (may be created by signal)

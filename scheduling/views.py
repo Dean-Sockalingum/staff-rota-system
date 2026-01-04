@@ -15287,6 +15287,19 @@ def mark_all_notifications_read(request):
 
 
 @login_required
+def unread_notifications_count(request):
+    """API endpoint for unread notifications count"""
+    from .models import Notification
+    
+    count = Notification.objects.filter(
+        recipient=request.user,
+        is_read=False
+    ).count()
+    
+    return JsonResponse({'count': count})
+
+
+@login_required
 def messages_inbox(request):
     """User's message inbox"""
     from . import collaboration
