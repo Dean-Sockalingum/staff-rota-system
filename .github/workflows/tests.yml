@@ -38,11 +38,17 @@ jobs:
         pip install coverage
     
     - name: Run migrations
+      env:
+        SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
+        DEBUG: 'True'
       run: |
         python manage.py migrate --noinput
     
     - name: Run tests with coverage
       continue-on-error: true
+      env:
+        SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
+        DEBUG: 'True'
       run: |
         coverage run --source='.' manage.py test --verbosity=2 || true
     
@@ -52,6 +58,9 @@ jobs:
         coverage report -m || true
     
     - name: Check critical tests
+      env:
+        SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
+        DEBUG: 'True'
       run: |
         echo "Running critical test suites..."
         python manage.py test scheduling.tests.test_security --verbosity=2
@@ -67,6 +76,9 @@ jobs:
         fail_ci_if_error: false
     
     - name: Run Phase 6 tests specifically
+      env:
+        SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
+        DEBUG: 'True'
       run: |
         python manage.py test scheduling.tests.test_task55_activity_feed --verbosity=2
         python manage.py test scheduling.tests.test_task56_compliance_widgets --verbosity=2
