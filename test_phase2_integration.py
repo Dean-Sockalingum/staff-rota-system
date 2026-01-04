@@ -52,8 +52,7 @@ class Phase2IntegrationTests(TestCase):
         
         # Create test unit
         self.unit = Unit.objects.create(
-            name="Test Unit",
-            ideal_staffing_level=5
+            name="OG_BRAMLEY"  # Use valid unit choice
         )
         
         # Create test role

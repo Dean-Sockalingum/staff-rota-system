@@ -41,6 +41,7 @@ jobs:
       env:
         SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
         DEBUG: 'True'
+        FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
       run: |
         python manage.py migrate --noinput
     
@@ -49,6 +50,7 @@ jobs:
       env:
         SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
         DEBUG: 'True'
+        FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
       run: |
         coverage run --source='.' manage.py test --verbosity=2 || true
     
@@ -61,6 +63,7 @@ jobs:
       env:
         SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
         DEBUG: 'True'
+        FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
       run: |
         echo "Running critical test suites..."
         python manage.py test scheduling.tests.test_security --verbosity=2
@@ -79,6 +82,7 @@ jobs:
       env:
         SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
         DEBUG: 'True'
+        FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
       run: |
         python manage.py test scheduling.tests.test_task55_activity_feed --verbosity=2
         python manage.py test scheduling.tests.test_task56_compliance_widgets --verbosity=2
