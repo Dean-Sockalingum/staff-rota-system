@@ -314,12 +314,17 @@ def ot_staff_detail(request, sap):
 def ot_analytics_api(request):
     """
     API endpoint for OT analytics data (for charts)
+    Restricted to management only.
     
     Returns JSON with:
     - Acceptance rate distribution
     - Response time metrics
     - Fairness trends over time
     """
+    # Management-only access for analytics
+    if not request.user.is_management and not request.user.is_superuser:
+        return JsonResponse({'error': 'Permission denied. Management access required.'}, status=403)
+    
     # Acceptance rate distribution
     acceptance_buckets = {
         '0-20%': 0,

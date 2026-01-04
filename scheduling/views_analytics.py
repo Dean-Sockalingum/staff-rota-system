@@ -274,7 +274,12 @@ def trends_analysis_view(request):
 def api_dashboard_summary(request):
     """
     API endpoint for dashboard summary data (JSON).
+    Restricted to management users only.
     """
+    # Management-only access for analytics
+    if not request.user.is_management and not request.user.is_superuser:
+        return JsonResponse({'error': 'Permission denied. Management access required.'}, status=403)
+    
     care_home_id = request.GET.get('care_home')
     care_home = None
     if care_home_id:

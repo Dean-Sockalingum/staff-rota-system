@@ -1909,6 +1909,7 @@ def ai_assistant_feedback_api(request):
 def ai_assistant_analytics_api(request):
     """
     Task 11: Get AI assistant performance analytics
+    Restricted to management only.
     
     GET /api/ai-assistant/analytics/?days=30
     
@@ -1965,6 +1966,7 @@ def ai_assistant_analytics_api(request):
 def ai_assistant_insights_api(request):
     """
     Task 11: Get AI assistant learning insights
+    Restricted to management only.
     
     GET /api/ai-assistant/insights/?min_feedback=5
     
@@ -1997,6 +1999,10 @@ def ai_assistant_insights_api(request):
         ]
     }
     """
+    # Management-only access for AI insights
+    if not request.user.is_management and not request.user.is_superuser:
+        return JsonResponse({'error': 'Permission denied. Management access required.'}, status=403)
+    
     from .feedback_learning import get_learning_insights
     
     # Only senior staff and admin can view insights

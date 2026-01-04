@@ -317,7 +317,12 @@ def api_get_data_sources(request):
 def api_preview_report(request):
     """
     Preview report results without saving (for builder interface).
+    Restricted to management only.
     """
+    # Management-only access for report previews
+    if not request.user.is_management and not request.user.is_superuser:
+        return JsonResponse({'error': 'Permission denied. Management access required.'}, status=403)
+    
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=400)
     
