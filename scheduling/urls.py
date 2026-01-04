@@ -212,6 +212,13 @@ from .views_compliance_widgets import (
     compliance_report
 )
 
+# Task 11: AI Assistant Feedback & Learning views
+from .views_compliance import (
+    ai_assistant_feedback_api,
+    ai_assistant_analytics_api,
+    ai_assistant_insights_api
+)
+
 # Intelligent OT Distribution views
 from .views_ot_intelligence import (
     ot_intelligence_dashboard,
@@ -389,9 +396,9 @@ urlpatterns = [
     path('api/ai-assistant/suggestions/', views.ai_assistant_suggestions_api, name='ai_assistant_suggestions_api'),
     
     # AI Assistant Feedback & Learning (Task 11 - Phase 3)
-    path('api/ai-assistant/feedback/', views.ai_assistant_feedback_api, name='ai_assistant_feedback_api'),
-    path('api/ai-assistant/analytics/', views.ai_assistant_analytics_api, name='ai_assistant_analytics_api'),
-    path('api/ai-assistant/insights/', views.ai_assistant_insights_api, name='ai_assistant_insights_api'),
+    path('api/ai-assistant/feedback/', ai_assistant_feedback_api, name='ai_assistant_feedback_api'),
+    path('api/ai-assistant/analytics/', ai_assistant_analytics_api, name='ai_assistant_analytics_api'),
+    path('api/ai-assistant/insights/', ai_assistant_insights_api, name='ai_assistant_insights_api'),
     
     path('api/ai-recommendations/approve/', approve_ai_recommendation, name='approve_ai_recommendation'),
     path('api/ai-recommendations/reject/', reject_ai_recommendation, name='reject_ai_recommendation'),
