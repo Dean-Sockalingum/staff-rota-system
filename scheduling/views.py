@@ -4725,12 +4725,13 @@ Management Team
                 'data': ReportGenerator.generate_shift_coverage_report(date_str)
             }
         
-        # Leave queries
-        if any(word in query_lower for word in ['annual leave', 'leave request', 'holiday', 'vacation', 'leave balance']):
-            return {
-                'type': 'leave_summary',
-                'data': ReportGenerator.generate_leave_summary()
-            }
+        # Leave queries - DISABLED: Now handled by _process_leave_balance_query which is more specific
+        # This generic handler was catching staff-specific leave queries before they could be processed properly
+        # if any(word in query_lower for word in ['annual leave', 'leave request', 'holiday', 'vacation', 'leave balance']):
+        #     return {
+        #         'type': 'leave_summary',
+        #         'data': ReportGenerator.generate_leave_summary()
+        #     }
         
         return None
 
@@ -5811,7 +5812,12 @@ def _process_leave_balance_query(query):
     Process leave balance queries for specific staff members
     Returns leave information or None if not a leave balance query
     """
-    from fuzzywuzzy import fuzz
+    # Try to import fuzzywuzzy, fall back to simple string matching if not available
+    try:
+        from fuzzywuzzy import fuzz
+        fuzzy_available = True
+    except ImportError:
+        fuzzy_available = False
     
     query_lower = query.lower()
     
@@ -5832,17 +5838,26 @@ def _process_leave_balance_query(query):
     for user in all_users:
         # Try matching full name
         full_name = f"{user.first_name} {user.last_name}"
-        score = fuzz.partial_ratio(query_lower, full_name.lower())
         
-        # Also try first name only
-        first_score = fuzz.partial_ratio(query_lower, user.first_name.lower())
-        # And last name only
-        last_score = fuzz.partial_ratio(query_lower, user.last_name.lower())
+        if fuzzy_available:
+            score = fuzz.partial_ratio(query_lower, full_name.lower())
+            # Also try first name only
+            first_score = fuzz.partial_ratio(query_lower, user.first_name.lower())
+            # And last name only
+            last_score = fuzz.partial_ratio(query_lower, user.last_name.lower())
+            # Take the best match
+            max_score = max(score, first_score, last_score)
+        else:
+            # Simple substring matching fallback
+            max_score = 0
+            if full_name.lower() in query_lower or query_lower in full_name.lower():
+                max_score = 80
+            elif user.first_name.lower() in query_lower or query_lower in user.first_name.lower():
+                max_score = 70
+            elif user.last_name.lower() in query_lower or query_lower in user.last_name.lower():
+                max_score = 70
         
-        # Take the best match
-        max_score = max(score, first_score, last_score)
-        
-        if max_score > best_score and max_score > 60:  # Threshold for fuzzy match
+        if max_score > best_score and max_score > 60:  # Threshold for match
             best_match = user
             best_score = max_score
     

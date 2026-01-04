@@ -44,6 +44,10 @@ PuLP>=2.7.0  # Linear programming for optimization
 # Performance Monitoring
 psutil>=5.9.0  # System and process utilities for performance benchmarks
 
+# AI Assistant
+fuzzywuzzy>=0.18.0  # Fuzzy string matching for name search
+python-Levenshtein>=0.21.0  # Fast string matching (optional speedup for fuzzywuzzy)
+
 # Care Inspectorate Integration
 beautifulsoup4>=4.12.0  # HTML parsing for CI website
 requests>=2.31.0  # HTTP requests for report fetching
