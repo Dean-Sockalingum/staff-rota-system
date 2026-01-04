@@ -28,6 +28,7 @@ django-csp>=3.7  # Content Security Policy headers
 safety  # Dependency vulnerability scanner
 pip-audit  # Python package auditing
 urllib3>=2.6.0  # HTTP library (CVE-2025-66418, CVE-2025-66471 fixed)
+sentry-sdk>=1.40.0  # Error tracking and performance monitoring (Task 51)
 
 # Phase 6: Machine Learning Dependencies
 prophet>=1.1.5  # Facebook's time series forecasting
