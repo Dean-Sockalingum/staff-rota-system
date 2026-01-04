@@ -11,12 +11,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 try:
     from celery.schedules import crontab
 except ImportError:
     crontab = None
 from decouple import config, Csv
+
+# Detect if we're running tests
+TESTING = 'test' in sys.argv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -190,7 +194,7 @@ AXES_VERBOSE = True  # Log lockout attempts for monitoring
 SESSION_COOKIE_AGE = 3600  # 1 hour (3600 seconds)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
-SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+SESSION_COOKIE_SAMESITE = 'Strict'  # Enhanced CSRF protection
 SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 
 # Phase 6: CSRF Protection
@@ -206,21 +210,28 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking
 
 # Phase 6: HTTPS/SSL Settings (Production only)
-if not DEBUG:
+# For production (not DEBUG and not TESTING), enable full HSTS
+if not DEBUG and not TESTING:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+else:
+    # Development/Testing: Disable HSTS to allow local HTTP testing
+    SECURE_SSL_REDIRECT = False
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
 
 # Phase 6: Content Security Policy
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com")
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com")
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_FONT_SRC = ("'self'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com")
-CSP_CONNECT_SRC = ("'self'",)
-CSP_FRAME_ANCESTORS = ("'none'",)  # Prevent embedding in iframes
+CSP_DEFAULT_SRC = ["'self'"]
+CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com"]
+CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com"]
+CSP_IMG_SRC = ["'self'", "data:", "https:"]
+CSP_FONT_SRC = ["'self'", "https://cdn.jsdelivr.net", "https://stackpath.bootstrapcdn.com"]
+CSP_CONNECT_SRC = ["'self'"]
+CSP_FRAME_ANCESTORS = ["'none'"]  # Prevent embedding in iframes
 
 # Phase 6: Field Encryption Key (for sensitive data)
 # Scottish Design: Privacy by design
@@ -578,25 +589,11 @@ SMS_EMERGENCY_ENABLED = True  # Always allow emergency SMS even if user opted ou
 SMS_RATE_LIMIT_PER_USER_HOUR = 5  # Max SMS per user per hour (prevent spam)
 
 # ===== Security Settings =====
-# Production security settings - configured via environment variables
-
-# HTTPS/SSL Settings (only enable in production with valid SSL certificate)
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-
-# HSTS (HTTP Strict Transport Security)
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
-SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=False, cast=bool)
+# Note: Core security settings (HSTS, SSL, cookies) are configured earlier in this file
+# They are properly set based on DEBUG mode for development vs production
 
 # Database Connection Pooling (production)
 CONN_MAX_AGE = config('CONN_MAX_AGE', default=0, cast=int)
-
-# Security Headers
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'
 
 # ===== Logging Configuration =====
 if not DEBUG:
