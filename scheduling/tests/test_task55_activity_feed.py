@@ -12,6 +12,7 @@ from datetime import timedelta
 from scheduling.models import Unit, LeaveRequest, Shift, Notification
 from scheduling.models_multi_home import CareHome
 from scheduling.models_activity import RecentActivity
+from staff_records.models import StaffProfile
 
 User = get_user_model()
 
@@ -41,13 +42,9 @@ class ActivityLogModelTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        self.user.care_home_access.add(self.care_home)
         
         self.staff_profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit,
-            permission_level='FULL'
+            user=self.user
         )
     
     def test_activity_log_creation(self):
@@ -138,16 +135,15 @@ class UserNotificationTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        self.user.care_home_access.add(self.care_home)
     
     def test_notification_creation(self):
         """Test creating a notification"""
         notification = Notification.objects.create(
-            user=self.user,
-            notification_type='INFO',
+            recipient=self.user,
+            notification_type='SYSTEM_ALERT',
             title='Test Notification',
             message='This is a test message',
-            link='/test-link/'
+            action_url='/test-link/'
         )
         
         self.assertIsNotNone(notification.id)
@@ -157,8 +153,8 @@ class UserNotificationTests(TestCase):
     def test_mark_as_read(self):
         """Test marking notification as read"""
         notification = Notification.objects.create(
-            user=self.user,
-            notification_type='INFO',
+            recipient=self.user,
+            notification_type='SYSTEM_ALERT',
             title='Test Notification',
             message='Test'
         )
@@ -175,23 +171,23 @@ class UserNotificationTests(TestCase):
         """Test counting unread notifications"""
         # Create read and unread notifications
         Notification.objects.create(
-            user=self.user,
-            notification_type='INFO',
+            recipient=self.user,
+            notification_type='SYSTEM_ALERT',
             title='Read',
             message='Test',
             is_read=True
         )
         
         Notification.objects.create(
-            user=self.user,
-            notification_type='WARNING',
+            recipient=self.user,
+            notification_type='COMPLIANCE_ALERT',
             title='Unread',
             message='Test',
             is_read=False
         )
         
         unread_count = Notification.objects.filter(
-            user=self.user,
+            recipient=self.user,
             is_read=False
         ).count()
         
@@ -221,13 +217,9 @@ class ActivityFeedViewTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        self.user.care_home_access.add(self.care_home)
         
         StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123458',
-            unit=self.unit,
-            permission_level='FULL'
+            user=self.user
         )
         
         # Create test activities
@@ -250,7 +242,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_authenticated(self):
         """Test activity feed for authenticated user"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123458', password='testpass123')
         url = reverse('activity_feed')
         response = self.client.get(url)
         
@@ -259,7 +251,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_api(self):
         """Test activity feed JSON API"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123458', password='testpass123')
         url = reverse('activity_feed_api')
         response = self.client.get(url)
         
@@ -278,7 +270,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_filtering(self):
         """Test filtering activities by category"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123458', password='testpass123')
         
         # Create activities in different categories
         RecentActivity.objects.create(
@@ -317,19 +309,19 @@ class NotificationViewTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        self.user.care_home_access.add(self.care_home)
+
         
         # Create test notification
         self.notification = Notification.objects.create(
-            user=self.user,
-            notification_type='INFO',
+            recipient=self.user,
+            notification_type='SYSTEM_ALERT',
             title='Test Notification',
             message='Test message'
         )
     
     def test_notifications_list_view(self):
         """Test notifications list view"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123459', password='testpass123')
         url = reverse('notifications_list')
         response = self.client.get(url)
         
@@ -338,7 +330,7 @@ class NotificationViewTests(TestCase):
     
     def test_mark_notification_read(self):
         """Test marking notification as read"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123459', password='testpass123')
         url = reverse('mark_notification_read', args=[self.notification.id])
         response = self.client.post(url)
         
@@ -350,7 +342,7 @@ class NotificationViewTests(TestCase):
     
     def test_unread_notifications_count_api(self):
         """Test unread notifications count API"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(sap='123459', password='testpass123')
         url = reverse('unread_notifications_count')
         response = self.client.get(url)
         
@@ -382,12 +374,9 @@ class ActivityTrackingIntegrationTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        self.user.care_home_access.add(self.care_home)
         
         StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
+            user=self.user
         )
     
     def test_leave_approval_creates_activity(self):
