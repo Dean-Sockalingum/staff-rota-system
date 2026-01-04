@@ -42,10 +42,6 @@ class ActivityLogModelTests(TestCase):
             first_name='Test',
             last_name='User'
         )
-        
-        self.staff_profile = StaffProfile.objects.create(
-            user=self.user
-        )
     
     def test_activity_log_creation(self):
         """Test creating an activity log entry"""
@@ -73,7 +69,7 @@ class ActivityLogModelTests(TestCase):
             title='Shift Assigned'
         )
         
-        expected = f"[{activity.timestamp.strftime('%Y-%m-%d %H:%M')}] SHIFT_ASSIGNED - Shift Assigned"
+        expected = f"[{activity.created_at.strftime('%Y-%m-%d %H:%M')}] SHIFT_ASSIGNED - Shift Assigned"
         self.assertEqual(str(activity), expected)
     
     def test_recent_activities_queryset(self):
@@ -218,10 +214,6 @@ class ActivityFeedViewTests(TestCase):
             last_name='User'
         )
         
-        StaffProfile.objects.create(
-            user=self.user
-        )
-        
         # Create test activities
         RecentActivity.objects.create(
             user=self.user,
@@ -242,7 +234,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_authenticated(self):
         """Test activity feed for authenticated user"""
-        self.client.login(sap='123458', password='testpass123')
+        self.client.force_login(self.user)
         url = reverse('activity_feed')
         response = self.client.get(url)
         
@@ -251,7 +243,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_api(self):
         """Test activity feed JSON API"""
-        self.client.login(sap='123458', password='testpass123')
+        self.client.force_login(self.user)
         url = reverse('activity_feed_api')
         response = self.client.get(url)
         
@@ -270,7 +262,7 @@ class ActivityFeedViewTests(TestCase):
     
     def test_activity_feed_filtering(self):
         """Test filtering activities by category"""
-        self.client.login(sap='123458', password='testpass123')
+        self.client.force_login(self.user)
         
         # Create activities in different categories
         RecentActivity.objects.create(
@@ -321,7 +313,7 @@ class NotificationViewTests(TestCase):
     
     def test_notifications_list_view(self):
         """Test notifications list view"""
-        self.client.login(sap='123459', password='testpass123')
+        self.client.force_login(self.user)
         url = reverse('notifications_list')
         response = self.client.get(url)
         
@@ -330,7 +322,7 @@ class NotificationViewTests(TestCase):
     
     def test_mark_notification_read(self):
         """Test marking notification as read"""
-        self.client.login(sap='123459', password='testpass123')
+        self.client.force_login(self.user)
         url = reverse('mark_notification_read', args=[self.notification.id])
         response = self.client.post(url)
         
@@ -342,7 +334,7 @@ class NotificationViewTests(TestCase):
     
     def test_unread_notifications_count_api(self):
         """Test unread notifications count API"""
-        self.client.login(sap='123459', password='testpass123')
+        self.client.force_login(self.user)
         url = reverse('unread_notifications_count')
         response = self.client.get(url)
         
@@ -375,10 +367,6 @@ class ActivityTrackingIntegrationTests(TestCase):
             last_name='User'
         )
         
-        StaffProfile.objects.create(
-            user=self.user
-        )
-    
     def test_leave_approval_creates_activity(self):
         """Test that approving leave creates activity log"""
         leave_request = LeaveRequest.objects.create(
