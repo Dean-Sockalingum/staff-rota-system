@@ -6,11 +6,15 @@ Automated quality assurance and security enforcement tools for the Staff Rota Sy
 
 This directory contains scripts and tools that automate code quality checks, security validation, and development workflows.
 
-## 🔐 API Authentication Enforcement
+## 🔐 Security Enforcement
 
-### check_api_decorators.py
+### check_api_decorators.py - Authentication (Phase 2)
 
 Automated scanner that ensures all REST API endpoints have proper authentication decorators.
+
+### check_api_permissions.py - Authorization (Phase 3)
+
+Validates that API endpoints have appropriate permission checks beyond authentication.
 
 **Quick Start:**
 ```bash
@@ -45,6 +49,36 @@ python3 tools/check_api_decorators.py --strict
 
 **Documentation:** See `API_AUTH_PHASE2_COMPLETE_JAN4_2026.md`
 
+**Quick Start (Phase 3 - Permissions):**
+```bash
+# Scan for missing permission checks
+python3 tools/check_api_permissions.py
+
+# Strict mode for CI (exit 1 if needs review)
+python3 tools/check_api_permissions.py --strict
+```
+
+**Features:**
+- ✅ Scans all API endpoints for authorization checks
+- ✅ Detects: `is_management`, `can_approve_leave`, `can_manage_rota`, `is_superuser`
+- ✅ Flags management actions without permission checks
+- ✅ Identifies analytics/reporting endpoints needing review
+- ✅ Detailed reporting by permission type
+
+**Example Output:**
+```
+📊 Summary:
+   Total API endpoints: 49
+   ✅ With permission checks: 10 (20.4%)
+   ⚠️  Need review: 8 (16.3%)
+   ℹ️  No permissions needed: 29 (59.2%)
+
+⚠️  ENDPOINTS NEEDING REVIEW:
+   views_analytics.py:
+      ❌ api_dashboard_summary (line 274)
+         💡 Analytics endpoint - consider management-only access
+```
+
 ### pre-commit-hook.sh
 
 Git pre-commit hook that blocks commits with unauthenticated API endpoints.
@@ -70,9 +104,10 @@ git commit --no-verify
 
 ```
 tools/
-├── README.md                    # This file
-├── check_api_decorators.py      # API auth validator
-└── pre-commit-hook.sh           # Git pre-commit hook
+├── README.md                       # This file
+├── check_api_decorators.py         # API authentication validator (Phase 2)
+├── check_api_permissions.py        # API authorization validator (Phase 3)
+└── pre-commit-hook.sh              # Git pre-commit hook
 ```
 
 ## 🚀 CI/CD Integration
