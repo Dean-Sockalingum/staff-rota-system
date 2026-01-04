@@ -12,7 +12,6 @@ from datetime import timedelta
 from scheduling.models import Unit, LeaveRequest, Shift, Notification
 from scheduling.models_multi_home import CareHome
 from scheduling.models_activity import RecentActivity
-from staff_records.models import StaffProfile
 
 User = get_user_model()
 
