@@ -629,7 +629,7 @@ class CarePlanManagerTestCase(TestCase):
             status='OVERDUE'
         )
         
-        self.client.login(sap='100002', password='testpass123')
+        self.client.force_login(self.manager)
         response = self.client.get('/careplan/manager-dashboard/')
         self.assertEqual(response.status_code, 200)
         # Dashboard loads and shows statistics
