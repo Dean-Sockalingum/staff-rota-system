@@ -11,9 +11,13 @@ from django.utils import timezone
 from datetime import timedelta
 from scheduling.models import Unit, LeaveRequest, Shift, Notification
 from scheduling.models_multi_home import CareHome
-from scheduling.models_activity import RecentActivity, ACTIVITY_TYPES, ACTIVITY_CATEGORIES
+from scheduling.models_activity import RecentActivity
 
 User = get_user_model()
+
+# Access constants from the model class
+ACTIVITY_TYPES = RecentActivity.ACTIVITY_TYPES
+ACTIVITY_CATEGORIES = RecentActivity.ACTIVITY_CATEGORIES
 
 
 class ActivityLogModelTests(TestCase):
