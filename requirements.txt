@@ -23,6 +23,8 @@ icalendar>=5.0.0  # iCal/ICS calendar export
 # Phase 6: Security Hardening Dependencies
 django-axes>=6.1.0  # Brute force protection & account lockout
 django-auditlog>=2.3.0  # Comprehensive audit logging
+django-otp>=1.3.0  # Two-factor authentication (2FA) support
+qrcode>=7.4.2  # QR code generation for 2FA setup
 django-encrypted-model-fields>=0.6.5  # Field-level encryption
 django-csp>=3.7  # Content Security Policy headers
 safety  # Dependency vulnerability scanner
