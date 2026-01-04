@@ -202,6 +202,8 @@ class ShiftOptimizer:
         
         logger.info(f"Model built: {len(self.variables)} variables, "
                    f"{len(self.model.constraints)} constraints")
+        
+        return self.model
     
     def _calculate_staff_costs(self) -> Dict[str, float]:
         """
@@ -395,7 +397,7 @@ class ShiftOptimizer:
                     if shift_type not in allowed_shifts:
                         self.model += (
                             self.variables[(staff.sap, unit.name, shift_type)] == 0,
-                            f"SkillMatch_{staff.sap}_{shift_type}"
+                            f"SkillMatch_{staff.sap}_{unit.name}_{shift_type}"
                         )
     
     def _add_wtd_constraints(self, units, shift_types):

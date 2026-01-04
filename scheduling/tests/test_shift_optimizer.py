@@ -177,13 +177,16 @@ class ConstraintGenerationTests(TestCase):
         self.sca1 = self._create_staff('sca1', self.sca_role, '003')
         
     def _create_staff(self, username, role, sap):
+        # SAP must be 6 digits
+        full_sap = sap.zfill(6) if len(sap) < 6 else sap
         staff = User.objects.create_user(
-            email=f'{username}@test.com',
+            sap=full_sap,
             password='testpass123',
-            role=role,
-            sap=sap
+            email=f'{username}@test.com',
+            first_name=username.title(),
+            last_name='Test',
+            role=role
         )
-        staff.unit = self.unit
         return staff
         
     def test_demand_constraints(self):
