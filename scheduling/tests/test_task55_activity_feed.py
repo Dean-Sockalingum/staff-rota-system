@@ -25,11 +25,13 @@ class ActivityLogModelTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50,
+            location_address="123 Test St",
+            care_inspectorate_id="TEST001"
         )
         self.unit = Unit.objects.create(
-            name="Test Unit",
+            name="OG_BRAMLEY",
             care_home=self.care_home
         )
         self.user = User.objects.create_user(
@@ -124,8 +126,10 @@ class UserNotificationTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50,
+            location_address="123 Test St",
+            care_inspectorate_id="TEST002"
         )
         self.user = User.objects.create_user(
             username='testuser',
@@ -198,11 +202,13 @@ class ActivityFeedViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50,
+            location_address="123 Test St",
+            care_inspectorate_id="TEST003"
         )
         self.unit = Unit.objects.create(
-            name="Test Unit",
+            name="OG_BRAMLEY",
             care_home=self.care_home
         )
         
@@ -296,8 +302,10 @@ class NotificationViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50,
+            location_address="123 Test St",
+            care_inspectorate_id="TEST004"
         )
         
         self.user = User.objects.create_user(
@@ -353,11 +361,13 @@ class ActivityTrackingIntegrationTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50,
+            location_address="123 Test St",
+            care_inspectorate_id="TEST005"
         )
         self.unit = Unit.objects.create(
-            name="Test Unit",
+            name="OG_BRAMLEY",
             care_home=self.care_home
         )
         
