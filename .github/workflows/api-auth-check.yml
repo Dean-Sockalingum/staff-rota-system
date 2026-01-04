@@ -30,7 +30,7 @@ jobs:
         run: python3 tools/check_api_decorators.py --strict
       
       - name: Comment on PR if check fails
-        if: failure()
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
