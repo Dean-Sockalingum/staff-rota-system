@@ -1,17 +1,19 @@
 #!/bin/sh
 #
-# Pre-commit hook to check API authentication decorators
+# Pre-commit hook to check API security (authentication + authorization)
 # Install: cp tools/pre-commit-hook.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 #
 
-echo "🔍 Checking API authentication decorators..."
+echo "🔍 Running API security checks..."
+echo ""
 
-# Run the checker in strict mode
+# Phase 2: Check authentication decorators
+echo "Phase 2: Authentication..."
 python3 tools/check_api_decorators.py --strict
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo "❌ API decorator check failed!"
+    echo "❌ API authentication check failed!"
     echo "   Some API endpoints are missing @api_login_required decorator."
     echo ""
     echo "   Options:"
@@ -23,5 +25,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "✅ All API endpoints are properly secured!"
+echo "✅ Authentication check passed"
+echo ""
+
+# Phase 3: Check authorization/permissions (advisory only, doesn't block)
+echo "Phase 3: Authorization..."
+python3 tools/check_api_permissions.py
+
+# Note: Permission check is advisory - we don't fail the commit
+# This helps developers be aware of potential authorization gaps
+echo ""
+echo "✅ All security checks complete!"
 exit 0
