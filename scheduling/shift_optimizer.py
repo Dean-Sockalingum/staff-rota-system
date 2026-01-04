@@ -33,8 +33,9 @@ class ShiftOptimizationResult:
     
     def __str__(self):
         if self.success:
+            cost_str = f"£{self.total_cost:.2f}" if self.total_cost is not None else "N/A"
             return (f"Optimization: {self.status} | "
-                   f"Cost: £{self.total_cost:.2f} | "
+                   f"Cost: {cost_str} | "
                    f"Assignments: {len(self.assignments)}")
         else:
             return f"Optimization Failed: {self.status}"
@@ -280,16 +281,25 @@ class ShiftOptimizer:
             min_demand ≤ Σ assignments ≤ max_demand
         """
         for unit in units:
-            unit_demand = self.forecast_demand.get(unit.name, {})
-            
             for shift_type in shift_types:
-                demand = unit_demand.get(shift_type, (0, 0))
-                
-                if isinstance(demand, tuple):
-                    min_demand, max_demand = demand
+                # Support both formats:
+                # 1. {(unit, shift_type): {'min': x, 'max': y}}
+                # 2. {unit: {shift_type: (min, max)}}
+                demand_key = (unit.name, shift_type)
+                if demand_key in self.forecast_demand:
+                    demand = self.forecast_demand[demand_key]
+                    if isinstance(demand, dict):
+                        min_demand = demand.get('min', 0)
+                        max_demand = demand.get('max', 0)
+                    else:
+                        min_demand, max_demand = demand, demand
                 else:
-                    # Single value - use as exact target
-                    min_demand = max_demand = demand
+                    unit_demand = self.forecast_demand.get(unit.name, {})
+                    demand = unit_demand.get(shift_type, (0, 0))
+                    if isinstance(demand, tuple):
+                        min_demand, max_demand = demand
+                    else:
+                        min_demand = max_demand = demand
                 
                 # Minimum demand constraint
                 self.model += (
@@ -422,7 +432,7 @@ class ShiftOptimizer:
                     for shift_type in shift_types:
                         self.model += (
                             self.variables[(staff.sap, unit.name, shift_type)] == 0,
-                            f"WTD_MaxHours_{staff.sap}"
+                            f"WTD_MaxHours_{staff.sap}_{unit.name}_{shift_type}"
                         )
             
             # Rest period constraint (11 hours between shifts)
@@ -442,7 +452,7 @@ class ShiftOptimizer:
                         for shift_type in ['DAY_SENIOR', 'DAY_ASSISTANT']:
                             self.model += (
                                 self.variables[(staff.sap, unit.name, shift_type)] == 0,
-                                f"RestPeriod_{staff.sap}_{shift_type}"
+                                f"RestPeriod_{staff.sap}_{unit.name}_{shift_type}"
                             )
     
     def _extract_assignments(self) -> List[Dict]:

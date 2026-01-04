@@ -70,14 +70,13 @@ class ShiftOptimizerSetupTests(TestCase):
         
         # Staff
         self.staff = User.objects.create_user(
-            email='sscw@test.com',
+            sap='123456',
             password='testpass123',
+            email='sscw@test.com',
             first_name='Test',
             last_name='SSCW',
-            role=self.sscw_role,
-            sap='12345'
+            role=self.sscw_role
         )
-        self.staff.unit = self.unit
         
     def test_optimizer_initialization(self):
         """Verify ShiftOptimizer can be initialized"""
@@ -92,8 +91,8 @@ class ShiftOptimizerSetupTests(TestCase):
         )
         
         self.assertEqual(optimizer.care_home, self.care_home)
-        self.assertEqual(optimizer.optimization_date, date(2025, 1, 1))
-        self.assertEqual(len(optimizer.available_staff), 1)
+        self.assertEqual(optimizer.date, date(2025, 1, 1))
+        self.assertEqual(len(optimizer.staff), 1)
         
     def test_cost_calculation(self):
         """Test _calculate_staff_costs returns correct rates"""
@@ -108,8 +107,8 @@ class ShiftOptimizerSetupTests(TestCase):
         costs = optimizer._calculate_staff_costs()
         
         # SSCW base rate: £15/hour
-        self.assertIn('12345', costs)
-        self.assertEqual(costs['12345'], 15.0)  # No overtime
+        self.assertIn('123456', costs)
+        self.assertEqual(costs['123456'], 15.0)  # No overtime
         
     def test_weekly_hours_calculation(self):
         """Test _get_weekly_hours queries existing shifts correctly"""
@@ -354,12 +353,13 @@ class OptimizationResultTests(TestCase):
         self.staff = []
         for i in range(5):
             staff = User.objects.create_user(
-                email=f'sscw{i}@test.com',
+                sap=str(i).zfill(6),
                 password='testpass123',
-                role=self.sscw_role,
-                sap=f'00{i}'
+                email=f'sscw{i}@test.com',
+                first_name=f'Staff{i}',
+                last_name='Test',
+                role=self.sscw_role
             )
-            staff.unit = self.unit
             self.staff.append(staff)
             
     def test_successful_optimization(self):
@@ -498,12 +498,13 @@ class ShiftCreationTests(TestCase):
         self.sscw_role = Role.objects.create(name='SSCW')
         
         self.staff = User.objects.create_user(
-            email='sscw@test.com',
+            sap='123456',
             password='testpass123',
-            role=self.sscw_role,
-            sap='12345'
+            email='sscw@test.com',
+            first_name='Test',
+            last_name='Staff',
+            role=self.sscw_role
         )
-        self.staff.unit = self.unit
         
     def test_create_shifts_from_results(self):
         """Verify create_shifts() creates Shift instances"""
@@ -535,7 +536,7 @@ class ShiftCreationTests(TestCase):
             self.assertEqual(shift.unit, self.unit)
             self.assertEqual(shift.shift_type, self.day_senior)
             self.assertEqual(shift.status, 'SCHEDULED')
-            self.assertEqual(shift.classification, 'REGULAR')
+            self.assertEqual(shift.shift_classification, 'REGULAR')
             
             # Notes should mention optimizer
             self.assertIn('optimizer', shift.notes.lower())
@@ -618,12 +619,13 @@ class IntegrationWithForecastsTests(TestCase):
         self.staff = []
         for i in range(10):
             staff = User.objects.create_user(
-                email=f'sscw{i}@test.com',
+                sap=str(i).zfill(6),
                 password='testpass123',
-                role=self.sscw_role,
-                sap=f'00{i}'
+                email=f'sscw{i}@test.com',
+                first_name=f'Staff{i}',
+                last_name='Test',
+                role=self.sscw_role
             )
-            staff.unit = self.unit
             self.staff.append(staff)
             
         # Create forecast
@@ -720,12 +722,13 @@ class EdgeCaseTests(TestCase):
         """Optimization with min=0, max=0"""
         sscw_role = Role.objects.create(name='SSCW')
         staff = User.objects.create_user(
-            email='sscw@test.com',
+            sap='123456',
             password='testpass123',
-            role=sscw_role,
-            sap='12345'
+            email='sscw@test.com',
+            first_name='Test',
+            last_name='Staff',
+            role=sscw_role
         )
-        staff.unit = self.unit
         
         forecast_demand = {
             ('TEST_UNIT', 'DAY_SENIOR'): {'min': 0, 'max': 0},
@@ -753,12 +756,13 @@ class EdgeCaseTests(TestCase):
         staff = []
         for i in range(3):
             s = User.objects.create_user(
-                email=f'sscw{i}@test.com',
+                sap=str(i).zfill(6),
                 password='testpass123',
-                role=sscw_role,
-                sap=f'00{i}'
+                email=f'sscw{i}@test.com',
+                first_name=f'Staff{i}',
+                last_name='Test',
+                role=sscw_role
             )
-            s.unit = self.unit
             staff.append(s)
             
             # All on leave
@@ -767,7 +771,8 @@ class EdgeCaseTests(TestCase):
                 start_date=date(2025, 1, 1),
                 end_date=date(2025, 1, 1),
                 leave_type='ANNUAL',
-                status='APPROVED'
+                status='APPROVED',
+                days_requested=1
             )
         
         forecast_demand = {
@@ -791,12 +796,13 @@ class EdgeCaseTests(TestCase):
         """Gracefully handle negative min/max (data error)"""
         sscw_role = Role.objects.create(name='SSCW')
         staff = User.objects.create_user(
-            email='sscw@test.com',
+            sap='123456',
             password='testpass123',
-            role=sscw_role,
-            sap='12345'
+            email='sscw@test.com',
+            first_name='Test',
+            last_name='Staff',
+            role=sscw_role
         )
-        staff.unit = self.unit
         
         forecast_demand = {
             ('TEST_UNIT', 'DAY_SENIOR'): {'min': -1, 'max': 5},  # Negative min
