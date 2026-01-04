@@ -250,6 +250,7 @@ class ConstraintGenerationTests(TestCase):
             user=self.sscw1,
             start_date=date(2025, 1, 1),
             end_date=date(2025, 1, 1),
+            days_requested=1,
             leave_type='ANNUAL',
             status='APPROVED'
         )
