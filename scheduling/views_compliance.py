@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
+from .decorators_api import api_login_required
 from django.views.decorators.http import require_http_methods
 from datetime import date, timedelta
 from decimal import Decimal
@@ -1789,7 +1790,7 @@ def ai_assistant_query_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 def ai_assistant_suggestions_api(request):
     """
     API endpoint for getting example queries
@@ -1819,7 +1820,7 @@ def ai_assistant_suggestions_api(request):
     }, status=200)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def ai_assistant_feedback_api(request):
     """
@@ -1903,7 +1904,7 @@ def ai_assistant_feedback_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def ai_assistant_analytics_api(request):
     """
@@ -1959,7 +1960,7 @@ def ai_assistant_analytics_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def ai_assistant_insights_api(request):
     """

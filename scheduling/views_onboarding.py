@@ -9,6 +9,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.urls import reverse
+from django.db import models
+from .decorators_api import api_login_required
 
 from .models_onboarding import OnboardingProgress, OnboardingTourStep, UserTip
 
@@ -318,3 +320,131 @@ def get_contextual_tips(request):
     } for tip in tips[:3]]  # Limit to 3 tips
     
     return JsonResponse({'tips': tips_data})
+
+
+# API endpoints for onboarding wizard
+@api_login_required
+@require_http_methods(["POST"])
+def update_onboarding_progress(request):
+    """
+    API endpoint to update onboarding progress
+    """
+    import json
+    progress = get_object_or_404(OnboardingProgress, user=request.user)
+    data = json.loads(request.body)
+    
+    step_name = data.get('step')
+    if step_name:
+        progress.mark_step_complete(step_name)
+        return JsonResponse({
+            'success': True,
+            'completion_percentage': progress.completion_percentage
+        })
+    
+    return JsonResponse({'success': False, 'error': 'No step specified'}, status=400)
+
+
+@api_login_required
+@require_http_methods(["GET"])
+def get_onboarding_progress(request):
+    """
+    API endpoint to get user's onboarding progress
+    """
+    progress, created = OnboardingProgress.objects.get_or_create(user=request.user)
+    
+    return JsonResponse({
+        'success': True,
+        'progress': {
+            'welcome_completed': progress.welcome_completed,
+            'dashboard_tour_completed': progress.dashboard_tour_completed,
+            'rota_tour_completed': progress.rota_tour_completed,
+            'staff_tour_completed': progress.staff_tour_completed,
+            'ai_intro_completed': progress.ai_intro_completed,
+            'mobile_tips_completed': progress.mobile_tips_completed,
+            'completed': progress.completed,
+            'skip_onboarding': progress.skip_onboarding,
+            'completion_percentage': progress.completion_percentage,
+        }
+    })
+
+
+@api_login_required
+@require_http_methods(["POST"])
+def mark_onboarding_step_complete(request):
+    """
+    API endpoint to mark individual onboarding step as complete
+    """
+    import json
+    progress = get_object_or_404(OnboardingProgress, user=request.user)
+    data = json.loads(request.body)
+    
+    step_name = data.get('step')
+    if step_name:
+        progress.mark_step_complete(step_name)
+        return JsonResponse({
+            'success': True,
+            'completion_percentage': progress.completion_percentage
+        })
+    
+    return JsonResponse({'success': False, 'error': 'No step specified'}, status=400)
+
+
+@api_login_required
+@require_http_methods(["GET"])
+def get_user_tips(request):
+    """
+    API endpoint to get contextual tips for current page
+    """
+    current_path = request.GET.get('path', '')
+    user = request.user
+    
+    # Determine user role
+    if user.role and user.role.is_management:
+        if user.role.name in ['Service Manager', 'OM']:
+            role_filter = ['all', 'management', 'senior']
+        else:
+            role_filter = ['all', 'management']
+    else:
+        role_filter = ['all', 'staff']
+    
+    # Get tips for this role and page
+    tips = UserTip.objects.filter(
+        is_active=True,
+        target_role__in=role_filter
+    )
+    
+    # Filter by page if specified
+    if current_path:
+        tips = tips.filter(
+            models.Q(target_page='') | models.Q(target_page__icontains=current_path)
+        )
+    
+    tips_data = [{
+        'title': tip.title,
+        'content': tip.content,
+        'type': tip.tip_type,
+        'icon': tip.icon,
+    } for tip in tips[:3]]  # Limit to 3 tips
+    
+    return JsonResponse({'success': True, 'tips': tips_data})
+
+
+def onboarding_resume(request):
+    """
+    Resume onboarding from last completed step
+    """
+    progress = get_object_or_404(OnboardingProgress, user=request.user)
+    
+    # Find the first incomplete step and redirect there
+    if not progress.welcome_completed:
+        return redirect('onboarding_welcome')
+    elif not progress.dashboard_tour_completed:
+        return redirect('onboarding_dashboard_tour')
+    elif progress.completed:
+        # Already complete, go to dashboard
+        if request.user.role and request.user.role.is_management:
+            return redirect('manager_dashboard')
+        return redirect('staff_dashboard')
+    else:
+        return redirect('onboarding_welcome')
+

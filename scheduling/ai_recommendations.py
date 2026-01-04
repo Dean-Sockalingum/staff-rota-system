@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db import transaction
+from scheduling.decorators_api import api_login_required
 from datetime import datetime
 import json
 import logging
@@ -17,7 +18,7 @@ from scheduling.models import Shift, User, StaffReallocation, ActivityLog
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def approve_ai_recommendation(request):
     """
@@ -222,7 +223,7 @@ def _execute_staff_move(shift_id, from_unit, to_unit, staff_sap, approved_by, re
         }
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def reject_ai_recommendation(request):
     """

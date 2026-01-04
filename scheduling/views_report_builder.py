@@ -14,6 +14,7 @@ from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.core.paginator import Paginator
+from .decorators_api import api_login_required
 import json
 
 from .models_reports import CustomReportTemplate, CustomSavedReport, ReportFavorite, ReportDataSource
@@ -291,7 +292,7 @@ def toggle_favorite(request, template_id):
 
 # API Endpoints for builder interface
 
-@login_required
+@api_login_required
 def api_get_data_sources(request):
     """
     Get available data sources for report builder.
@@ -312,7 +313,7 @@ def api_get_data_sources(request):
     return JsonResponse({'data_sources': data})
 
 
-@login_required
+@api_login_required
 def api_preview_report(request):
     """
     Preview report results without saving (for builder interface).

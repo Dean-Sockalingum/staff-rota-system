@@ -10,6 +10,7 @@ from django.db.models import Count, Sum, Q, Avg
 from django.utils import timezone
 from datetime import timedelta
 
+from .decorators_api import api_login_required
 from .models import Shift, User
 from .models_overtime import (
     StaffOvertimePreference, 
@@ -212,7 +213,7 @@ def ot_fairness_report(request):
     return render(request, 'scheduling/ot_intelligence/fairness_report.html', context)
 
 
-@login_required
+@api_login_required
 def ot_request_coverage_api(request):
     """
     API endpoint to trigger intelligent OT coverage request
@@ -309,7 +310,7 @@ def ot_staff_detail(request, sap):
     return render(request, 'scheduling/ot_intelligence/staff_detail.html', context)
 
 
-@login_required
+@api_login_required
 def ot_analytics_api(request):
     """
     API endpoint for OT analytics data (for charts)

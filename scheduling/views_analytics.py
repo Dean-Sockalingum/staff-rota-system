@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
+from .decorators_api import api_login_required
 
 from .models import User, Unit
 from .models_multi_home import CareHome
@@ -269,7 +270,7 @@ def trends_analysis_view(request):
 # AJAX/API endpoints for dashboard data
 
 
-@login_required
+@api_login_required
 def api_dashboard_summary(request):
     """
     API endpoint for dashboard summary data (JSON).
@@ -284,7 +285,7 @@ def api_dashboard_summary(request):
     return JsonResponse(data)
 
 
-@login_required
+@api_login_required
 def api_unit_staffing(request, unit_id):
     """
     API endpoint for unit staffing data (JSON).
@@ -299,7 +300,7 @@ def api_unit_staffing(request, unit_id):
     return JsonResponse(data)
 
 
-@login_required
+@api_login_required
 def api_budget_analysis(request, care_home_id):
     """
     API endpoint for budget analysis data (JSON).
@@ -314,7 +315,7 @@ def api_budget_analysis(request, care_home_id):
     return JsonResponse(data)
 
 
-@login_required
+@api_login_required
 def api_weekly_trends(request):
     """
     API endpoint for weekly shift trends (JSON).

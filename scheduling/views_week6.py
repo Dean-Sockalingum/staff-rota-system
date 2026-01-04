@@ -7,13 +7,14 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from .decorators_api import api_login_required
 import json
 
 from .models_week6 import DashboardWidgetPreference, SavedSearchFilter, BulkOperationLog
 from .models import LeaveRequest, User
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_widget_preferences(request):
     """
@@ -43,7 +44,7 @@ def get_widget_preferences(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def save_widget_preferences(request):
     """
@@ -76,7 +77,7 @@ def save_widget_preferences(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_saved_filters(request):
     """
@@ -113,7 +114,7 @@ def get_saved_filters(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def save_search_filter(request):
     """
@@ -150,7 +151,7 @@ def save_search_filter(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def delete_saved_filter(request, filter_id):
     """
@@ -173,7 +174,7 @@ def delete_saved_filter(request, filter_id):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def bulk_approve_leave(request):
     """
@@ -241,7 +242,7 @@ def bulk_approve_leave(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def bulk_reject_leave(request):
     """
@@ -312,7 +313,7 @@ def bulk_reject_leave(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def bulk_assign_training(request):
     """

@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from .decorators_api import api_login_required
 from django_otp import user_has_device
 from django_otp.decorators import otp_required
 from django_otp.plugins.otp_totp.models import TOTPDevice
@@ -268,7 +269,7 @@ def _user_requires_2fa(user):
     return False
 
 
-@login_required
+@api_login_required
 def two_factor_status(request):
     """
     API endpoint to check 2FA status (for AJAX calls)
