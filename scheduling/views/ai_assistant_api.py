@@ -405,9 +405,10 @@ class ReportGenerator:
                 date_str = timezone.now().date().isoformat()
             return {'type': 'shift_coverage', 'data': ReportGenerator.generate_shift_coverage_report(date_str)}
         
-        # Leave queries
-        if any(word in query_lower for word in ['annual leave', 'holiday', 'vacation', 'leave requests', 'leave balance']):
-            return {'type': 'leave_summary', 'data': ReportGenerator.generate_leave_summary()}
+        # Leave queries - DISABLED: Now handled by _process_leave_balance_query which is more specific
+        # This generic handler was catching staff-specific leave queries before they could be processed properly
+        # if any(word in query_lower for word in ['annual leave', 'holiday', 'vacation', 'leave requests', 'leave balance']):
+        #     return {'type': 'leave_summary', 'data': ReportGenerator.generate_leave_summary()}
         
         # Weekly report queries
         if any(word in query_lower for word in ['weekly report', 'weekend report', 'weekly summary']):
