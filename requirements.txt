@@ -41,6 +41,9 @@ matplotlib>=3.7.0  # Plotting (for model diagnostics)
 seaborn>=0.12.0  # Statistical visualization
 PuLP>=2.7.0  # Linear programming for optimization
 
+# Performance Monitoring
+psutil>=5.9.0  # System and process utilities for performance benchmarks
+
 # Care Inspectorate Integration
 beautifulsoup4>=4.12.0  # HTML parsing for CI website
 requests>=2.31.0  # HTTP requests for report fetching
