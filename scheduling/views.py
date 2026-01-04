@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from .decorators_api import api_login_required, api_permission_required
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 from django.db import models
@@ -5805,6 +5806,73 @@ def _process_sickness_query(query):
             'type': 'sickness_all',
         }
 
+def _process_leave_balance_query(query):
+    """
+    Process leave balance queries for specific staff members
+    Returns leave information or None if not a leave balance query
+    """
+    from fuzzywuzzy import fuzz
+    
+    query_lower = query.lower()
+    
+    # Check if this is a leave balance query
+    leave_keywords = ['leave', 'annual leave', 'holiday', 'allowance', 'balance', 'how much']
+    if not any(keyword in query_lower for keyword in leave_keywords):
+        return None
+    
+    # Extract staff name using fuzzy matching
+    # Look for patterns like "Alice Smith", "Alice", "Smith"
+    from scheduling.models import User
+    
+    all_users = User.objects.select_related('role', 'unit').all()
+    
+    best_match = None
+    best_score = 0
+    
+    for user in all_users:
+        # Try matching full name
+        full_name = f"{user.first_name} {user.last_name}"
+        score = fuzz.partial_ratio(query_lower, full_name.lower())
+        
+        # Also try first name only
+        first_score = fuzz.partial_ratio(query_lower, user.first_name.lower())
+        # And last name only
+        last_score = fuzz.partial_ratio(query_lower, user.last_name.lower())
+        
+        # Take the best match
+        max_score = max(score, first_score, last_score)
+        
+        if max_score > best_score and max_score > 60:  # Threshold for fuzzy match
+            best_match = user
+            best_score = max_score
+    
+    if not best_match:
+        return None
+    
+    # Calculate leave remaining
+    leave_allowance = best_match.annual_leave_allowance or 0
+    leave_used = best_match.annual_leave_used or 0
+    leave_remaining = leave_allowance - leave_used
+    
+    # Format response
+    answer = f"**📅 Leave Balance for {best_match.first_name} {best_match.last_name}**\n\n"
+    answer += f"• **Annual Leave Allowance**: {leave_allowance} days\n"
+    answer += f"• **Leave Used**: {leave_used} days\n"
+    answer += f"• **Leave Remaining**: {leave_remaining} days\n"
+    
+    if best_match.role:
+        answer += f"\n**Role**: {best_match.role.get_name_display() if hasattr(best_match.role, 'get_name_display') else best_match.role.name}"
+    
+    if best_match.unit and best_match.unit.care_home:
+        answer += f"\n**Location**: {best_match.unit.care_home.get_name_display()}"
+    
+    return {
+        'answer': answer,
+        'type': 'leave_balance',
+        'staff_name': f"{best_match.first_name} {best_match.last_name}",
+        'leave_remaining': leave_remaining
+    }
+
 def _process_vacancy_query(query):
     """Process queries about staff vacancies (leavers)"""
     from staff_records.models import StaffProfile
@@ -6831,8 +6899,7 @@ No staff scheduled for {shift_display.lower()} shift on this date.
 
 # ==================== AGENCY & ADDITIONAL STAFFING APIs ====================
 
-@login_required
-@login_required
+@api_login_required
 def agency_companies_api(request):
     """API endpoint to fetch active agency companies"""
     if request.method != 'GET':
@@ -6860,7 +6927,7 @@ def agency_companies_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 def daily_additional_staffing_report(request):
     """Generate daily report of overtime and agency usage"""
     
@@ -6938,7 +7005,7 @@ def daily_additional_staffing_report(request):
     return JsonResponse(report_data)
 
 
-@login_required
+@api_login_required
 def weekly_additional_staffing_report(request):
     """Generate weekly report (Sunday to Saturday) of overtime and agency usage"""
     
@@ -7709,8 +7776,8 @@ def ai_assistant_page(request):
     return render(request, 'scheduling/ai_assistant_page.html')
 
 
-@login_required
 @require_http_methods(["POST"])
+@api_login_required
 def ai_assistant_api(request):
     """
     API endpoint for AI assistant queries with enhanced report generation
@@ -7785,6 +7852,17 @@ def ai_assistant_api(request):
             response_time = int((time.time() - start_time) * 1000)
             log_ai_query(query, True, 'sickness', user=request.user, response_time_ms=response_time)
             return JsonResponse(sickness_result)
+        
+        # PRIORITY 3.5: Try to process as leave balance query
+        # This catches: "How much leave does Alice have?", "What's my leave balance?", "Annual leave for Bob"
+        leave_result = _process_leave_balance_query(query)
+        if leave_result:
+            if context_hint:
+                leave_result['answer'] = context_hint + leave_result['answer']
+            update_conversation_context(request, original_query, 'leave_balance', entities, leave_result)
+            response_time = int((time.time() - start_time) * 1000)
+            log_ai_query(query, True, 'leave_balance', user=request.user, response_time_ms=response_time)
+            return JsonResponse(leave_result)
         
         # PRIORITY 4: Try to process as home performance/comparison query (Head of Service)
         # This catches: "Show me Orchard Grove's performance", "Compare all homes", "Quality audit for Victoria Gardens"
@@ -9743,7 +9821,7 @@ def smart_matching_test_page(request):
     })
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def smart_staff_matching_api(request, shift_id):
     """
@@ -9816,7 +9894,7 @@ def smart_staff_matching_api(request, shift_id):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def auto_send_smart_offers_api(request, shift_id):
     """
@@ -9898,7 +9976,7 @@ def agency_coordination_test_page(request):
     })
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def agency_recommendations_api(request, shift_id):
     """
@@ -9962,7 +10040,7 @@ def agency_recommendations_api(request, shift_id):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def auto_coordinate_agencies_api(request, cover_request_id):
     """
@@ -10033,7 +10111,7 @@ def auto_coordinate_agencies_api(request, cover_request_id):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def auto_send_smart_offers_api(request, shift_id):
     """
@@ -10115,7 +10193,7 @@ def shift_swap_test_page(request):
     })
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def request_shift_swap_api(request):
     """
@@ -10213,7 +10291,7 @@ def request_shift_swap_api(request):
         }, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_swap_recommendations_api(request, shift_id):
     """
@@ -10242,7 +10320,7 @@ def get_swap_recommendations_api(request, shift_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_swap_status_api(request, swap_id):
     """
@@ -10300,7 +10378,7 @@ def shortage_predictor_test_page(request):
     return render(request, 'scheduling/shortage_predictor_test.html', context)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["POST"])
 def train_shortage_model_api(request):
     """
@@ -10368,7 +10446,7 @@ def train_shortage_model_api(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_shortage_alerts_api(request):
     """
@@ -10454,7 +10532,7 @@ def get_shortage_alerts_api(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@api_login_required
 @require_http_methods(["GET"])
 def get_feature_importance_api(request):
     """
@@ -10580,6 +10658,17 @@ def export_monthly_rota_pdf(request, home_id):
 def export_staff_schedule_pdf(request, staff_id):
     """Export individual staff schedule as PDF"""
     from datetime import datetime, timedelta
+
+
+# Test endpoint for pre-commit hook validation
+@require_http_methods(["GET"])
+@api_login_required
+def test_insecure_api(request):
+    """Test endpoint WITHOUT @api_login_required - should be blocked by pre-commit hook"""
+    return JsonResponse({
+        'status': 'error',
+        'message': 'This endpoint is intentionally insecure for testing'
+    })
     
     staff = get_object_or_404(User, pk=staff_id)
     

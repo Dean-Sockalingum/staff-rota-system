@@ -236,6 +236,9 @@ urlpatterns = [
     path('2fa/regenerate-backup-codes/', regenerate_backup_codes, name='regenerate_backup_codes'),
     path('api/2fa/status/', two_factor_status, name='two_factor_status'),
     
+    # Test endpoint for pre-commit hook validation (should be BLOCKED)
+    path('api/test-insecure/', views.test_insecure_api, name='test_insecure_api'),
+    
     # Task 49: Advanced Search with Elasticsearch
     path('search/', global_search, name='global_search'),
     path('search/autocomplete/', autocomplete, name='search_autocomplete'),
@@ -305,6 +308,7 @@ urlpatterns = [
     
     # Staff Views
     path('my-rota/', views.staff_dashboard, name='staff_dashboard'),
+    path('staff-dashboard/', views.staff_dashboard, name='staff_dashboard_alias'),  # Alias for tests
     path('request-leave/', views.request_annual_leave, name='request_annual_leave'),
     path('request-swap/', views.request_shift_swap, name='request_shift_swap'),
     path('leave-approvals/', views.leave_approval_dashboard, name='leave_approval_dashboard'),
@@ -551,6 +555,10 @@ urlpatterns = [
     path('performance/review/create/', views.create_performance_review_view, name='create_performance_review'),
     path('performance/review/<int:review_id>/', views.performance_review_detail, name='performance_review_detail'),
     path('performance/team-comparison/', views.team_performance_comparison, name='team_performance_comparison'),
+    
+    # Care Plan Management URLs
+    path('careplan/manager-dashboard/', views.careplan_manager_dashboard, name='careplan_manager_dashboard'),
+    path('careplan/approve/<int:review_id>/', views.careplan_approve_review, name='careplan_approve_review'),
     
     # Task 35: Predictive Leave Forecasting URLs
     path('leave-forecast/', views.leave_forecast_dashboard, name='leave_forecast_dashboard'),
