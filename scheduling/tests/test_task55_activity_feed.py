@@ -35,7 +35,7 @@ class ActivityLogModelTests(TestCase):
             care_home=self.care_home
         )
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='123456',
             email='test@example.com',
             password='testpass123',
             first_name='Test',
@@ -132,9 +132,11 @@ class UserNotificationTests(TestCase):
             care_inspectorate_id="TEST002"
         )
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='123457',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
         )
         self.user.care_home_access.add(self.care_home)
     
@@ -213,7 +215,7 @@ class ActivityFeedViewTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='123458',
             email='test@example.com',
             password='testpass123',
             first_name='Test',
@@ -223,7 +225,7 @@ class ActivityFeedViewTests(TestCase):
         
         StaffProfile.objects.create(
             user=self.user,
-            sap_number='123456',
+            sap_number='123458',
             unit=self.unit,
             permission_level='FULL'
         )
@@ -309,9 +311,11 @@ class NotificationViewTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='123459',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
         )
         self.user.care_home_access.add(self.care_home)
         
@@ -372,9 +376,11 @@ class ActivityTrackingIntegrationTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='123460',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
         )
         self.user.care_home_access.add(self.care_home)
         
