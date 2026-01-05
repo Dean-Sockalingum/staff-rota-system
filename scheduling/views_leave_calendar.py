@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.db.models import Q, Count
 from datetime import datetime, timedelta
 from scheduling.models import LeaveRequest, CareHome, Unit
-from scheduling.permissions import has_care_home_access
+# from scheduling.permissions import has_care_home_access  # Module doesn't exist
 
 
 @login_required

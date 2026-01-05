@@ -22,7 +22,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('scheduling.management.urls')),
-    path('', include('scheduling.urls_activity')),  # Task 55-59 URLs (minimal imports)
+    path('', include('scheduling.urls_activity')),  # Task 55: Activity Feed
+    path('', include('scheduling.urls_compliance')),  # Task 56: Compliance Widgets
+    path('', include('scheduling.urls_calendar')),  # Task 59: Leave Calendar
     # path('', include('scheduling.urls')),  # Main scheduling app URLs - TEMPORARILY DISABLED DUE TO IMPORT ERRORS
     path('staff-records/', include(('staff_records.urls', 'staff_records'), namespace='staff_records')),
     path('accounts/', include('django.contrib.auth.urls')),
