@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',  # Backup codes
     # Task 49: Advanced Search
-    # 'django_elasticsearch_dsl',  # Temporarily disabled - ES not running
+    'django_elasticsearch_dsl',  # ✅ ES now running on localhost:9200
     # Core apps
     'scheduling',
     'scheduling.management',
