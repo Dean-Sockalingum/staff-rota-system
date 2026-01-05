@@ -32,8 +32,7 @@ class LeaveCalendarViewTests(TestCase):
             care_home=self.care_home
         )
         
-        self.user = User.objects.create_user(
-            username='testuser',
+        self.user = User.objects.create_user(            sap='SAP200021',            username='testuser',
             email='test@example.com',
             password='testpass123'
         )
@@ -93,6 +92,7 @@ class TeamLeaveCalendarViewTests(TestCase):
         
         # Create manager user
         self.manager = User.objects.create_user(
+            sap='SAP200002',
             username='manager',
             email='manager@example.com',
             password='testpass123'
@@ -108,6 +108,7 @@ class TeamLeaveCalendarViewTests(TestCase):
         
         # Create regular user
         self.staff = User.objects.create_user(
+            sap='SAP200003',
             username='staff',
             email='staff@example.com',
             password='testpass123'
@@ -175,6 +176,7 @@ class LeaveCalendarDataAPITests(TestCase):
         )
         
         self.user = User.objects.create_user(
+            sap='SAP200004',
             username='testuser',
             email='test@example.com',
             password='testpass123'
@@ -315,6 +317,7 @@ class LeaveCoverageReportAPITests(TestCase):
         )
         
         self.user = User.objects.create_user(
+            sap='SAP200005',
             username='manager',
             email='manager@example.com',
             password='testpass123'
@@ -374,6 +377,7 @@ class LeaveCoverageReportAPITests(TestCase):
         # Create multiple staff
         for i in range(10):
             staff_user = User.objects.create_user(
+                sap=f'SAP20001{i}',
                 username=f'staff{i}',
                 email=f'staff{i}@example.com',
                 password='testpass123'
@@ -430,6 +434,7 @@ class LeaveColorSchemeTests(TestCase):
         )
         
         self.user = User.objects.create_user(
+            sap='SAP200020',
             username='testuser',
             email='test@example.com',
             password='testpass123'
@@ -501,6 +506,7 @@ class LeaveCalendarPermissionsTests(TestCase):
         )
         
         self.user = User.objects.create_user(
+            sap='SAP200021',
             username='testuser',
             email='test@example.com',
             password='testpass123'
