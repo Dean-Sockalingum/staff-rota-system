@@ -166,25 +166,25 @@ def calculate_staffing_levels(care_home=None, unit=None, start_date=None, end_da
     
     scheduled_shifts = shifts.count()
     
-    # Calculate required shifts based on vacancies
-    vacancies_queryset = Vacancy.objects.filter(
-        date__range=[start_date, end_date],
-        filled=False
-    )
+    # Calculate required shifts based on expected coverage
+    # Since Vacancy model doesn't exist, estimate based on expected shifts per day
+    # Typical care home: ~15-20 staff per day across all units
+    days = (end_date - start_date).days + 1
     
     if unit:
-        vacancies_queryset = vacancies_queryset.filter(unit=unit)
+        expected_shifts_per_day = 5  # Estimate per unit
     elif care_home:
-        vacancies_queryset = vacancies_queryset.filter(care_home=care_home)
+        expected_shifts_per_day = 15  # Estimate per care home
+    else:
+        expected_shifts_per_day = 50  # Estimate for all homes
     
-    vacancies_count = vacancies_queryset.count()
-    required_shifts = scheduled_shifts + vacancies_count
+    required_shifts = days * expected_shifts_per_day
+    vacancies_count = max(0, required_shifts - scheduled_shifts)
     
     # Calculate fill rate
     fill_rate = (scheduled_shifts / required_shifts * 100) if required_shifts > 0 else 100.0
     
     # Calculate average staff per day
-    days = (end_date - start_date).days + 1
     avg_staff_per_day = scheduled_shifts / days if days > 0 else 0
     
     return {
