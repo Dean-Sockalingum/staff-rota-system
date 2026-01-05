@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import Shift, Staff, LeaveRequest, Unit, CareHome
+from .models import Shift, User as Staff, LeaveRequest, Unit, CareHome
 from .data_table_utils import (
     AdvancedTableProcessor, DataTableExport,
     BulkActions, DataTableFilter, DataTableSort

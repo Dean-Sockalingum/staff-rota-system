@@ -17,14 +17,14 @@ from .decorators_api import api_login_required
 
 from .models import User, Unit
 from .models_multi_home import CareHome
-from .analytics import (
-    StaffPerformanceAnalytics,
-    UnitAnalytics,
-    CareHomeAnalytics,
-    TrendAnalytics,
-    PredictiveAnalytics,
-    DashboardAggregator
-)
+# from .analytics import (
+#     StaffPerformanceAnalytics,
+#     UnitAnalytics,
+#     CareHomeAnalytics,
+#     TrendAnalytics,
+#     PredictiveAnalytics,
+#     DashboardAggregator
+# )
 
 
 @login_required

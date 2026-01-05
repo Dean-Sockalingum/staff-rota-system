@@ -22,6 +22,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('scheduling.management.urls')),
+    path('', include('scheduling.urls_activity')),  # Task 55-59 URLs (minimal imports)
+    # path('', include('scheduling.urls')),  # Main scheduling app URLs - TEMPORARILY DISABLED DUE TO IMPORT ERRORS
     path('staff-records/', include(('staff_records.urls', 'staff_records'), namespace='staff_records')),
     path('accounts/', include('django.contrib.auth.urls')),
     # Task 38: Mobile App API

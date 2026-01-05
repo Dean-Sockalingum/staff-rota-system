@@ -10,7 +10,7 @@ from decimal import Decimal
 from collections import defaultdict
 import logging
 
-from .models import Shift, User, CareHome, Unit, ShiftType, LeaveRequest, Vacancy
+from .models import Shift, User, CareHome, Unit, ShiftType, LeaveRequest
 
 logger = logging.getLogger(__name__)
 
