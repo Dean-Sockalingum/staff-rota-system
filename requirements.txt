@@ -16,6 +16,11 @@ twilio
 WeasyPrint>=60.0  # PDF generation from HTML/CSS
 openpyxl>=3.1.0  # Excel file generation
 
+# Phase 2: Advanced Search (Elasticsearch)
+elasticsearch>=7.17.0,<8.0.0  # Elasticsearch client
+elasticsearch-dsl>=7.4.0,<8.0.0  # High-level Elasticsearch DSL
+django-elasticsearch-dsl>=7.3.0  # Django integration for Elasticsearch
+
 # Phase 2: Email & Calendar
 django-anymail[mailgun]>=10.0  # Email backend
 icalendar>=5.0.0  # iCal/ICS calendar export
