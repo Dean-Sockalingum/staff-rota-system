@@ -389,7 +389,6 @@ class LeaveCoverageReportAPITests(TestCase):
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
-            staff_user.care_home_access.add(self.care_home)
             
             StaffProfile.objects.create(
                 user=staff_user,

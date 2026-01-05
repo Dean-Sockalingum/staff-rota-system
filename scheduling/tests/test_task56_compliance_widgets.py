@@ -21,8 +21,10 @@ class ComplianceMetricModelTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            location_address="123 Metric St",
+            bed_capacity=40,
+            care_inspectorate_id="CS000001"
         )
     
     def test_metric_creation(self):
