@@ -67,9 +67,9 @@ class ShiftDocument(Document):
     Indexes: date, time, care home, assigned staff, shift type
     """
     # Related fields
-    care_home_name = fields.TextField(attr='care_home.name')
-    assigned_to_name = fields.TextField(attr='assigned_to.get_full_name')
-    assigned_to_sap = fields.KeywordField(attr='assigned_to.sap')
+    care_home_name = fields.TextField(attr='unit.care_home.name')
+    user_name = fields.TextField(attr='user.get_full_name')
+    user_sap = fields.KeywordField(attr='user.sap')
     
     # Date fields for range filtering
     date = fields.DateField()
@@ -99,9 +99,9 @@ class ShiftDocument(Document):
     def get_instances_from_related(self, related_instance):
         """Update when User or CareHome changes"""
         if isinstance(related_instance, User):
-            return related_instance.assigned_shifts.all()
+            return related_instance.shifts.all()
         elif isinstance(related_instance, CareHome):
-            return related_instance.shift_set.all()
+            return Shift.objects.filter(unit__care_home=related_instance)
     
     def prepare_shift_type_display(self, instance):
         """Get human-readable shift type"""
