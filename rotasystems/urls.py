@@ -18,8 +18,20 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
+from django.http import FileResponse
+import os
+
+def service_worker_view(request):
+    """Serve the service worker from the root path with proper headers."""
+    file_path = os.path.join(settings.BASE_DIR, 'scheduling', 'static', 'js', 'service-worker.js')
+    response = FileResponse(open(file_path, 'rb'), content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
 
 urlpatterns = [
+    path('service-worker.js', service_worker_view, name='service-worker'),
     path('admin/', admin.site.urls),
     path('', include('scheduling.management.urls')),
     path('', include('scheduling.urls_activity')),  # Task 55: Activity Feed

@@ -612,7 +612,7 @@
                 }
                 
                 console.log('🚀 Registering Service Worker...');
-                navigator.serviceWorker.register("{% static 'js/service-worker.js' %}", { 
+                navigator.serviceWorker.register("/service-worker.js", { 
                     scope: '/',
                     updateViaCache: 'none'  // Always fetch fresh service worker
                 })
