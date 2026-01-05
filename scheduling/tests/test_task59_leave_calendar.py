@@ -22,8 +22,10 @@ class LeaveCalendarViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='VICTORIA_GARDENS',
+            location_address="100 Calendar Lane",
+            bed_capacity=45,
+            care_inspectorate_id="CS567890"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -79,8 +81,10 @@ class TeamLeaveCalendarViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            location_address="200 Team View St",
+            bed_capacity=40,
+            care_inspectorate_id="CS678901"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -160,8 +164,10 @@ class LeaveCalendarDataAPITests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='MEADOWBURN',
+            location_address="300 API Drive",
+            bed_capacity=38,
+            care_inspectorate_id="CS789012"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -298,8 +304,10 @@ class LeaveCoverageReportAPITests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='HAWTHORN_HOUSE',
+            location_address="400 Coverage Rd",
+            bed_capacity=42,
+            care_inspectorate_id="CS890123"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -411,8 +419,10 @@ class LeaveColorSchemeTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='RIVERSIDE',
+            location_address="500 Color Way",
+            bed_capacity=36,
+            care_inspectorate_id="CS901234"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -473,12 +483,16 @@ class LeaveCalendarPermissionsTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home1 = CareHome.objects.create(
-            name="Care Home 1",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            location_address="600 Permission Blvd",
+            bed_capacity=40,
+            care_inspectorate_id="CS012345"
         )
         self.care_home2 = CareHome.objects.create(
-            name="Care Home 2",
-            address="456 Test Ave"
+            name='MEADOWBURN',
+            location_address="700 Access Ave",
+            bed_capacity=35,
+            care_inspectorate_id="CS123450"
         )
         
         self.unit1 = Unit.objects.create(

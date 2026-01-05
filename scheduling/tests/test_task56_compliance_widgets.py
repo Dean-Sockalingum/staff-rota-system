@@ -111,8 +111,10 @@ class ComplianceWidgetModelTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='ORCHARD_GROVE',
+            location_address="123 Test St",
+            bed_capacity=40,
+            care_inspectorate_id="CS123456"
         )
         
         self.user = User.objects.create_user(
@@ -185,8 +187,10 @@ class ComplianceDashboardViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='MEADOWBURN',
+            location_address="456 Dashboard Ave",
+            bed_capacity=35,
+            care_inspectorate_id="CS234567"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -261,8 +265,10 @@ class ComplianceCalculationTests(TestCase):
     
     def setUp(self):
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='HAWTHORN_HOUSE',
+            location_address="123 Test St",
+            bed_capacity=40,
+            care_inspectorate_id="CS345678"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -352,8 +358,10 @@ class ComplianceWidgetManagementTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name='RIVERSIDE',
+            location_address="789 Widget Rd",
+            bed_capacity=50,
+            care_inspectorate_id="CS456789"
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
