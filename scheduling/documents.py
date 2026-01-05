@@ -73,11 +73,11 @@ class ShiftDocument(Document):
     
     # Date fields for range filtering
     date = fields.DateField()
-    start_time = fields.TextField()
-    end_time = fields.TextField()
+    start_time = fields.KeywordField()
+    end_time = fields.KeywordField()
     
     # Shift details
-    shift_type = fields.KeywordField()
+    shift_type = fields.KeywordField(attr='shift_type.name')
     shift_type_display = fields.TextField()
     notes = fields.TextField()
     
@@ -103,9 +103,17 @@ class ShiftDocument(Document):
         elif isinstance(related_instance, CareHome):
             return Shift.objects.filter(unit__care_home=related_instance)
     
+    def prepare_start_time(self, instance):
+        """Convert time to string"""
+        return instance.shift_type.start_time.strftime('%H:%M') if instance.shift_type and instance.shift_type.start_time else ''
+    
+    def prepare_end_time(self, instance):
+        """Convert time to string"""
+        return instance.shift_type.end_time.strftime('%H:%M') if instance.shift_type and instance.shift_type.end_time else ''
+    
     def prepare_shift_type_display(self, instance):
         """Get human-readable shift type"""
-        return instance.get_shift_type_display()
+        return instance.shift_type.name if instance.shift_type else 'Unknown'
 
 
 @registry.register_document

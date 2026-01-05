@@ -194,22 +194,29 @@ def rota_cost_analysis(request):
     # Sort by cost descending
     home_costs.sort(key=lambda x: x['cost'], reverse=True)
     
-    # OT system performance
-    ot_requests = OvertimeCoverageRequest.objects.filter(
-        shift_date__gte=start_date,
-        shift_date__lte=end_date
-    )
+    # OT system performance - TEMPORARILY DISABLED (table not migrated)
+    # ot_requests = OvertimeCoverageRequest.objects.filter(
+    #     shift_date__gte=start_date,
+    #     shift_date__lte=end_date
+    # )
+    # 
+    # if care_home_id:
+    #     ot_requests = ot_requests.filter(unit__care_home__name=care_home_id)
+    # 
+    # ot_requests_total = ot_requests.count()
+    # ot_filled = ot_requests.filter(status='FILLED').count()
+    # ot_response_rate = (ot_filled / ot_requests_total * 100) if ot_requests_total > 0 else 0
+    # 
+    # # Estimate agency cost avoided by using OT
+    # agency_cost_avoided = ot_filled * SHIFT_HOURS * (HOURLY_RATES['AGENCY'] - HOURLY_RATES['OVERTIME'])
+    # ot_system_savings = agency_cost_avoided
     
-    if care_home_id:
-        ot_requests = ot_requests.filter(unit__care_home__name=care_home_id)
-    
-    ot_requests_total = ot_requests.count()
-    ot_filled = ot_requests.filter(status='FILLED').count()
-    ot_response_rate = (ot_filled / ot_requests_total * 100) if ot_requests_total > 0 else 0
-    
-    # Estimate agency cost avoided by using OT
-    agency_cost_avoided = ot_filled * SHIFT_HOURS * (HOURLY_RATES['AGENCY'] - HOURLY_RATES['OVERTIME'])
-    ot_system_savings = agency_cost_avoided
+    # Placeholder values until OT table is migrated
+    ot_requests_total = 0
+    ot_filled = 0
+    ot_response_rate = 0
+    ot_system_savings = 0
+    agency_cost_avoided = 0
     
     context = {
         'start_date': start_date,
@@ -243,13 +250,249 @@ def export_cost_analysis_pdf(request):
     if not PDF_AVAILABLE:
         return HttpResponse("PDF export requires weasyprint library", status=501)
     
-    # Get the same data as the main view
-    # (simplified - would reuse logic in production)
-    html_content = "<h1>Cost Analysis Report</h1><p>PDF export coming soon</p>"
+    # Get filter parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    care_home_id = request.GET.get('care_home', '')
+    
+    # Parse dates
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = (datetime.now() - timedelta(days=30)).date()
+    
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        end_date = datetime.now().date()
+    
+    # Get shifts data (reusing same logic as main view)
+    shifts = Shift.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related('user', 'user__role', 'shift_type', 'unit', 'unit__care_home')
+    
+    if care_home_id:
+        shifts = shifts.filter(unit__care_home__name=care_home_id)
+    
+    total_shifts = shifts.count()
+    
+    # Cost calculations
+    HOURLY_RATES = {
+        'REGULAR': Decimal('21.60'),
+        'OVERTIME': Decimal('32.40'),
+        'AGENCY': Decimal('38.88'),
+    }
+    SHIFT_HOURS = Decimal('8.0')
+    
+    regular_shifts = shifts.filter(Q(shift_classification='REGULAR') | Q(shift_classification__isnull=True))
+    regular_cost = regular_shifts.count() * SHIFT_HOURS * HOURLY_RATES['REGULAR']
+    
+    overtime_shifts = shifts.filter(shift_classification='OVERTIME')
+    overtime_cost = overtime_shifts.count() * SHIFT_HOURS * HOURLY_RATES['OVERTIME']
+    
+    agency_shifts = shifts.filter(shift_classification='AGENCY')
+    agency_cost = agency_shifts.count() * SHIFT_HOURS * HOURLY_RATES['AGENCY']
+    
+    total_staff_cost = regular_cost + overtime_cost + agency_cost
+    actual_cost = total_staff_cost
+    
+    # Budget calculation
+    days_in_period = (end_date - start_date).days + 1
+    DAILY_BUDGET = Decimal('17003.37')
+    budgeted_cost = DAILY_BUDGET * days_in_period
+    budget_variance = actual_cost - budgeted_cost
+    
+    # Cost per shift
+    cost_per_shift = (actual_cost / total_shifts) if total_shifts > 0 else Decimal('0')
+    
+    # Generate HTML for PDF
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 40px;
+                color: #333;
+            }}
+            h1 {{
+                color: #2c3e50;
+                border-bottom: 3px solid #3498db;
+                padding-bottom: 10px;
+            }}
+            h2 {{
+                color: #34495e;
+                margin-top: 30px;
+                border-bottom: 2px solid #ecf0f1;
+                padding-bottom: 8px;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+            }}
+            .date-range {{
+                text-align: center;
+                color: #7f8c8d;
+                margin-bottom: 20px;
+                font-size: 14px;
+            }}
+            .metrics {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                margin: 20px 0;
+            }}
+            .metric {{
+                flex: 1;
+                min-width: 200px;
+                padding: 15px;
+                background: #ecf0f1;
+                border-radius: 5px;
+            }}
+            .metric-label {{
+                font-size: 12px;
+                color: #7f8c8d;
+                text-transform: uppercase;
+            }}
+            .metric-value {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-top: 5px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }}
+            th, td {{
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }}
+            th {{
+                background-color: #34495e;
+                color: white;
+                font-weight: bold;
+            }}
+            tr:hover {{
+                background-color: #f5f5f5;
+            }}
+            .cost-breakdown {{
+                margin: 20px 0;
+                padding: 20px;
+                background: #f8f9fa;
+                border-left: 4px solid #3498db;
+            }}
+            .footer {{
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #ecf0f1;
+                text-align: center;
+                font-size: 12px;
+                color: #7f8c8d;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Rota Cost Analysis Report</h1>
+            <div class="date-range">
+                {start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}
+                {f'<br>Care Home: {care_home_id}' if care_home_id else '<br>All Care Homes'}
+            </div>
+        </div>
+        
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-label">Total Shifts</div>
+                <div class="metric-value">{total_shifts:,}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Staff Cost</div>
+                <div class="metric-value">£{total_staff_cost:,.2f}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Cost Per Shift</div>
+                <div class="metric-value">£{cost_per_shift:.2f}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Budget Variance</div>
+                <div class="metric-value">£{budget_variance:,.2f}</div>
+            </div>
+        </div>
+        
+        <h2>Cost Breakdown</h2>
+        <div class="cost-breakdown">
+            <table>
+                <tr>
+                    <th>Category</th>
+                    <th>Shifts</th>
+                    <th>Cost</th>
+                </tr>
+                <tr>
+                    <td>Regular Shifts</td>
+                    <td>{regular_shifts.count():,}</td>
+                    <td>£{regular_cost:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>Overtime Shifts</td>
+                    <td>{overtime_shifts.count():,}</td>
+                    <td>£{overtime_cost:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>Agency Shifts</td>
+                    <td>{agency_shifts.count():,}</td>
+                    <td>£{agency_cost:,.2f}</td>
+                </tr>
+                <tr style="font-weight: bold; background-color: #ecf0f1;">
+                    <td>Total</td>
+                    <td>{total_shifts:,}</td>
+                    <td>£{total_staff_cost:,.2f}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <h2>Budget Comparison</h2>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Amount</th>
+            </tr>
+            <tr>
+                <td>Budgeted Cost</td>
+                <td>£{budgeted_cost:,.2f}</td>
+            </tr>
+            <tr>
+                <td>Actual Cost</td>
+                <td>£{actual_cost:,.2f}</td>
+            </tr>
+            <tr style="font-weight: bold;">
+                <td>Variance</td>
+                <td style="color: {'#e74c3c' if budget_variance > 0 else '#27ae60'}">
+                    £{budget_variance:,.2f} ({(budget_variance / budgeted_cost * 100):.1f}%)
+                </td>
+            </tr>
+        </table>
+        
+        <div class="footer">
+            <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+            <p>© 2026 Glasgow HSCP - Staff Rota Management System</p>
+        </div>
+    </body>
+    </html>
+    """
+    
     pdf = HTML(string=html_content).write_pdf()
     
     response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="cost_analysis.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="cost_analysis_{start_date}_{end_date}.pdf"'
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
     return response
 
 

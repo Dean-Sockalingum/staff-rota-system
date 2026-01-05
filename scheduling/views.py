@@ -857,6 +857,7 @@ def rota_view(request):
 
     # Organize shifts by date and user
     shifts_by_date = {}
+    
     all_shifts_list = list(shifts_query)
     
     # Day roles: HOS, SM, OM, SSCW, SCW, SCA
@@ -877,9 +878,9 @@ def rota_view(request):
         date_shifts = [shift for shift in all_shifts_list if shift.date == current_date]
 
         day_shifts = [
-            s for s in date_shifts if s.shift_type.name in ['DAY', 'EARLY', 'LATE', 'LONG_DAY']
+            s for s in date_shifts if s.shift_type.name.startswith('DAY') or s.shift_type.name in ['EARLY', 'LATE', 'LONG_DAY', 'ADMIN']
         ]
-        night_shifts = [s for s in date_shifts if s.shift_type.name == 'NIGHT']
+        night_shifts = [s for s in date_shifts if s.shift_type.name.startswith('NIGHT')]
 
         # Management staff (SM, OM) - always at top with pink background
         # NOTE: Management never works night shifts, so we exclude them from night_management

@@ -1,35 +1,28 @@
 /**
  * Service Worker for Staff Rota Management System
  * Provides offline functionality, caching, and background sync
- * Version: 1.0.0
+ * Version: 1.0.3
  */
 
-const CACHE_VERSION = 'staff-rota-v1';
+const CACHE_VERSION = 'staff-rota-v6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
-const OFFLINE_PAGE = '/offline/';
 
-// Static assets to cache on install
+// Static assets to cache on install (only essential assets that are guaranteed to exist)
 const STATIC_ASSETS = [
-    '/',
     '/static/css/design-system.css',
     '/static/css/modern-theme.css',
-    '/static/css/skeleton-loading.css',
     '/static/js/chart-config.js',
-    '/static/manifest.json',
-    '/static/images/icon-192x192.png',
-    '/static/images/icon-512x512.png',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
-    'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+    '/static/manifest.json'
 ];
 
 // URLs that should always fetch from network (no caching)
 const NETWORK_ONLY = [
     '/admin/',
     '/api/live-updates/',
-    '/api/notifications/'
+    '/api/notifications/',
+    '/login/',
+    '/logout/'
 ];
 
 // URLs that need network-first strategy (API endpoints)
@@ -37,7 +30,8 @@ const NETWORK_FIRST = [
     '/api/',
     '/rota/api/',
     '/leave/api/',
-    '/staff/api/'
+    '/staff/api/',
+    '/rota-view/'
 ];
 
 /**
@@ -147,14 +141,6 @@ async function cacheFirst(request) {
         
     } catch (error) {
         console.error('[Service Worker] Cache-first failed:', error);
-        
-        // If both cache and network fail, return offline page for navigation requests
-        if (request.mode === 'navigate') {
-            const offlinePage = await caches.match(OFFLINE_PAGE);
-            if (offlinePage) {
-                return offlinePage;
-            }
-        }
         
         // Return a custom offline response
         return new Response('Offline - Content not available', {
