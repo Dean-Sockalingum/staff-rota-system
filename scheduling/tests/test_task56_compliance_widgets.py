@@ -118,7 +118,9 @@ class ComplianceWidgetModelTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            sap='SAP100001',
+            sap='100001',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
@@ -198,7 +200,9 @@ class ComplianceDashboardViewTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            sap='SAP100002',
+            sap='100002',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
@@ -276,7 +280,9 @@ class ComplianceCalculationTests(TestCase):
         
         # Create test staff
         self.user1 = User.objects.create_user(
-            sap='SAP100003',
+            sap='100003',
+            first_name='Staff',
+            last_name='One',
             email='staff1@example.com',
             password='testpass123'
         )
@@ -289,7 +295,9 @@ class ComplianceCalculationTests(TestCase):
         )
         
         self.user2 = User.objects.create_user(
-            sap='SAP100004',
+            sap='100004',
+            first_name='Staff',
+            last_name='Two',
             email='staff2@example.com',
             password='testpass123'
         )
@@ -368,7 +376,9 @@ class ComplianceWidgetManagementTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            sap='SAP100005',
+            sap='100005',
+            first_name='Manager',
+            last_name='User',
             email='manager@example.com',
             password='testpass123'
         )
