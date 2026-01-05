@@ -158,9 +158,9 @@ class LeaveRequestDocument(Document):
     def get_instances_from_related(self, related_instance):
         """Update when User changes"""
         if isinstance(related_instance, User):
-            # Update leave requests for this user (both as staff and approver)
+            # Update leave requests for this user (both as requester and approver)
             return LeaveRequest.objects.filter(
-                models.Q(staff=related_instance) | models.Q(approved_by=related_instance)
+                models.Q(user=related_instance) | models.Q(approved_by=related_instance)
             )
     
     def prepare_approval_status(self, instance):

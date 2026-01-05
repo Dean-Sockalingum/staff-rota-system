@@ -293,7 +293,7 @@ td.calendar-day .shift-card.role-scan {
     width: 14.2%; /* Adjusted for 7 equal day columns */
     min-width: 180px; /* Increased from 120px */
     vertical-align: top;
-    padding: 10px 5px;
+    padding: 0; /* Remove default padding for consistent alignment */
 }
 
 .table.table-bordered tbody td:first-child {
@@ -312,17 +312,34 @@ td.calendar-day .shift-card.role-scan {
     margin-bottom: 15px;
 }
 
-/* Unit group alignment - flexible vertical layout */
+/* Unit group alignment - CSS Grid for perfect vertical alignment */
 .calendar-day {
+    display: grid;
+    grid-template-rows: 2rem 2rem auto 1fr; /* FIXED heights for first 2 rows */
+    gap: 0;
+    padding: 0.5rem;
+    min-height: 100px;
+    align-items: start;
+}
+
+/* Ensure sections always take up exact space */
+.management-section {
+    grid-row: 1; /* Always in row 1 */
+    height: 2rem; /* FIXED height */
+    overflow: hidden;
+}
+
+.duty-sscw-section {
+    grid-row: 2; /* Always in row 2 */
+    height: 2rem; /* FIXED height */
+    overflow: hidden;
+}
+
+.units-container {
+    grid-row: 3; /* Always in row 3 */
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    padding: 0.25rem;
-}
-
-/* Section positioning for consistent alignment */
-.management-section, .duty-sscw-section { 
-    margin-bottom: 0.25rem;
 }
 
 /* Section headers - compact height */
@@ -331,6 +348,7 @@ td.calendar-day .shift-card.role-scan {
     line-height: 1.1;
     font-size: 0.75rem;
     font-weight: 600;
+    min-height: 1.2rem; /* Fixed minimum height for alignment */
 }
 
 .unit-group {
@@ -874,8 +892,10 @@ td.calendar-day .shift-card.role-scan {
 
                                                 <!-- Management Section - Always show for alignment -->
                                                 <div class="management-section">
+                                                    <div class="section-header text-danger fw-semibold small">
+                                                        {% if shift_data.day_management %}Management{% else %}&nbsp;{% endif %}
+                                                    </div>
                                                     {% if shift_data.day_management %}
-                                                        <div class="section-header text-danger fw-semibold small">Management</div>
                                                         {% for shift in shift_data.day_management %}
                                                             <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
                                                                 <div class="d-flex justify-content-between align-items-center">
@@ -900,8 +920,10 @@ td.calendar-day .shift-card.role-scan {
 
                                                 <!-- Duty SSCW Section - Always show for alignment -->
                                                 <div class="duty-sscw-section">
+                                                    <div class="section-header text-primary fw-semibold small">
+                                                        {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}Duty SSCW (Supernumerary){% else %}&nbsp;{% endif %}
+                                                    </div>
                                                     {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}
-                                                        <div class="section-header text-primary fw-semibold small">Duty SSCW (Supernumerary)</div>
                                                     {% for shift in shift_data.day_supernumerary_duty %}
                                                         <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
                                                             <div class="d-flex justify-content-between align-items-center">
@@ -941,6 +963,8 @@ td.calendar-day .shift-card.role-scan {
                                                     {% endif %}
                                                 </div>
 
+                                                <!-- Units Container - Grid Row 3 -->
+                                                <div class="units-container">
                                                 {% for unit_name, unit_shifts in shift_data.day_care_by_unit.items %}
                                                     {% if unit_shifts %}
                                                         <div class="unit-group mb-2" data-unit="{{ unit_name }}">
@@ -994,10 +1018,11 @@ td.calendar-day .shift-card.role-scan {
                                                 {% endfor %}
                                             {% endif %}
                                         {% endfor %}
+                                                </div><!-- Close units-container -->
                                     </td>
                                 {% endfor %}
                             </tr>
-                            <tr>
+            <tr>
                                 <td><strong>Night Shifts</strong></td>
                                 {% for date in date_range %}
                                     <td class="calendar-day">
@@ -1005,8 +1030,10 @@ td.calendar-day .shift-card.role-scan {
                                             {% if shift_date == date %}
                                                 <!-- Management Section - Always show for alignment -->
                                                 <div class="management-section">
+                                                    <div class="section-header text-danger fw-semibold small">
+                                                        {% if shift_data.night_management %}Management{% else %}&nbsp;{% endif %}
+                                                    </div>
                                                     {% if shift_data.night_management %}
-                                                        <div class="section-header text-danger fw-semibold small">Management</div>
                                                         {% for shift in shift_data.night_management %}
                                                             <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
                                                                 <div class="d-flex justify-content-between align-items-start">
@@ -1034,8 +1061,10 @@ td.calendar-day .shift-card.role-scan {
 
                                                 <!-- Duty SSCWN Section - Always show for alignment -->
                                                 <div class="duty-sscw-section">
+                                                    <div class="section-header text-primary fw-semibold small">
+                                                        {% if shift_data.night_supernumerary %}Duty SSCWN (Supernumerary){% else %}&nbsp;{% endif %}
+                                                    </div>
                                                     {% if shift_data.night_supernumerary %}
-                                                        <div class="section-header text-primary fw-semibold small">Duty SSCWN (Supernumerary)</div>
                                                     {% for shift in shift_data.night_supernumerary %}
                                                         <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
                                                             <div class="d-flex justify-content-between align-items-start">
@@ -1058,6 +1087,8 @@ td.calendar-day .shift-card.role-scan {
                                                     {% endif %}
                                                 </div>
 
+                                                <!-- Units Container - Grid Row 3 -->
+                                                <div class="units-container">
                                                 {% for unit_name, unit_shifts in shift_data.night_care_by_unit.items %}
                                                     {% if unit_shifts %}
                                                         <div class="unit-group mb-2" data-unit="{{ unit_name }}">
@@ -1111,6 +1142,7 @@ td.calendar-day .shift-card.role-scan {
                                                 {% endfor %}
                                             {% endif %}
                                         {% endfor %}
+                                                </div><!-- Close units-container -->
                                     </td>
                                 {% endfor %}
                             </tr>
