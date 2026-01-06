@@ -675,6 +675,72 @@ class ReportGenerator:
         }
     
     @staticmethod
+    def generate_agency_usage_report(days=30):
+        """Generate agency usage report for specified period"""
+        start_date = timezone.now() - timedelta(days=days)
+        
+        # Get all agency shifts
+        agency_shifts = Shift.objects.filter(
+            date__gte=start_date,
+            shift_classification='AGENCY',
+            agency_company__isnull=False
+        ).select_related('agency_company', 'shift_type', 'unit__care_home')
+        
+        total_agency_shifts = agency_shifts.count()
+        total_shifts = Shift.objects.filter(date__gte=start_date).count()
+        
+        # Calculate percentage
+        agency_percentage = (total_agency_shifts / total_shifts * 100) if total_shifts > 0 else 0
+        
+        # Count by agency company
+        by_agency = {}
+        by_home = {}
+        total_hours = 0
+        
+        for shift in agency_shifts:
+            # By agency company
+            company_name = shift.agency_company.name
+            by_agency[company_name] = by_agency.get(company_name, 0) + 1
+            
+            # By care home
+            if shift.unit and shift.unit.care_home:
+                home_name = shift.unit.care_home.name
+                by_home[home_name] = by_home.get(home_name, 0) + 1
+            
+            # Calculate hours (estimate based on shift type)
+            if shift.shift_type:
+                if 'night' in shift.shift_type.name.lower():
+                    total_hours += 12
+                else:
+                    total_hours += 7.5
+        
+        # Build summary with emojis
+        summary = f"🏢 **Agency Usage Report ({days} days)**\n\n"
+        summary += f"📊 **Total:** {total_agency_shifts} agency shifts ({agency_percentage:.1f}% of all shifts)\n"
+        summary += f"⏰ **Hours:** ~{total_hours:.0f} agency hours\n\n"
+        
+        if by_agency:
+            summary += "**By Agency Company:**\n"
+            for company, count in sorted(by_agency.items(), key=lambda x: x[1], reverse=True):
+                summary += f"• {company}: {count} shifts\n"
+            summary += "\n"
+        
+        if by_home:
+            summary += "**By Care Home:**\n"
+            for home, count in sorted(by_home.items(), key=lambda x: x[1], reverse=True):
+                summary += f"• {home}: {count} shifts\n"
+        
+        return {
+            'total_agency_shifts': total_agency_shifts,
+            'total_shifts': total_shifts,
+            'percentage': round(agency_percentage, 1),
+            'total_hours': round(total_hours, 1),
+            'by_agency': by_agency,
+            'by_home': by_home,
+            'summary': summary
+        }
+    
+    @staticmethod
     def generate_shift_coverage_report(date_str=None):
         """Generate shift coverage report for a specific date"""
         if date_str:
@@ -1036,6 +1102,23 @@ class ReportGenerator:
                 }
             }
         
+        # Agency usage queries
+        agency_keywords = ['agency', 'agency usage', 'agency staff', 'agency shifts', 
+                          'agency cost', 'agency hours', 'temp staff', 'temporary staff']
+        if any(keyword in query_lower for keyword in agency_keywords):
+            days = 30
+            if 'today' in query_lower:
+                days = 1
+            elif 'week' in query_lower or '7 day' in query_lower:
+                days = 7
+            elif 'month' in query_lower or '30 day' in query_lower:
+                days = 30
+            elif 'year' in query_lower or '365 day' in query_lower:
+                days = 365
+            elif 'quarter' in query_lower or '90 day' in query_lower:
+                days = 90
+            return {'type': 'agency_usage', 'data': ReportGenerator.generate_agency_usage_report(days)}
+        
         # Training queries
         training_keywords = ['training', 'courses', 'qualifications', 'certifications',
                             'training records', 'expired training', 'training due']
@@ -1378,6 +1461,10 @@ def ai_assistant_api(request):
                     answer += "\n\n**Quick Links:**\n"
                     for link in report_data['links']:
                         answer += f"• [{link['text']}]({link['url']})\n"
+            
+            elif report_type == 'agency_usage':
+                # Agency usage is already formatted in the summary
+                pass
             
             elif report_type == 'training_info':
                 if report_data.get('links'):
