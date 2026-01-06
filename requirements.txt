@@ -17,9 +17,9 @@ WeasyPrint>=60.0  # PDF generation from HTML/CSS
 openpyxl>=3.1.0  # Excel file generation
 
 # Phase 2: Advanced Search (Elasticsearch)
-elasticsearch>=7.17.0,<8.0.0  # Elasticsearch client
-elasticsearch-dsl>=7.4.0,<8.0.0  # High-level Elasticsearch DSL
-django-elasticsearch-dsl>=7.3.0  # Django integration for Elasticsearch
+elasticsearch>=8.0.0,<9.0.0  # Elasticsearch client (v8.x supports urllib3>=2.0)
+elasticsearch-dsl>=8.0.0,<9.0.0  # High-level Elasticsearch DSL
+django-elasticsearch-dsl>=8.0  # Django integration for Elasticsearch
 
 # Phase 2: Email & Calendar
 django-anymail[mailgun]>=10.0  # Email backend
@@ -34,7 +34,7 @@ django-encrypted-model-fields>=0.6.5  # Field-level encryption
 django-csp>=3.7  # Content Security Policy headers
 safety  # Dependency vulnerability scanner
 pip-audit  # Python package auditing
-urllib3>=1.26.0,<2.0.0  # HTTP library (pinned for Elasticsearch 7.x compatibility - requires urllib3<2)
+urllib3>=2.6.0  # HTTP library (CVE-2025-66418, CVE-2025-66471 fixed, compatible with ES 8.x)
 sentry-sdk>=1.40.0  # Error tracking and performance monitoring (Task 51)
 
 # Phase 6: Machine Learning Dependencies
