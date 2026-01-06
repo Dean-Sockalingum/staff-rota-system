@@ -1,10 +1,10 @@
 /**
  * Service Worker for Staff Rota Management System
  * Provides offline functionality, caching, and background sync
- * Version: 1.0.3
+ * Version: 1.0.5
  */
 
-const CACHE_VERSION = 'staff-rota-v6';
+const CACHE_VERSION = 'staff-rota-v8';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -22,7 +22,11 @@ const NETWORK_ONLY = [
     '/api/live-updates/',
     '/api/notifications/',
     '/login/',
-    '/logout/'
+    '/logout/',
+    '/search/',
+    '/search/advanced/',
+    '/staff-search-rota/',
+    '/overtime/'
 ];
 
 // URLs that need network-first strategy (API endpoints)
@@ -203,7 +207,11 @@ async function networkOnly(request) {
     try {
         return await fetch(request);
     } catch (error) {
-        console.error('[Service Worker] Network-only failed:', error);
+        // Only log errors for non-common failures
+        const url = request.url || '';
+        if (!url.includes('well-known') && !url.includes('screenshot')) {
+            console.warn('[Service Worker] Network request failed:', url, error.message);
+        }
         return new Response('Network request failed', {
             status: 503,
             statusText: 'Service Unavailable'

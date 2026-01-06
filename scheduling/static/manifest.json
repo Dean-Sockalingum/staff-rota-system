@@ -59,29 +59,6 @@
     }
   ],
   "categories": ["productivity", "business", "health"],
-  "screenshots": [
-    {
-      "src": "/static/images/screenshot-mobile-1.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Staff Dashboard - View your schedule and leave balance"
-    },
-    {
-      "src": "/static/images/screenshot-mobile-2.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Manager Dashboard - Staffing alerts and coverage"
-    },
-    {
-      "src": "/static/images/screenshot-desktop-1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Senior Management Dashboard - Multi-home analytics"
-    }
-  ],
   "shortcuts": [
     {
       "name": "My Rota",

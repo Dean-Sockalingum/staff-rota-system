@@ -2180,6 +2180,37 @@ async function loadExecutiveCharts() {
         const currentStaffing = 87; // 87% of required staff on duty
         const staffingGap = 100 - currentStaffing;
         
+        // Center text plugin for gauge chart
+        const centerTextPlugin = {
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                const width = chart.width;
+                const height = chart.height;
+                const ctx = chart.ctx;
+                ctx.restore();
+                
+                const fontSize = (height / 114).toFixed(2);
+                ctx.font = 'bold ' + fontSize + 'em Inter, sans-serif';
+                ctx.textBaseline = 'middle';
+                
+                const text = currentStaffing + '%';
+                const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                const textY = height / 2;
+                
+                ctx.fillStyle = '#1F2937';
+                ctx.fillText(text, textX, textY - 10);
+                
+                // Subtitle
+                ctx.font = '0.9em Inter, sans-serif';
+                const subtitle = 'Staffed';
+                const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                ctx.fillStyle = '#6B7280';
+                ctx.fillText(subtitle, subtitleX, textY + 20);
+                
+                ctx.save();
+            }
+        };
+        
         staffingGaugeChart = ChartHelpers.createDoughnutChart('staffingGaugeChart', {
             labels: ['Filled', 'Gap'],
             datasets: [{
@@ -2203,114 +2234,95 @@ async function loadExecutiveCharts() {
                             return context.label + ': ' + context.parsed + '%';
                         }
                     }
-                }
+                },
+                centerText: centerTextPlugin
             }
         });
-        
-        // Add center text to gauge chart
-        const gaugeCtx = document.getElementById('staffingGaugeChart');
-        if (gaugeCtx) {
-            const centerText = {
-                id: 'centerText',
-                beforeDraw: function(chart) {
-                    const width = chart.width;
-                    const height = chart.height;
-                    const ctx = chart.ctx;
-                    ctx.restore();
-                    
-                    const fontSize = (height / 114).toFixed(2);
-                    ctx.font = 'bold ' + fontSize + 'em Inter, sans-serif';
-                    ctx.textBaseline = 'middle';
-                    
-                    const text = currentStaffing + '%';
-                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                    const textY = height / 2;
-                    
-                    ctx.fillStyle = '#1F2937';
-                    ctx.fillText(text, textX, textY - 10);
-                    
-                    // Subtitle
-                    ctx.font = '0.9em Inter, sans-serif';
-                    const subtitle = 'Staffed';
-                    const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
-                    ctx.fillStyle = '#6B7280';
-                    ctx.fillText(subtitle, subtitleX, textY + 20);
-                    
-                    ctx.save();
-                }
-            };
-            staffingGaugeChart.options.plugins.push(centerText);
-            staffingGaugeChart.update();
-        }
         console.log('✓ Staffing Gauge chart created');
         
         // Chart 5: Compliance Score Trends by Home (Radar Chart)
         // Shows compliance scores across different metrics for each home
         console.log('Creating Compliance Score chart...');
-        const complianceMetrics = ['Training', 'Supervision', 'Care Plans', 'Incidents', 'Staffing', 'Documentation'];
-        
-        complianceScoreChart = ChartHelpers.createRadarChart('complianceScoreChart', {
-            labels: complianceMetrics,
-            datasets: [
-                {
-                    label: 'Victoria Gardens',
-                    data: [92, 88, 95, 90, 85, 93],
-                    borderColor: '#0066FF',
-                    backgroundColor: 'rgba(0, 102, 255, 0.25)',
-                    borderWidth: 2
+        const complianceCanvas = document.getElementById('complianceScoreChart');
+        if (!complianceCanvas) {
+            console.error('❌ Compliance Score chart canvas not found!');
+        } else {
+            console.log('✓ Compliance Score chart canvas found');
+            console.log('Chart.js version:', Chart.version);
+            console.log('Available chart types:', Chart.registry?.controllers?.keys ? Array.from(Chart.registry.controllers.keys()) : 'Unknown');
+            
+            try {
+                const complianceMetrics = ['Training', 'Supervision', 'Care Plans', 'Incidents', 'Staffing', 'Documentation'];
+                
+                complianceScoreChart = ChartHelpers.createRadarChart('complianceScoreChart', {
+                labels: complianceMetrics,
+                datasets: [
+                    {
+                        label: 'Victoria Gardens',
+                        data: [92, 88, 95, 90, 85, 93],
+                        borderColor: '#0066FF',
+                        backgroundColor: 'rgba(0, 102, 255, 0.25)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Orchard Grove',
+                        data: [88, 91, 89, 92, 87, 90],
+                        borderColor: '#00C853',
+                        backgroundColor: 'rgba(0, 200, 83, 0.25)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Meadowburn',
+                        data: [90, 85, 92, 88, 91, 89],
+                        borderColor: '#FF6F00',
+                        backgroundColor: 'rgba(255, 111, 0, 0.25)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Riverside',
+                        data: [87, 89, 90, 85, 88, 91],
+                        borderColor: '#9333ea',
+                        backgroundColor: 'rgba(147, 51, 234, 0.25)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Hawthorn House',
+                        data: [91, 87, 88, 91, 90, 86],
+                        borderColor: '#ec4899',
+                        backgroundColor: 'rgba(236, 72, 153, 0.25)',
+                        borderWidth: 2
+                    }
+                ]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: false
+                    },
+                    legend: {
+                        position: 'right'
+                    }
                 },
-                {
-                    label: 'Orchard Grove',
-                    data: [88, 91, 89, 92, 87, 90],
-                    borderColor: '#00C853',
-                    backgroundColor: 'rgba(0, 200, 83, 0.25)',
-                    borderWidth: 2
-                },
-                {
-                    label: 'Meadowburn',
-                    data: [90, 85, 92, 88, 91, 89],
-                    borderColor: '#FF6F00',
-                    backgroundColor: 'rgba(255, 111, 0, 0.25)',
-                    borderWidth: 2
-                },
-                {
-                    label: 'Riverside',
-                    data: [87, 89, 90, 85, 88, 91],
-                    borderColor: '#9333ea',
-                    backgroundColor: 'rgba(147, 51, 234, 0.25)',
-                    borderWidth: 2
-                },
-                {
-                    label: 'Hawthorn House',
-                    data: [91, 87, 88, 91, 90, 86],
-                    borderColor: '#ec4899',
-                    backgroundColor: 'rgba(236, 72, 153, 0.25)',
-                    borderWidth: 2
-                }
-            ]
-        }, {
-            plugins: {
-                title: {
-                    display: false
-                },
-                legend: {
-                    position: 'right'
-                }
-            },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        stepSize: 20,
-                        callback: function(value) {
-                            return value + '%';
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + '%';
+                            }
                         }
                     }
                 }
-            }
-        });
-        console.log('✓ Compliance Score chart created');
+            });
+            console.log('✓ Compliance Score chart created:', complianceScoreChart);
+        } catch (error) {
+            console.error('❌ Error creating Compliance Score chart:', error);
+            console.error('Error stack:', error.stack);
+        }
+    }
         
         console.log('✅ All Executive Analytics charts loaded successfully');
     } catch (error) {

@@ -520,7 +520,10 @@ class ReportGenerator:
             return {'type': 'ml_shortage', 'data': ReportGenerator.check_staffing_shortage(date_str)}
         
         # Staffing queries
-        if any(word in query_lower for word in ['how many staff', 'total staff', 'staff count', 'staffing levels']):
+        if any(word in query_lower for word in ['how many staff', 'total staff', 'staff count', 'staffing levels', 
+                                                  'how many active', 'how many are active', 'active staff',
+                                                  'staff in hawthorn', 'staff in orchard', 'staff in meadowburn',
+                                                  'staff in riverside', 'staff in victoria']):
             return {'type': 'staffing_summary', 'data': ReportGenerator.generate_staffing_summary()}
         
         # Sickness queries

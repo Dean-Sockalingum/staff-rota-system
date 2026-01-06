@@ -18,7 +18,8 @@ from .models_workflow import (
     Workflow, WorkflowStep, WorkflowExecution, 
     WorkflowStepExecution, WorkflowTrigger
 )
-from .models import Shift, LeaveRequest, StaffProfile, CareHome
+from .models import Shift, LeaveRequest, CareHome
+from staff_records.models import StaffProfile
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

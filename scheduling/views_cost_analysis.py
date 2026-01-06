@@ -1,10 +1,12 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.db.models import Count, Q
+from django.conf import settings
 from datetime import datetime, timedelta
 from decimal import Decimal
 import csv
 import json
+import os
 
 # Try to import optional libraries
 try:
@@ -249,8 +251,9 @@ def export_cost_analysis_pdf(request):
     """Export cost analysis as PDF."""
     if not PDF_AVAILABLE:
         return HttpResponse("PDF export requires weasyprint library", status=501)
-    
-    # Get filter parameters
+        # Get the logo path
+    logo_path = os.path.join(settings.BASE_DIR, 'scheduling', 'static', 'images', 'logos', 'glasgow_hscp_logo.png')
+        # Get filter parameters
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     care_home_id = request.GET.get('care_home', '')
@@ -332,6 +335,21 @@ def export_cost_analysis_pdf(request):
             .header {{
                 text-align: center;
                 margin-bottom: 30px;
+                border-bottom: 4px solid #0065BD;
+                padding-bottom: 20px;
+            }}
+            .logo-section {{
+                background: #E6F7F7;
+                padding: 20px;
+                margin: -20px -20px 30px -20px;
+                text-align: center;
+                border-bottom: 3px solid #6B4C9A;
+            }}
+            .logo-section img {{
+                max-width: 400px;
+                height: auto;
+                display: block;
+                margin: 0 auto;
             }}
             .date-range {{
                 text-align: center;
@@ -398,6 +416,10 @@ def export_cost_analysis_pdf(request):
         </style>
     </head>
     <body>
+        <div class="logo-section">
+            <img src="file://{logo_path}" alt="Glasgow HSCP Logo">
+        </div>
+        
         <div class="header">
             <h1>Rota Cost Analysis Report</h1>
             <div class="date-range">

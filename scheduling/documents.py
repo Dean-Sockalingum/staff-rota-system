@@ -68,7 +68,7 @@ class ShiftDocument(Document):
     """
     # Related fields
     care_home_name = fields.TextField(attr='unit.care_home.name')
-    user_name = fields.TextField(attr='user.get_full_name')
+    user_name = fields.TextField()
     user_sap = fields.KeywordField(attr='user.sap')
     
     # Date fields for range filtering
@@ -103,6 +103,10 @@ class ShiftDocument(Document):
         elif isinstance(related_instance, CareHome):
             return Shift.objects.filter(unit__care_home=related_instance)
     
+    def prepare_user_name(self, instance):
+        """Get full name of assigned user"""
+        return instance.user.full_name if instance.user else ''
+    
     def prepare_start_time(self, instance):
         """Convert time to string"""
         return instance.shift_type.start_time.strftime('%H:%M') if instance.shift_type and instance.shift_type.start_time else ''
@@ -123,9 +127,9 @@ class LeaveRequestDocument(Document):
     Indexes: staff name, dates, reason, approval status
     """
     # Related fields
-    staff_name = fields.TextField(attr='staff.get_full_name')
-    staff_sap = fields.KeywordField(attr='staff.sap')
-    approved_by_name = fields.TextField(attr='approved_by.get_full_name')
+    staff_name = fields.TextField()
+    staff_sap = fields.KeywordField(attr='user.sap')
+    approved_by_name = fields.TextField()
     
     # Date fields for range filtering
     start_date = fields.DateField()
@@ -162,6 +166,14 @@ class LeaveRequestDocument(Document):
             return LeaveRequest.objects.filter(
                 models.Q(user=related_instance) | models.Q(approved_by=related_instance)
             )
+    
+    def prepare_staff_name(self, instance):
+        """Get full name of requesting user"""
+        return instance.user.full_name if instance.user else ''
+    
+    def prepare_approved_by_name(self, instance):
+        """Get full name of approver"""
+        return instance.approved_by.full_name if instance.approved_by else ''
     
     def prepare_approval_status(self, instance):
         """Generate approval status text"""
