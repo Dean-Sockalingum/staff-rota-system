@@ -6,7 +6,6 @@ from django.db import models
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from .models import User, Shift, LeaveRequest, CareHome, Role
-from staff_records.models import StaffProfile
 
 
 @registry.register_document
@@ -16,8 +15,8 @@ class UserDocument(Document):
     Indexes: name, SAP number, email, role, care home
     """
     # Related fields
-    role_name = fields.TextField(attr='staff_profile.role.name')
-    care_home_name = fields.TextField(attr='staff_profile.current_care_home.name')
+    role_name = fields.TextField(attr='role.name')
+    care_home_name = fields.TextField(attr='unit.care_home.name')
     
     # Computed fields
     full_name = fields.TextField()
@@ -39,21 +38,18 @@ class UserDocument(Document):
             'email',
             'is_active',
         ]
-        related_models = [StaffProfile, Role, CareHome]
+        related_models = [Role, CareHome]
     
     def get_instances_from_related(self, related_instance):
         """
         Update document when related models change
         """
-        if isinstance(related_instance, StaffProfile):
-            return related_instance.user
-        elif isinstance(related_instance, (Role, CareHome)):
-            # Update all users with this role/care home
-            return User.objects.filter(
-                staff_profile__role=related_instance
-            ) if isinstance(related_instance, Role) else User.objects.filter(
-                staff_profile__current_care_home=related_instance
-            )
+        if isinstance(related_instance, Role):
+            # Update all users with this role
+            return User.objects.filter(role=related_instance)
+        elif isinstance(related_instance, CareHome):
+            # Update all users in units belonging to this care home
+            return User.objects.filter(unit__care_home=related_instance)
     
     def prepare_full_name(self, instance):
         """Generate full name for search"""
