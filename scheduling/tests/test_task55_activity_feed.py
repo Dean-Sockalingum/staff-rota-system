@@ -95,8 +95,10 @@ class ActivityLogModelTests(TestCase):
             created_at=now - timedelta(days=35)
         )
         
-        # Query last 30 days
+        # Query last 30 days for this specific user/care home
         recent = RecentActivity.objects.filter(
+            user=self.user,
+            care_home=self.care_home,
             created_at__gte=now - timedelta(days=30)
         )
         
@@ -327,9 +329,11 @@ class NotificationViewTests(TestCase):
         """Test marking notification as read"""
         self.client.force_login(self.user)
         url = reverse('mark_notification_read', args=[self.notification.id])
-        response = self.client.post(url)
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         
         self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
         
         # Check notification is marked read
         self.notification.refresh_from_db()

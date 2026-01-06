@@ -184,6 +184,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
     
+    def get_full_name(self):
+        """Return full name (compatibility method for Django's AbstractUser API)"""
+        return self.full_name
+    
     @property
     def annual_leave_remaining(self):
         """Calculate remaining annual leave including approved and pending requests"""

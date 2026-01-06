@@ -15269,10 +15269,19 @@ def notifications_list(request):
 def mark_notification_read(request, notification_id):
     """Mark a notification as read"""
     from .models import Notification
+    from django.http import JsonResponse
     
     try:
         notification = Notification.objects.get(id=notification_id, recipient=request.user)
         notification.mark_as_read()
+        
+        # Return JSON for AJAX requests
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.META.get('HTTP_ACCEPT', '').startswith('application/json'):
+            unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+            return JsonResponse({
+                'success': True,
+                'unread_count': unread_count
+            })
         
         # If notification has action URL, redirect there
         if notification.action_url:
@@ -15280,6 +15289,8 @@ def mark_notification_read(request, notification_id):
         
         messages.success(request, 'Notification marked as read.')
     except Notification.DoesNotExist:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.META.get('HTTP_ACCEPT', '').startswith('application/json'):
+            return JsonResponse({'success': False, 'error': 'Notification not found'}, status=404)
         messages.error(request, 'Notification not found.')
     
     return redirect('notifications_list')
