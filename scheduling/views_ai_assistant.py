@@ -108,7 +108,7 @@ class ChartGenerator:
         for home in homes:
             # Get active sickness records for this home's units
             sickness_count = SicknessRecord.objects.filter(
-                profile__user__units__care_home=home,
+                profile__user__unit__care_home=home,
                 status__in=['OPEN', 'AWAITING_FIT_NOTE']
             ).distinct().count()
             
@@ -286,7 +286,7 @@ class ChartGenerator:
             staff_count = User.objects.filter(
                 is_staff=False,
                 is_active=True,
-                units__care_home=home
+                unit__care_home=home
             ).distinct().count()
             
             labels.append(home.name)
@@ -570,7 +570,7 @@ class ReportGenerator:
                 home = homes.first()
                 home_name = home.name
                 # Filter staff by units in this home
-                staff_query = staff_query.filter(units__care_home=home).distinct()
+                staff_query = staff_query.filter(unit__care_home=home).distinct()
         
         total_staff = staff_query.count()
         staff_by_role = {}
@@ -583,11 +583,10 @@ class ReportGenerator:
         
         # Count by care home (if not filtering by specific home)
         if not care_home_filter:
-            for user in staff_query.prefetch_related('units__care_home'):
-                for unit in user.units.all():
-                    if unit.care_home:
-                        home = unit.care_home.name
-                        staff_by_home[home] = staff_by_home.get(home, 0) + 1
+            for user in staff_query.select_related('unit__care_home'):
+                if user.unit and user.unit.care_home:
+                    home = user.unit.care_home.name
+                    staff_by_home[home] = staff_by_home.get(home, 0) + 1
         
         # Build summary message
         if home_name:
