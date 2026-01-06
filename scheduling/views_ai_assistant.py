@@ -741,8 +741,8 @@ class ReportGenerator:
         }
     
     @staticmethod
-    def generate_shift_coverage_report(date_str=None):
-        """Generate shift coverage report for a specific date"""
+    def generate_shift_coverage_report(date_str=None, shift_type=None):
+        """Generate shift coverage report for a specific date, optionally filtered by shift type"""
         if date_str:
             try:
                 target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -753,8 +753,16 @@ class ReportGenerator:
         
         shifts = Shift.objects.filter(date=target_date).select_related('user', 'shift_type', 'unit')
         
+        # Filter by shift type if specified
+        if shift_type:
+            if shift_type.lower() == 'night':
+                shifts = shifts.filter(shift_type__name__icontains='Night')
+            elif shift_type.lower() == 'day':
+                shifts = shifts.exclude(shift_type__name__icontains='Night')
+        
         coverage_by_unit = {}
         coverage_by_shift = {}
+        staff_list = []
         
         for shift in shifts:
             unit_name = shift.unit.get_name_display() if shift.unit else 'Unknown'
@@ -769,13 +777,28 @@ class ReportGenerator:
                 coverage_by_unit[unit_name]['day'] += 1
             
             coverage_by_shift[shift_name] = coverage_by_shift.get(shift_name, 0) + 1
+            
+            # Add staff details
+            if shift.user:
+                staff_list.append({
+                    'name': shift.user.full_name,
+                    'unit': unit_name,
+                    'shift': shift_name,
+                    'sap': shift.user.sap
+                })
+        
+        summary_prefix = ""
+        if shift_type:
+            summary_prefix = f"{shift_type.title()} shifts: "
         
         return {
             'date': target_date.isoformat(),
             'total_shifts': shifts.count(),
             'by_unit': coverage_by_unit,
             'by_shift_type': coverage_by_shift,
-            'summary': f"On {target_date.strftime('%A, %d %B %Y')}: {shifts.count()} shifts scheduled across {len(coverage_by_unit)} units."
+            'staff': staff_list,
+            'shift_filter': shift_type,
+            'summary': f"{summary_prefix}On {target_date.strftime('%A, %d %B %Y')}: {shifts.count()} shifts scheduled across {len(coverage_by_unit)} units."
         }
     
     @staticmethod
@@ -1150,6 +1173,133 @@ class ReportGenerator:
                 }
             }
         
+        # Individual staff detail queries
+        if any(word in query_lower for word in ['show me', 'details for', 'info on', 'information about']):
+            # Check if a name is mentioned
+            if ' ' in query_lower:  # Likely contains a name
+                return {
+                    'type': 'staff_detail',
+                    'data': {
+                        'summary': '👤 **Staff Details**\n\nTo view detailed staff information, please use:\n• **Staff Management** → Search for staff member\n• **Staff Records** → View full profiles\n• **Rota** → Click on staff name in shifts',
+                        'info': 'You can find comprehensive staff details including contact info, qualifications, shift history, and leave balances in the Staff Management section.',
+                        'links': [
+                            {'text': 'Staff Management', 'url': '/staff-management/'},
+                            {'text': 'Staff Records', 'url': '/staff-records/'},
+                            {'text': 'View Rota', 'url': '/rota/'}
+                        ]
+                    }
+                }
+        
+        # Night shift specific queries
+        if any(word in query_lower for word in ['night shift tonight', 'on night shift', 'working night', 'night duty']):
+            # Check for tonight specifically
+            if 'tonight' in query_lower:
+                date_str = timezone.now().date().isoformat()
+            elif 'tomorrow night' in query_lower:
+                date_str = (timezone.now().date() + timedelta(days=1)).isoformat()
+            else:
+                date_str = timezone.now().date().isoformat()
+            return {'type': 'night_shift_coverage', 'data': ReportGenerator.generate_shift_coverage_report(date_str, shift_type='night')}
+        
+        # Role-specific staff listing
+        role_keywords = {
+            'senior': ['list all senior', 'show senior', 'senior carers', 'senior care', 'sscw', 'scw'],
+            'assistant': ['list all assistant', 'show assistant', 'assistant carers', 'sca'],
+            'manager': ['list managers', 'show managers', 'all managers', 'unit managers'],
+            'admin': ['list admin', 'show admin', 'admin staff', 'administrative']
+        }
+        
+        for role_type, keywords in role_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                return {
+                    'type': 'staff_by_role',
+                    'data': {
+                        'summary': f'👥 **{role_type.title()} Staff List**\n\nTo view staff by role, visit:\n• **Staff Management** → Filter by role\n• **Rota** → View by staff role',
+                        'role': role_type,
+                        'info': f'You can filter and view all {role_type} staff members in the Staff Management section, including their qualifications, units, and current status.',
+                        'links': [
+                            {'text': 'Staff Management', 'url': '/staff-management/'},
+                            {'text': 'Staff Records', 'url': '/staff-records/'}
+                        ]
+                    }
+                }
+        
+        # Care plan review queries
+        care_plan_keywords = ['care plan', 'review due', 'overdue review', 'care plan review', 
+                             'review compliance', 'dem01', 'resident review']
+        if any(keyword in query_lower for keyword in care_plan_keywords):
+            return {
+                'type': 'care_plan_info',
+                'data': {
+                    'summary': '📋 **Care Plan Reviews**\n\nAccess care plan information through:\n• **Care Plans** → View all reviews\n• **Compliance** → Review status and overdue items',
+                    'info': 'Care plan reviews are tracked for all 120 residents across 8 units. You can view due dates, overdue reviews, and compliance status.',
+                    'links': [
+                        {'text': 'Care Plan Reviews', 'url': '/care-plans/'},
+                        {'text': 'Compliance Dashboard', 'url': '/compliance/'},
+                        {'text': 'Review Calendar', 'url': '/care-plans/calendar/'}
+                    ]
+                }
+            }
+        
+        # Home performance and comparison queries
+        performance_keywords = ['performance', 'quality audit', 'compare homes', 'compare all homes',
+                               'home comparison', 'orchard grove performance', 'victoria gardens performance',
+                               'hawthorn house performance', 'meadowburn performance', 'riverside performance']
+        if any(keyword in query_lower for keyword in performance_keywords):
+            # Check if specific home mentioned
+            home_name = ReportGenerator.extract_care_home_from_query(query_lower)
+            
+            if 'compare' in query_lower or 'all homes' in query_lower:
+                summary = '📊 **Multi-Home Comparison**\n\nCompare performance across all care homes through:\n• **Executive Analytics** → Cross-home reports\n• **Compliance** → Quality metrics\n• **Dashboard** → KPI comparisons'
+            elif home_name:
+                summary = f'📊 **{home_name.title()} Performance**\n\nView detailed performance metrics through:\n• **Executive Analytics** → Home-specific reports\n• **Compliance** → Quality audits\n• **Dashboard** → KPI tracking'
+            else:
+                summary = '📊 **Care Home Performance**\n\nAccess performance data through:\n• **Executive Analytics** → Detailed reports\n• **Compliance** → Quality metrics\n• **Dashboard** → Key indicators'
+            
+            return {
+                'type': 'home_performance',
+                'data': {
+                    'summary': summary,
+                    'home': home_name if home_name else 'all',
+                    'info': 'Performance metrics include staffing levels, sickness rates, incident reports, compliance scores, and financial data.',
+                    'links': [
+                        {'text': 'Executive Analytics', 'url': '/executive-analytics/'},
+                        {'text': 'Compliance Dashboard', 'url': '/compliance/'},
+                        {'text': 'Home Dashboard', 'url': '/dashboard/'}
+                    ]
+                }
+            }
+        
+        # Leave balance queries (for current user)
+        if any(word in query_lower for word in ['my leave balance', 'show my leave', 'my annual leave', 'my holiday balance']):
+            return {
+                'type': 'my_leave_balance',
+                'data': {
+                    'summary': '📅 **Your Leave Balance**\n\nView your leave information through:\n• **My Profile** → Leave balance and history\n• **Leave Requests** → Request and track leave\n• **Dashboard** → Quick leave summary',
+                    'info': 'Your leave balance, pending requests, and leave history are available in your profile section.',
+                    'links': [
+                        {'text': 'My Profile', 'url': '/profile/'},
+                        {'text': 'Request Leave', 'url': '/leave/request/'},
+                        {'text': 'My Dashboard', 'url': '/dashboard/'}
+                    ]
+                }
+            }
+        
+        # Leave approval queries (for managers)
+        if any(word in query_lower for word in ['pending approval', 'leave pending', 'approve leave', 'leave approvals']):
+            return {
+                'type': 'leave_approvals',
+                'data': {
+                    'summary': '✅ **Leave Approvals**\n\nManage leave requests through:\n• **Leave Management** → Pending approvals\n• **Dashboard** → Quick approval actions\n• **Bulk Actions** → Process multiple requests',
+                    'info': 'You can approve, reject, or request more information for pending leave requests. AI predictions help guide approval decisions.',
+                    'links': [
+                        {'text': 'Leave Approvals', 'url': '/leave/approvals/'},
+                        {'text': 'Dashboard', 'url': '/dashboard/'},
+                        {'text': 'Leave Calendar', 'url': '/leave/calendar/'}
+                    ]
+                }
+            }
+        
         return None
 
 
@@ -1467,6 +1617,23 @@ def ai_assistant_api(request):
                 pass
             
             elif report_type == 'training_info':
+                if report_data.get('links'):
+                    answer += "\n\n**Quick Links:**\n"
+                    for link in report_data['links']:
+                        answer += f"• [{link['text']}]({link['url']})\n"
+            
+            elif report_type == 'night_shift_coverage':
+                # Enhanced with staff list for night shifts
+                if report_data.get('staff'):
+                    answer += "\n\n**Staff on Night Shift:**\n"
+                    for staff in report_data['staff'][:20]:  # Limit to 20 for readability
+                        answer += f"• {staff['name']} ({staff['sap']}) - {staff['unit']}\n"
+                    if len(report_data['staff']) > 20:
+                        answer += f"\n...and {len(report_data['staff']) - 20} more staff members\n"
+            
+            elif report_type in ['staff_detail', 'staff_by_role', 'care_plan_info', 'home_performance', 
+                                'my_leave_balance', 'leave_approvals']:
+                # These types have formatted summaries with links
                 if report_data.get('links'):
                     answer += "\n\n**Quick Links:**\n"
                     for link in report_data['links']:
