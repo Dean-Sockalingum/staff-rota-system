@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'scheduling.management',
     'staff_records',
     'rotasystems.core',
+    'email_config',  # UI-based email configuration
 ]
 
 MIDDLEWARE = [
@@ -504,28 +505,58 @@ Q_CLUSTER = {
 }
 
 # ===== Email Configuration =====
-# Uses environment variables for secure credential storage
-# To switch between console (testing) and SMTP (production):
-#   - Console: Unset EMAIL_HOST environment variable
-#   - Production: Set EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD environment variables
+# Priority: 1) Database UI config, 2) Environment variables, 3) Console backend
+# Allows HSCP administrators to configure email via Django admin UI
 
-# Determine backend based on environment variables
-if os.environ.get('EMAIL_HOST'):
-    # Production SMTP - configured via environment variables
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get('EMAIL_HOST')  # e.g., smtp.gmail.com or smtp.office365.com
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
-    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-    EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'Staff Rota System <{EMAIL_HOST_USER}>')
-    SERVER_EMAIL = DEFAULT_FROM_EMAIL
-else:
-    # Development/Testing - Console backend (emails print to terminal)
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'Staff Rota System <webmaster@localhost>'
-    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+# Try database configuration first (UI-based setup)
+try:
+    from email_config.models import EmailConfiguration
+    active_config = EmailConfiguration.objects.filter(is_active=True).first()
+    
+    if active_config:
+        # Use database configuration (configured via admin UI)
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = active_config.host
+        EMAIL_PORT = active_config.port
+        EMAIL_USE_TLS = active_config.use_tls
+        EMAIL_USE_SSL = active_config.use_ssl
+        EMAIL_HOST_USER = active_config.username
+        EMAIL_HOST_PASSWORD = active_config.get_decrypted_password()
+        DEFAULT_FROM_EMAIL = active_config.from_email
+        SERVER_EMAIL = active_config.from_email
+    elif os.environ.get('EMAIL_HOST'):
+        # Fallback to environment variables (legacy .env configuration)
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = os.environ.get('EMAIL_HOST')
+        EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+        EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+        EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+        EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+        EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+        DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'Staff Rota System <{EMAIL_HOST_USER}>')
+        SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    else:
+        # Development/Testing - Console backend (emails print to terminal)
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        DEFAULT_FROM_EMAIL = 'Staff Rota System <webmaster@localhost>'
+        SERVER_EMAIL = DEFAULT_FROM_EMAIL
+except Exception as e:
+    # Database not ready (migrations pending) or other error
+    # Fallback to environment variables or console
+    if os.environ.get('EMAIL_HOST'):
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = os.environ.get('EMAIL_HOST')
+        EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+        EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+        EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+        EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+        EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+        DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'Staff Rota System <{EMAIL_HOST_USER}>')
+        SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        DEFAULT_FROM_EMAIL = 'Staff Rota System <webmaster@localhost>'
+        SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Email timeout settings
 EMAIL_TIMEOUT = 30  # seconds
