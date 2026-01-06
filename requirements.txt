@@ -34,7 +34,7 @@ django-encrypted-model-fields>=0.6.5  # Field-level encryption
 django-csp>=3.7  # Content Security Policy headers
 safety  # Dependency vulnerability scanner
 pip-audit  # Python package auditing
-urllib3>=2.6.0  # HTTP library (CVE-2025-66418, CVE-2025-66471 fixed)
+urllib3>=1.26.0,<2.0.0  # HTTP library (pinned for Elasticsearch 7.x compatibility - requires urllib3<2)
 sentry-sdk>=1.40.0  # Error tracking and performance monitoring (Task 51)
 
 # Phase 6: Machine Learning Dependencies
