@@ -1,4 +1,6 @@
 # Generated manually on 2026-01-05 to add missing User model fields
+# NOTE: sms_* fields already added in 0002_sms_notifications (merged at 0031)
+# This migration intentionally left empty to preserve migration sequence
 
 from django.db import migrations, models
 
@@ -10,19 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='user',
-            name='sms_notifications_enabled',
-            field=models.BooleanField(default=True, help_text='Enable SMS notifications for urgent alerts'),
-        ),
-        migrations.AddField(
-            model_name='user',
-            name='sms_emergency_only',
-            field=models.BooleanField(default=False, help_text='Only send SMS for emergency/critical alerts'),
-        ),
-        migrations.AddField(
-            model_name='user',
-            name='sms_opted_in_date',
-            field=models.DateTimeField(blank=True, help_text='Date when user opted in to SMS notifications', null=True),
-        ),
+        # Empty - sms_notifications_enabled, sms_emergency_only, and sms_opted_in_date
+        # already exist from 0002_sms_notifications migration (merged at 0031_merge_20251230_0908)
     ]
