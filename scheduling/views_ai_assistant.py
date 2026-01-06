@@ -1,6 +1,7 @@
 """
 AI Assistant API View
 Provides web-based access to the AI help assistant with enhanced reporting capabilities
+Includes ML-powered chart generation and statistical analysis for executives
 """
 
 from django.http import JsonResponse
@@ -11,9 +12,12 @@ from django.views.decorators.http import require_http_methods
 from .decorators_api import api_login_required
 from django.utils import timezone
 from datetime import timedelta, date, datetime
+from django.db.models import Count, Sum, Avg, Q, F
+from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 import json
 import sys
 import os
+from collections import defaultdict
 
 # Import models for report generation
 from scheduling.models import (
@@ -37,7 +41,345 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'management', 'comman
 from help_assistant import HelpAssistant
 
 
-@login_required
+class ChartGenerator:
+    """Generate Chart.js compatible chart data from natural language queries"""
+    
+    @staticmethod
+    def generate_staffing_trend_chart(days=90):
+        """Generate staffing levels trend chart"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get daily shift counts
+        shifts_by_date = Shift.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        labels = []
+        data = []
+        
+        for entry in shifts_by_date:
+            labels.append(entry['date'].strftime('%Y-%m-%d'))
+            data.append(entry['count'])
+        
+        return {
+            'type': 'line',
+            'title': f'Staffing Levels - Last {days} Days',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'label': 'Shifts Scheduled',
+                    'data': data,
+                    'borderColor': 'rgb(75, 192, 192)',
+                    'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                    'tension': 0.4
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'display': True},
+                    'title': {'display': True, 'text': f'Staffing Trend - Last {days} Days'}
+                },
+                'scales': {
+                    'y': {'beginAtZero': True, 'title': {'display': True, 'text': 'Number of Shifts'}}
+                }
+            }
+        }
+    
+    @staticmethod
+    def generate_sickness_comparison_chart():
+        """Compare sickness rates across care homes"""
+        homes = CareHome.objects.all()
+        
+        labels = []
+        data = []
+        colors = [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)'
+        ]
+        
+        for home in homes:
+            # Get active sickness records for this home's units
+            sickness_count = SicknessRecord.objects.filter(
+                profile__user__units__care_home=home,
+                status__in=['OPEN', 'AWAITING_FIT_NOTE']
+            ).distinct().count()
+            
+            labels.append(home.name)
+            data.append(sickness_count)
+        
+        return {
+            'type': 'bar',
+            'title': 'Sickness Absence by Care Home',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'label': 'Currently Off Sick',
+                    'data': data,
+                    'backgroundColor': colors[:len(labels)],
+                    'borderColor': [c.replace('0.6', '1') for c in colors[:len(labels)]],
+                    'borderWidth': 2
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'display': False},
+                    'title': {'display': True, 'text': 'Current Sickness Absence by Care Home'}
+                },
+                'scales': {
+                    'y': {'beginAtZero': True, 'title': {'display': True, 'text': 'Staff Off Sick'}}
+                }
+            }
+        }
+    
+    @staticmethod
+    def generate_incident_severity_chart(days=30):
+        """Generate incident breakdown by severity"""
+        start_date = timezone.now() - timedelta(days=days)
+        
+        incidents = IncidentReport.objects.filter(
+            created_at__gte=start_date
+        ).values('severity').annotate(count=Count('id'))
+        
+        severity_map = {
+            'NO_HARM': 'No Harm',
+            'LOW_HARM': 'Low Harm',
+            'MODERATE_HARM': 'Moderate Harm',
+            'MAJOR_HARM': 'Major Harm',
+            'DEATH': 'Death'
+        }
+        
+        colors_map = {
+            'NO_HARM': 'rgba(75, 192, 192, 0.6)',
+            'LOW_HARM': 'rgba(255, 206, 86, 0.6)',
+            'MODERATE_HARM': 'rgba(255, 159, 64, 0.6)',
+            'MAJOR_HARM': 'rgba(255, 99, 132, 0.6)',
+            'DEATH': 'rgba(139, 0, 0, 0.8)'
+        }
+        
+        labels = []
+        data = []
+        colors = []
+        
+        for incident in incidents:
+            severity = incident['severity']
+            labels.append(severity_map.get(severity, severity))
+            data.append(incident['count'])
+            colors.append(colors_map.get(severity, 'rgba(128, 128, 128, 0.6)'))
+        
+        return {
+            'type': 'pie',
+            'title': f'Incidents by Severity - Last {days} Days',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'data': data,
+                    'backgroundColor': colors,
+                    'borderColor': '#fff',
+                    'borderWidth': 2
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'position': 'right'},
+                    'title': {'display': True, 'text': f'Incident Severity Distribution - Last {days} Days'}
+                }
+            }
+        }
+    
+    @staticmethod
+    def generate_leave_patterns_chart(months=6):
+        """Analyze leave request patterns"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=months*30)
+        
+        # Group by month
+        leave_by_month = LeaveRequest.objects.filter(
+            start_date__gte=start_date
+        ).annotate(
+            month=TruncMonth('start_date')
+        ).values('month').annotate(
+            total=Count('id'),
+            approved=Count('id', filter=Q(status='APPROVED')),
+            pending=Count('id', filter=Q(status='PENDING')),
+            rejected=Count('id', filter=Q(status='REJECTED'))
+        ).order_by('month')
+        
+        labels = []
+        approved_data = []
+        pending_data = []
+        rejected_data = []
+        
+        for entry in leave_by_month:
+            labels.append(entry['month'].strftime('%B %Y'))
+            approved_data.append(entry['approved'])
+            pending_data.append(entry['pending'])
+            rejected_data.append(entry['rejected'])
+        
+        return {
+            'type': 'bar',
+            'title': f'Leave Requests - Last {months} Months',
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'Approved',
+                        'data': approved_data,
+                        'backgroundColor': 'rgba(75, 192, 192, 0.6)',
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'borderWidth': 1
+                    },
+                    {
+                        'label': 'Pending',
+                        'data': pending_data,
+                        'backgroundColor': 'rgba(255, 206, 86, 0.6)',
+                        'borderColor': 'rgb(255, 206, 86)',
+                        'borderWidth': 1
+                    },
+                    {
+                        'label': 'Rejected',
+                        'data': rejected_data,
+                        'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'borderWidth': 1
+                    }
+                ]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'display': True},
+                    'title': {'display': True, 'text': f'Leave Request Patterns - Last {months} Months'}
+                },
+                'scales': {
+                    'x': {'stacked': True},
+                    'y': {'stacked': True, 'beginAtZero': True, 'title': {'display': True, 'text': 'Number of Requests'}}
+                }
+            }
+        }
+    
+    @staticmethod
+    def generate_staff_distribution_chart():
+        """Show staff distribution across care homes"""
+        homes = CareHome.objects.all()
+        
+        labels = []
+        data = []
+        colors = [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)'
+        ]
+        
+        for home in homes:
+            staff_count = User.objects.filter(
+                is_staff=False,
+                is_active=True,
+                units__care_home=home
+            ).distinct().count()
+            
+            labels.append(home.name)
+            data.append(staff_count)
+        
+        return {
+            'type': 'doughnut',
+            'title': 'Staff Distribution by Care Home',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'data': data,
+                    'backgroundColor': colors[:len(labels)],
+                    'borderColor': '#fff',
+                    'borderWidth': 2
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'position': 'right'},
+                    'title': {'display': True, 'text': 'Staff Distribution Across Care Homes'}
+                }
+            }
+        }
+    
+    @staticmethod
+    def generate_ml_forecast_chart(days=14):
+        """Generate ML forecasting chart with confidence intervals"""
+        forecasts = StaffingForecast.objects.filter(
+            forecast_date__gte=timezone.now().date(),
+            forecast_date__lte=timezone.now().date() + timedelta(days=days)
+        ).order_by('forecast_date')[:days]
+        
+        labels = []
+        predicted = []
+        lower_ci = []
+        upper_ci = []
+        
+        for fc in forecasts:
+            labels.append(fc.forecast_date.strftime('%Y-%m-%d'))
+            predicted.append(float(fc.predicted_shifts))
+            lower_ci.append(float(fc.confidence_lower))
+            upper_ci.append(float(fc.confidence_upper))
+        
+        return {
+            'type': 'line',
+            'title': f'ML Staffing Forecast - Next {days} Days',
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'Predicted Demand',
+                        'data': predicted,
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'tension': 0.4,
+                        'borderWidth': 3
+                    },
+                    {
+                        'label': 'Upper Confidence',
+                        'data': upper_ci,
+                        'borderColor': 'rgba(255, 99, 132, 0.5)',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.1)',
+                        'borderDash': [5, 5],
+                        'tension': 0.4,
+                        'borderWidth': 2
+                    },
+                    {
+                        'label': 'Lower Confidence',
+                        'data': lower_ci,
+                        'borderColor': 'rgba(54, 162, 235, 0.5)',
+                        'backgroundColor': 'rgba(54, 162, 235, 0.1)',
+                        'borderDash': [5, 5],
+                        'tension': 0.4,
+                        'borderWidth': 2
+                    }
+                ]
+            },
+            'options': {
+                'responsive': True,
+                'plugins': {
+                    'legend': {'display': True},
+                    'title': {'display': True, 'text': 'ML-Powered Staffing Forecast with Confidence Intervals'}
+                },
+                'scales': {
+                    'y': {'beginAtZero': True, 'title': {'display': True, 'text': 'Number of Shifts'}}
+                }
+            }
+        }
+
+
+
 def ai_assistant_page(request):
     """
     Main landing page for the AI Assistant interface.
@@ -196,19 +538,69 @@ class ReportGenerator:
     """Generate and interpret various reports using AI"""
     
     @staticmethod
-    def generate_staffing_summary():
-        """Generate current staffing summary"""
-        total_staff = User.objects.filter(is_staff=False, is_active=True).count()
-        staff_by_role = {}
+    def extract_care_home_from_query(query_lower):
+        """Extract care home name from query"""
+        # Define all possible variations of care home names
+        home_variations = {
+            'hawthorn': ['hawthorn', 'hawthorn house'],
+            'meadowburn': ['meadowburn', 'meadow burn'],
+            'orchard': ['orchard', 'orchard grove'],
+            'riverside': ['riverside'],
+            'victoria': ['victoria', 'victoria gardens']
+        }
         
-        for user in User.objects.filter(is_staff=False, is_active=True).select_related('role'):
+        for home_key, variations in home_variations.items():
+            for variation in variations:
+                if variation in query_lower:
+                    return home_key
+        return None
+    
+    @staticmethod
+    def generate_staffing_summary(care_home_filter=None):
+        """Generate current staffing summary, optionally filtered by care home"""
+        # Base query for active staff
+        staff_query = User.objects.filter(is_staff=False, is_active=True)
+        
+        # Filter by care home if specified
+        home_name = None
+        if care_home_filter:
+            # Try to find matching CareHome
+            homes = CareHome.objects.filter(name__icontains=care_home_filter)
+            if homes.exists():
+                home = homes.first()
+                home_name = home.name
+                # Filter staff by units in this home
+                staff_query = staff_query.filter(units__care_home=home).distinct()
+        
+        total_staff = staff_query.count()
+        staff_by_role = {}
+        staff_by_home = {}
+        
+        # Count by role
+        for user in staff_query.select_related('role'):
             role_name = user.role.get_name_display() if user.role else 'No Role'
             staff_by_role[role_name] = staff_by_role.get(role_name, 0) + 1
+        
+        # Count by care home (if not filtering by specific home)
+        if not care_home_filter:
+            for user in staff_query.prefetch_related('units__care_home'):
+                for unit in user.units.all():
+                    if unit.care_home:
+                        home = unit.care_home.name
+                        staff_by_home[home] = staff_by_home.get(home, 0) + 1
+        
+        # Build summary message
+        if home_name:
+            summary = f"📍 **{home_name}** has **{total_staff}** active staff members."
+        else:
+            summary = f"👥 You currently have **{total_staff}** active staff members across **{len(staff_by_home)}** care homes."
         
         return {
             'total': total_staff,
             'by_role': staff_by_role,
-            'summary': f"You currently have {total_staff} active staff members across {len(staff_by_role)} different roles."
+            'by_home': staff_by_home,
+            'care_home': home_name,
+            'summary': summary
         }
     
     @staticmethod
@@ -495,10 +887,70 @@ class ReportGenerator:
     
     @staticmethod
     def interpret_query(query):
-        """Interpret user query and determine what report to generate"""
+        """Interpret user query and determine what report/chart to generate"""
         query_lower = query.lower()
         
-        # ML Forecasting queries (NEW)
+        # Chart/Graph generation queries - NEW for executives
+        chart_keywords = ['chart', 'graph', 'plot', 'visualize', 'visualization', 'show me a', 'create a']
+        is_chart_request = any(keyword in query_lower for keyword in chart_keywords)
+        
+        # Detect specific chart requests
+        if is_chart_request or 'trend' in query_lower:
+            # Staffing trend chart
+            if any(word in query_lower for word in ['staffing trend', 'staff trend', 'staffing over time', 'staffing levels']):
+                days = 90
+                if '30 day' in query_lower or 'month' in query_lower:
+                    days = 30
+                elif '7 day' in query_lower or 'week' in query_lower:
+                    days = 7
+                return {'type': 'chart', 'chart_type': 'staffing_trend', 'data': ChartGenerator.generate_staffing_trend_chart(days)}
+            
+            # Sickness comparison chart
+            elif any(word in query_lower for word in ['sickness comparison', 'sickness by home', 'sickness rates', 'compare sickness']):
+                return {'type': 'chart', 'chart_type': 'sickness_comparison', 'data': ChartGenerator.generate_sickness_comparison_chart()}
+            
+            # Incident severity chart
+            elif any(word in query_lower for word in ['incident severity', 'incidents by severity', 'incident breakdown']):
+                days = 30
+                if '7 day' in query_lower or 'week' in query_lower:
+                    days = 7
+                elif '90 day' in query_lower or '3 month' in query_lower:
+                    days = 90
+                return {'type': 'chart', 'chart_type': 'incident_severity', 'data': ChartGenerator.generate_incident_severity_chart(days)}
+            
+            # Leave patterns chart
+            elif any(word in query_lower for word in ['leave pattern', 'leave request', 'leave trend', 'holiday pattern']):
+                months = 6
+                if '3 month' in query_lower:
+                    months = 3
+                elif '12 month' in query_lower or 'year' in query_lower:
+                    months = 12
+                return {'type': 'chart', 'chart_type': 'leave_patterns', 'data': ChartGenerator.generate_leave_patterns_chart(months)}
+            
+            # Staff distribution chart
+            elif any(word in query_lower for word in ['staff distribution', 'staff by home', 'staff breakdown']):
+                return {'type': 'chart', 'chart_type': 'staff_distribution', 'data': ChartGenerator.generate_staff_distribution_chart()}
+            
+            # ML forecast chart
+            elif any(word in query_lower for word in ['ml forecast', 'forecasting chart', 'prediction chart', 'forecast chart']):
+                days = 14
+                if '7 day' in query_lower or 'week' in query_lower:
+                    days = 7
+                elif '30 day' in query_lower or 'month' in query_lower:
+                    days = 30
+                return {'type': 'chart', 'chart_type': 'ml_forecast', 'data': ChartGenerator.generate_ml_forecast_chart(days)}
+        
+        # Statistical analysis keywords
+        stats_keywords = ['statistics', 'stats', 'analysis', 'analyze', 'compare', 'breakdown']
+        if any(keyword in query_lower for keyword in stats_keywords):
+            # Sickness statistics
+            if 'sickness' in query_lower or 'absence' in query_lower:
+                return {'type': 'chart', 'chart_type': 'sickness_comparison', 'data': ChartGenerator.generate_sickness_comparison_chart()}
+            # Staff statistics
+            elif 'staff' in query_lower or 'staffing' in query_lower:
+                return {'type': 'chart', 'chart_type': 'staff_distribution', 'data': ChartGenerator.generate_staff_distribution_chart()}
+        
+        # ML Forecasting queries (existing)
         if any(word in query_lower for word in ['forecast', 'predict', 'prediction', 'next week', 'upcoming demand']):
             days = 7
             if 'tomorrow' in query_lower:
@@ -519,17 +971,24 @@ class ReportGenerator:
                 date_str = None
             return {'type': 'ml_shortage', 'data': ReportGenerator.check_staffing_shortage(date_str)}
         
-        # Staffing queries
-        if any(word in query_lower for word in ['how many staff', 'total staff', 'staff count', 'staffing levels', 
-                                                  'how many active', 'how many are active', 'active staff',
-                                                  'staff in hawthorn', 'staff in orchard', 'staff in meadowburn',
-                                                  'staff in riverside', 'staff in victoria']):
-            return {'type': 'staffing_summary', 'data': ReportGenerator.generate_staffing_summary()}
+        # Staffing queries - Enhanced to detect care home names
+        staffing_keywords = ['how many staff', 'total staff', 'staff count', 'staffing levels', 
+                            'how many active', 'how many are active', 'active staff',
+                            'number of staff', 'staff do', 'staff does', 'staff at',
+                            'staff have', 'staff has', 'how many people', 'how many workers']
+        
+        if any(keyword in query_lower for keyword in staffing_keywords):
+            # Check if query mentions a specific care home
+            care_home = ReportGenerator.extract_care_home_from_query(query_lower)
+            return {'type': 'staffing_summary', 'data': ReportGenerator.generate_staffing_summary(care_home)}
         
         # Sickness queries
-        if any(word in query_lower for word in ['sickness', 'sick', 'absence', 'off sick', 'who is sick']):
+        sickness_keywords = ['sickness', 'sick', 'absence', 'off sick', 'who is sick', 
+                            'who\'s sick', 'absent', 'not in today', 'called in sick',
+                            'sickness absence', 'staff absent', 'away sick']
+        if any(keyword in query_lower for keyword in sickness_keywords):
             days = 7
-            if 'today' in query_lower:
+            if 'today' in query_lower or 'right now' in query_lower:
                 days = 0
             elif 'week' in query_lower or '7 day' in query_lower:
                 days = 7
@@ -548,8 +1007,11 @@ class ReportGenerator:
                 days = 30
             return {'type': 'incident_report', 'data': ReportGenerator.generate_incident_report(days)}
         
-        # Shift coverage queries
-        if any(word in query_lower for word in ['coverage', 'shifts today', 'who is working', 'rota today', 'schedule today']):
+        # Shift coverage queries - Enhanced with more patterns
+        coverage_keywords = ['coverage', 'shifts today', 'who is working', 'rota today', 
+                            'schedule today', 'who\'s on', 'who is on', 'on duty',
+                            'working today', 'working tomorrow', 'shift schedule']
+        if any(keyword in query_lower for keyword in coverage_keywords):
             # Extract date if specified
             date_str = None
             if 'tomorrow' in query_lower:
@@ -557,6 +1019,39 @@ class ReportGenerator:
             elif 'today' in query_lower or 'now' in query_lower:
                 date_str = timezone.now().date().isoformat()
             return {'type': 'shift_coverage', 'data': ReportGenerator.generate_shift_coverage_report(date_str)}
+        
+        # Overtime queries
+        overtime_keywords = ['overtime', 'extra hours', 'ot hours', 'additional hours', 
+                            'working extra', 'overtime this week', 'overtime this month']
+        if any(keyword in query_lower for keyword in overtime_keywords):
+            return {
+                'type': 'overtime_info',
+                'data': {
+                    'summary': '📊 To view overtime information, visit the **Overtime Intelligence** dashboard or **Staff Records** section.',
+                    'info': 'You can track overtime hours, requests, and costs from the Overtime menu.',
+                    'links': [
+                        {'text': 'Overtime Dashboard', 'url': '/overtime/dashboard/'},
+                        {'text': 'My Preferences', 'url': '/overtime/preferences/'},
+                        {'text': 'Staff Records', 'url': '/staff-records/'}
+                    ]
+                }
+            }
+        
+        # Training queries
+        training_keywords = ['training', 'courses', 'qualifications', 'certifications',
+                            'training records', 'expired training', 'training due']
+        if any(keyword in query_lower for keyword in training_keywords):
+            return {
+                'type': 'training_info',
+                'data': {
+                    'summary': '📚 Training information is available in the **Staff Records** and **Training** sections.',
+                    'info': 'You can view training records, expiring certifications, and assign new courses.',
+                    'links': [
+                        {'text': 'Staff Training', 'url': '/staff-records/'},
+                        {'text': 'Assign Training', 'url': '/staff-management/'}
+                    ]
+                }
+            }
         
         # Leave queries - DISABLED: Now handled by _process_leave_balance_query which is more specific
         # This generic handler was catching staff-specific leave queries before they could be processed properly
@@ -760,14 +1255,67 @@ def ai_assistant_api(request):
             report_type = report_result['type']
             report_data = report_result['data']
             
+            # Handle chart requests differently
+            if report_type == 'chart':
+                chart_type = report_result.get('chart_type', 'unknown')
+                chart_data = report_data
+                
+                # Create explanatory text based on chart type
+                chart_explanations = {
+                    'staffing_trend': f"📈 I've created a **staffing trend chart** showing shift levels over time. This visualization helps identify patterns and forecast future needs.",
+                    'sickness_comparison': f"📊 I've generated a **sickness comparison chart** across all care homes. Use this to identify locations that may need additional support.",
+                    'incident_severity': f"🔍 I've created an **incident severity breakdown**. This pie chart shows the distribution of incidents by severity level.",
+                    'leave_patterns': f"📅 I've generated a **leave patterns analysis**. This stacked bar chart shows approved, pending, and rejected leave requests over time.",
+                    'staff_distribution': f"👥 I've created a **staff distribution chart** showing how staff are allocated across care homes.",
+                    'ml_forecast': f"🔮 I've generated an **ML-powered forecast chart** with confidence intervals. The shaded areas represent prediction uncertainty."
+                }
+                
+                answer = chart_explanations.get(chart_type, f"📊 I've generated a chart based on your request.")
+                answer += f"\n\n**{chart_data.get('title', 'Chart')}**\n\n"
+                answer += "The interactive chart is displayed below. You can:\n"
+                answer += "• Hover over data points for detailed information\n"
+                answer += "• Click legend items to show/hide datasets\n"
+                answer += "• Use this data to make informed decisions\n\n"
+                
+                # Add chart-specific insights
+                if chart_type == 'ml_forecast':
+                    answer += "💡 **Insight:** The upper confidence line shows maximum expected demand. Plan staffing to meet the upper bound for safety.\n"
+                elif chart_type == 'sickness_comparison':
+                    answer += "💡 **Insight:** Compare sickness rates across locations to identify where extra support may be needed.\n"
+                elif chart_type == 'staffing_trend':
+                    answer += "💡 **Insight:** Look for patterns and seasonal variations to optimize staffing schedules.\n"
+                
+                return JsonResponse({
+                    'answer': answer,
+                    'chart_data': chart_data,
+                    'has_chart': True,
+                    'chart_type': chart_type,
+                    'related': ['Generate Another Chart', 'View Dashboard', 'Export Data'],
+                    'category': 'chart_analysis'
+                })
+            
             answer = f"**{report_type.replace('_', ' ').title()}**\n\n"
             answer += report_data.get('summary', '')
             
             # Add detailed breakdown based on report type
             if report_type == 'staffing_summary':
-                answer += "\n\n**Breakdown by Role:**\n"
-                for role, count in report_data['by_role'].items():
-                    answer += f"• {role}: {count}\n"
+                # Show breakdown by role
+                if report_data['by_role']:
+                    answer += "\n\n**📋 Breakdown by Role:**\n"
+                    for role, count in sorted(report_data['by_role'].items(), key=lambda x: x[1], reverse=True):
+                        answer += f"• {role}: **{count}** staff\n"
+                
+                # Show breakdown by home (if not filtering by specific home)
+                if report_data.get('by_home') and len(report_data['by_home']) > 0:
+                    answer += "\n\n**🏠 Breakdown by Care Home:**\n"
+                    for home, count in sorted(report_data['by_home'].items(), key=lambda x: x[1], reverse=True):
+                        answer += f"• {home}: **{count}** staff\n"
+                
+                # Add helpful tip
+                if report_data.get('care_home'):
+                    answer += f"\n\n💡 **Tip:** You can also ask about specific roles at {report_data['care_home']}, e.g., 'How many nurses at {report_data['care_home']}?'"
+                else:
+                    answer += "\n\n💡 **Tip:** You can ask about a specific care home, e.g., 'How many staff at Hawthorn House?'"
             
             elif report_type == 'ml_forecast':
                 if report_data['high_risk_days']:
@@ -826,6 +1374,18 @@ def ai_assistant_api(request):
                     for staff in report_data['low_balance_staff']:
                         answer += f"• {staff['name']}: {staff['hours_remaining']:.1f} hours remaining\n"
             
+            elif report_type == 'overtime_info':
+                if report_data.get('links'):
+                    answer += "\n\n**Quick Links:**\n"
+                    for link in report_data['links']:
+                        answer += f"• [{link['text']}]({link['url']})\n"
+            
+            elif report_type == 'training_info':
+                if report_data.get('links'):
+                    answer += "\n\n**Quick Links:**\n"
+                    for link in report_data['links']:
+                        answer += f"• [{link['text']}]({link['url']})\n"
+            
             return JsonResponse({
                 'answer': answer,
                 'related': ['View Dashboard', 'Generate Report', 'Export Data'],
@@ -882,40 +1442,131 @@ def ai_assistant_api(request):
                 'category': result.get('category', '')
             })
         else:
-            # No exact match found - provide helpful suggestions
-            return JsonResponse({
-                'answer': """I'm not sure about that specific question. Here are some things I can help with:
+            # No exact match found - provide helpful suggestions based on query context
+            query_lower = query.lower()
+            
+            # Provide context-aware help
+            if any(word in query_lower for word in ['how', 'what', 'where', 'when', 'who']):
+                context_help = """I understand you're asking a question. Let me help you with what I can do:
 
-**Quick Reports:**
+**📊 Staffing Queries:**
+• "How many staff do we have?" / "Total staff count"
+• "How many staff at Hawthorn House?" (works for any care home)
+• "How many active staff?" / "Staff by role"
+
+**🤒 Sickness & Absence:**
+• "Who is off sick today?" / "Sickness this week"
+• "Show me absent staff" / "Sickness report"
+
+**📅 Rota & Coverage:**
+• "What's the coverage today?" / "Who is working?"
+• "Show shifts for tomorrow" / "Schedule today"
+
+**🚨 Incidents:**
+• "Show incidents this week" / "Recent accidents"
+• "Falls this month" / "Injury reports"
+
+**🏖️ Leave Requests:**
+• "Show leave requests" / "Who's on holiday?"
+• "Can I take leave from [date] to [date]?"
+• "What are my chances for leave next week?"
+
+**🔮 ML Predictions (NEW!):**
+• "Forecast staffing for next week"
+• "Will we be short-staffed tomorrow?"
+• "Predict demand for next 30 days"
+
+Try asking in natural language - I'm constantly learning!"""
+            
+            elif any(word in query_lower for word in ['staff', 'people', 'workers', 'employees']):
+                context_help = """I can help you with **staffing information**! Try asking:
+
 • "How many staff do we have?"
-• "Who is off sick today?"
-• "Show me incidents this week"
-• "What's the coverage today?"
-• "Show leave requests"
+• "How many staff at [care home name]?" (e.g., Hawthorn House, Riverside)
+• "Total active staff" / "Staff count"
+• "Show me staffing levels"
+• "Breakdown by role"
 
-**ML-Powered Forecasts (NEW!):**
-• "What's the staffing forecast for next week?"
+I can also tell you about specific homes:
+• Hawthorn House
+• Meadowburn
+• Orchard Grove
+• Riverside
+• Victoria Gardens
+
+Just ask "How many staff at [home name]" and I'll give you the details!"""
+            
+            elif any(word in query_lower for word in ['sick', 'absence', 'absent', 'ill']):
+                context_help = """I can help with **sickness and absence tracking**! Try:
+
+• "Who is off sick today?"
+• "Sickness this week" / "Sickness this month"
+• "Show me absent staff"
+• "Who's called in sick?"
+• "Sickness report"
+
+I'll show you who's currently off and recent sickness trends."""
+            
+            elif any(word in query_lower for word in ['rota', 'shift', 'schedule', 'coverage', 'working']):
+                context_help = """I can help with **rotas and shift coverage**! Try:
+
+• "What's the coverage today?"
+• "Who is working today?"
+• "Show shifts for tomorrow"
+• "Rota for this week"
+• "Schedule today"
+
+I'll show you current shift coverage by unit and shift type."""
+            
+            elif any(word in query_lower for word in ['leave', 'holiday', 'vacation', 'time off']):
+                context_help = """I can help with **leave management**! Try:
+
+• "Show leave requests" / "Who's on holiday?"
+• "Can I take leave from Dec 25 to Dec 27?"
+• "What are my chances for leave next week?"
+• "When is the best time for leave in March?"
+• "Check leave availability"
+
+I'll use ML to predict approval likelihood and suggest better dates!"""
+            
+            elif any(word in query_lower for word in ['forecast', 'predict', 'shortage', 'demand']):
+                context_help = """I can provide **ML-powered predictions**! Try:
+
+• "Forecast staffing for next week"
 • "Will we be short-staffed tomorrow?"
 • "Predict demand for next 30 days"
 • "Are we understaffed on Monday?"
+• "Show shortage predictions"
 
-**Commands:**
-• How to add staff
-• How to generate rotas
-• How to start the server
-• How to manage annual leave
+My machine learning models analyze historical patterns to predict future needs."""
+            
+            else:
+                context_help = """I'm here to help! Here are some things I can do:
 
-**Locations:**
-• Where is the admin panel?
-• Where is the documentation?
+**📊 Quick Reports:**
+• Staffing levels (total, by home, by role)
+• Sickness tracking
+• Shift coverage
+• Incident reports
+• Leave requests
 
-**Troubleshooting:**
-• Database locked errors
-• Import errors
-• Permission denied errors
+**🔮 ML Predictions:**
+• Staffing forecasts
+• Shortage predictions
+• Leave approval likelihood
 
-Ask about forecasts, shortages, sickness, or incidents for instant ML-powered insights!""",
-                'related': ['Staffing Forecast', 'Shortage Prediction', 'Sickness Report', 'Coverage Report'],
+**💡 Examples:**
+• "How many staff at Hawthorn House?"
+• "Who is off sick today?"
+• "What's the coverage tomorrow?"
+• "Forecast staffing for next week"
+• "Can I take leave Dec 25-27?"
+
+Try asking in natural language - I'm constantly improving!"""
+            
+            return JsonResponse({
+                'answer': context_help,
+                'related': ['Staffing Summary', 'Sickness Report', 'Coverage Report', 'ML Forecast'],
                 'category': 'help'
             })
     
