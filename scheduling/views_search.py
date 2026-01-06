@@ -155,10 +155,10 @@ def advanced_search(request):
             )
         
         if role_id:
-            staff_search = staff_search.filter('term', **{'staffprofile.role.id': role_id})
+            staff_search = staff_search.filter('term', **{'staff_profile.role.id': role_id})
         
         if care_home_id:
-            staff_search = staff_search.filter('term', **{'staffprofile.current_care_home.id': care_home_id})
+            staff_search = staff_search.filter('term', **{'staff_profile.current_care_home.id': care_home_id})
         
         # Pagination
         start = (page - 1) * per_page

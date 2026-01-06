@@ -16,8 +16,8 @@ class UserDocument(Document):
     Indexes: name, SAP number, email, role, care home
     """
     # Related fields
-    role_name = fields.TextField(attr='staffprofile.role.name')
-    care_home_name = fields.TextField(attr='staffprofile.current_care_home.name')
+    role_name = fields.TextField(attr='staff_profile.role.name')
+    care_home_name = fields.TextField(attr='staff_profile.current_care_home.name')
     
     # Computed fields
     full_name = fields.TextField()
@@ -50,9 +50,9 @@ class UserDocument(Document):
         elif isinstance(related_instance, (Role, CareHome)):
             # Update all users with this role/care home
             return User.objects.filter(
-                staffprofile__role=related_instance
+                staff_profile__role=related_instance
             ) if isinstance(related_instance, Role) else User.objects.filter(
-                staffprofile__current_care_home=related_instance
+                staff_profile__current_care_home=related_instance
             )
     
     def prepare_full_name(self, instance):
