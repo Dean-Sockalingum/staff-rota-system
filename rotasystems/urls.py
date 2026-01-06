@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from django.http import FileResponse
+from rotasystems import saml_views
 import os
 
 def service_worker_view(request):
@@ -43,6 +44,15 @@ urlpatterns = [
     # Task 38: Mobile App API
     path('api/mobile/', include('scheduling.api_urls')),
     path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login
+    # SAML 2.0 Single Sign-On (CGI SSO Integration)
+    path('saml/', include([
+        path('login/', saml_views.saml_login, name='saml_login'),
+        path('acs/', saml_views.saml_acs, name='saml_acs'),
+        path('logout/', saml_views.saml_logout, name='saml_logout'),
+        path('sls/', saml_views.saml_sls, name='saml_sls'),
+        path('metadata/', saml_views.saml_metadata, name='saml_metadata'),
+        path('status/', saml_views.saml_status, name='saml_status'),
+    ])),
 ]
 
 # Task 51: Custom error handlers
