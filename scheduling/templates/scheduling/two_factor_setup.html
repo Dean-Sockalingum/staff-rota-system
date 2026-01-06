@@ -57,7 +57,7 @@
             {% if requires_2fa and not has_2fa %}
             <div class="alert-2fa-required">
                 <strong><i class="fas fa-exclamation-triangle"></i> 2FA Required</strong><br>
-                As a {{ user.staffprofile.role.name|default:"manager" }}, you are required to enable 
+                As a {{ user.staff_profile.role.name|default:"manager" }}, you are required to enable 
                 Two-Factor Authentication for enhanced security.
             </div>
             {% endif %}

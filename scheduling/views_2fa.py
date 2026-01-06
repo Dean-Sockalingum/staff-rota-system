@@ -259,8 +259,8 @@ def _user_requires_2fa(user):
     
     # Check if user has manager role
     try:
-        if hasattr(user, 'staffprofile'):
-            profile = user.staffprofile
+        if hasattr(user, 'staff_profile'):
+            profile = user.staff_profile
             if profile.role and 'Manager' in profile.role.name:
                 return True
     except:

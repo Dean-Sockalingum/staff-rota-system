@@ -348,11 +348,11 @@ class Command(BaseCommand):
         self.stdout.write(f'👔 Role: {user.role.name}')
         self.stdout.write(f'🏢 Home Unit: {user.home_unit.name}')
         self.stdout.write(f'👥 Team: {user.team}')
-        self.stdout.write(f'⏰ Contracted Hours: {user.staffprofile.contracted_hours_per_week}/week')
+        self.stdout.write(f'⏰ Contracted Hours: {user.staff_profile.contracted_hours_per_week}/week')
         self.stdout.write(f'🌅 Shift Preference: {user.get_shift_preference_display()}')
-        self.stdout.write(f'📅 Start Date: {user.staffprofile.start_date}')
+        self.stdout.write(f'📅 Start Date: {user.staff_profile.start_date}')
         
-        entitlement = user.staffprofile.annual_leave_entitlements.first()
+        entitlement = user.staff_profile.annual_leave_entitlements.first()
         if entitlement:
             self.stdout.write(f'🏖️  Annual Leave: {entitlement.total_entitlement_hours} hours ({entitlement.total_entitlement_hours / Decimal("11.66"):.1f} days)')
         
