@@ -14,6 +14,7 @@ from scheduling.models_multi_home import CareHome
 from scheduling.models_activity import RecentActivity
 from scheduling.models_compliance_widgets import ComplianceMetric, ComplianceWidget
 from scheduling.models import TrainingRecord, SupervisionRecord, TrainingCourse
+from staff_records.models import StaffProfile
 
 User = get_user_model()
 
@@ -38,7 +39,7 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
             email='staff@example.com',
             password='testpass123'
         )
-        self.staff_user.care_home_access.add(self.care_home)
+        # self.staff_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.staff_profile = StaffProfile.objects.create(
             user=self.staff_user,
@@ -52,7 +53,7 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.manager_user.care_home_access.add(self.care_home)
+        # self.manager_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.manager_profile = StaffProfile.objects.create(
             user=self.manager_user,
@@ -138,7 +139,7 @@ class CalendarCoverageIntegrationTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.manager.care_home_access.add(self.care_home)
+        # self.manager.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.manager_profile = StaffProfile.objects.create(
             user=self.manager,
@@ -155,7 +156,7 @@ class CalendarCoverageIntegrationTests(TestCase):
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
-            user.care_home_access.add(self.care_home)
+            # user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
             
             profile = StaffProfile.objects.create(
                 user=user,
@@ -233,7 +234,7 @@ class FormSubmissionAutosaveClearIntegrationTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -301,7 +302,7 @@ class ComplianceWidgetCalculationIntegrationTests(TestCase):
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
-            user.care_home_access.add(self.care_home)
+            # user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
             
             profile = StaffProfile.objects.create(
                 user=user,
@@ -380,7 +381,7 @@ class DashboardIntegrationTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -453,7 +454,7 @@ class PermissionsIntegrationTests(TestCase):
             email='readonly@example.com',
             password='testpass123'
         )
-        self.readonly_user.care_home_access.add(self.care_home)
+        # self.readonly_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.readonly_profile = StaffProfile.objects.create(
             user=self.readonly_user,
@@ -468,7 +469,7 @@ class PermissionsIntegrationTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.full_user.care_home_access.add(self.care_home)
+        # self.full_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.full_profile = StaffProfile.objects.create(
             user=self.full_user,

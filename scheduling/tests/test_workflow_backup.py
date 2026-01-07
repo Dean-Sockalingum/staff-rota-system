@@ -61,7 +61,7 @@ class WorkflowBasicTest(TestCase):
         
         # Create staff member
         import random
-        sap = f"TEST{random.randint(1000, 9999)}"
+        sap = f"{random.randint(100000, 999999)}"  # 6-digit SAP
         self.staff = User.objects.create_user(
             sap=sap,
             first_name="Test",

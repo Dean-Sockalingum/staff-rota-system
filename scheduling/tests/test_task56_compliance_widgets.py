@@ -12,6 +12,7 @@ from decimal import Decimal
 from scheduling.models import Unit, TrainingRecord, SupervisionRecord, TrainingCourse
 from scheduling.models_multi_home import CareHome
 from scheduling.models_compliance_widgets import ComplianceMetric, ComplianceWidget
+from staff_records.models import StaffProfile
 
 User = get_user_model()
 
@@ -288,7 +289,7 @@ class ComplianceCalculationTests(TestCase):
             email='staff1@example.com',
             password='testpass123'
         )
-        self.user1.care_home_access.add(self.care_home)
+        # self.user1.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile1 = StaffProfile.objects.create(
             user=self.user1,
@@ -303,7 +304,7 @@ class ComplianceCalculationTests(TestCase):
             email='staff2@example.com',
             password='testpass123'
         )
-        self.user2.care_home_access.add(self.care_home)
+        # self.user2.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile2 = StaffProfile.objects.create(
             user=self.user2,
@@ -384,7 +385,7 @@ class ComplianceWidgetManagementTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         StaffProfile.objects.create(
             user=self.user,

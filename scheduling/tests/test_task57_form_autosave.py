@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import timedelta, date
 from scheduling.models import Unit, LeaveRequest, IncidentReport, SupervisionRecord, TrainingRecord, TrainingCourse
 from scheduling.models_multi_home import CareHome
+from staff_records.models import StaffProfile
 
 User = get_user_model()
 
@@ -33,7 +34,7 @@ class FormAutoSaveTemplateTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         StaffProfile.objects.create(
             user=self.user,
@@ -120,7 +121,7 @@ class FormSubmissionTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -201,7 +202,7 @@ class FormValidationTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -270,7 +271,7 @@ class FormSecurityTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         StaffProfile.objects.create(
             user=self.user,
@@ -327,7 +328,7 @@ class FormDataIntegrityTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,

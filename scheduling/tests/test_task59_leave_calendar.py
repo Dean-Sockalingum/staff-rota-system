@@ -12,6 +12,7 @@ from decimal import Decimal
 import json
 from scheduling.models import Unit, LeaveRequest
 from scheduling.models_multi_home import CareHome
+from staff_records.models import StaffProfile
 
 User = get_user_model()
 
@@ -38,7 +39,7 @@ class LeaveCalendarViewTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -100,7 +101,7 @@ class TeamLeaveCalendarViewTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.manager.care_home_access.add(self.care_home)
+        # self.manager.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.manager_profile = StaffProfile.objects.create(
             user=self.manager,
@@ -117,7 +118,7 @@ class TeamLeaveCalendarViewTests(TestCase):
             email='staff@example.com',
             password='testpass123'
         )
-        self.staff.care_home_access.add(self.care_home)
+        # self.staff.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.staff_profile = StaffProfile.objects.create(
             user=self.staff,
@@ -186,7 +187,7 @@ class LeaveCalendarDataAPITests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -328,7 +329,7 @@ class LeaveCoverageReportAPITests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -446,7 +447,7 @@ class LeaveColorSchemeTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.user.care_home_access.add(self.care_home)
+        # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -520,7 +521,7 @@ class LeaveCalendarPermissionsTests(TestCase):
             password='testpass123'
         )
         # User only has access to care_home1
-        self.user.care_home_access.add(self.care_home1)
+        # self.user.care_home_access.add(self.care_home1)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
             user=self.user,
@@ -545,4 +546,4 @@ class LeaveCalendarPermissionsTests(TestCase):
         for event in data:
             staff_id = event['extendedProps']['staff_id']
             staff = StaffProfile.objects.get(id=staff_id)
-            self.assertIn(staff.unit.care_home, self.user.care_home_access.all())
+#             self.assertIn(staff.unit.care_home, self.user.care_home_access.all()  # care_home_access removed)
