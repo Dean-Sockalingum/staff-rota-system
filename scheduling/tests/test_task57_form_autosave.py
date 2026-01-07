@@ -21,8 +21,8 @@ class FormAutoSaveTemplateTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -42,7 +42,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_leave_request_form_has_autosave(self):
         """Test leave request form includes auto-save attributes"""
-        self.client.login(username='200100', password='testpass123')
+        self.client.force_login(self.user)  # '200100', password='testpass123')
         url = reverse('request_leave')
         response = self.client.get(url)
         
@@ -53,7 +53,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_incident_report_form_has_autosave(self):
         """Test incident report form includes auto-save attributes"""
-        self.client.login(username='200100', password='testpass123')
+        self.client.force_login(self.user)  # '200100', password='testpass123')
         url = reverse('report_incident')
         response = self.client.get(url)
         
@@ -63,7 +63,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_supervision_record_form_has_autosave(self):
         """Test supervision record form includes auto-save attributes"""
-        self.client.login(username='200100', password='testpass123')
+        self.client.force_login(self.user)  # '200100', password='testpass123')
         url = reverse('create_supervision_record')
         response = self.client.get(url)
         
@@ -73,7 +73,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_training_record_form_has_autosave(self):
         """Test training record form includes auto-save attributes"""
-        self.client.login(username='200100', password='testpass123')
+        self.client.force_login(self.user)  # '200100', password='testpass123')
         url = reverse('submit_training_record')
         response = self.client.get(url)
         
@@ -106,8 +106,8 @@ class FormSubmissionTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -127,7 +127,7 @@ class FormSubmissionTests(TestCase):
     
     def test_leave_request_submission_clears_autosave(self):
         """Test that submitting leave request should clear auto-save data"""
-        self.client.login(username='200101', password='testpass123')
+        self.client.force_login(self.user)  # '200101', password='testpass123')
         
         # Submit leave request
         url = reverse('request_leave')
@@ -152,7 +152,7 @@ class FormSubmissionTests(TestCase):
     
     def test_incident_report_submission(self):
         """Test incident report submission"""
-        self.client.login(username='200101', password='testpass123')
+        self.client.force_login(self.user)  # '200101', password='testpass123')
         
         url = reverse('report_incident')
         data = {
@@ -178,8 +178,8 @@ class FormValidationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -199,7 +199,7 @@ class FormValidationTests(TestCase):
     
     def test_leave_request_validation_errors(self):
         """Test that validation errors are displayed correctly"""
-        self.client.login(username='200102', password='testpass123')
+        self.client.force_login(self.user)  # '200102', password='testpass123')
         
         # Submit incomplete leave request (missing required fields)
         url = reverse('request_leave')
@@ -217,7 +217,7 @@ class FormValidationTests(TestCase):
     
     def test_date_range_validation(self):
         """Test date range validation (end_date >= start_date)"""
-        self.client.login(username='200102', password='testpass123')
+        self.client.force_login(self.user)  # '200102', password='testpass123')
         
         url = reverse('request_leave')
         data = {
@@ -239,8 +239,8 @@ class FormSecurityTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -260,7 +260,7 @@ class FormSecurityTests(TestCase):
     
     def test_csrf_token_not_saved(self):
         """Test that CSRF tokens are not saved in localStorage"""
-        self.client.login(username='200103', password='testpass123')
+        self.client.force_login(self.user)  # '200103', password='testpass123')
         url = reverse('request_leave')
         response = self.client.get(url)
         
@@ -294,8 +294,8 @@ class FormDataIntegrityTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.care_home = CareHome.objects.create(
-            name="Test Care Home",
-            address="123 Test St"
+            name="ORCHARD_GROVE",
+            bed_capacity=50
         )
         self.unit = Unit.objects.create(
             name="Test Unit",
@@ -315,7 +315,7 @@ class FormDataIntegrityTests(TestCase):
     
     def test_special_characters_in_forms(self):
         """Test that forms handle special characters correctly"""
-        self.client.login(username='200104', password='testpass123')
+        self.client.force_login(self.user)  # '200104', password='testpass123')
         
         url = reverse('request_leave')
         data = {

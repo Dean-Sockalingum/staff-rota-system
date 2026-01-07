@@ -175,10 +175,11 @@ class LeaveCalendarDataAPITests(TestCase):
         
         # Create test leave request
         self.leave_request = LeaveRequest.objects.create(
-            staff_profile=self.user.staff_profile,
+            user=self.user,  # Changed from staff_profile
             leave_type='ANNUAL',  # CharField choice, not a ForeignKey
             start_date=date.today(),
             end_date=date.today() + timedelta(days=5),
+            days_requested=5,
             reason='Test vacation',
             status='APPROVED'
         )

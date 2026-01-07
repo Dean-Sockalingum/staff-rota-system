@@ -45,7 +45,7 @@ class ComplianceMetricModelTests(TestCase):
         )
         
         self.assertIsNotNone(metric.id)
-        self.assertEqual(metric.category, 'training')
+        self.assertEqual(metric.category, 'TRAINING')  # Category is uppercase
         self.assertEqual(metric.status, 'amber')  # 92.5% is 85-94%
     
     def test_traffic_light_status_green(self):
