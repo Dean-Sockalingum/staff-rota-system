@@ -314,6 +314,7 @@ urlpatterns = [
     path('my-rota/', views.staff_dashboard, name='staff_dashboard'),
     path('staff-dashboard/', views.staff_dashboard, name='staff_dashboard_alias'),  # Alias for tests
     path('request-leave/', views.request_annual_leave, name='request_annual_leave'),
+    path('request-leave/', views.request_annual_leave, name='request_leave'),  # Alias for compatibility
     path('request-swap/', views.request_shift_swap, name='request_shift_swap'),
     path('leave-approvals/', views.leave_approval_dashboard, name='leave_approval_dashboard'),
     

@@ -177,6 +177,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    @property
+    def id(self):
+        """Backward compatibility - Django code often expects 'id' field"""
+        return self.pk
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.sap})"
     
@@ -261,6 +266,37 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.unit and self.unit.care_home:
             return self.unit.care_home
         return None
+    
+    @property
+    def care_home(self):
+        """Backward compatibility alias for assigned_care_home"""
+        return self.assigned_care_home
+    
+    @property
+    def care_home_access(self):
+        """
+        Backward compatibility property for legacy code expecting many-to-many care_home_access.
+        Returns a QuerySet-like object that supports .add() and .all()
+        """
+        class CareHomeAccessCompat:
+            def __init__(self, user):
+                self.user = user
+            
+            def add(self, care_home):
+                """Legacy compatibility - no-op since access is now via unit"""
+                pass
+            
+            def all(self):
+                """Returns care homes the user can access"""
+                from django.db.models import Q
+                if not self.user.unit or not self.user.unit.care_home:
+                    return CareHome.objects.none()
+                # If senior management, return all homes, else return assigned home
+                if self.user.role and self.user.role.is_senior_management_team:
+                    return CareHome.objects.all()
+                return CareHome.objects.filter(pk=self.user.unit.care_home.pk)
+        
+        return CareHomeAccessCompat(self)
 
 # Table 3: Units/Departments
 class Unit(models.Model):
@@ -4372,6 +4408,16 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.recipient.username} - {self.get_notification_type_display()}"
+    
+    @property
+    def user(self):
+        """Backward compatibility property - alias for recipient"""
+        return self.recipient
+    
+    @user.setter
+    def user(self, value):
+        """Backward compatibility setter - sets recipient"""
+        self.recipient = value
     
     def mark_as_read(self):
         """Mark notification as read"""

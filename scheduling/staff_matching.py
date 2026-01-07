@@ -399,7 +399,7 @@ class StaffMatcher:
             # Use existing WDT compliance check
             compliant_staff = get_wdt_compliant_staff_for_ot(
                 self.shift,
-                User.objects.filter(id=staff_member.id)
+                User.objects.filter(pk=staff_member.pk)
             )
             
             return len(compliant_staff) > 0

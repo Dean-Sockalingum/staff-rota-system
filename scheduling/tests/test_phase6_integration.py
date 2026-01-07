@@ -35,55 +35,46 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
         
         # Create staff member
         self.staff_user = User.objects.create_user(
-            username='staff',
+            sap='200001',
+            first_name='Staff',
+            last_name='User',
             email='staff@example.com',
             password='testpass123'
         )
+        self.staff_user.unit = self.unit
+        self.staff_user.save()
         # self.staff_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.staff_profile = StaffProfile.objects.create(
-            user=self.staff_user,
-            sap_number='123456',
-            unit=self.unit
-        )
         
         # Create manager
         self.manager_user = User.objects.create_user(
-            username='manager',
+            sap='100001',
+            first_name='Manager',
+            last_name='User',
             email='manager@example.com',
             password='testpass123'
         )
+        self.manager_user.unit = self.unit
+        self.manager_user.save()
+        self.manager_user.staff_profile.job_title = 'Manager'
+        self.manager_user.staff_profile.save()
         # self.manager_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.manager_profile = StaffProfile.objects.create(
-            user=self.manager_user,
-            sap_number='111111',
-            unit=self.unit,
-            permission_level='FULL'
-        )
-        
-        # Create leave type
-        self.leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
     
     def test_leave_approval_workflow(self):
         """Test complete leave approval workflow"""
         # Create leave request
         leave_request = LeaveRequest.objects.create(
-            staff_profile=self.staff_profile,
-            leave_type=self.leave_type,
+            user=self.staff_user,
+            leave_type='ANNUAL',
             start_date=date.today() + timedelta(days=7),
             end_date=date.today() + timedelta(days=11),
+            days_requested=5,
             reason='Summer vacation',
             status='PENDING'
         )
         
         # Approve leave
         leave_request.status = 'APPROVED'
-        leave_request.approved_by = self.manager_profile
+        leave_request.approved_by = self.manager_user
         leave_request.approval_date = timezone.now()
         leave_request.save()
         
@@ -101,11 +92,10 @@ class LeaveApprovalActivityIntegrationTests(TestCase):
         """Test leave request creates notification for managers"""
         # Create leave request
         leave_request = LeaveRequest.objects.create(
-            staff_profile=self.staff_profile,
-            leave_type=self.leave_type,
+            user=self.staff_user,
+            leave_type='ANNUAL',
             start_date=date.today() + timedelta(days=7),
-            end_date=date.today() + timedelta(days=11),
-            reason='Vacation',
+            end_date=date.today() + timedelta(days=11),            days_requested=5,            reason='Vacation',
             status='PENDING'
         )
         
@@ -135,57 +125,49 @@ class CalendarCoverageIntegrationTests(TestCase):
         )
         
         self.manager = User.objects.create_user(
-            username='manager',
+            sap='100002',
+            first_name='Manager',
+            last_name='Two',
             email='manager@example.com',
             password='testpass123'
         )
+        self.manager.unit = self.unit
+        self.manager.save()
+        self.manager.staff_profile.job_title = 'Manager'
+        self.manager.staff_profile.save()
         # self.manager.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.manager_profile = StaffProfile.objects.create(
-            user=self.manager,
-            sap_number='111111',
-            unit=self.unit,
-            permission_level='FULL'
-        )
         
         # Create staff members
         self.staff_profiles = []
         for i in range(10):
             user = User.objects.create_user(
-                username=f'staff{i}',
+                sap=f'20000{i}',
+                first_name=f'Staff{i}',
+                last_name='User',
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
+            user.unit = self.unit
+            user.save()
             # user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
             
-            profile = StaffProfile.objects.create(
-                user=user,
-                sap_number=f'12345{i}',
-                unit=self.unit
-            )
-            self.staff_profiles.append(profile)
-        
-        # Create leave type
-        self.leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
+            self.staff_profiles.append(user.staff_profile)
     
     def test_calendar_and_coverage_consistency(self):
         """Test calendar events match coverage report data"""
         # Create leave requests for 3 staff (30% coverage)
         for i in range(3):
             LeaveRequest.objects.create(
-                staff_profile=self.staff_profiles[i],
-                leave_type=self.leave_type,
+                user=self.staff_profiles[i].user,
+                leave_type='ANNUAL',
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=3),
+                days_requested=4,
                 reason='Test',
                 status='APPROVED'
             )
         
-        self.client.login(username='manager', password='testpass123')
+        self.client.force_login(self.manager)
         
         # Get calendar data
         calendar_url = reverse('leave_calendar_data_api')
@@ -230,27 +212,19 @@ class FormSubmissionAutosaveClearIntegrationTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200010',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
-        
-        self.leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
     
     def test_leave_form_submission_workflow(self):
         """Test complete leave form submission workflow"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.force_login(self.user)
         
         # Access form (should load with auto-save enabled)
         form_url = reverse('request_leave')
@@ -261,7 +235,7 @@ class FormSubmissionAutosaveClearIntegrationTests(TestCase):
         
         # Submit form
         post_data = {
-            'leave_type': self.leave_type.id,
+            'leave_type': 'ANNUAL',
             'start_date': date.today(),
             'end_date': date.today() + timedelta(days=5),
             'reason': 'Test vacation'
@@ -274,8 +248,8 @@ class FormSubmissionAutosaveClearIntegrationTests(TestCase):
         
         # Verify leave request created
         leave_requests = LeaveRequest.objects.filter(
-            staff_profile=self.profile,
-            leave_type=self.leave_type
+            user=self.user,
+            leave_type='ANNUAL'
         )
         self.assertTrue(leave_requests.exists())
 
@@ -298,18 +272,17 @@ class ComplianceWidgetCalculationIntegrationTests(TestCase):
         self.staff_profiles = []
         for i in range(20):
             user = User.objects.create_user(
-                username=f'staff{i}',
+                sap=f'20{i:04d}',
+                first_name=f'Staff{i}',
+                last_name='User',
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
+            user.unit = self.unit
+            user.save()
             # user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
             
-            profile = StaffProfile.objects.create(
-                user=user,
-                sap_number=f'12345{i:02d}',
-                unit=self.unit
-            )
-            self.staff_profiles.append(profile)
+            self.staff_profiles.append(user)
         
         # Create training course
         self.training_course = TrainingCourse.objects.create(
@@ -323,11 +296,10 @@ class ComplianceWidgetCalculationIntegrationTests(TestCase):
         # Give training to 18 out of 20 staff (90% compliance)
         for i in range(18):
             TrainingRecord.objects.create(
-                staff_profile=self.staff_profiles[i],
+                staff_member=self.staff_profiles[i],
                 course=self.training_course,
                 completion_date=date.today(),
-                expiry_date=date.today() + timedelta(days=365),
-                status='CURRENT'
+                expiry_date=date.today() + timedelta(days=365)
             )
         
         # Calculate compliance
@@ -377,22 +349,21 @@ class DashboardIntegrationTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='manager',
+            sap='100003',
+            first_name='Manager',
+            last_name='Three',
             email='manager@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
+        self.user.staff_profile.job_title = 'Manager'
+        self.user.staff_profile.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='111111',
-            unit=self.unit,
-            permission_level='FULL'
-        )
     
     def test_dashboard_displays_all_components(self):
         """Test dashboard shows activity feed, widgets, and notifications"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.force_login(self.user)
         
         # Create test data
         RecentActivity.objects.create(
@@ -413,9 +384,9 @@ class DashboardIntegrationTests(TestCase):
             care_home=self.care_home,
             category='TRAINING',
             metric_name='Training Compliance',
-            current_value=Decimal('95.0',
+            current_value=Decimal('95.0'),
             period_start=date.today() - timedelta(days=30),
-            period_end=date.today()),
+            period_end=date.today(),
             target_value=Decimal('95.0'),
             total_count=100
         )
@@ -453,37 +424,33 @@ class PermissionsIntegrationTests(TestCase):
         
         # Create READ_ONLY user
         self.readonly_user = User.objects.create_user(
-            username='readonly',
+            sap='300001',
+            first_name='ReadOnly',
+            last_name='User',
             email='readonly@example.com',
             password='testpass123'
         )
+        self.readonly_user.unit = self.unit
+        self.readonly_user.save()
         # self.readonly_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.readonly_profile = StaffProfile.objects.create(
-            user=self.readonly_user,
-            sap_number='222222',
-            unit=self.unit,
-            permission_level='READ_ONLY'
-        )
         
         # Create FULL user
         self.full_user = User.objects.create_user(
-            username='manager',
+            sap='100004',
+            first_name='Manager',
+            last_name='Four',
             email='manager@example.com',
             password='testpass123'
         )
+        self.full_user.unit = self.unit
+        self.full_user.save()
+        self.full_user.staff_profile.job_title = 'Manager'
+        self.full_user.staff_profile.save()
         # self.full_user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.full_profile = StaffProfile.objects.create(
-            user=self.full_user,
-            sap_number='111111',
-            unit=self.unit,
-            permission_level='FULL'
-        )
     
     def test_readonly_can_view_team_calendar(self):
         """Test READ_ONLY user can view team calendar"""
-        self.client.login(username='readonly', password='testpass123')
+        self.client.force_login(self.readonly_user)
         url = reverse('team_leave_calendar')
         response = self.client.get(url)
         
@@ -491,7 +458,7 @@ class PermissionsIntegrationTests(TestCase):
     
     def test_readonly_can_view_activity_feed(self):
         """Test READ_ONLY user can view activity feed"""
-        self.client.login(username='readonly', password='testpass123')
+        self.client.force_login(self.readonly_user)
         url = reverse('activity_feed')
         response = self.client.get(url)
         
@@ -499,7 +466,7 @@ class PermissionsIntegrationTests(TestCase):
     
     def test_readonly_can_view_compliance_dashboard(self):
         """Test READ_ONLY user can view compliance dashboard"""
-        self.client.login(username='readonly', password='testpass123')
+        self.client.force_login(self.readonly_user)
         url = reverse('compliance_dashboard')
         response = self.client.get(url)
         

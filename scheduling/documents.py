@@ -105,11 +105,23 @@ class ShiftDocument(Document):
     
     def prepare_start_time(self, instance):
         """Convert time to string"""
-        return instance.shift_type.start_time.strftime('%H:%M') if instance.shift_type and instance.shift_type.start_time else ''
+        if not instance.shift_type or not instance.shift_type.start_time:
+            return ''
+        start = instance.shift_type.start_time
+        # Handle already-converted strings
+        if isinstance(start, str):
+            return start
+        return start.strftime('%H:%M')
     
     def prepare_end_time(self, instance):
         """Convert time to string"""
-        return instance.shift_type.end_time.strftime('%H:%M') if instance.shift_type and instance.shift_type.end_time else ''
+        if not instance.shift_type or not instance.shift_type.end_time:
+            return ''
+        end = instance.shift_type.end_time
+        # Handle already-converted strings
+        if isinstance(end, str):
+            return end
+        return end.strftime('%H:%M')
     
     def prepare_shift_type_display(self, instance):
         """Get human-readable shift type"""
@@ -173,12 +185,15 @@ class LeaveRequestDocument(Document):
     
     def prepare_approval_status(self, instance):
         """Generate approval status text"""
-        if instance.approved is None:
+        # LeaveRequest uses status CharField, not approved boolean
+        if instance.status == 'PENDING':
             return "Pending"
-        elif instance.approved:
+        elif instance.status == 'APPROVED':
             return "Approved"
+        elif instance.status == 'DENIED':
+            return "Denied"
         else:
-            return "Rejected"
+            return instance.status
 
 
 @registry.register_document
