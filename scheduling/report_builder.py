@@ -18,6 +18,9 @@ from .models import Shift, User, Unit, LeaveRequest, ShiftSwapRequest
 from .models_multi_home import CareHome
 from .models_reports import CustomReportTemplate, CustomSavedReport
 
+# Alias for backwards compatibility
+ReportTemplate = CustomReportTemplate
+
 
 class ReportQueryBuilder:
     """
