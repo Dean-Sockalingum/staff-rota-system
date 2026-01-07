@@ -1,89 +1,36 @@
-#!/usr/bin/env python
-"""
-Fix foreign key constraint issues before migration
-"""
 import os
 import django
-import sqlite3
-
-# Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
 django.setup()
 
-from scheduling.models import User
+from django.db import connection
 
-# Connect to database directly
-db_path = '/Users/deansockalingum/Desktop/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete/db.sqlite3'
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
-
-print("Checking for invalid foreign keys...")
-
-# Get all tables
-cursor.execute("""
-    SELECT name FROM sqlite_master 
-    WHERE type='table' AND (name LIKE 'scheduling_%' OR name LIKE 'staff_records_%')
-""")
-all_tables = [t[0] for t in cursor.fetchall()]
-
-# Get all foreign keys for each table
-tables_to_fix = []
-for table_name in all_tables:
-    cursor.execute(f"PRAGMA foreign_key_list({table_name})")
-    fks = cursor.fetchall()
+# Get all valid SAP numbers
+with connection.cursor() as cursor:
+    cursor.execute("SELECT sap FROM scheduling_user")
+    valid_saps = {row[0] for row in cursor.fetchall()}
     
-    for fk in fks:
-        fk_id, seq, ref_table, from_col, to_col = fk[:5]
-        if ref_table == 'scheduling_user' and to_col == 'sap':
-            tables_to_fix.append((table_name, from_col))
-
-print(f"Found {len(tables_to_fix)} foreign key columns to check...\n")
-
-total_fixed = 0
-
-for table_name, column_name in tables_to_fix:
-    try:
-        cursor.execute(f"""
-            SELECT COUNT(*) FROM {table_name} 
-            WHERE {column_name} IS NOT NULL 
-            AND {column_name} NOT IN (SELECT sap FROM scheduling_user)
-        """)
-        count = cursor.fetchone()[0]
-        
-        if count > 0:
-            print(f"⚠ {table_name}.{column_name}: {count} invalid references")
+    # Find tables with user foreign keys
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'scheduling_%'")
+    tables = [row[0] for row in cursor.fetchall()]
+    
+    fixed = 0
+    for table in tables:
+        try:
+            # Get table info
+            cursor.execute(f"PRAGMA table_info({table})")
+            columns = cursor.fetchall()
             
-            # Delete or NULL based on column name
-            if column_name in ['user_id', 'created_by_id', 'reported_by_id', 'generated_by_id']:
-                # Delete records with invalid user references
-                cursor.execute(f"""
-                    DELETE FROM {table_name} 
-                    WHERE {column_name} NOT IN (SELECT sap FROM scheduling_user)
-                """)
-                print(f"  ✓ Deleted {cursor.rowcount} records")
-            else:
-                # Set to NULL for other fields (resolved_by, acknowledged_by, etc.)
-                cursor.execute(f"""
-                    UPDATE {table_name} 
-                    SET {column_name} = NULL 
-                    WHERE {column_name} NOT IN (SELECT sap FROM scheduling_user)
-                """)
-                print(f"  ✓ Set {cursor.rowcount} to NULL")
+            # Find user_id or similar columns
+            user_cols = [col[1] for col in columns if 'user_id' in col[1] or col[1] in ['supervisor_id', 'staff_member_id', 'reported_by_id', 'created_by_id']]
             
-            total_fixed += cursor.rowcount
-    except sqlite3.OperationalError as e:
-        print(f"⚠ Error with {table_name}.{column_name}: {e}")
-
-if total_fixed > 0:
-    conn.commit()
-    print(f"\n✓ Fixed {total_fixed} total invalid records")
-
-# Check for other potential issues
-print("\n" + "="*50)
-print("Cleanup complete!")
-print("="*50)
-
-conn.close()
-
-print("\n✓ All foreign key issues resolved!")
-print("\nNow run: python3 manage.py migrate")
+            for col in user_cols:
+                # Delete invalid rows
+                cursor.execute(f"DELETE FROM {table} WHERE {col} NOT IN (SELECT sap FROM scheduling_user) AND {col} IS NOT NULL")
+                if cursor.rowcount > 0:
+                    print(f"Deleted {cursor.rowcount} invalid rows from {table}.{col}")
+                    fixed += cursor.rowcount
+        except Exception as e:
+            print(f"Error processing {table}: {e}")
+    
+    print(f"\nTotal rows fixed: {fixed}")

@@ -129,17 +129,10 @@ class FormSubmissionTests(TestCase):
         """Test that submitting leave request should clear auto-save data"""
         self.client.login(username='200101', password='testpass123')
         
-        # Create leave type
-        leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
-        
         # Submit leave request
         url = reverse('request_leave')
         data = {
-            'leave_type': leave_type.id,
+            'leave_type': 'ANNUAL',
             'start_date': date.today(),
             'end_date': date.today() + timedelta(days=5),
             'reason': 'Test vacation'
@@ -226,15 +219,9 @@ class FormValidationTests(TestCase):
         """Test date range validation (end_date >= start_date)"""
         self.client.login(username='200102', password='testpass123')
         
-        leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
-        
         url = reverse('request_leave')
         data = {
-            'leave_type': leave_type.id,
+            'leave_type': 'ANNUAL',
             'start_date': date.today(),
             'end_date': date.today() - timedelta(days=5),  # Invalid: end before start
             'reason': 'Test'
@@ -330,15 +317,9 @@ class FormDataIntegrityTests(TestCase):
         """Test that forms handle special characters correctly"""
         self.client.login(username='200104', password='testpass123')
         
-        leave_type = LeaveType.objects.create(
-            name='Sick Leave',
-            code='SICK',
-            is_paid=True
-        )
-        
         url = reverse('request_leave')
         data = {
-            'leave_type': leave_type.id,
+            'leave_type': 'SICK',
             'start_date': date.today(),
             'end_date': date.today() + timedelta(days=3),
             'reason': 'Test with special chars: <>&"\''
@@ -352,7 +333,7 @@ class FormDataIntegrityTests(TestCase):
         # Verify data was saved correctly
         leave_request = LeaveRequest.objects.filter(
             staff_profile=self.user.staff_profile,
-            leave_type=leave_type
+            leave_type='SICK'
         ).first()
         
         if leave_request:

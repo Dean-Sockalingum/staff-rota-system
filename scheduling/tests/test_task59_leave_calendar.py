@@ -173,17 +173,10 @@ class LeaveCalendarDataAPITests(TestCase):
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         # StaffProfile auto-created by signal
         
-        # Create leave type
-        self.leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
-        
         # Create test leave request
         self.leave_request = LeaveRequest.objects.create(
             staff_profile=self.user.staff_profile,
-            leave_type=self.leave_type,
+            leave_type='ANNUAL',  # CharField choice, not a ForeignKey
             start_date=date.today(),
             end_date=date.today() + timedelta(days=5),
             reason='Test vacation',
@@ -309,13 +302,6 @@ class LeaveCoverageReportAPITests(TestCase):
         )
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         # StaffProfile auto-created by signal
-        
-        # Create leave type
-        self.leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
     
     def test_coverage_api_requires_login(self):
         """Test coverage API requires authentication"""
@@ -421,35 +407,29 @@ class LeaveColorSchemeTests(TestCase):
         """Test approved annual leave has green color"""
         from scheduling.views_leave_calendar import get_leave_color
         
-        leave_type = LeaveType.objects.create(
-            name='Annual Leave',
-            code='ANNUAL',
-            is_paid=True
-        )
-        
-        color = get_leave_color('APPROVED', leave_type.code)
-        self.assertEqual(color, '#28a745')  # Green
+        color = get_leave_color('APPROVED', 'ANNUAL')
+        self.assertEqual(color['background'], '#28a745')  # Green
     
     def test_approved_sick_leave_color(self):
         """Test approved sick leave has orange color"""
         from scheduling.views_leave_calendar import get_leave_color
         
         color = get_leave_color('APPROVED', 'SICK')
-        self.assertEqual(color, '#fd7e14')  # Orange
+        self.assertEqual(color['background'], '#fd7e14')  # Orange
     
     def test_pending_leave_color(self):
         """Test pending leave has yellow color"""
         from scheduling.views_leave_calendar import get_leave_color
         
         color = get_leave_color('PENDING', 'ANNUAL')
-        self.assertEqual(color, '#ffc107')  # Yellow
+        self.assertEqual(color['background'], '#ffc107')  # Yellow
     
     def test_denied_leave_color(self):
         """Test denied leave has red color"""
         from scheduling.views_leave_calendar import get_leave_color
         
         color = get_leave_color('DENIED', 'ANNUAL')
-        self.assertEqual(color, '#dc3545')  # Red
+        self.assertEqual(color['background'], '#dc3545')  # Red
 
 
 class LeaveCalendarPermissionsTests(TestCase):
