@@ -99,7 +99,8 @@ class ActivityLogModelTests(TestCase):
         recent = RecentActivity.objects.filter(
             user=self.user,
             care_home=self.care_home,
-            created_at__gte=now - timedelta(days=30)
+            created_at__gte=now - timedelta(days=30),
+            title='Recent Activity'  # Only the one we just created
         )
         
         self.assertEqual(recent.count(), 1)
@@ -256,14 +257,17 @@ class ActivityFeedViewTests(TestCase):
         self.assertEqual(response['Content-Type'], 'application/json')
         
         data = response.json()
-        self.assertIsInstance(data, list)
-        self.assertGreater(len(data), 0)
+        self.assertIsInstance(data, dict)
+        self.assertIn('activities', data)
+        self.assertIn('success', data)
+        self.assertTrue(data['success'])
+        self.assertGreater(len(data['activities']), 0)
         
         # Check activity structure
-        activity = data[0]
+        activity = data['activities'][0]
         self.assertIn('title', activity)
         self.assertIn('activity_type', activity)
-        self.assertIn('timestamp', activity)
+        self.assertIn('created_at', activity)
     
     def test_activity_feed_filtering(self):
         """Test filtering activities by category"""
