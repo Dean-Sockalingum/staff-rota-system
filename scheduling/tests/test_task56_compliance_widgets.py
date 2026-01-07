@@ -227,13 +227,8 @@ class ComplianceDashboardViewTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        
-        StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit,
-            permission_level='FULL'
-        )
+        self.user.unit = self.unit
+        self.user.save()
         
         # Create test metric
         self.metric = ComplianceMetric.objects.create(
@@ -266,7 +261,7 @@ class ComplianceDashboardViewTests(TestCase):
     
     def test_compliance_dashboard_authenticated(self):
         """Test dashboard for authenticated user"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='100002', password='testpass123')
         url = reverse('compliance_dashboard')
         response = self.client.get(url)
         
@@ -310,13 +305,11 @@ class ComplianceCalculationTests(TestCase):
             email='staff1@example.com',
             password='testpass123'
         )
+        self.user1.unit = self.unit
+        self.user1.save()
         # self.user1.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
-        self.profile1 = StaffProfile.objects.create(
-            user=self.user1,
-            sap_number='123456',
-            unit=self.unit
-        )
+        self.profile1 = self.user1.staff_profile
         
         self.user2 = User.objects.create_user(
             sap='100004',
@@ -325,13 +318,11 @@ class ComplianceCalculationTests(TestCase):
             email='staff2@example.com',
             password='testpass123'
         )
+        self.user2.unit = self.unit
+        self.user2.save()
         # self.user2.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
-        self.profile2 = StaffProfile.objects.create(
-            user=self.user2,
-            sap_number='234567',
-            unit=self.unit
-        )
+        self.profile2 = self.user2.staff_profile
     
     def test_training_compliance_calculation(self):
         """Test training compliance percentage calculation"""
@@ -406,18 +397,13 @@ class ComplianceWidgetManagementTests(TestCase):
             email='manager@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit,
-            permission_level='FULL'
-        )
     
     def test_create_widget_view(self):
         """Test creating a new widget"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='100005', password='testpass123')
         url = reverse('create_widget')
         
         response = self.client.get(url)
@@ -433,7 +419,7 @@ class ComplianceWidgetManagementTests(TestCase):
             created_by=self.user
         )
         
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='100005', password='testpass123')
         url = reverse('delete_widget', args=[widget.id])
         
         response = self.client.post(url)
