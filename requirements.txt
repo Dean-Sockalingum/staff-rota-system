@@ -12,6 +12,11 @@ redis
 # Communications
 twilio
 
+# LDAP and SAML SSO Authentication
+python-ldap>=3.4.0  # LDAP/Active Directory integration (Task #2)
+django-auth-ldap>=4.6.0  # Django LDAP authentication backend
+python3-saml>=1.16.0  # SAML 2.0 SSO integration (Task #3)
+
 # Phase 2: PDF/Excel Export
 WeasyPrint>=60.0  # PDF generation from HTML/CSS
 openpyxl>=3.1.0  # Excel file generation
