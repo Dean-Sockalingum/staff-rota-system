@@ -312,7 +312,7 @@ class LeaveCoverageReportAPITests(TestCase):
     
     def test_coverage_api_returns_json(self):
         """Test coverage API returns JSON"""
-        self.client.login(username='200002', password='testpass123')
+        self.client.login(username='200005', password='testpass123')  # Use correct SAP
         url = reverse('leave_coverage_report_api')
         response = self.client.get(url)
         
@@ -321,7 +321,7 @@ class LeaveCoverageReportAPITests(TestCase):
     
     def test_coverage_api_structure(self):
         """Test coverage API returns correct data structure"""
-        self.client.login(username='200002', password='testpass123')
+        self.client.login(username='200005', password='testpass123')  # Use correct SAP
         url = reverse('leave_coverage_report_api')
         
         response = self.client.get(url, {
@@ -355,14 +355,14 @@ class LeaveCoverageReportAPITests(TestCase):
             staff_user = User.objects.get(sap=f'20001{i}')
             LeaveRequest.objects.create(
                 staff_profile=staff_user.staff_profile,
-                leave_type=self.leave_type,
+                leave_type='ANNUAL',  # CharField choice, not ForeignKey
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=3),
                 reason='Test',
                 status='APPROVED'
             )
         
-        self.client.login(username='200002', password='testpass123')
+        self.client.login(username='200005', password='testpass123')  # Use correct SAP
         url = reverse('leave_coverage_report_api')
         
         response = self.client.get(url, {
