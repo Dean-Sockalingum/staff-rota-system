@@ -67,19 +67,18 @@ jobs:
         python manage.py migrate --noinput
     
     - name: Run tests with coverage
-      continue-on-error: true
       env:
         SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
         DEBUG: 'True'
         FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
         ELASTICSEARCH_HOST: 'localhost:9200'
       run: |
-        coverage run --source='.' manage.py test --verbosity=2 || true
+        coverage run --source='.' manage.py test --verbosity=2
     
     - name: Generate coverage report
-      continue-on-error: true
+      if: always()
       run: |
-        coverage report -m || true
+        coverage report -m
     
     - name: Check critical tests
       env:
