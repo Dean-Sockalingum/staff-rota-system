@@ -40,10 +40,7 @@ class LeaveCalendarViewTests(TestCase):
             password='testpass123'
         )
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user
-        )
+        # StaffProfile auto-created by signal
     
     def test_calendar_requires_login(self):
         """Test that calendar view requires authentication"""
@@ -99,10 +96,7 @@ class TeamLeaveCalendarViewTests(TestCase):
             password='testpass123'
         )
         # self.manager.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.manager_profile = StaffProfile.objects.create(
-            user=self.manager
-        )
+        # StaffProfile auto-created by signal
         
         # Create regular user
         self.staff = User.objects.create_user(
@@ -113,10 +107,7 @@ class TeamLeaveCalendarViewTests(TestCase):
             password='testpass123'
         )
         # self.staff.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.staff_profile = StaffProfile.objects.create(
-            user=self.staff
-        )
+        # StaffProfile auto-created by signal
     
     def test_team_calendar_requires_login(self):
         """Test team calendar requires authentication"""
@@ -179,10 +170,7 @@ class LeaveCalendarDataAPITests(TestCase):
             password='testpass123'
         )
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user
-        )
+        # StaffProfile auto-created by signal
         
         # Create leave type
         self.leave_type = LeaveType.objects.create(
@@ -193,7 +181,7 @@ class LeaveCalendarDataAPITests(TestCase):
         
         # Create test leave request
         self.leave_request = LeaveRequest.objects.create(
-            staff_profile=self.profile,
+            staff_profile=self.user.staff_profile,
             leave_type=self.leave_type,
             start_date=date.today(),
             end_date=date.today() + timedelta(days=5),
@@ -319,13 +307,7 @@ class LeaveCoverageReportAPITests(TestCase):
             password='testpass123'
         )
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit,
-            permission_level='FULL'
-        )
+        # StaffProfile auto-created by signal
         
         # Create leave type
         self.leave_type = LeaveType.objects.create(
@@ -379,16 +361,13 @@ class LeaveCoverageReportAPITests(TestCase):
                 email=f'staff{i}@example.com',
                 password='testpass123'
             )
-            
-            StaffProfile.objects.create(
-                user=staff_user
-            )
+            # StaffProfile auto-created by signal
         
         # Create leave requests for some staff
         for i in range(3):
-            staff = StaffProfile.objects.get(sap_number=f'12345{i}')
+            staff_user = User.objects.get(sap=f'20001{i}')
             LeaveRequest.objects.create(
-                staff_profile=staff,
+                staff_profile=staff_user.staff_profile,
                 leave_type=self.leave_type,
                 start_date=date.today(),
                 end_date=date.today() + timedelta(days=3),
@@ -435,10 +414,7 @@ class LeaveColorSchemeTests(TestCase):
             password='testpass123'
         )
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user
-        )
+        # StaffProfile auto-created by signal
     
     def test_approved_annual_leave_color(self):
         """Test approved annual leave has green color"""
@@ -507,10 +483,7 @@ class LeaveCalendarPermissionsTests(TestCase):
         )
         # User only has access to care_home1
         # self.user.care_home_access.add(self.care_home1)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user
-        )
+        # StaffProfile auto-created by signal
     
     def test_calendar_respects_care_home_access(self):
         """Test calendar only shows leave from accessible care homes"""
