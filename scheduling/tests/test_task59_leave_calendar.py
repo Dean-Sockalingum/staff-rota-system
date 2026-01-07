@@ -42,10 +42,7 @@ class LeaveCalendarViewTests(TestCase):
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit,
-            permission_level='FULL'
+            user=self.user
         )
     
     def test_calendar_requires_login(self):
@@ -104,10 +101,7 @@ class TeamLeaveCalendarViewTests(TestCase):
         # self.manager.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.manager_profile = StaffProfile.objects.create(
-            user=self.manager,
-            sap_number='111111',
-            unit=self.unit,
-            permission_level='FULL'
+            user=self.manager
         )
         
         # Create regular user
@@ -121,10 +115,7 @@ class TeamLeaveCalendarViewTests(TestCase):
         # self.staff.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.staff_profile = StaffProfile.objects.create(
-            user=self.staff,
-            sap_number='222222',
-            unit=self.unit,
-            permission_level='READ_ONLY'
+            user=self.staff
         )
     
     def test_team_calendar_requires_login(self):
@@ -190,9 +181,7 @@ class LeaveCalendarDataAPITests(TestCase):
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
+            user=self.user
         )
         
         # Create leave type
@@ -392,9 +381,7 @@ class LeaveCoverageReportAPITests(TestCase):
             )
             
             StaffProfile.objects.create(
-                user=staff_user,
-                sap_number=f'12345{i}',
-                unit=self.unit
+                user=staff_user
             )
         
         # Create leave requests for some staff
@@ -450,9 +437,7 @@ class LeaveColorSchemeTests(TestCase):
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
+            user=self.user
         )
     
     def test_approved_annual_leave_color(self):
@@ -524,9 +509,7 @@ class LeaveCalendarPermissionsTests(TestCase):
         # self.user.care_home_access.add(self.care_home1)  # care_home_access removed - users access via unit.care_home
         
         self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit1
+            user=self.user
         )
     
     def test_calendar_respects_care_home_access(self):

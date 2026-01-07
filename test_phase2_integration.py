@@ -57,9 +57,8 @@ class Phase2IntegrationTests(TestCase):
         
         # Create test role
         self.role = Role.objects.create(
-            name="Support Care Worker",
-            required_headcount=5,
-            hourly_rate=Decimal('12.00')
+            name='SCW',  # Use valid role choice from ROLE_CHOICES
+            required_headcount=5
         )
         
         # Create test shift type
