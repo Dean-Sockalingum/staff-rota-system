@@ -20,6 +20,10 @@ import json
 from .models_reports import CustomReportTemplate, CustomSavedReport, ReportFavorite, ReportDataSource
 from .report_builder import ReportExecutor, ReportExporter, ReportTemplateBuilder
 
+# Aliases for backward compatibility
+ReportTemplate = CustomReportTemplate
+SavedReport = CustomSavedReport
+
 
 @login_required
 def report_builder_home(request):

@@ -27,6 +27,7 @@ from .models import (
     ActivityLog,
     CarePlanReview,
     LeaveRequest,
+    Notification,
     Resident,
     Role,
     Shift,
