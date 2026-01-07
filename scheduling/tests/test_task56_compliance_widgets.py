@@ -270,7 +270,7 @@ class ComplianceDashboardViewTests(TestCase):
     
     def test_widget_data_api(self):
         """Test widget data API endpoint"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='100002', password='testpass123')
         url = reverse('widget_data_api', args=[self.widget.id])
         response = self.client.get(url)
         

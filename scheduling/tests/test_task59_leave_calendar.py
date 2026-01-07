@@ -33,9 +33,10 @@ class LeaveCalendarViewTests(TestCase):
             care_home=self.care_home
         )
         
-        self.user = User.objects.create_user(            sap='200021',
+        self.user = User.objects.create_user(
+            sap='200021',
             first_name='Test',
-            last_name='User',            username='testuser',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
@@ -52,7 +53,7 @@ class LeaveCalendarViewTests(TestCase):
     
     def test_calendar_view_authenticated(self):
         """Test calendar view for authenticated user"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar')
         response = self.client.get(url)
         
@@ -62,7 +63,7 @@ class LeaveCalendarViewTests(TestCase):
     
     def test_calendar_includes_fullcalendar_cdn(self):
         """Test that calendar includes FullCalendar CDN links"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar')
         response = self.client.get(url)
         
@@ -119,7 +120,7 @@ class TeamLeaveCalendarViewTests(TestCase):
     
     def test_team_calendar_manager_access(self):
         """Test manager can access team calendar"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='200002', password='testpass123')
         url = reverse('team_leave_calendar')
         response = self.client.get(url)
         
@@ -128,7 +129,7 @@ class TeamLeaveCalendarViewTests(TestCase):
     
     def test_team_calendar_readonly_access(self):
         """Test READ_ONLY user can access team calendar"""
-        self.client.login(username='staff', password='testpass123')
+        self.client.login(username='200003', password='testpass123')
         url = reverse('team_leave_calendar')
         response = self.client.get(url)
         
@@ -137,7 +138,7 @@ class TeamLeaveCalendarViewTests(TestCase):
     
     def test_team_calendar_filters_displayed(self):
         """Test team calendar shows care home and unit filters"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='200002', password='testpass123')
         url = reverse('team_leave_calendar')
         response = self.client.get(url)
         
@@ -198,7 +199,7 @@ class LeaveCalendarDataAPITests(TestCase):
     
     def test_calendar_data_api_returns_json(self):
         """Test API returns JSON format"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         response = self.client.get(url)
         
@@ -207,7 +208,7 @@ class LeaveCalendarDataAPITests(TestCase):
     
     def test_calendar_data_api_event_structure(self):
         """Test API returns events with correct structure"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         
         # Add date range parameters for FullCalendar
@@ -236,7 +237,7 @@ class LeaveCalendarDataAPITests(TestCase):
     
     def test_calendar_data_api_filtering_by_care_home(self):
         """Test API filters by care home parameter"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         
         response = self.client.get(url, {
@@ -251,7 +252,7 @@ class LeaveCalendarDataAPITests(TestCase):
     
     def test_calendar_data_api_filtering_by_unit(self):
         """Test API filters by unit parameter"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         
         response = self.client.get(url, {
@@ -266,7 +267,7 @@ class LeaveCalendarDataAPITests(TestCase):
     
     def test_calendar_data_api_view_type_personal(self):
         """Test API with view_type=personal shows only user's leave"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         
         response = self.client.get(url, {
@@ -325,7 +326,7 @@ class LeaveCoverageReportAPITests(TestCase):
     
     def test_coverage_api_returns_json(self):
         """Test coverage API returns JSON"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='200002', password='testpass123')
         url = reverse('leave_coverage_report_api')
         response = self.client.get(url)
         
@@ -334,7 +335,7 @@ class LeaveCoverageReportAPITests(TestCase):
     
     def test_coverage_api_structure(self):
         """Test coverage API returns correct data structure"""
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='200002', password='testpass123')
         url = reverse('leave_coverage_report_api')
         
         response = self.client.get(url, {
@@ -375,7 +376,7 @@ class LeaveCoverageReportAPITests(TestCase):
                 status='APPROVED'
             )
         
-        self.client.login(username='manager', password='testpass123')
+        self.client.login(username='200002', password='testpass123')
         url = reverse('leave_coverage_report_api')
         
         response = self.client.get(url, {
@@ -487,7 +488,7 @@ class LeaveCalendarPermissionsTests(TestCase):
     
     def test_calendar_respects_care_home_access(self):
         """Test calendar only shows leave from accessible care homes"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200021', password='testpass123')
         url = reverse('leave_calendar_data_api')
         
         response = self.client.get(url, {

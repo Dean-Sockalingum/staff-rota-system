@@ -152,14 +152,14 @@ class FormSubmissionTests(TestCase):
         
         # Verify leave request was created
         leave_requests = LeaveRequest.objects.filter(
-            staff_profile=self.profile,
+            staff_profile=self.user.staff_profile,
             leave_type=leave_type
         )
         self.assertTrue(leave_requests.exists())
     
     def test_incident_report_submission(self):
         """Test incident report submission"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200101', password='testpass123')
         
         url = reverse('report_incident')
         data = {
@@ -170,7 +170,7 @@ class FormSubmissionTests(TestCase):
             'description': 'Test incident description',
             'location': 'Test location',
             'immediate_action': 'Test action taken',
-            'reported_by': self.profile.id
+            'reported_by': self.user.staff_profile.id
         }
         
         response = self.client.post(url, data, follow=True)
@@ -224,7 +224,7 @@ class FormValidationTests(TestCase):
     
     def test_date_range_validation(self):
         """Test date range validation (end_date >= start_date)"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200102', password='testpass123')
         
         leave_type = LeaveType.objects.create(
             name='Annual Leave',
@@ -351,7 +351,7 @@ class FormDataIntegrityTests(TestCase):
         
         # Verify data was saved correctly
         leave_request = LeaveRequest.objects.filter(
-            staff_profile=self.profile,
+            staff_profile=self.user.staff_profile,
             leave_type=leave_type
         ).first()
         
