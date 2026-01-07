@@ -412,7 +412,10 @@ class DashboardIntegrationTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='TRAINING',
-            current_value=Decimal('95.0'),
+            metric_name='Training Compliance',
+            current_value=Decimal('95.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )

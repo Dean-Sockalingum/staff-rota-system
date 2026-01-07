@@ -33,12 +33,15 @@ class ComplianceMetricModelTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='TRAINING',
+            metric_name='Training Compliance',
             current_value=Decimal('92.5'),
             target_value=Decimal('95.0'),
             compliant_count=37,
             at_risk_count=3,
             non_compliant_count=0,
-            total_count=40
+            total_count=40,
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()
         )
         
         self.assertIsNotNone(metric.id)
@@ -50,7 +53,10 @@ class ComplianceMetricModelTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='SUPERVISION',
-            current_value=Decimal('96.0'),
+            metric_name='Supervision Compliance',
+            current_value=Decimal('96.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )
@@ -62,7 +68,10 @@ class ComplianceMetricModelTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='WTD',
-            current_value=Decimal('88.0'),
+            metric_name='Wtd Compliance',
+            current_value=Decimal('88.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )
@@ -74,7 +83,10 @@ class ComplianceMetricModelTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='INDUCTION',
-            current_value=Decimal('75.0'),
+            metric_name='Induction Compliance',
+            current_value=Decimal('75.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )
@@ -86,7 +98,10 @@ class ComplianceMetricModelTests(TestCase):
         metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='TRAINING',
-            current_value=Decimal('95.0'),
+            metric_name='Training Compliance',
+            current_value=Decimal('95.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             previous_value=Decimal('90.0'),
             target_value=Decimal('95.0'),
             total_count=100
@@ -131,7 +146,10 @@ class ComplianceWidgetModelTests(TestCase):
         self.metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='TRAINING',
-            current_value=Decimal('95.0'),
+            metric_name='Training Compliance',
+            current_value=Decimal('95.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )
@@ -221,7 +239,10 @@ class ComplianceDashboardViewTests(TestCase):
         self.metric = ComplianceMetric.objects.create(
             care_home=self.care_home,
             category='TRAINING',
-            current_value=Decimal('95.0'),
+            metric_name='Training Compliance',
+            current_value=Decimal('95.0',
+            period_start=date.today() - timedelta(days=30),
+            period_end=date.today()),
             target_value=Decimal('95.0'),
             total_count=100
         )
