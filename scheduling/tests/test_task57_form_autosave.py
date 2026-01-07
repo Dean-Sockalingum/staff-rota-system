@@ -30,21 +30,19 @@ class FormAutoSaveTemplateTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200100',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
     
     def test_leave_request_form_has_autosave(self):
         """Test leave request form includes auto-save attributes"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200100', password='testpass123')
         url = reverse('request_leave')
         response = self.client.get(url)
         
@@ -55,7 +53,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_incident_report_form_has_autosave(self):
         """Test incident report form includes auto-save attributes"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200100', password='testpass123')
         url = reverse('report_incident')
         response = self.client.get(url)
         
@@ -65,7 +63,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_supervision_record_form_has_autosave(self):
         """Test supervision record form includes auto-save attributes"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200100', password='testpass123')
         url = reverse('create_supervision_record')
         response = self.client.get(url)
         
@@ -75,7 +73,7 @@ class FormAutoSaveTemplateTests(TestCase):
     
     def test_training_record_form_has_autosave(self):
         """Test training record form includes auto-save attributes"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200100', password='testpass123')
         url = reverse('submit_training_record')
         response = self.client.get(url)
         
@@ -117,21 +115,19 @@ class FormSubmissionTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200101',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
     
     def test_leave_request_submission_clears_autosave(self):
         """Test that submitting leave request should clear auto-save data"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200101', password='testpass123')
         
         # Create leave type
         leave_type = LeaveType.objects.create(
@@ -198,21 +194,19 @@ class FormValidationTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200102',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
     
     def test_leave_request_validation_errors(self):
         """Test that validation errors are displayed correctly"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200102', password='testpass123')
         
         # Submit incomplete leave request (missing required fields)
         url = reverse('request_leave')
@@ -267,21 +261,19 @@ class FormSecurityTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200103',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
     
     def test_csrf_token_not_saved(self):
         """Test that CSRF tokens are not saved in localStorage"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200103', password='testpass123')
         url = reverse('request_leave')
         response = self.client.get(url)
         
@@ -324,21 +316,19 @@ class FormDataIntegrityTests(TestCase):
         )
         
         self.user = User.objects.create_user(
-            username='testuser',
+            sap='200104',
+            first_name='Test',
+            last_name='User',
             email='test@example.com',
             password='testpass123'
         )
+        self.user.unit = self.unit
+        self.user.save()
         # self.user.care_home_access.add(self.care_home)  # care_home_access removed - users access via unit.care_home
-        
-        self.profile = StaffProfile.objects.create(
-            user=self.user,
-            sap_number='123456',
-            unit=self.unit
-        )
     
     def test_special_characters_in_forms(self):
         """Test that forms handle special characters correctly"""
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='200104', password='testpass123')
         
         leave_type = LeaveType.objects.create(
             name='Sick Leave',
