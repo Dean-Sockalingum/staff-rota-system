@@ -166,7 +166,7 @@ class ReportExecutor:
         start_time = time.time()
         
         # Create saved report instance
-        saved_report = SavedReport.objects.create(
+        saved_report = CustomSavedReport.objects.create(
             template=template,
             generated_by=user,
             parameters=parameters or {},
