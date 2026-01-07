@@ -488,8 +488,7 @@ PRICING_MODEL = {
         'duration': '6 months (Jan - Jun 2026)',
         'monthly_fee': '£1,000',
         'annual_fee': '£12,000',
-        '
-': [
+        'included_services': [
             'Full application access (4 homes, 12 units)',
             '24/7 P1/P2 support',
             'Business hours P3/P4 support',
