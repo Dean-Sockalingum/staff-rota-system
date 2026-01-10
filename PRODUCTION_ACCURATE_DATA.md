@@ -35,8 +35,8 @@
 
 ### 1. Orchard Grove
 - **Code:** `ORCHARD_GROVE`
-- **Bed Capacity:** 60 beds
-- **Occupancy:** 95% (57 residents)
+- **Bed Capacity:** 120 beds
+- **Occupancy:** 95% (114 residents)
 - **Location:** Maryhill, Glasgow
 - **Care Inspectorate ID:** CS2014333831
 - **Units (8 + MGMT):**
@@ -54,8 +54,8 @@
 
 ### 2. Meadowburn House
 - **Code:** `MEADOWBURN`
-- **Bed Capacity:** 45 beds
-- **Occupancy:** 93.3% (42 residents)
+- **Bed Capacity:** 120 beds
+- **Occupancy:** 93.3% (112 residents)
 - **Location:** Glasgow
 - **Care Inspectorate ID:** CS2018371804
 - **Units (8 + MGMT):**
@@ -73,8 +73,8 @@
 
 ### 3. Hawthorn House
 - **Code:** `HAWTHORN_HOUSE`
-- **Bed Capacity:** 38 beds
-- **Occupancy:** 92.1% (35 residents)
+- **Bed Capacity:** 120 beds
+- **Occupancy:** 91.6% (110 residents)
 - **Location:** Glasgow
 - **Care Inspectorate ID:** CS2003001025
 - **Units (8 + MGMT):**
@@ -92,8 +92,8 @@
 
 ### 4. Riverside
 - **Code:** `RIVERSIDE`
-- **Bed Capacity:** 52 beds
-- **Occupancy:** 92.3% (48 residents)
+- **Bed Capacity:** 120beds
+- **Occupancy:** 92.5% (111 residents)
 - **Location:** Govan, Glasgow
 - **Care Inspectorate ID:** CS2014333834
 - **Units (8 + MGMT):**
@@ -111,8 +111,8 @@
 
 ### 5. Victoria Gardens
 - **Code:** `VICTORIA_GARDENS`
-- **Bed Capacity:** 40 beds
-- **Occupancy:** 95% (38 residents)
+- **Bed Capacity:** 70 beds
+- **Occupancy:** 95% (67 residents)
 - **Location:** Partick, Glasgow
 - **Care Inspectorate ID:** CS2018371437
 - **Units (5 + MGMT):**
@@ -132,10 +132,10 @@
 ### Capacity Overview
 - **Total Care Homes:** 5
 - **Total Units:** 42 active units (37 care units + 5 MGMT units)
-- **Total Bed Capacity:** 235 beds (academic paper) or 550 beds (production data - using unit calculation)
-- **Overall Occupancy:** 93.6% (220/235 beds occupied)
+- **Total Bed Capacity:** 550 beds (academic paper) or 550 beds (production data - using unit calculation)
+- **Overall Occupancy:** 93.4% (514/550 beds occupied)
 - **Total Staff:** 821 staff members
-- **Shift Types:** Multiple (Day 07:00-19:00, Night 19:00-07:00, Long Day 07:00-20:00)
+- **Shift Types:** Multiple (Day 08:00-20:00, Night 20:00-08:00, Mgmt 09:00-17:00)
 
 ### Unit Naming Convention
 - **Format:** `{HOME_ABBREV}_{UNIT_NAME}`
