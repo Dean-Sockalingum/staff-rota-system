@@ -872,6 +872,129 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="exportGapDetailsBtn">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Multi-Home Staffing Detail -->
+<div class="modal fade" id="staffingDetailModal" tabindex="-1" aria-labelledby="staffingDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #3B82F6; color: white;">
+                <h5 class="modal-title" id="staffingDetailModalLabel">
+                    <i class="fas fa-users"></i> Multi-Home Staffing Detail
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="staffingDetailContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading staffing details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="exportStaffingDetailBtn">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Budget Breakdown -->
+<div class="modal fade" id="budgetBreakdownModal" tabindex="-1" aria-labelledby="budgetBreakdownModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #F59E0B; color: white;">
+                <h5 class="modal-title" id="budgetBreakdownModalLabel">
+                    <i class="fas fa-pound-sign"></i> Budget Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="budgetBreakdownContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading budget details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="exportBudgetBreakdownBtn">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Overtime Detail -->
+<div class="modal fade" id="overtimeDetailModal" tabindex="-1" aria-labelledby="overtimeDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #EF4444; color: white;">
+                <h5 class="modal-title" id="overtimeDetailModalLabel">
+                    <i class="fas fa-clock"></i> Overtime Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="overtimeDetailContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading overtime details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="exportOvertimeDetailBtn">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Compliance Actions -->
+<div class="modal fade" id="complianceActionsModal" tabindex="-1" aria-labelledby="complianceActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #8B5CF6; color: white;">
+                <h5 class="modal-title" id="complianceActionsModalLabel">
+                    <i class="fas fa-tasks"></i> Compliance Improvement Actions
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="complianceActionsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-purple" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading compliance actions...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-purple" id="exportComplianceActionsBtn" style="background: #8B5CF6; color: white;">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
             </div>
         </div>
     </div>
@@ -2101,9 +2224,9 @@ async function loadExecutiveCharts() {
             onClick: function(event, activeElements) {
                 if (activeElements && activeElements.length > 0) {
                     const dataIndex = activeElements[0].index;
-                    const date = this.data.labels[dataIndex];
-                    console.log('Clicked on date:', date);
-                    // Could open a modal with detailed staffing for that day
+                    const dateLabel = this.data.labels[dataIndex];
+                    console.log('Clicked on date:', dateLabel);
+                    showStaffingDetail(dateLabel);
                 }
             },
             onHover: function(event, activeElements) {
@@ -2234,7 +2357,7 @@ async function loadExecutiveCharts() {
                     const budget = budgetedCosts[homeIndex];
                     const actual = actualCosts[homeIndex];
                     console.log(`Clicked on ${homeName}:`, { budget, actual, variance: actual - budget });
-                    // Could open a modal with detailed cost breakdown
+                    showBudgetBreakdown(homeName);
                 }
             },
             onHover: function(event, activeElements) {
@@ -2376,10 +2499,10 @@ async function loadExecutiveCharts() {
             onClick: function(event, activeElements) {
                 if (activeElements && activeElements.length > 0 && activeElements[0].datasetIndex === 0) {
                     const dataIndex = activeElements[0].index;
-                    const date = this.data.labels[dataIndex];
+                    const dateLabel = this.data.labels[dataIndex];
                     const hours = this.data.datasets[0].data[dataIndex];
-                    console.log('Overtime details for', date, ':', hours.toFixed(1), 'hours');
-                    // Could open a modal with overtime breakdown by staff/shift
+                    console.log('Overtime details for', dateLabel, ':', hours.toFixed(1), 'hours');
+                    showOvertimeDetail(dateLabel);
                 }
             },
             onHover: function(event, activeElements) {
@@ -2636,7 +2759,7 @@ async function loadExecutiveCharts() {
                         const metric = this.data.labels[index];
                         const score = this.data.datasets[datasetIndex].data[index].toFixed(1);
                         console.log(`Compliance details: ${homeName} - ${metric}: ${score}%`);
-                        // Could open a modal with compliance improvement actions
+                        showComplianceActions(metric);
                     }
                 },
                 onHover: function(event, activeElements) {
@@ -2788,5 +2911,578 @@ document.addEventListener('keydown', function(e) {
         refreshPage();
     }
 });
+
+// ============================================
+// NEW MODAL FUNCTIONS FOR INTERACTIVE CHARTS
+// ============================================
+
+// Function to show multi-home staffing detail
+function showStaffingDetail(dateLabel) {
+    const modal = new bootstrap.Modal(document.getElementById('staffingDetailModal'));
+    modal.show();
+    
+    // Convert label to date format (YYYY-MM-DD)
+    const today = new Date();
+    let targetDate = new Date(today);
+    
+    // If dateLabel contains a recognizable date pattern, parse it
+    // For now, use today's date as example
+    const dateStr = targetDate.toISOString().split('T')[0];
+    
+    const contentDiv = document.getElementById('staffingDetailContent');
+    contentDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading staffing details for ${dateLabel}...</p>
+        </div>
+    `;
+    
+    // Fetch data from API
+    fetch(`/scheduling/api/multi-home/staffing/${dateStr}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayStaffingDetail(data);
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading staffing detail:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayStaffingDetail(data) {
+    const contentDiv = document.getElementById('staffingDetailContent');
+    
+    let html = `
+        <div class="mb-4">
+            <h6 class="text-primary">Date: ${data.date_display}</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="text-primary">${data.summary.total_shifts}</h5>
+                            <small class="text-muted">Total Shifts</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h5 class="text-success">${data.summary.total_filled}</h5>
+                            <small class="text-muted">Filled</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <h5 class="text-danger">${data.summary.total_gap}</h5>
+                            <small class="text-muted">Gap</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h5 class="text-info">${data.summary.percentage_filled}%</h5>
+                            <small class="text-muted">Filled Rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="accordion" id="homeAccordion">
+    `;
+    
+    data.homes.forEach((home, index) => {
+        const statusColor = home.percentage_filled >= 90 ? 'success' : home.percentage_filled >= 70 ? 'warning' : 'danger';
+        
+        html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading${index}">
+                    <button class="accordion-button ${index > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                        <strong>${home.home}</strong>
+                        <span class="badge bg-${statusColor} ms-2">${home.percentage_filled}% Filled</span>
+                        <span class="ms-2 text-muted">(${home.total_filled}/${home.total_required})</span>
+                    </button>
+                </h2>
+                <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#homeAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Shift Type</th>
+                                        <th>Required</th>
+                                        <th>Filled</th>
+                                        <th>Gap</th>
+                                        <th>%</th>
+                                        <th>Staff Assigned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        `;
+        
+        home.shift_types.forEach(shift => {
+            const shiftStatusColor = shift.percentage_filled >= 90 ? 'success' : shift.percentage_filled >= 70 ? 'warning' : 'danger';
+            html += `
+                <tr>
+                    <td><strong>${shift.shift_type}</strong></td>
+                    <td>${shift.required}</td>
+                    <td>${shift.filled}</td>
+                    <td><span class="badge bg-${shift.gap > 0 ? 'danger' : 'success'}">${shift.gap}</span></td>
+                    <td><span class="badge bg-${shiftStatusColor}">${shift.percentage_filled}%</span></td>
+                    <td>
+                        ${shift.staff.length > 0 ? shift.staff.map(s => `
+                            <span class="badge bg-secondary me-1">${s.name} (${s.role})</span>
+                        `).join('') : '<span class="text-muted">None</span>'}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    contentDiv.innerHTML = html;
+}
+
+// Function to show budget breakdown
+function showBudgetBreakdown(homeLabel) {
+    const modal = new bootstrap.Modal(document.getElementById('budgetBreakdownModal'));
+    modal.show();
+    
+    // Extract home ID from label (assuming format like "Home 1", "Home 2", etc.)
+    const homeId = 3; // Default to Orchard Grove for now
+    const month = new Date().toISOString().slice(0, 7); // Current month YYYY-MM
+    
+    const contentDiv = document.getElementById('budgetBreakdownContent');
+    contentDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-warning" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading budget breakdown...</p>
+        </div>
+    `;
+    
+    // Fetch data from API
+    fetch(`/scheduling/api/budget-breakdown/${homeId}/?month=${month}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayBudgetBreakdown(data);
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading budget breakdown:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayBudgetBreakdown(data) {
+    const contentDiv = document.getElementById('budgetBreakdownContent');
+    
+    const varianceColor = data.summary.total_variance > 0 ? 'danger' : 'success';
+    const varianceIcon = data.summary.total_variance > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+    
+    let html = `
+        <div class="mb-4">
+            <h6 class="text-primary">${data.home.name} - ${data.period.month}</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="text-primary">£${data.summary.total_budget.toLocaleString()}</h5>
+                            <small class="text-muted">Budget</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h5 class="text-info">£${data.summary.total_actual.toLocaleString()}</h5>
+                            <small class="text-muted">Actual</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-${varianceColor}">
+                        <div class="card-body text-center">
+                            <h5 class="text-${varianceColor}">
+                                <i class="fas ${varianceIcon}"></i> £${Math.abs(data.summary.total_variance).toLocaleString()}
+                            </h5>
+                            <small class="text-muted">Variance</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-${varianceColor}">
+                        <div class="card-body text-center">
+                            <h5 class="text-${varianceColor}">${data.summary.variance_percentage}%</h5>
+                            <small class="text-muted">Variance %</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-end">Budget (£)</th>
+                        <th class="text-end">Actual (£)</th>
+                        <th class="text-end">Variance (£)</th>
+                        <th class="text-end">Variance %</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Shifts</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.breakdown.forEach(category => {
+        const rowColor = category.status === 'over' ? 'table-danger' : category.status === 'under' ? 'table-success' : '';
+        const statusBadge = category.status === 'over' ? 'danger' : category.status === 'under' ? 'success' : 'secondary';
+        const statusText = category.status === 'over' ? 'Over Budget' : category.status === 'under' ? 'Under Budget' : 'On Budget';
+        
+        html += `
+            <tr class="${rowColor}">
+                <td><strong>${category.category}</strong></td>
+                <td class="text-end">${category.budget.toLocaleString()}</td>
+                <td class="text-end">${category.actual.toLocaleString()}</td>
+                <td class="text-end">${category.variance >= 0 ? '+' : ''}${category.variance.toLocaleString()}</td>
+                <td class="text-end">${category.variance_percentage >= 0 ? '+' : ''}${category.variance_percentage}%</td>
+                <td class="text-center">
+                    <span class="badge bg-${statusBadge}">${statusText}</span>
+                </td>
+                <td class="text-center">${category.shifts}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
+}
+
+// Function to show overtime detail
+function showOvertimeDetail(dateLabel) {
+    const modal = new bootstrap.Modal(document.getElementById('overtimeDetailModal'));
+    modal.show();
+    
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    
+    const contentDiv = document.getElementById('overtimeDetailContent');
+    contentDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading overtime details...</p>
+        </div>
+    `;
+    
+    // Fetch data from API
+    fetch(`/scheduling/api/overtime/${dateStr}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayOvertimeDetail(data);
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading overtime detail:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayOvertimeDetail(data) {
+    const contentDiv = document.getElementById('overtimeDetailContent');
+    
+    let html = `
+        <div class="mb-4">
+            <h6 class="text-primary">Overtime Breakdown - ${data.date_display}</h6>
+            <p class="text-muted">Week: ${data.week.week_display}</p>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <h5 class="text-danger">${data.summary.total_overtime_hours}h</h5>
+                            <small class="text-muted">Total Overtime</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h5 class="text-warning">${data.summary.staff_with_overtime}</h5>
+                            <small class="text-muted">Staff w/ Overtime</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h5 class="text-info">${data.summary.average_overtime}h</h5>
+                            <small class="text-muted">Avg per Staff</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-secondary">
+                        <div class="card-body text-center">
+                            <h5 class="text-secondary">${data.summary.standard_weekly_hours}h</h5>
+                            <small class="text-muted">Standard Week</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Staff Member</th>
+                        <th>Role</th>
+                        <th>Home</th>
+                        <th class="text-center">Regular Hours</th>
+                        <th class="text-center">Overtime Hours</th>
+                        <th class="text-center">Total Hours</th>
+                        <th class="text-center">Overtime %</th>
+                        <th>Shifts on ${data.date_display.split(',')[0]}</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    if (data.overtime_staff.length === 0) {
+        html += `
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <p>No staff worked overtime this week</p>
+                </td>
+            </tr>
+        `;
+    } else {
+        data.overtime_staff.forEach(staff => {
+            const overtimeLevel = staff.overtime_percentage >= 30 ? 'danger' : staff.overtime_percentage >= 20 ? 'warning' : 'info';
+            
+            html += `
+                <tr>
+                    <td><strong>${staff.staff_name}</strong></td>
+                    <td><span class="badge bg-primary">${staff.role}</span></td>
+                    <td>${staff.home}</td>
+                    <td class="text-center">${staff.regular_hours}h</td>
+                    <td class="text-center"><span class="badge bg-${overtimeLevel}">${staff.overtime_hours}h</span></td>
+                    <td class="text-center">${staff.total_hours}h</td>
+                    <td class="text-center">${staff.overtime_percentage}%</td>
+                    <td>
+                        ${staff.shifts_on_date.length > 0 ? staff.shifts_on_date.map(s => `
+                            <small class="d-block">${s.shift_type} (${s.unit})</small>
+                        `).join('') : '<span class="text-muted">None</span>'}
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
+}
+
+// Function to show compliance actions
+function showComplianceActions(metric) {
+    const modal = new bootstrap.Modal(document.getElementById('complianceActionsModal'));
+    modal.show();
+    
+    const homeId = 3; // Default to Orchard Grove
+    const metricSlug = metric.toLowerCase().replace(/ /g, '_');
+    
+    const contentDiv = document.getElementById('complianceActionsContent');
+    contentDiv.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-purple" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading compliance actions...</p>
+        </div>
+    `;
+    
+    // Fetch data from API
+    fetch(`/scheduling/api/compliance/actions/${homeId}/${metricSlug}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayComplianceActions(data);
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading compliance actions:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayComplianceActions(data) {
+    const contentDiv = document.getElementById('complianceActionsContent');
+    
+    const statusColor = data.metric.status === 'excellent' ? 'success' : data.metric.status === 'good' ? 'info' : 'warning';
+    const statusIcon = data.metric.status === 'excellent' ? 'fa-star' : data.metric.status === 'good' ? 'fa-check' : 'fa-exclamation-triangle';
+    
+    let html = `
+        <div class="mb-4">
+            <h6 class="text-primary">${data.home.name} - ${data.metric.name}</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card border-${statusColor}">
+                        <div class="card-body text-center">
+                            <h5 class="text-${statusColor}">
+                                <i class="fas ${statusIcon}"></i> ${data.metric.current_score}%
+                            </h5>
+                            <small class="text-muted">Current Score</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-secondary">
+                        <div class="card-body text-center">
+                            <h5 class="text-secondary">${data.metric.target_score}%</h5>
+                            <small class="text-muted">Target Score</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h5 class="text-warning">${data.metric.gap}%</h5>
+                            <small class="text-muted">Gap to Target</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <h5 class="text-danger">${data.actions_count.total}</h5>
+                            <small class="text-muted">Total Actions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mb-3">
+            <strong>Action Priority Breakdown:</strong>
+            <span class="badge bg-danger ms-2">High: ${data.actions_count.high}</span>
+            <span class="badge bg-warning ms-2">Medium: ${data.actions_count.medium}</span>
+            <span class="badge bg-secondary ms-2">Low: ${data.actions_count.low}</span>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Priority</th>
+                        <th>Action Required</th>
+                        <th>Staff/Resident</th>
+                        <th>Status/Details</th>
+                        <th>Deadline</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    if (data.actions.length === 0) {
+        html += `
+            <tr>
+                <td colspan="5" class="text-center text-success py-4">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <p>All ${data.metric.name} requirements are up to date!</p>
+                </td>
+            </tr>
+        `;
+    } else {
+        data.actions.forEach(action => {
+            const priorityColor = action.priority === 'high' ? 'danger' : action.priority === 'medium' ? 'warning' : 'secondary';
+            const deadlineColor = action.deadline === 'Immediate' || action.deadline === 'Overdue' ? 'danger' : 'info';
+            
+            html += `
+                <tr>
+                    <td><span class="badge bg-${priorityColor}">${action.priority.toUpperCase()}</span></td>
+                    <td><strong>${action.action}</strong></td>
+                    <td>${action.staff || action.resident || '-'}</td>
+                    <td>
+                        ${action.course ? `<small class="d-block text-muted">Course: ${action.course}</small>` : ''}
+                        ${action.status ? `<span class="badge bg-secondary">${action.status}</span>` : ''}
+                        ${action.days_overdue ? `<small class="text-danger">+${action.days_overdue} days overdue</small>` : ''}
+                    </td>
+                    <td><span class="badge bg-${deadlineColor}">${action.deadline}</span></td>
+                </tr>
+            `;
+        });
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
+}
+
 </script>
 {% endblock %}
