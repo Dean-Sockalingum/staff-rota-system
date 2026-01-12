@@ -3,7 +3,8 @@ from . import views
 from .views_senior_dashboard import (
     senior_management_dashboard, 
     senior_dashboard_export,
-    custom_report_builder
+    custom_report_builder,
+    api_staffing_gaps
 )
 from .views_forecasting import (
     forecasting_dashboard,
@@ -292,9 +293,13 @@ urlpatterns = [
     path('home/', views.home_dashboard, name='home_dashboard'),  # Auto-detects user's home
     path('home/<slug:home_slug>/', views.home_dashboard, name='home_dashboard_specific'),  # Specific home view
     
+    # Senior Dashboard
     path('senior-dashboard/export/', senior_dashboard_export, name='senior_dashboard_export'),
     path('senior-dashboard/reports/', custom_report_builder, name='custom_report_builder'),
     path('senior-dashboard/', senior_management_dashboard, name='senior_management_dashboard'),
+    
+    # Senior Dashboard API Endpoints
+    path('api/staffing-gaps/', api_staffing_gaps, name='api_staffing_gaps'),
     
     # ML Forecasting Dashboard (Task 11)
     path('forecasting/', forecasting_dashboard, name='forecasting_dashboard'),

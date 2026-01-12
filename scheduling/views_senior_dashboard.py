@@ -17,13 +17,15 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg, Q, F, Prefetch
 from django.db import models
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from datetime import datetime, timedelta
 from decimal import Decimal
 import csv
+import json
 
 from .models import Shift, Unit, User, LeaveRequest, StaffReallocation, Resident, CarePlanReview
 from .models_multi_home import CareHome
+from .decorators_api import api_login_required
 # Automated workflow models - to be integrated in Phase 2
 # from .models_automated_workflow import (
 #     StaffingCoverRequest, ReallocationRequest, AgencyRequest
@@ -1467,3 +1469,118 @@ def _export_pdf(report_type, report_data, start_date, end_date):
         # reportlab not installed, fall back to CSV
         return _export_csv(report_type, report_data, start_date, end_date)
 
+
+@api_login_required
+def api_staffing_gaps(request):
+    """
+    API endpoint for staffing gap details
+    Returns detailed breakdown of staffing gaps by home, shift type, and date
+    
+    GET parameters:
+    - date: YYYY-MM-DD (default: today)
+    - days: number of days to include (default: 7)
+    - home_id: filter by specific home (optional)
+    
+    Returns JSON with gap details for GAP breakdown modal
+    """
+    try:
+        # Parse request parameters
+        date_str = request.GET.get('date')
+        if date_str:
+            start_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            start_date = timezone.now().date()
+        
+        days = int(request.GET.get('days', 7))
+        end_date = start_date + timedelta(days=days)
+        
+        home_id = request.GET.get('home_id')
+        
+        # Get all care homes
+        homes = CareHome.objects.all()
+        if home_id:
+            homes = homes.filter(id=home_id)
+        
+        gaps_data = []
+        total_gap = 0
+        total_filled = 0
+        total_required = 0
+        
+        # Calculate gaps for each home
+        for home in homes:
+            # Get units for this home
+            units = Unit.objects.filter(care_home=home)
+            
+            # Get shifts in date range
+            shifts = Shift.objects.filter(
+                unit__in=units,
+                date__gte=start_date,
+                date__lt=end_date
+            ).select_related('unit', 'shift_type', 'assigned_to')
+            
+            # Group by date and shift type
+            shift_groups = {}
+            for shift in shifts:
+                key = (shift.date, shift.shift_type.name if shift.shift_type else 'Unknown')
+                if key not in shift_groups:
+                    shift_groups[key] = {
+                        'required': 0,
+                        'filled': 0,
+                        'shifts': []
+                    }
+                
+                shift_groups[key]['required'] += 1
+                if shift.assigned_to:
+                    shift_groups[key]['filled'] += 1
+                shift_groups[key]['shifts'].append(shift)
+            
+            # Calculate gaps for each group
+            for (date, shift_type), data in shift_groups.items():
+                gap = data['required'] - data['filled']
+                
+                if gap > 0:  # Only include if there's actually a gap
+                    gaps_data.append({
+                        'home': home.name,
+                        'home_id': home.id,
+                        'shift_type': shift_type,
+                        'date': date.strftime('%Y-%m-%d'),
+                        'date_display': date.strftime('%a, %b %d'),
+                        'required': data['required'],
+                        'filled': data['filled'],
+                        'gap': gap,
+                        'percentage_filled': round((data['filled'] / data['required'] * 100), 1) if data['required'] > 0 else 0
+                    })
+                    
+                    total_gap += gap
+                    total_required += data['required']
+                    total_filled += data['filled']
+        
+        # Sort by date, then home, then shift type
+        gaps_data.sort(key=lambda x: (x['date'], x['home'], x['shift_type']))
+        
+        # Calculate overall percentage
+        overall_percentage = round((total_filled / total_required * 100), 1) if total_required > 0 else 0
+        
+        return JsonResponse({
+            'success': True,
+            'period': {
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d'),
+                'days': days
+            },
+            'summary': {
+                'total_required': total_required,
+                'total_filled': total_filled,
+                'total_gap': total_gap,
+                'percentage_filled': overall_percentage
+            },
+            'gaps': gaps_data,
+            'homes_count': homes.count(),
+            'generated_at': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
