@@ -1584,3 +1584,586 @@ def api_staffing_gaps(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_login_required
+def api_multi_home_staffing(request, date_str):
+    """
+    API endpoint for multi-home staffing detail breakdown
+    Returns detailed staffing levels across all homes for a specific date
+    
+    URL parameter:
+    - date_str: YYYY-MM-DD format
+    
+    Returns JSON with staffing details by home, unit, and shift type
+    Used when clicking data points on Multi-Home Staffing Chart
+    """
+    try:
+        # Parse date
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Get all care homes
+        homes = CareHome.objects.all().order_by('name')
+        
+        staffing_data = []
+        total_shifts = 0
+        total_filled = 0
+        total_gap = 0
+        
+        for home in homes:
+            # Get units for this home
+            units = Unit.objects.filter(care_home=home, is_active=True)
+            
+            # Get shifts for this date
+            shifts = Shift.objects.filter(
+                unit__in=units,
+                date=target_date
+            ).select_related('unit', 'shift_type', 'assigned_to', 'assigned_to__role')
+            
+            # Group by shift type
+            shift_type_groups = {}
+            for shift in shifts:
+                shift_type_name = shift.shift_type.name if shift.shift_type else 'Unknown'
+                
+                if shift_type_name not in shift_type_groups:
+                    shift_type_groups[shift_type_name] = {
+                        'required': 0,
+                        'filled': 0,
+                        'staff': []
+                    }
+                
+                shift_type_groups[shift_type_name]['required'] += 1
+                total_shifts += 1
+                
+                if shift.assigned_to:
+                    shift_type_groups[shift_type_name]['filled'] += 1
+                    total_filled += 1
+                    shift_type_groups[shift_type_name]['staff'].append({
+                        'name': f"{shift.assigned_to.first_name} {shift.assigned_to.last_name}",
+                        'role': shift.assigned_to.role.name if shift.assigned_to.role else 'Unknown',
+                        'unit': shift.unit.name
+                    })
+            
+            # Calculate home-level stats
+            home_required = sum(g['required'] for g in shift_type_groups.values())
+            home_filled = sum(g['filled'] for g in shift_type_groups.values())
+            home_gap = home_required - home_filled
+            total_gap += home_gap
+            
+            # Build shift type breakdown
+            shift_types_breakdown = []
+            for shift_type, data in shift_type_groups.items():
+                gap = data['required'] - data['filled']
+                shift_types_breakdown.append({
+                    'shift_type': shift_type,
+                    'required': data['required'],
+                    'filled': data['filled'],
+                    'gap': gap,
+                    'percentage_filled': round((data['filled'] / data['required'] * 100), 1) if data['required'] > 0 else 0,
+                    'staff': data['staff']
+                })
+            
+            staffing_data.append({
+                'home': home.name,
+                'home_id': home.id,
+                'location': home.location,
+                'total_required': home_required,
+                'total_filled': home_filled,
+                'total_gap': home_gap,
+                'percentage_filled': round((home_filled / home_required * 100), 1) if home_required > 0 else 0,
+                'shift_types': shift_types_breakdown
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'date': target_date.strftime('%Y-%m-%d'),
+            'date_display': target_date.strftime('%A, %B %d, %Y'),
+            'summary': {
+                'total_shifts': total_shifts,
+                'total_filled': total_filled,
+                'total_gap': total_gap,
+                'percentage_filled': round((total_filled / total_shifts * 100), 1) if total_shifts > 0 else 0,
+                'homes_count': homes.count()
+            },
+            'homes': staffing_data,
+            'generated_at': timezone.now().isoformat()
+        })
+        
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid date format. Use YYYY-MM-DD'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_login_required
+def api_budget_breakdown(request, home_id):
+    """
+    API endpoint for budget breakdown by department/category
+    Returns detailed cost breakdown for a specific care home
+    
+    URL parameter:
+    - home_id: Care home ID
+    
+    GET parameters:
+    - month: YYYY-MM (default: current month)
+    
+    Returns JSON with budget vs actual spending by category
+    Used when clicking bars on Budget vs Actual Chart
+    """
+    try:
+        # Get care home
+        home = CareHome.objects.get(id=home_id)
+        
+        # Parse month parameter
+        month_str = request.GET.get('month')
+        if month_str:
+            target_date = datetime.strptime(month_str, '%Y-%m').date()
+        else:
+            target_date = timezone.now().date()
+        
+        # Calculate month date range
+        month_start = target_date.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1)
+        
+        # Get units for this home
+        units = Unit.objects.filter(care_home=home, is_active=True)
+        
+        # Get all shifts for the month
+        shifts = Shift.objects.filter(
+            unit__in=units,
+            date__gte=month_start,
+            date__lt=month_end
+        ).select_related('assigned_to', 'assigned_to__role', 'shift_type')
+        
+        # Calculate costs by category
+        categories = {
+            'Staff Wages': {'budget': 0, 'actual': 0, 'shifts': 0},
+            'Agency Cover': {'budget': 0, 'actual': 0, 'shifts': 0},
+            'Overtime': {'budget': 0, 'actual': 0, 'shifts': 0},
+            'Training': {'budget': 0, 'actual': 0, 'shifts': 0},
+        }
+        
+        # Hourly rates (simplified - should come from settings/database)
+        base_rate = Decimal('12.50')
+        agency_rate = Decimal('18.00')
+        overtime_rate = Decimal('15.63')  # 1.25x base
+        
+        total_budget = Decimal('0')
+        total_actual = Decimal('0')
+        
+        for shift in shifts:
+            # Determine shift duration (simplified - assuming 8 hours)
+            duration = 8
+            
+            if shift.assigned_to:
+                # Regular staff wage
+                cost = base_rate * duration
+                categories['Staff Wages']['actual'] += float(cost)
+                categories['Staff Wages']['shifts'] += 1
+                total_actual += cost
+            else:
+                # Unfilled - budget for agency
+                cost = agency_rate * duration
+                categories['Agency Cover']['budget'] += float(cost)
+                categories['Agency Cover']['shifts'] += 1
+                total_budget += cost
+        
+        # Add sample overtime (20% of filled shifts)
+        filled_shifts = shifts.filter(assigned_to__isnull=False).count()
+        overtime_cost = float(overtime_rate * 8 * Decimal(filled_shifts) * Decimal('0.2'))
+        categories['Overtime']['actual'] = overtime_cost
+        categories['Overtime']['shifts'] = int(filled_shifts * 0.2)
+        total_actual += Decimal(str(overtime_cost))
+        
+        # Training budget (fixed monthly)
+        training_budget = 2000.0
+        categories['Training']['budget'] = training_budget
+        categories['Training']['actual'] = training_budget * 0.85  # 85% spent
+        total_budget += Decimal(str(training_budget))
+        total_actual += Decimal(str(training_budget * 0.85))
+        
+        # Build breakdown
+        breakdown = []
+        for category, data in categories.items():
+            budget = data['budget']
+            actual = data['actual']
+            variance = actual - budget
+            variance_pct = round((variance / budget * 100), 1) if budget > 0 else 0
+            
+            breakdown.append({
+                'category': category,
+                'budget': round(budget, 2),
+                'actual': round(actual, 2),
+                'variance': round(variance, 2),
+                'variance_percentage': variance_pct,
+                'shifts': data['shifts'],
+                'status': 'over' if variance > 0 else 'under' if variance < 0 else 'on_budget'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'home': {
+                'id': home.id,
+                'name': home.name,
+                'location': home.location
+            },
+            'period': {
+                'month': month_start.strftime('%B %Y'),
+                'start_date': month_start.strftime('%Y-%m-%d'),
+                'end_date': (month_end - timedelta(days=1)).strftime('%Y-%m-%d')
+            },
+            'summary': {
+                'total_budget': round(float(total_budget), 2),
+                'total_actual': round(float(total_actual), 2),
+                'total_variance': round(float(total_actual - total_budget), 2),
+                'variance_percentage': round(((total_actual - total_budget) / total_budget * 100), 1) if total_budget > 0 else 0
+            },
+            'breakdown': breakdown,
+            'generated_at': timezone.now().isoformat()
+        })
+        
+    except CareHome.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Care home not found'
+        }, status=404)
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid month format. Use YYYY-MM'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_login_required
+def api_overtime_detail(request, date_str):
+    """
+    API endpoint for overtime detail by staff member
+    Returns detailed overtime breakdown for a specific date
+    
+    URL parameter:
+    - date_str: YYYY-MM-DD format
+    
+    Returns JSON with overtime hours by staff member
+    Used when clicking high-overtime days on Overtime Trend Chart
+    """
+    try:
+        # Parse date
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Calculate week range (Monday to Sunday containing target date)
+        days_since_monday = target_date.weekday()
+        week_start = target_date - timedelta(days=days_since_monday)
+        week_end = week_start + timedelta(days=6)
+        
+        # Get all care homes
+        homes = CareHome.objects.all()
+        all_units = Unit.objects.filter(care_home__in=homes, is_active=True)
+        
+        # Get shifts for the week
+        shifts = Shift.objects.filter(
+            unit__in=all_units,
+            date__gte=week_start,
+            date__lte=week_end,
+            assigned_to__isnull=False
+        ).select_related('assigned_to', 'assigned_to__role', 'unit', 'unit__care_home', 'shift_type')
+        
+        # Calculate hours per staff member
+        staff_hours = {}
+        for shift in shifts:
+            staff_id = shift.assigned_to.id
+            
+            if staff_id not in staff_hours:
+                staff_hours[staff_id] = {
+                    'staff_name': f"{shift.assigned_to.first_name} {shift.assigned_to.last_name}",
+                    'role': shift.assigned_to.role.name if shift.assigned_to.role else 'Unknown',
+                    'home': shift.unit.care_home.name,
+                    'regular_hours': 0,
+                    'overtime_hours': 0,
+                    'total_hours': 0,
+                    'shifts': []
+                }
+            
+            # Assume 8 hours per shift
+            shift_hours = 8
+            staff_hours[staff_id]['total_hours'] += shift_hours
+            
+            # Track shifts on target date
+            if shift.date == target_date:
+                staff_hours[staff_id]['shifts'].append({
+                    'date': shift.date.strftime('%Y-%m-%d'),
+                    'shift_type': shift.shift_type.name if shift.shift_type else 'Unknown',
+                    'unit': shift.unit.name,
+                    'hours': shift_hours
+                })
+        
+        # Calculate overtime (over 37.5 hours per week)
+        standard_hours = 37.5
+        overtime_data = []
+        total_overtime = 0
+        total_staff_overtime = 0
+        
+        for staff_id, data in staff_hours.items():
+            if data['total_hours'] > standard_hours:
+                overtime = data['total_hours'] - standard_hours
+                data['regular_hours'] = standard_hours
+                data['overtime_hours'] = overtime
+                total_overtime += overtime
+                total_staff_overtime += 1
+                
+                overtime_data.append({
+                    'staff_name': data['staff_name'],
+                    'role': data['role'],
+                    'home': data['home'],
+                    'regular_hours': round(data['regular_hours'], 1),
+                    'overtime_hours': round(overtime, 1),
+                    'total_hours': round(data['total_hours'], 1),
+                    'overtime_percentage': round((overtime / data['total_hours'] * 100), 1),
+                    'shifts_on_date': data['shifts']
+                })
+            else:
+                data['regular_hours'] = data['total_hours']
+                data['overtime_hours'] = 0
+        
+        # Sort by overtime hours (descending)
+        overtime_data.sort(key=lambda x: x['overtime_hours'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'date': target_date.strftime('%Y-%m-%d'),
+            'date_display': target_date.strftime('%A, %B %d, %Y'),
+            'week': {
+                'start_date': week_start.strftime('%Y-%m-%d'),
+                'end_date': week_end.strftime('%Y-%m-%d'),
+                'week_display': f"{week_start.strftime('%b %d')} - {week_end.strftime('%b %d, %Y')}"
+            },
+            'summary': {
+                'total_overtime_hours': round(total_overtime, 1),
+                'staff_with_overtime': total_staff_overtime,
+                'total_staff': len(staff_hours),
+                'average_overtime': round(total_overtime / total_staff_overtime, 1) if total_staff_overtime > 0 else 0,
+                'standard_weekly_hours': standard_hours
+            },
+            'overtime_staff': overtime_data,
+            'generated_at': timezone.now().isoformat()
+        })
+        
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid date format. Use YYYY-MM-DD'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_login_required
+def api_compliance_actions(request, home_id, metric):
+    """
+    API endpoint for compliance improvement actions
+    Returns actionable recommendations for improving specific compliance metrics
+    
+    URL parameters:
+    - home_id: Care home ID
+    - metric: Compliance metric (training, documentation, care_planning, safeguarding, medication)
+    
+    Returns JSON with improvement actions and current compliance status
+    Used when clicking low-scoring metrics on Compliance Score Chart
+    """
+    try:
+        # Get care home
+        home = CareHome.objects.get(id=home_id)
+        
+        # Validate metric
+        valid_metrics = ['training', 'documentation', 'care_planning', 'safeguarding', 'medication']
+        if metric not in valid_metrics:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid metric. Must be one of: {", ".join(valid_metrics)}'
+            }, status=400)
+        
+        # Get units for this home
+        units = Unit.objects.filter(care_home=home, is_active=True)
+        staff = User.objects.filter(unit__in=units, is_active=True).distinct()
+        
+        # Calculate current compliance
+        actions = []
+        current_score = 0
+        target_score = 100
+        
+        if metric == 'training':
+            from scheduling.models import TrainingCourse, TrainingRecord
+            
+            mandatory_courses = TrainingCourse.objects.filter(is_mandatory=True)
+            total_required = staff.count() * mandatory_courses.count()
+            completed = 0
+            
+            for staff_member in staff:
+                for course in mandatory_courses:
+                    latest = TrainingRecord.objects.filter(
+                        staff_member=staff_member,
+                        course=course,
+                        completion_date__isnull=False
+                    ).order_by('-completion_date').first()
+                    
+                    if latest and not latest.is_expired():
+                        completed += 1
+                    else:
+                        # Add action for missing/expired training
+                        actions.append({
+                            'priority': 'high' if not latest else 'medium',
+                            'action': f"Schedule {course.name} for {staff_member.first_name} {staff_member.last_name}",
+                            'staff': f"{staff_member.first_name} {staff_member.last_name}",
+                            'course': course.name,
+                            'status': 'expired' if latest else 'not_started',
+                            'deadline': 'Overdue' if latest and latest.is_expired() else '30 days'
+                        })
+            
+            current_score = round((completed / total_required * 100), 1) if total_required > 0 else 0
+            
+        elif metric == 'documentation':
+            # Sample documentation compliance check
+            residents = Resident.objects.filter(unit__in=units, status='ACTIVE')
+            total_residents = residents.count()
+            compliant_count = 0
+            
+            for resident in residents:
+                # Check if care plan review is up to date (within 28 days)
+                latest_review = CarePlanReview.objects.filter(
+                    resident=resident
+                ).order_by('-review_date').first()
+                
+                if latest_review:
+                    days_since = (timezone.now().date() - latest_review.review_date).days
+                    if days_since <= 28:
+                        compliant_count += 1
+                    else:
+                        actions.append({
+                            'priority': 'high' if days_since > 35 else 'medium',
+                            'action': f"Update care plan review for {resident.name}",
+                            'resident': resident.name,
+                            'last_review': latest_review.review_date.strftime('%Y-%m-%d'),
+                            'days_overdue': days_since - 28,
+                            'deadline': 'Immediate' if days_since > 35 else '7 days'
+                        })
+                else:
+                    actions.append({
+                        'priority': 'high',
+                        'action': f"Create initial care plan review for {resident.name}",
+                        'resident': resident.name,
+                        'status': 'missing',
+                        'deadline': 'Immediate'
+                    })
+            
+            current_score = round((compliant_count / total_residents * 100), 1) if total_residents > 0 else 0
+            
+        elif metric == 'care_planning':
+            # Care planning compliance
+            residents = Resident.objects.filter(unit__in=units, status='ACTIVE')
+            compliant_count = sum(1 for r in residents if hasattr(r, 'care_plan'))
+            current_score = round((compliant_count / residents.count() * 100), 1) if residents.count() > 0 else 0
+            
+            for resident in residents:
+                if not hasattr(resident, 'care_plan'):
+                    actions.append({
+                        'priority': 'high',
+                        'action': f"Create care plan for {resident.name}",
+                        'resident': resident.name,
+                        'deadline': 'Immediate'
+                    })
+            
+        elif metric == 'safeguarding':
+            # Safeguarding training compliance
+            safeguarding_trained = 0
+            for staff_member in staff:
+                # Check if they have safeguarding training
+                from scheduling.models import TrainingRecord
+                has_training = TrainingRecord.objects.filter(
+                    staff_member=staff_member,
+                    course__name__icontains='safeguard',
+                    completion_date__isnull=False
+                ).exists()
+                
+                if has_training:
+                    safeguarding_trained += 1
+                else:
+                    actions.append({
+                        'priority': 'high',
+                        'action': f"Schedule Safeguarding training for {staff_member.first_name} {staff_member.last_name}",
+                        'staff': f"{staff_member.first_name} {staff_member.last_name}",
+                        'deadline': '30 days'
+                    })
+            
+            current_score = round((safeguarding_trained / staff.count() * 100), 1) if staff.count() > 0 else 0
+            
+        elif metric == 'medication':
+            # Medication management compliance
+            current_score = 92.5  # Sample score
+            actions.append({
+                'priority': 'medium',
+                'action': 'Review medication administration records for completeness',
+                'deadline': '7 days'
+            })
+            actions.append({
+                'priority': 'low',
+                'action': 'Audit medication storage temperature logs',
+                'deadline': '14 days'
+            })
+        
+        # Sort actions by priority
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        actions.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 2))
+        
+        # Calculate gap
+        gap = target_score - current_score
+        
+        return JsonResponse({
+            'success': True,
+            'home': {
+                'id': home.id,
+                'name': home.name,
+                'location': home.location
+            },
+            'metric': {
+                'name': metric.replace('_', ' ').title(),
+                'current_score': round(current_score, 1),
+                'target_score': target_score,
+                'gap': round(gap, 1),
+                'status': 'excellent' if current_score >= 95 else 'good' if current_score >= 85 else 'needs_improvement'
+            },
+            'actions': actions,
+            'actions_count': {
+                'high': sum(1 for a in actions if a.get('priority') == 'high'),
+                'medium': sum(1 for a in actions if a.get('priority') == 'medium'),
+                'low': sum(1 for a in actions if a.get('priority') == 'low'),
+                'total': len(actions)
+            },
+            'generated_at': timezone.now().isoformat()
+        })
+        
+    except CareHome.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Care home not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

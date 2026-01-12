@@ -4,7 +4,11 @@ from .views_senior_dashboard import (
     senior_management_dashboard, 
     senior_dashboard_export,
     custom_report_builder,
-    api_staffing_gaps
+    api_staffing_gaps,
+    api_multi_home_staffing,
+    api_budget_breakdown,
+    api_overtime_detail,
+    api_compliance_actions
 )
 from .views_forecasting import (
     forecasting_dashboard,
@@ -300,6 +304,10 @@ urlpatterns = [
     
     # Senior Dashboard API Endpoints
     path('api/staffing-gaps/', api_staffing_gaps, name='api_staffing_gaps'),
+    path('api/multi-home/staffing/<str:date_str>/', api_multi_home_staffing, name='api_multi_home_staffing'),
+    path('api/budget-breakdown/<int:home_id>/', api_budget_breakdown, name='api_budget_breakdown'),
+    path('api/overtime/<str:date_str>/', api_overtime_detail, name='api_overtime_detail'),
+    path('api/compliance/actions/<int:home_id>/<str:metric>/', api_compliance_actions, name='api_compliance_actions'),
     
     # ML Forecasting Dashboard (Task 11)
     path('forecasting/', forecasting_dashboard, name='forecasting_dashboard'),
