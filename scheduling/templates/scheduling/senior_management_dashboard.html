@@ -850,6 +850,33 @@
     </div>
 </div>
 
+<!-- Modal for Staffing Gap Details -->
+<div class="modal fade" id="staffingGapModal" tabindex="-1" aria-labelledby="staffingGapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #10B981; color: white;">
+                <h5 class="modal-title" id="staffingGapModalLabel">
+                    <i class="fas fa-exclamation-triangle"></i> Staffing Gaps Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="staffingGapContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading gap details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ============================================= -->
 <!-- SECTION 1.5: CITYWIDE SUMMARY -->
 <!-- ============================================= -->
@@ -1976,7 +2003,9 @@ async function loadExecutiveCharts() {
                     borderColor: '#0066FF',
                     backgroundColor: 'rgba(0, 102, 255, 0.5)',
                     fill: true,
-                    borderWidth: 3
+                    borderWidth: 3,
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#0052CC'
                 },
                 {
                     label: 'Agency Staff',
@@ -1984,7 +2013,9 @@ async function loadExecutiveCharts() {
                     borderColor: '#FF6F00',
                     backgroundColor: 'rgba(255, 111, 0, 0.5)',
                     fill: true,
-                    borderWidth: 3
+                    borderWidth: 3,
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#E65100'
                 },
                 {
                     label: 'Required Level',
@@ -1993,7 +2024,8 @@ async function loadExecutiveCharts() {
                     backgroundColor: 'transparent',
                     borderDash: [5, 5],
                     fill: false,
-                    borderWidth: 3
+                    borderWidth: 3,
+                    hoverBorderWidth: 4
                 }
             ]
         }, {
@@ -2002,11 +2034,40 @@ async function loadExecutiveCharts() {
                     display: false
                 },
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    onClick: function(e, legendItem, legend) {
+                        const index = legendItem.datasetIndex;
+                        const chart = legend.chart;
+                        const meta = chart.getDatasetMeta(index);
+                        meta.hidden = !meta.hidden;
+                        chart.update();
+                    },
+                    onHover: function(event) {
+                        event.native.target.style.cursor = 'pointer';
+                    },
+                    onLeave: function(event) {
+                        event.native.target.style.cursor = 'default';
+                    }
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const datasetIndex = context.datasetIndex;
+                            const required = requiredStaffByDay[context.dataIndex];
+                            if (datasetIndex === 0 || datasetIndex === 1) {
+                                const total = actualStaffByDay[context.dataIndex] + agencyStaffByDay[context.dataIndex];
+                                const gap = required - total;
+                                if (gap > 0) {
+                                    return `Gap: ${gap} staff needed`;
+                                } else if (gap < 0) {
+                                    return `Overstaffed by ${Math.abs(gap)}`;
+                                }
+                            }
+                            return '';
+                        }
+                    }
                 }
             },
             scales: {
@@ -2015,6 +2076,9 @@ async function loadExecutiveCharts() {
                     title: {
                         display: true,
                         text: 'Date'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 },
                 y: {
@@ -2023,6 +2087,9 @@ async function loadExecutiveCharts() {
                     title: {
                         display: true,
                         text: 'Number of Staff'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 }
             },
@@ -2030,6 +2097,17 @@ async function loadExecutiveCharts() {
                 mode: 'nearest',
                 axis: 'x',
                 intersect: false
+            },
+            onClick: function(event, activeElements) {
+                if (activeElements && activeElements.length > 0) {
+                    const dataIndex = activeElements[0].index;
+                    const date = this.data.labels[dataIndex];
+                    console.log('Clicked on date:', date);
+                    // Could open a modal with detailed staffing for that day
+                }
+            },
+            onHover: function(event, activeElements) {
+                event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
             }
         });
         console.log('✓ Multi-Home Staffing chart created');
@@ -2049,14 +2127,28 @@ async function loadExecutiveCharts() {
                     data: budgetedCosts,
                     backgroundColor: '#66A3FF',
                     borderColor: '#0066FF',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    hoverBackgroundColor: '#5599FF',
+                    hoverBorderWidth: 3
                 },
                 {
                     label: 'Actual (£)',
                     data: actualCosts,
-                    backgroundColor: '#66DBA3',
-                    borderColor: '#00C853',
-                    borderWidth: 2
+                    backgroundColor: function(context) {
+                        const index = context.dataIndex;
+                        const actual = actualCosts[index];
+                        const budget = budgetedCosts[index];
+                        // Red if over budget, green if under
+                        return actual > budget ? 'rgba(239, 68, 68, 0.6)' : '#66DBA3';
+                    },
+                    borderColor: function(context) {
+                        const index = context.dataIndex;
+                        const actual = actualCosts[index];
+                        const budget = budgetedCosts[index];
+                        return actual > budget ? '#DC2626' : '#00C853';
+                    },
+                    borderWidth: 2,
+                    hoverBorderWidth: 3
                 }
             ]
         }, {
@@ -2065,7 +2157,20 @@ async function loadExecutiveCharts() {
                     display: false
                 },
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    onClick: function(e, legendItem, legend) {
+                        const index = legendItem.datasetIndex;
+                        const chart = legend.chart;
+                        const meta = chart.getDatasetMeta(index);
+                        meta.hidden = !meta.hidden;
+                        chart.update();
+                    },
+                    onHover: function(event) {
+                        event.native.target.style.cursor = 'pointer';
+                    },
+                    onLeave: function(event) {
+                        event.native.target.style.cursor = 'default';
+                    }
                 },
                 tooltip: {
                     callbacks: {
@@ -2076,6 +2181,26 @@ async function loadExecutiveCharts() {
                             }
                             label += '£' + context.parsed.y.toLocaleString();
                             return label;
+                        },
+                        afterLabel: function(context) {
+                            if (context.datasetIndex === 1) { // Actual costs
+                                const actual = context.parsed.y;
+                                const budget = budgetedCosts[context.dataIndex];
+                                const variance = actual - budget;
+                                const pct = ((variance / budget) * 100).toFixed(1);
+                                if (variance > 0) {
+                                    return `Over budget: £${variance.toLocaleString()} (+${pct}%)`;
+                                } else if (variance < 0) {
+                                    return `Under budget: £${Math.abs(variance).toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                            return '';
+                        },
+                        footer: function(tooltipItems) {
+                            if (tooltipItems[0].datasetIndex === 1) {
+                                return 'Click for detailed breakdown';
+                            }
+                            return '';
                         }
                     }
                 }
@@ -2091,8 +2216,29 @@ async function loadExecutiveCharts() {
                         callback: function(value) {
                             return '£' + (value / 1000) + 'k';
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
+            },
+            onClick: function(event, activeElements) {
+                if (activeElements && activeElements.length > 0) {
+                    const homeIndex = activeElements[0].index;
+                    const homeName = homes[homeIndex];
+                    const budget = budgetedCosts[homeIndex];
+                    const actual = actualCosts[homeIndex];
+                    console.log(`Clicked on ${homeName}:`, { budget, actual, variance: actual - budget });
+                    // Could open a modal with detailed cost breakdown
+                }
+            },
+            onHover: function(event, activeElements) {
+                event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
             }
         });
         console.log('✓ Budget vs Actual chart created');
@@ -2117,31 +2263,81 @@ async function loadExecutiveCharts() {
             return base + weekend + monday + (Math.random() * 15 - 7.5);
         });
         
+        const overtimeThreshold = 50; // Target maximum overtime hours
+        
         overtimeTrendChart = ChartHelpers.createAreaChart('overtimeTrendChart', {
             labels: last30Days,
-            datasets: [{
-                label: 'Overtime Hours',
-                data: overtimeData,
-                borderColor: '#F59E0B',
-                backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: 5
-            }]
+            datasets: [
+                {
+                    label: 'Overtime Hours',
+                    data: overtimeData,
+                    borderColor: function(context) {
+                        const value = context.raw;
+                        return value > overtimeThreshold ? '#EF4444' : '#F59E0B';
+                    },
+                    backgroundColor: function(context) {
+                        const value = context.raw;
+                        return value > overtimeThreshold ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)';
+                    },
+                    segment: {
+                        borderColor: function(ctx) {
+                            const value = ctx.p1.parsed.y;
+                            return value > overtimeThreshold ? '#EF4444' : '#F59E0B';
+                        }
+                    },
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: function(context) {
+                        const value = context.raw;
+                        return value > overtimeThreshold ? 4 : 0;
+                    },
+                    pointBackgroundColor: '#DC2626',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Target Maximum',
+                    data: Array(30).fill(overtimeThreshold),
+                    borderColor: '#DC2626',
+                    borderDash: [8, 4],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                }
+            ]
         }, {
             plugins: {
                 title: {
                     display: false
                 },
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        filter: function(item, chart) {
+                            return item.text !== 'Target Maximum' || chart.getDatasetMeta(1).visible;
+                        }
+                    }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return 'Overtime: ' + context.parsed.y.toFixed(1) + ' hours';
+                            if (context.datasetIndex === 0) {
+                                const hours = context.parsed.y.toFixed(1);
+                                const status = context.parsed.y > overtimeThreshold ? ' ⚠️ Over target' : ' ✓ Within target';
+                                return 'Overtime: ' + hours + ' hours' + status;
+                            }
+                            return 'Target: ' + context.parsed.y + ' hours';
+                        },
+                        footer: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            if (item.datasetIndex === 0 && item.parsed.y > overtimeThreshold) {
+                                return 'Click to view breakdown';
+                            }
+                            return '';
                         }
                     }
                 }
@@ -2152,6 +2348,9 @@ async function loadExecutiveCharts() {
                         maxTicksLimit: 10,
                         maxRotation: 45,
                         minRotation: 45
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 },
                 y: {
@@ -2164,12 +2363,27 @@ async function loadExecutiveCharts() {
                         callback: function(value) {
                             return value.toFixed(0) + 'h';
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 }
             },
             interaction: {
                 mode: 'index',
                 intersect: false
+            },
+            onClick: function(event, activeElements) {
+                if (activeElements && activeElements.length > 0 && activeElements[0].datasetIndex === 0) {
+                    const dataIndex = activeElements[0].index;
+                    const date = this.data.labels[dataIndex];
+                    const hours = this.data.datasets[0].data[dataIndex];
+                    console.log('Overtime details for', date, ':', hours.toFixed(1), 'hours');
+                    // Could open a modal with overtime breakdown by staff/shift
+                }
+            },
+            onHover: function(event, activeElements) {
+                event.native.target.style.cursor = (activeElements.length > 0 && activeElements[0].datasetIndex === 0) ? 'pointer' : 'default';
             }
         });
         console.log('✓ Overtime Trend chart created');
@@ -2215,9 +2429,12 @@ async function loadExecutiveCharts() {
             labels: ['Filled', 'Gap'],
             datasets: [{
                 data: [currentStaffing, staffingGap],
-                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(229, 231, 235, 0.5)'],
-                borderColor: ['#10B981', '#E5E7EB'],
-                borderWidth: 2
+                backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)'], // Blue for Filled, Green for Gap
+                borderColor: ['#3B82F6', '#10B981'],
+                borderWidth: 2,
+                hoverBackgroundColor: ['rgba(59, 130, 246, 1.0)', 'rgba(16, 185, 129, 1.0)'],
+                hoverBorderColor: ['#2563EB', '#059669'],
+                hoverBorderWidth: 3
             }]
         }, {
             cutout: '75%',
@@ -2229,13 +2446,38 @@ async function loadExecutiveCharts() {
                     display: false
                 },
                 tooltip: {
+                    enabled: true,
                     callbacks: {
                         label: function(context) {
                             return context.label + ': ' + context.parsed + '%';
+                        },
+                        afterLabel: function(context) {
+                            if (context.label === 'Gap') {
+                                return 'Click to view details';
+                            }
+                            return '';
                         }
                     }
                 },
                 centerText: centerTextPlugin
+            },
+            onClick: function(event, activeElements) {
+                console.log('Chart clicked!', activeElements);
+                if (activeElements && activeElements.length > 0) {
+                    const clickedIndex = activeElements[0].index;
+                    const clickedLabel = this.data.labels[clickedIndex];
+                    
+                    console.log('Clicked on:', clickedLabel);
+                    
+                    // Show details if Gap section is clicked
+                    if (clickedLabel === 'Gap') {
+                        console.log('Opening staffing gap details modal...');
+                        showStaffingGapDetails();
+                    }
+                }
+            },
+            onHover: function(event, activeElements) {
+                event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
             }
         });
         console.log('✓ Staffing Gauge chart created');
@@ -2262,35 +2504,65 @@ async function loadExecutiveCharts() {
                         data: [92, 88, 95, 90, 85, 93],
                         borderColor: '#0066FF',
                         backgroundColor: 'rgba(0, 102, 255, 0.25)',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#0066FF',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3
                     },
                     {
                         label: 'Orchard Grove',
                         data: [88, 91, 89, 92, 87, 90],
                         borderColor: '#00C853',
                         backgroundColor: 'rgba(0, 200, 83, 0.25)',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#00C853',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3
                     },
                     {
                         label: 'Meadowburn',
                         data: [90, 85, 92, 88, 91, 89],
                         borderColor: '#FF6F00',
                         backgroundColor: 'rgba(255, 111, 0, 0.25)',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#FF6F00',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3
                     },
                     {
                         label: 'Riverside',
                         data: [87, 89, 90, 85, 88, 91],
                         borderColor: '#9333ea',
                         backgroundColor: 'rgba(147, 51, 234, 0.25)',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#9333ea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3
                     },
                     {
                         label: 'Hawthorn House',
                         data: [91, 87, 88, 91, 90, 86],
                         borderColor: '#ec4899',
                         backgroundColor: 'rgba(236, 72, 153, 0.25)',
-                        borderWidth: 2
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ec4899',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3
                     }
                 ]
             }, {
@@ -2301,7 +2573,36 @@ async function loadExecutiveCharts() {
                         display: false
                     },
                     legend: {
-                        position: 'right'
+                        position: 'right',
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.datasetIndex;
+                            const chart = legend.chart;
+                            const meta = chart.getDatasetMeta(index);
+                            meta.hidden = !meta.hidden;
+                            chart.update();
+                        },
+                        onHover: function(event) {
+                            event.native.target.style.cursor = 'pointer';
+                        },
+                        onLeave: function(event) {
+                            event.native.target.style.cursor = 'default';
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const score = context.parsed.r.toFixed(1);
+                                const status = score >= 90 ? ' ⭐ Excellent' : score >= 75 ? ' ✓ Good' : ' ⚠️ Needs attention';
+                                return context.dataset.label + ': ' + score + '%' + status;
+                            },
+                            afterLabel: function(context) {
+                                const score = context.parsed.r;
+                                if (score < 75) {
+                                    return 'Click for improvement actions';
+                                }
+                                return '';
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -2312,9 +2613,34 @@ async function loadExecutiveCharts() {
                             stepSize: 20,
                             callback: function(value) {
                                 return value + '%';
+                            },
+                            backdropColor: 'transparent'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12,
+                                weight: 'bold'
                             }
                         }
                     }
+                },
+                onClick: function(event, activeElements) {
+                    if (activeElements && activeElements.length > 0) {
+                        const element = activeElements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const index = element.index;
+                        const homeName = this.data.datasets[datasetIndex].label;
+                        const metric = this.data.labels[index];
+                        const score = this.data.datasets[datasetIndex].data[index].toFixed(1);
+                        console.log(`Compliance details: ${homeName} - ${metric}: ${score}%`);
+                        // Could open a modal with compliance improvement actions
+                    }
+                },
+                onHover: function(event, activeElements) {
+                    event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
                 }
             });
             console.log('✓ Compliance Score chart created:', complianceScoreChart);
@@ -2328,6 +2654,115 @@ async function loadExecutiveCharts() {
     } catch (error) {
         console.error('❌ Error loading executive charts:', error);
     }
+}
+
+// Function to show staffing gap details
+function showStaffingGapDetails() {
+    const modal = new bootstrap.Modal(document.getElementById('staffingGapModal'));
+    modal.show();
+    
+    // Simulate loading gap data
+    const contentDiv = document.getElementById('staffingGapContent');
+    
+    // Fetch gap details from the server
+    fetch('/api/staffing-gaps/')
+        .then(response => response.json())
+        .then(data => {
+            displayGapDetails(data);
+        })
+        .catch(error => {
+            console.error('Error loading gap details:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i> 
+                    <strong>Sample Data:</strong> API endpoint not yet configured. Showing example gap details:
+                </div>
+                ${getSampleGapDetails()}
+            `;
+        });
+}
+
+function getSampleGapDetails() {
+    return `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Home</th>
+                        <th>Unit</th>
+                        <th>Shift Type</th>
+                        <th>Date</th>
+                        <th>Required</th>
+                        <th>Scheduled</th>
+                        <th>Gap</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Orchard Grove</strong></td>
+                        <td>OG_PEACH</td>
+                        <td><span class="badge bg-warning">Day</span></td>
+                        <td>2026-01-14</td>
+                        <td>4</td>
+                        <td>3</td>
+                        <td><span class="badge bg-danger">-1</span></td>
+                        <td><span class="badge bg-warning">Short</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hawthorn House</strong></td>
+                        <td>HH_VIOLET</td>
+                        <td><span class="badge bg-dark">Night</span></td>
+                        <td>2026-01-14</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td><span class="badge bg-danger">-1</span></td>
+                        <td><span class="badge bg-warning">Short</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Riverside</strong></td>
+                        <td>RS_JASMINE</td>
+                        <td><span class="badge bg-warning">Day</span></td>
+                        <td>2026-01-14</td>
+                        <td>4</td>
+                        <td>2</td>
+                        <td><span class="badge bg-danger">-2</span></td>
+                        <td><span class="badge bg-danger">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Meadowburn</strong></td>
+                        <td>MB_DAISY</td>
+                        <td><span class="badge bg-dark">Night</span></td>
+                        <td>2026-01-14</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td><span class="badge bg-danger">-1</span></td>
+                        <td><span class="badge bg-warning">Short</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Victoria Gardens</strong></td>
+                        <td>VG_ROSE</td>
+                        <td><span class="badge bg-warning">Day</span></td>
+                        <td>2026-01-15</td>
+                        <td>4</td>
+                        <td>3</td>
+                        <td><span class="badge bg-danger">-1</span></td>
+                        <td><span class="badge bg-warning">Short</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i> 
+            <strong>Note:</strong> This is sample data. Click "Close" and implement the API endpoint to see real-time gap details.
+        </div>
+    `;
+}
+
+function displayGapDetails(data) {
+    const contentDiv = document.getElementById('staffingGapContent');
+    // Process and display actual data from API
+    // This would be implemented based on your API response structure
 }
 
 // Clean up on page unload
