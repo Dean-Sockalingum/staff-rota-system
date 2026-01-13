@@ -29,6 +29,7 @@ from datetime import timedelta
 import json
 
 from .models import PDSAProject, PDSACycle, PDSATeamMember, PDSADataPoint, PDSAChatbotLog
+from .forms import PDSAProjectForm, PDSACycleForm, PDSADataPointForm, PDSATeamMemberForm, DataPointFormSet
 from .ml.smart_aim_generator import SMARTAimGenerator
 from .ml.hypothesis_suggester import HypothesisSuggester
 from .ml.data_analyzer import PDSADataAnalyzer
@@ -187,13 +188,8 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     """Create a new PDSA project."""
     model = PDSAProject
+    form_class = PDSAProjectForm
     template_name = 'quality_audits/project_form.html'
-    fields = [
-        'project_name', 'project_aim', 'care_home', 'department',
-        'quality_domain', 'project_category', 'baseline_value',
-        'target_value', 'measurement_unit', 'measurement_frequency',
-        'start_date', 'expected_end_date'
-    ]
     
     def form_valid(self, form):
         """Set the created_by user and generate AI aim if requested."""
@@ -226,13 +222,8 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 class ProjectUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """Update an existing PDSA project."""
     model = PDSAProject
+    form_class = PDSAProjectForm
     template_name = 'quality_audits/project_form.html'
-    fields = [
-        'project_name', 'project_aim', 'care_home', 'department',
-        'quality_domain', 'project_category', 'baseline_value',
-        'target_value', 'measurement_unit', 'measurement_frequency',
-        'start_date', 'expected_end_date', 'actual_end_date', 'status'
-    ]
     
     def test_func(self):
         """Only allow project creator or team members to edit."""
@@ -272,14 +263,8 @@ class ProjectDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 class CycleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     """Create a new PDSA cycle for a project."""
     model = PDSACycle
+    form_class = PDSACycleForm
     template_name = 'quality_audits/cycle_form.html'
-    fields = [
-        'cycle_number', 'cycle_objective', 'plan_hypothesis', 'plan_changes',
-        'plan_prediction', 'plan_data_collection', 'do_implementation_start',
-        'do_implementation_end', 'do_observations', 'do_challenges',
-        'study_data_analysis', 'study_findings', 'study_unexpected_results',
-        'act_decision', 'act_next_steps', 'act_review_date'
-    ]
     
     def dispatch(self, request, *args, **kwargs):
         """Get the project and ensure user has access."""
@@ -345,14 +330,8 @@ class CycleDetailView(LoginRequiredMixin, DetailView):
 class CycleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """Update an existing PDSA cycle."""
     model = PDSACycle
+    form_class = PDSACycleForm
     template_name = 'quality_audits/cycle_form.html'
-    fields = [
-        'cycle_number', 'cycle_objective', 'plan_hypothesis', 'plan_changes',
-        'plan_prediction', 'plan_data_collection', 'do_implementation_start',
-        'do_implementation_end', 'do_observations', 'do_challenges',
-        'study_data_analysis', 'study_findings', 'study_unexpected_results',
-        'act_decision', 'act_next_steps', 'act_review_date', 'status'
-    ]
     
     def test_func(self):
         """Only allow project creator or team members to edit."""
@@ -392,8 +371,8 @@ class CycleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 class DataPointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     """Add a data point to a PDSA cycle."""
     model = PDSADataPoint
+    form_class = PDSADataPointForm
     template_name = 'quality_audits/datapoint_form.html'
-    fields = ['measurement_date', 'measurement_value', 'notes']
     
     def dispatch(self, request, *args, **kwargs):
         """Get the cycle and ensure user has access."""
@@ -424,8 +403,8 @@ class DataPointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 class DataPointUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """Update a data point."""
     model = PDSADataPoint
+    form_class = PDSADataPointForm
     template_name = 'quality_audits/datapoint_form.html'
-    fields = ['measurement_date', 'measurement_value', 'notes']
     
     def test_func(self):
         """Only allow data recorder or project creator to edit."""
