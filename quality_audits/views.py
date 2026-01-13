@@ -85,13 +85,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['recent_projects'] = projects.order_by('-created_at')[:5]
         context['recent_cycles'] = all_cycles.order_by('-created_at')[:5]
         
-        # Upcoming reviews (cycles with review date in next 7 days)
-        next_week = timezone.now() + timedelta(days=7)
-        context['upcoming_reviews'] = all_cycles.filter(
-            act_review_date__lte=next_week,
-            act_review_date__gte=timezone.now(),
-            act_decision='PENDING'
-        ).order_by('act_review_date')[:5]
+        # No upcoming reviews section - act_review_date field doesn't exist
+        # Cycles are reviewed when act_decision is made
         
         return context
 
