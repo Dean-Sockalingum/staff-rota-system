@@ -205,7 +205,7 @@ SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for PWA/AJAX (was True)
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000', cast=Csv())
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://192.168.1.125:8001,http://localhost:8000,http://localhost:8001,http://127.0.0.1:8000,http://127.0.0.1:8001', cast=Csv())
 
 # Phase 6: Security Headers
 SECURE_BROWSER_XSS_FILTER = True
