@@ -904,6 +904,78 @@ class ProjectStatusAPIView(LoginRequiredMixin, View):
             }, status=500)
 
 
+class DashboardStatsAPIView(LoginRequiredMixin, View):
+    """API endpoint for dashboard analytics data."""
+    
+    def get(self, request, *args, **kwargs):
+        """Return dashboard statistics for charts."""
+        try:
+            user = request.user
+            projects = PDSAProject.objects.filter(
+                Q(created_by=user) | Q(team_members__user=user)
+            ).distinct()
+            
+            # Status counts for pie chart
+            status_counts = {}
+            for status_choice in PDSAProject.STATUS_CHOICES:
+                status_code = status_choice[0]
+                status_label = status_choice[1]
+                count = projects.filter(status=status_code).count()
+                if count > 0:
+                    status_counts[status_label] = count
+            
+            # Domain counts for bar chart
+            domain_counts = {}
+            for domain_choice in PDSAProject.DOMAIN_CHOICES:
+                domain_code = domain_choice[0]
+                domain_label = domain_choice[1]
+                count = projects.filter(quality_domain=domain_code).count()
+                if count > 0:
+                    domain_counts[domain_label] = count
+            
+            # Monthly trends (last 6 months)
+            from datetime import timedelta
+            from django.utils import timezone
+            monthly_trends = []
+            today = timezone.now()
+            
+            for i in range(5, -1, -1):
+                month_start = today - timedelta(days=30*i)
+                month_end = today - timedelta(days=30*(i-1)) if i > 0 else today
+                
+                month_projects = projects.filter(
+                    created_at__gte=month_start,
+                    created_at__lt=month_end,
+                    status='COMPLETED'
+                )
+                
+                if month_projects.exists():
+                    avg_score = month_projects.aggregate(
+                        Avg('ai_success_score')
+                    )['ai_success_score__avg'] or 0
+                else:
+                    avg_score = 0
+                
+                monthly_trends.append({
+                    'month': month_start.strftime('%b %Y'),
+                    'success_rate': round(avg_score, 1)
+                })
+            
+            stats = {
+                'status_counts': status_counts,
+                'domain_counts': domain_counts,
+                'monthly_trends': monthly_trends
+            }
+            
+            return JsonResponse({'success': True, 'stats': stats})
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
 class CycleChartDataAPIView(LoginRequiredMixin, View):
     """API endpoint for cycle chart data (run charts, control charts)."""
     

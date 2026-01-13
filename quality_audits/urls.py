@@ -53,6 +53,7 @@ urlpatterns = [
     path('export/cycles/<int:pk>/csv/', views.ExportCycleDataCSVView.as_view(), name='export_cycle_csv'),
     
     # API Endpoints (for AJAX calls)
+    path('api/dashboard/stats/', views.DashboardStatsAPIView.as_view(), name='dashboard_stats'),
     path('api/projects/<int:pk>/status/', views.ProjectStatusAPIView.as_view(), name='api_project_status'),
     path('api/cycles/<int:pk>/chart-data/', views.CycleChartDataAPIView.as_view(), name='api_cycle_chart_data'),
 ]
