@@ -3345,7 +3345,19 @@ function showComplianceActions(metric) {
     modal.show();
     
     const homeId = 3; // Default to Orchard Grove
+    
+    // Map display names to API metric names
+    const metricMap = {
+        'training': 'training',
+        'supervision': 'care_planning',  // Supervision maps to care_planning
+        'care_plans': 'care_planning',   // Care Plans also maps to care_planning
+        'incidents': 'safeguarding',     // Incidents maps to safeguarding
+        'staffing': 'training',          // Staffing maps to training (placeholder)
+        'documentation': 'documentation'
+    };
+    
     const metricSlug = metric.toLowerCase().replace(/ /g, '_');
+    const apiMetric = metricMap[metricSlug] || metricSlug;
     
     const contentDiv = document.getElementById('complianceActionsContent');
     contentDiv.innerHTML = `
@@ -3358,7 +3370,7 @@ function showComplianceActions(metric) {
     `;
     
     // Fetch data from API
-    fetch(`/api/compliance/actions/${homeId}/${metricSlug}/`)
+    fetch(`/api/compliance/actions/${homeId}/${apiMetric}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
