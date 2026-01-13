@@ -58,22 +58,23 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',  # Task 38: Token auth for mobile API
     'corsheaders',
-    'django_celery_beat',  # Celery Beat for periodic tasks
+    # 'django_celery_beat',  # DISABLED FOR LOCAL DEV - Missing timezone_field
     # Phase 6: Security & ML apps
-    'axes',  # Account lockout protection
+    # 'axes',  # DISABLED FOR LOCAL DEV
     'auditlog',  # Audit logging for compliance
     # Task 48: Two-Factor Authentication
-    'django_otp',
-    'django_otp.plugins.otp_totp',
-    'django_otp.plugins.otp_static',  # Backup codes
+    # 'django_otp',  # DISABLED FOR LOCAL DEV - Missing conf module
+    # 'django_otp.plugins.otp_totp',  # DISABLED FOR LOCAL DEV
+    # 'django_otp.plugins.otp_static',  # Backup codes - DISABLED FOR LOCAL DEV
     # Task 49: Advanced Search
-    'django_elasticsearch_dsl',  # ✅ ES running on localhost:9200
+    # 'django_elasticsearch_dsl',  # DISABLED FOR LOCAL DEV
     # Core apps
     'scheduling',
     'scheduling.management',
     'staff_records',
     'rotasystems.core',
     'email_config',  # UI-based email configuration
+    'quality_audits',  # TQM Module 1: PDSA Tracker & Quality Audits
 ]
 
 MIDDLEWARE = [
@@ -85,11 +86,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django_otp.middleware.OTPMiddleware',  # Task 48: 2FA verification
+    # 'django_otp.middleware.OTPMiddleware',  # DISABLED FOR LOCAL DEV
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Phase 6: Security middleware
-    'axes.middleware.AxesMiddleware',  # Account lockout protection
+    # 'axes.middleware.AxesMiddleware',  # DISABLED FOR LOCAL DEV
     'csp.middleware.CSPMiddleware',  # Content Security Policy
     # Custom middleware
     'scheduling.middleware.AuditLoggingMiddleware',  # Automatic audit logging
@@ -444,7 +445,7 @@ AUTH_USER_MODEL = 'scheduling.User'
 
 # Custom Authentication Backend
 AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesStandaloneBackend',  # Account lockout protection (renamed from AxesBackend in v5.0+)
+    # 'axes.backends.AxesStandaloneBackend',  # DISABLED FOR LOCAL DEV
     'scheduling.backends.SAPAuthenticationBackend',  # SAP number authentication
     'django.contrib.auth.backends.ModelBackend',  # Django default
 ]
@@ -867,54 +868,55 @@ SEARCH_HIGHLIGHT_ENABLED = True
 SEARCH_ANALYTICS_ENABLED = True  # Track search queries for analytics
 
 # ===== Task 51: Sentry Error Tracking Configuration =====
-
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
-from sentry_sdk.integrations.redis import RedisIntegration
+# TEMPORARILY DISABLED FOR LOCAL DEVELOPMENT
+# import sentry_sdk
+# from sentry_sdk.integrations.django import DjangoIntegration
+# from sentry_sdk.integrations.celery import CeleryIntegration
+# from sentry_sdk.integrations.redis import RedisIntegration
 
 # Initialize Sentry
 # Get DSN from environment variable (keep it secret!)
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
 
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-            RedisIntegration(),
-        ],
-        
-        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
-        # We recommend adjusting this value in production (0.1 = 10% of transactions)
-        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
-        
-        # Set profiles_sample_rate to 1.0 to profile 100% of sampled transactions.
-        # We recommend adjusting this value in production (0.1 = 10% of sampled transactions)
-        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
-        
-        # Send default PII (Personally Identifiable Information) such as user id, username, email
-        send_default_pii=True,
-        
-        # Enable performance monitoring
-        enable_tracing=True,
-        
-        # Set environment (development, staging, production)
-        environment=os.environ.get('SENTRY_ENVIRONMENT', 'development'),
-        
-        # Release tracking (use git commit SHA or version number)
-        release=os.environ.get('SENTRY_RELEASE', 'staff-rota-system@1.0.0'),
-        
-        # Ignore common errors
-        ignore_errors=[
-            'PermissionDenied',
-            'Http404',
-        ],
-        
-        # Before sending an event, modify it
-        before_send=lambda event, hint: event if not DEBUG else None,  # Don't send in DEBUG mode
-    )
+# SENTRY TEMPORARILY DISABLED FOR LOCAL DEVELOPMENT
+# if SENTRY_DSN:
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         integrations=[
+#             DjangoIntegration(),
+#             CeleryIntegration(),
+#             RedisIntegration(),
+#         ],
+#         
+#         # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+#         # We recommend adjusting this value in production (0.1 = 10% of transactions)
+#         traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+#         
+#         # Set profiles_sample_rate to 1.0 to profile 100% of sampled transactions.
+#         # We recommend adjusting this value in production (0.1 = 10% of sampled transactions)
+#         profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
+#         
+#         # Send default PII (Personally Identifiable Information) such as user id, username, email
+#         send_default_pii=True,
+#         
+#         # Enable performance monitoring
+#         enable_tracing=True,
+#         
+#         # Set environment (development, staging, production)
+#         environment=os.environ.get('SENTRY_ENVIRONMENT', 'development'),
+#         
+#         # Release tracking (use git commit SHA or version number)
+#         release=os.environ.get('SENTRY_RELEASE', 'staff-rota-system@1.0.0'),
+#         
+#         # Ignore common errors
+#         ignore_errors=[
+#             'PermissionDenied',
+#             'Http404',
+#         ],
+#         
+#         # Before sending an event, modify it
+#         before_send=lambda event, hint: event if not DEBUG else None,  # Don't send in DEBUG mode
+#     )
 
 # Sentry settings for user feedback
 SENTRY_USER_FEEDBACK_ENABLED = True

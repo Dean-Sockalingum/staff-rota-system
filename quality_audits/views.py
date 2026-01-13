@@ -750,6 +750,82 @@ class ReportsView(LoginRequiredMixin, TemplateView):
         return context
 
 
+class ExportProjectCSVView(LoginRequiredMixin, View):
+    """Export project data to CSV."""
+    
+    def get(self, request, *args, **kwargs):
+        """Generate CSV export of all projects."""
+        import csv
+        from django.utils import timezone
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="pdsa_projects_{timezone.now().strftime("%Y%m%d")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Project ID', 'Title', 'Status', 'Category', 'Priority',
+            'Baseline Value', 'Target Value', 'Unit', 'Start Date',
+            'Target Completion', 'Lead User', 'Care Home', 'Cycles Count',
+            'AI Success Score', 'Created Date'
+        ])
+        
+        projects = PDSAProject.objects.select_related('lead_user', 'care_home').prefetch_related('cycles')
+        for project in projects:
+            writer.writerow([
+                project.id,
+                project.title,
+                project.get_status_display(),
+                project.get_category_display(),
+                project.get_priority_display(),
+                project.baseline_value or '',
+                project.target_value or '',
+                project.measurement_unit or '',
+                project.start_date.strftime('%Y-%m-%d') if project.start_date else '',
+                project.target_completion_date.strftime('%Y-%m-%d') if project.target_completion_date else '',
+                project.lead_user.get_full_name() if project.lead_user else '',
+                project.care_home.name if project.care_home else '',
+                project.cycles.count(),
+                project.ai_success_score,
+                project.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+        
+        return response
+
+
+class ExportCycleDataCSVView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Export cycle data points to CSV."""
+    
+    def test_func(self):
+        """Ensure user has access."""
+        cycle = get_object_or_404(PDSACycle, pk=self.kwargs['pk'])
+        user = self.request.user
+        project = cycle.project
+        return project.created_by == user or project.team_members.filter(user=user).exists()
+    
+    def get(self, request, *args, **kwargs):
+        """Generate CSV export of cycle data points."""
+        import csv
+        from django.utils import timezone
+        
+        cycle = get_object_or_404(PDSACycle, pk=kwargs['pk'])
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="cycle_{cycle.cycle_number}_data_{timezone.now().strftime("%Y%m%d")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Value', 'Notes', 'Collected By'])
+        
+        for dp in cycle.data_points.select_related('collected_by').order_by('measurement_date'):
+            writer.writerow([
+                dp.measurement_date.strftime('%Y-%m-%d'),
+                dp.value,
+                dp.notes or '',
+                dp.collected_by.get_full_name() if dp.collected_by else ''
+            ])
+        
+        return response
+
+
 class ProjectReportPDFView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Generate PDF report for a project."""
     

@@ -85,6 +85,48 @@
         </div>
     </div>
     
+    <!-- Analytics Charts -->
+    <div class="row mb-4">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart"></i> Project Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up-arrow"></i> Success Trends
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart"></i> Projects by Domain
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="domainChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         <!-- Recent Projects -->
         <div class="col-lg-6">
@@ -245,6 +287,36 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // Load dashboard analytics data
+    $.ajax({
+        url: '{% url "quality_audits:dashboard_stats" %}',
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const stats = response.stats;
+                
+                // Status Pie Chart
+                if (stats.status_counts) {
+                    PDSACharts.createStatusPieChart('statusChart', stats.status_counts);
+                }
+                
+                // Trend Chart
+                if (stats.monthly_trends) {
+                    PDSACharts.createTrendChart('trendChart', stats.monthly_trends);
+                }
+                
+                // Domain Bar Chart
+                if (stats.domain_counts) {
+                    PDSACharts.createDomainBarChart('domainChart', stats.domain_counts);
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading dashboard stats');
+        }
+    });
+    
+    // AI Chatbot
     $('#askAIBtn').click(function() {
         const question = $('#chatQuestion').val();
         if (!question.trim()) {

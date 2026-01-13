@@ -131,8 +131,17 @@
             
             <!-- Data Chart -->
             <div class="card mb-3">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Run Chart</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary" id="exportPNG">
+                            <i class="bi bi-image"></i> PNG
+                        </button>
+                        <a href="{% url 'quality_audits:export_cycle_csv' cycle.pk %}" 
+                           class="btn btn-outline-success">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <canvas id="runChart" height="80"></canvas>
@@ -231,6 +240,9 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    let runChartInstance = null;
+    let controlLimitsData = null;
+    
     // Load chart data
     $.ajax({
         url: '{% url "quality_audits:cycle_chart_data" cycle.pk %}',
@@ -238,54 +250,27 @@ $(document).ready(function() {
         success: function(response) {
             if (response.success) {
                 const data = response.data;
-                const ctx = document.getElementById('runChart').getContext('2d');
                 
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: 'Measurement',
-                            data: data.values,
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1,
-                            fill: false
-                        },
-                        {
-                            label: 'Baseline',
-                            data: Array(data.labels.length).fill(data.baseline),
-                            borderColor: 'rgb(255, 99, 132)',
-                            borderDash: [5, 5],
-                            fill: false
-                        },
-                        {
-                            label: 'Target',
-                            data: Array(data.labels.length).fill(data.target),
-                            borderColor: 'rgb(54, 162, 235)',
-                            borderDash: [5, 5],
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Measurement Over Time (' + data.measurement_unit + ')'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false
-                            }
-                        }
-                    }
-                });
+                // Transform data for PDSACharts library
+                const dataPoints = data.labels.map((label, index) => ({
+                    date: label,
+                    value: data.values[index]
+                }));
+                
+                // Create run chart using advanced library
+                runChartInstance = PDSACharts.createRunChart(
+                    'runChart',
+                    dataPoints,
+                    data.baseline,
+                    data.target,
+                    data.measurement_unit,
+                    controlLimitsData  // Will be null initially, updated after analysis
+                );
             }
         }
     });
     
-    // Analyze data
+    // Analyze data with ML
     $('#analyzeDataBtn').click(function() {
         const btn = $(this);
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Analyzing...');
@@ -296,14 +281,88 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     const analysis = response.analysis;
+                    
+                    // Display analysis results
                     let html = '<dl class="row mb-0">';
                     html += '<dt class="col-6">Trend:</dt>';
-                    html += '<dd class="col-6">' + (analysis.trend || 'No trend') + '</dd>';
-                    html += '<dt class="col-6">P-value:</dt>';
-                    html += '<dd class="col-6">' + (analysis.p_value ? analysis.p_value.toFixed(4) : 'N/A') + '</dd>';
-                    html += '<dt class="col-6">Mean:</dt>';
-                    html += '<dd class="col-6">' + (analysis.mean ? analysis.mean.toFixed(2) : 'N/A') + '</dd>';
+                    html += '<dd class="col-6"><span class="badge bg-' + 
+                            (analysis.trend === 'Improving' ? 'success' : analysis.trend === 'Declining' ? 'danger' : 'secondary') + 
+                            '">' + (analysis.trend || 'No trend') + '</span></dd>';
+                    
+                    if (analysis.p_value !== undefined) {
+                        html += '<dt class="col-6">P-value:</dt>';
+                        html += '<dd class="col-6">' + analysis.p_value.toFixed(4) + 
+                                (analysis.p_value < 0.05 ? ' <i class="bi bi-check-circle-fill text-success" title="Statistically significant"></i>' : '') + 
+                                '</dd>';
+                    }
+                    
+                    if (analysis.mean !== undefined) {
+                        html += '<dt class="col-6">Mean:</dt>';
+                        html += '<dd class="col-6">' + analysis.mean.toFixed(2) + ' {{ cycle.project.measurement_unit }}</dd>';
+                    }
+                    
+                    if (analysis.std !== undefined) {
+                        html += '<dt class="col-6">Std Dev:</dt>';
+                        html += '<dd class="col-6">' + analysis.std.toFixed(2) + '</dd>';
+                    }
+                    
+                    if (analysis.ucl !== undefined && analysis.lcl !== undefined) {
+                        html += '<dt class="col-6">Control Limits:</dt>';
+                        html += '<dd class="col-6">UCL: ' + analysis.ucl.toFixed(2) + '<br>LCL: ' + analysis.lcl.toFixed(2) + '</dd>';
+                        
+                        // Update chart with control limits
+                        controlLimitsData = {
+                            ucl: analysis.ucl,
+                            lcl: analysis.lcl,
+                            mean: analysis.mean
+                        };
+                        
+                        // Reload chart with control limits
+                        if (runChartInstance) {
+                            runChartInstance.destroy();
+                        }
+                        
+                        $.ajax({
+                            url: '{% url "quality_audits:cycle_chart_data" cycle.pk %}',
+                            method: 'GET',
+                            success: function(chartResponse) {
+                                if (chartResponse.success) {
+                                    const data = chartResponse.data;
+                                    const dataPoints = data.labels.map((label, index) => ({
+                                        date: label,
+                                        value: data.values[index]
+                                    }));
+                                    
+                                    runChartInstance = PDSACharts.createRunChart(
+                                        'runChart',
+                                        dataPoints,
+                                        data.baseline,
+                                        data.target,
+                                        data.measurement_unit,
+                                        controlLimitsData
+                                    );
+                                }
+                            }
+                        });
+                    }
+                    
+                    if (analysis.special_causes && analysis.special_causes.length > 0) {
+                        html += '<dt class="col-12 mt-2">Special Causes:</dt>';
+                        html += '<dd class="col-12">';
+                        analysis.special_causes.forEach(cause => {
+                            html += '<span class="badge bg-warning text-dark me-1">' + cause + '</span>';
+                        });
+                        html += '</dd>';
+                    }
+                    
                     html += '</dl>';
+                    
+                    if (analysis.interpretation) {
+                        html += '<div class="alert alert-info mt-3 mb-0">';
+                        html += '<strong><i class="bi bi-lightbulb"></i> Interpretation:</strong><br>';
+                        html += analysis.interpretation;
+                        html += '</div>';
+                    }
                     
                     $('#analysisContent').html(html);
                     $('#analysisResults').removeClass('d-none');
@@ -318,6 +377,15 @@ $(document).ready(function() {
                 btn.prop('disabled', false).html('<i class="bi bi-graph-up"></i> Analyze');
             }
         });
+    });
+    
+    // Export chart to PNG
+    $('#exportPNG').click(function() {
+        if (runChartInstance) {
+            PDSACharts.exportChartToPNG(runChartInstance, 'cycle_{{ cycle.cycle_number }}_chart');
+        } else {
+            alert('Chart not loaded yet');
+        }
     });
 });
 </script>

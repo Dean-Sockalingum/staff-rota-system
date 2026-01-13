@@ -48,6 +48,10 @@ urlpatterns = [
     path('reports/project/<int:pk>/pdf/', views.ProjectReportPDFView.as_view(), name='project_report_pdf'),
     path('reports/cycle/<int:pk>/pdf/', views.CycleReportPDFView.as_view(), name='cycle_report_pdf'),
     
+    # Export & Reports
+    path('export/projects/csv/', views.ExportProjectCSVView.as_view(), name='export_projects_csv'),
+    path('export/cycles/<int:pk>/csv/', views.ExportCycleDataCSVView.as_view(), name='export_cycle_csv'),
+    
     # API Endpoints (for AJAX calls)
     path('api/projects/<int:pk>/status/', views.ProjectStatusAPIView.as_view(), name='api_project_status'),
     path('api/cycles/<int:pk>/chart-data/', views.CycleChartDataAPIView.as_view(), name='api_cycle_chart_data'),
