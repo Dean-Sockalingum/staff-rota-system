@@ -190,8 +190,8 @@ def get_team_performance_comparison(care_home, start_date=None, end_date=None, l
     if not start_date:
         start_date = end_date - timedelta(days=30)
     
-    # Get all staff in care home
-    staff_members = User.objects.filter(care_home=care_home, is_active=True)
+    # Get all staff in care home (through unit relationship)
+    staff_members = User.objects.filter(unit__care_home=care_home, is_active=True)
     
     performance_data = []
     
