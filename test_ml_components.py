@@ -1,7 +1,15 @@
 """
 Test script for PDSA ML components
-Run this to verify all ML features work correctly
+Run with: python manage.py shell < test_ml_components.py
+Or as Django management command
 """
+
+import os
+import django
+
+# Setup Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
+django.setup()
 
 from quality_audits.ml.smart_aim_generator import SMARTAimGenerator
 from quality_audits.ml.hypothesis_suggester import HypothesisSuggester
