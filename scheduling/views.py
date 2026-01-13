@@ -14693,8 +14693,36 @@ def performance_dashboard(request):
     """Performance tracking dashboard"""
     from . import performance_tracking
     from .models import StaffPerformance, AttendanceRecord
+    from .models_multi_home import CareHome
     
-    care_home = request.user.care_home
+    # Get care home - either from user's unit or allow selection for senior management
+    care_home = None
+    care_homes = CareHome.objects.all()
+    
+    # Check if user is senior management (can view any home)
+    if request.user.role and request.user.role.is_senior_management_team:
+        # Allow selection via GET parameter
+        selected_home_id = request.GET.get('care_home')
+        if selected_home_id:
+            try:
+                care_home = CareHome.objects.get(id=selected_home_id)
+            except CareHome.DoesNotExist:
+                pass
+        
+        # Default to first home if none selected
+        if not care_home:
+            care_home = care_homes.first()
+    else:
+        # Regular staff - get from their unit
+        if request.user.unit:
+            care_home = request.user.unit.care_home
+        else:
+            # No unit assigned, default to first home
+            care_home = care_homes.first()
+    
+    if not care_home:
+        messages.error(request, 'No care homes found in the system.')
+        return redirect('manager_dashboard')
     
     # Date range (default: last 30 days)
     end_date = timezone.now().date()
@@ -14729,6 +14757,9 @@ def performance_dashboard(request):
             })
     
     context = {
+        'care_home': care_home,
+        'care_homes': care_homes,
+        'selected_care_home': care_home,
         'top_performers': team_data['top_performers'],
         'bottom_performers': team_data['bottom_performers'],
         'average_score': team_data['average_score'],
