@@ -1516,7 +1516,7 @@ def api_staffing_gaps(request):
                 unit__in=units,
                 date__gte=start_date,
                 date__lt=end_date
-            ).select_related('unit', 'shift_type', 'assigned_to')
+            ).select_related('unit', 'shift_type', 'user')
             
             # Group by date and shift type
             shift_groups = {}
@@ -1530,7 +1530,7 @@ def api_staffing_gaps(request):
                     }
                 
                 shift_groups[key]['required'] += 1
-                if shift.assigned_to:
+                if shift.user:
                     shift_groups[key]['filled'] += 1
                 shift_groups[key]['shifts'].append(shift)
             
@@ -1618,7 +1618,7 @@ def api_multi_home_staffing(request, date_str):
             shifts = Shift.objects.filter(
                 unit__in=units,
                 date=target_date
-            ).select_related('unit', 'shift_type', 'assigned_to', 'assigned_to__role')
+            ).select_related('unit', 'shift_type', 'user', 'user__role')
             
             # Group by shift type
             shift_type_groups = {}
@@ -1635,12 +1635,12 @@ def api_multi_home_staffing(request, date_str):
                 shift_type_groups[shift_type_name]['required'] += 1
                 total_shifts += 1
                 
-                if shift.assigned_to:
+                if shift.user:
                     shift_type_groups[shift_type_name]['filled'] += 1
                     total_filled += 1
                     shift_type_groups[shift_type_name]['staff'].append({
-                        'name': f"{shift.assigned_to.first_name} {shift.assigned_to.last_name}",
-                        'role': shift.assigned_to.role.name if shift.assigned_to.role else 'Unknown',
+                        'name': f"{shift.user.first_name} {shift.user.last_name}",
+                        'role': shift.user.role.name if shift.user.role else 'Unknown',
                         'unit': shift.unit.name
                     })
             
@@ -1666,7 +1666,7 @@ def api_multi_home_staffing(request, date_str):
             staffing_data.append({
                 'home': home.name,
                 'home_id': home.id,
-                'location': home.location,
+                'location': home.location_address,
                 'total_required': home_required,
                 'total_filled': home_filled,
                 'total_gap': home_gap,
@@ -1742,7 +1742,7 @@ def api_budget_breakdown(request, home_id):
             unit__in=units,
             date__gte=month_start,
             date__lt=month_end
-        ).select_related('assigned_to', 'assigned_to__role', 'shift_type')
+        ).select_related('user', 'user__role', 'shift_type')
         
         # Calculate costs by category
         categories = {
@@ -1764,7 +1764,7 @@ def api_budget_breakdown(request, home_id):
             # Determine shift duration (simplified - assuming 8 hours)
             duration = 8
             
-            if shift.assigned_to:
+            if shift.user:
                 # Regular staff wage
                 cost = base_rate * duration
                 categories['Staff Wages']['actual'] += float(cost)
@@ -1778,7 +1778,7 @@ def api_budget_breakdown(request, home_id):
                 total_budget += cost
         
         # Add sample overtime (20% of filled shifts)
-        filled_shifts = shifts.filter(assigned_to__isnull=False).count()
+        filled_shifts = shifts.filter(user__isnull=False).count()
         overtime_cost = float(overtime_rate * 8 * Decimal(filled_shifts) * Decimal('0.2'))
         categories['Overtime']['actual'] = overtime_cost
         categories['Overtime']['shifts'] = int(filled_shifts * 0.2)
@@ -1814,7 +1814,7 @@ def api_budget_breakdown(request, home_id):
             'home': {
                 'id': home.id,
                 'name': home.name,
-                'location': home.location
+                'location': home.location_address
             },
             'period': {
                 'month': month_start.strftime('%B %Y'),
@@ -1878,18 +1878,18 @@ def api_overtime_detail(request, date_str):
             unit__in=all_units,
             date__gte=week_start,
             date__lte=week_end,
-            assigned_to__isnull=False
-        ).select_related('assigned_to', 'assigned_to__role', 'unit', 'unit__care_home', 'shift_type')
+            user__isnull=False
+        ).select_related('user', 'user__role', 'unit', 'unit__care_home', 'shift_type')
         
         # Calculate hours per staff member
         staff_hours = {}
         for shift in shifts:
-            staff_id = shift.assigned_to.id
+            staff_id = shift.user.id
             
             if staff_id not in staff_hours:
                 staff_hours[staff_id] = {
-                    'staff_name': f"{shift.assigned_to.first_name} {shift.assigned_to.last_name}",
-                    'role': shift.assigned_to.role.name if shift.assigned_to.role else 'Unknown',
+                    'staff_name': f"{shift.user.first_name} {shift.user.last_name}",
+                    'role': shift.user.role.name if shift.user.role else 'Unknown',
                     'home': shift.unit.care_home.name,
                     'regular_hours': 0,
                     'overtime_hours': 0,
@@ -2138,7 +2138,7 @@ def api_compliance_actions(request, home_id, metric):
             'home': {
                 'id': home.id,
                 'name': home.name,
-                'location': home.location
+                'location': home.location_address
             },
             'metric': {
                 'name': metric.replace('_', ' ').title(),
