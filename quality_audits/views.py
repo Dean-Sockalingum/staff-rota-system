@@ -72,10 +72,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['total_cycles'] = all_cycles.count()
         context['active_cycles'] = all_cycles.filter(act_decision='PENDING').count()
         
-        # Success metrics
-        completed_cycles = all_cycles.exclude(act_decision='PENDING')
-        if completed_cycles.exists():
-            context['avg_success_score'] = completed_cycles.aggregate(
+        # Success metrics (from projects, not cycles)
+        completed_projects = projects.filter(status='COMPLETED')
+        if completed_projects.exists():
+            context['avg_success_score'] = completed_projects.aggregate(
                 Avg('ai_success_score')
             )['ai_success_score__avg'] or 0
         else:
