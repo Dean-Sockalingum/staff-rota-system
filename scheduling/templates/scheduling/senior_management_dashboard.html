@@ -2095,19 +2095,19 @@ if (document.readyState === 'loading') {
 // Load Executive Analytics Charts
 let multiHomeStaffingChart, budgetActualChart, overtimeTrendChart, staffingGaugeChart, complianceScoreChart;
 
-async function loadExecutiveCharts() {
+function loadExecutiveCharts() {
     console.log('Loading Executive Analytics charts...');
+    
+    // Check if ChartHelpers is available, retry if not
+    if (typeof ChartHelpers === 'undefined' || typeof Chart === 'undefined') {
+        console.warn('ChartHelpers or Chart.js not loaded yet, retrying in 100ms...');
+        setTimeout(loadExecutiveCharts, 100);
+        return;
+    }
+    
+    console.log('✓ ChartHelpers and Chart.js are available');
+    
     try {
-        // Check if ChartHelpers is available
-        if (typeof ChartHelpers === 'undefined') {
-            console.error('ChartHelpers not loaded! Charts cannot be created.');
-            return;
-        }
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js not loaded! Charts cannot be created.');
-            return;
-        }
-        console.log('✓ ChartHelpers and Chart.js are available');
         
         // Generate last 7 days labels
         const last7Days = [];
