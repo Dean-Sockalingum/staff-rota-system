@@ -196,6 +196,11 @@
                             <i class="fas fa-chart-line"></i> Head of Service
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'performance_dashboard' %}">
+                            <i class="fas fa-award"></i> CI Performance
+                        </a>
+                    </li>
                     {% endif %}
                     {% if user.role.name == 'OM' or user.role.is_senior_management_team %}
                     <li class="nav-item">
