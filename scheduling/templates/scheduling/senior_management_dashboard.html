@@ -2440,8 +2440,9 @@ async function loadExecutiveCharts() {
                     display: true,
                     position: 'top',
                     labels: {
-                        filter: function(item, chart) {
-                            return item.text !== 'Target Maximum' || chart.getDatasetMeta(1).visible;
+                        filter: function(item, data) {
+                            // Show all items (no filtering needed)
+                            return true;
                         }
                     }
                 },
