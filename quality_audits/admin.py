@@ -1,5 +1,18 @@
 from django.contrib import admin
+from django import forms
+from django.contrib.postgres.fields import JSONField
 from .models import PDSAProject, PDSACycle, PDSATeamMember, PDSADataPoint, PDSAChatbotLog
+
+
+class PDSAProjectAdminForm(forms.ModelForm):
+    """Custom form to handle JSONField properly"""
+    class Meta:
+        model = PDSAProject
+        fields = '__all__'
+        widgets = {
+            'ai_suggested_hypotheses': forms.Textarea(attrs={'rows': 4, 'cols': 60}),
+            'chatbot_interactions': forms.NumberInput(attrs={'readonly': 'readonly'}),
+        }
 
 
 class PDSADataPointInline(admin.TabularInline):
@@ -28,10 +41,12 @@ class PDSATeamMemberInline(admin.TabularInline):
 
 @admin.register(PDSAProject)
 class PDSAProjectAdmin(admin.ModelAdmin):
+    form = PDSAProjectAdminForm
     list_display = ('title', 'category', 'priority', 'status', 'lead_user', 'care_home', 'ai_success_score', 'created_at')
     list_filter = ('status', 'category', 'priority', 'care_home')
     search_fields = ('title', 'problem_description', 'aim_statement')
     date_hierarchy = 'created_at'
+    readonly_fields = ('created_at', 'updated_at')
     
     fieldsets = (
         ('Basic Information', {
@@ -50,7 +65,11 @@ class PDSAProjectAdmin(admin.ModelAdmin):
             'fields': ('start_date', 'target_completion_date', 'actual_completion_date')
         }),
         ('AI & Automation', {
-            'fields': ('ai_aim_generated', 'ai_success_score', 'ai_suggested_hypotheses', 'chatbot_interactions'),
+            'fields': ('ai_aim_generated', 'ai_success_score', 'chatbot_interactions'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
