@@ -14733,9 +14733,9 @@ def performance_dashboard(request):
         care_home, start_date, end_date, limit=5
     )
     
-    # Get recent attendance records
+    # Get recent attendance records (filter by staff unit's care_home)
     recent_attendance = AttendanceRecord.objects.filter(
-        staff_member__care_home=care_home,
+        staff_member__unit__care_home=care_home,
         date__gte=start_date
     ).select_related('staff_member', 'shift').order_by('-date')[:10]
     
