@@ -2039,7 +2039,7 @@ def api_compliance_actions(request, home_id, metric):
             
         elif metric == 'documentation':
             # Sample documentation compliance check
-            residents = Resident.objects.filter(unit__in=units, status='ACTIVE')
+            residents = Resident.objects.filter(unit__in=units, is_active=True)
             total_residents = residents.count()
             compliant_count = 0
             
@@ -2075,7 +2075,7 @@ def api_compliance_actions(request, home_id, metric):
             
         elif metric == 'care_planning':
             # Care planning compliance
-            residents = Resident.objects.filter(unit__in=units, status='ACTIVE')
+            residents = Resident.objects.filter(unit__in=units, is_active=True)
             compliant_count = sum(1 for r in residents if hasattr(r, 'care_plan'))
             current_score = round((compliant_count / residents.count() * 100), 1) if residents.count() > 0 else 0
             
