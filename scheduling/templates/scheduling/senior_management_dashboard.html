@@ -2940,7 +2940,7 @@ function showStaffingDetail(dateLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/multi-home/staffing/${dateStr}/`)
+    fetch(`/api/multi-home/staffing/${dateStr}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3086,7 +3086,7 @@ function showBudgetBreakdown(homeLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/budget-breakdown/${homeId}/?month=${month}`)
+    fetch(`/api/budget-breakdown/${homeId}/?month=${month}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3217,7 +3217,7 @@ function showOvertimeDetail(dateLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/overtime/${dateStr}/`)
+    fetch(`/api/overtime/${dateStr}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3357,7 +3357,7 @@ function showComplianceActions(metric) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/compliance/actions/${homeId}/${metricSlug}/`)
+    fetch(`/api/compliance/actions/${homeId}/${metricSlug}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
