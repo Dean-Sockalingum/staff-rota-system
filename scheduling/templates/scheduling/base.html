@@ -137,6 +137,14 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
         }
+        
+        /* Force navbar to be visible on desktop to prevent Bootstrap collapse issues */
+        @media (min-width: 992px) {
+            #navbarContent {
+                display: flex !important;
+                visibility: visible !important;
+            }
+        }
     </style>
 </head>
 <body>
