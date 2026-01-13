@@ -2026,8 +2026,8 @@ function updateCurrentTime() {
     }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize dashboard function
+function initializeSeniorDashboard() {
     // Attach collapsible section handlers
     attachCollapsibleHandlers();
     
@@ -2083,7 +2083,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize executive charts
     loadExecutiveCharts();
-});
+}
+
+// Execute immediately if DOM is ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSeniorDashboard);
+} else {
+    initializeSeniorDashboard();
+}
 
 // Load Executive Analytics Charts
 let multiHomeStaffingChart, budgetActualChart, overtimeTrendChart, staffingGaugeChart, complianceScoreChart;
