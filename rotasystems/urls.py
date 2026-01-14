@@ -41,6 +41,10 @@ urlpatterns = [
     path('', include('scheduling.urls')),  # Main scheduling app URLs - includes search
     path('staff-records/', include(('staff_records.urls', 'staff_records'), namespace='staff_records')),
     path('accounts/', include('django.contrib.auth.urls')),
+    # TQM Module 1: Quality Audits (PDSA Tracker)
+    path('quality-audits/', include('quality_audits.urls')),
+    # TQM Module 2: Incident & Safety Management
+    path('incident-safety/', include('incident_safety.urls')),
     # Task 38: Mobile App API
     path('api/mobile/', include('scheduling.api_urls')),
     path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login

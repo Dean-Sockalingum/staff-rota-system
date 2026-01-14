@@ -76,6 +76,8 @@ INSTALLED_APPS = [
     'email_config',  # UI-based email configuration
     # TQM Module 1: Quality Audits & Inspections
     'quality_audits',  # PDSA Tracker, Audit Templates, CAPA System
+    # TQM Module 2: Incident & Safety Management
+    'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
 ]
 
 MIDDLEWARE = [
