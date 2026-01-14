@@ -686,20 +686,22 @@ urlpatterns = [
     path('workflows/steps/<int:step_id>/update/', workflow_update_step, name='workflow_update_step'),
     path('workflows/steps/<int:step_id>/', workflow_delete_step, name='workflow_delete_step'),
     
-    # Task 53: Document Management System
-    path('documents/', document_list, name='document_list'),
-    path('documents/upload/', document_upload, name='document_upload'),
-    path('documents/<int:document_id>/', document_detail, name='document_detail'),
-    path('documents/<int:document_id>/download/', document_download, name='document_download'),
-    path('documents/<int:document_id>/edit/', document_edit, name='document_edit'),
-    path('documents/<int:document_id>/delete/', document_delete, name='document_delete'),
-    path('documents/<int:document_id>/new-version/', document_new_version, name='document_new_version'),
-    path('documents/<int:document_id>/share/', document_share, name='document_share'),
-    path('documents/<int:document_id>/comment/', document_add_comment, name='document_add_comment'),
-    path('documents/my/', my_documents, name='my_documents'),
-    path('documents/shared/', shared_with_me, name='shared_with_me'),
-    path('documents/categories/', category_manage, name='category_manage'),
-    path('documents/categories/create/', category_create, name='category_create'),
+    # Task 53: Document Management System - DEPRECATED
+    # These URLs are now handled by TQM Module 5 (document_management app)
+    # Commenting out to prevent conflicts - use /documents/ which routes to document_management
+    # path('documents/', document_list, name='document_list'),
+    # path('documents/upload/', document_upload, name='document_upload'),
+    # path('documents/<int:document_id>/', document_detail, name='document_detail'),
+    # path('documents/<int:document_id>/download/', document_download, name='document_download'),
+    # path('documents/<int:document_id>/edit/', document_edit, name='document_edit'),
+    # path('documents/<int:document_id>/delete/', document_delete, name='document_delete'),
+    # path('documents/<int:document_id>/new-version/', document_new_version, name='document_new_version'),
+    # path('documents/<int:document_id>/share/', document_share, name='document_share'),
+    # path('documents/<int:document_id>/comment/', document_add_comment, name='document_add_comment'),
+    # path('documents/my/', my_documents, name='my_documents'),
+    # path('documents/shared/', shared_with_me, name='shared_with_me'),
+    # path('documents/categories/', category_manage, name='category_manage'),
+    # path('documents/categories/create/', category_create, name='category_create'),
     
     # Task 54: Video Tutorial Library
     path('videos/', video_library, name='video_library'),
