@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}5x5 Risk Matrix{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matrix-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    .matrix-cell {
+        height: 100px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 1.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .matrix-cell:hover {
+        transform: scale(1.05);
+        z-index: 10;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    .matrix-cell.critical { background-color: #dc3545; color: white; }
+    .matrix-cell.high { background-color: #fd7e14; color: white; }
+    .matrix-cell.medium { background-color: #ffc107; color: #212529; }
+    .matrix-cell.low { background-color: #28a745; color: white; }
+    
+    .matrix-header {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .risk-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        margin: 2px;
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 3px;
+        font-size: 0.7rem;
+        cursor: pointer;
+    }
+    .risk-badge:hover {
+        background-color: rgba(0,0,0,0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-th"></i> 5×5 Risk Matrix</h1>
+        <div>
+            <a href="{% url 'risk_management:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="{% url 'risk_management:risk_list' %}" class="btn btn-primary">
+                <i class="fas fa-list"></i> Risk Register
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="care_home" class="form-label">Care Home</label>
+                    <select class="form-select" id="care_home" name="care_home" onchange="this.form.submit()">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                        <option value="{{ home.id }}" {% if care_home_filter == home.id|stringformat:"s" %}selected{% endif %}>
+                            {{ home.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="category" class="form-label">Risk Category</label>
+                    <select class="form-select" id="category" name="category" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if category_filter == cat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Risk Rating Legend</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="alert alert-danger mb-2">
+                        <strong>Critical (15-25):</strong> Immediate action required
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="alert alert-warning mb-2">
+                        <strong>High (10-14):</strong> Senior management attention
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="alert alert-info mb-2">
+                        <strong>Medium (5-9):</strong> Management action required
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="alert alert-success mb-2">
+                        <strong>Low (1-4):</strong> Monitor and review
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Matrix -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Risk Matrix (Residual Risk - After Controls)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered matrix-table">
+                    <thead>
+                        <tr>
+                            <th class="matrix-header" style="width: 15%;">
+                                <div>Likelihood →</div>
+                                <div>Impact ↓</div>
+                            </th>
+                            <th class="matrix-header">
+                                <div><strong>1</strong></div>
+                                <div><small>Rare</small></div>
+                            </th>
+                            <th class="matrix-header">
+                                <div><strong>2</strong></div>
+                                <div><small>Unlikely</small></div>
+                            </th>
+                            <th class="matrix-header">
+                                <div><strong>3</strong></div>
+                                <div><small>Possible</small></div>
+                            </th>
+                            <th class="matrix-header">
+                                <div><strong>4</strong></div>
+                                <div><small>Likely</small></div>
+                            </th>
+                            <th class="matrix-header">
+                                <div><strong>5</strong></div>
+                                <div><small>Almost Certain</small></div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for impact in "54321" %}
+                        <tr>
+                            <td class="matrix-header">
+                                <div><strong>{{ impact }}</strong></div>
+                                <div><small>
+                                    {% if impact == "5" %}Severe
+                                    {% elif impact == "4" %}Major
+                                    {% elif impact == "3" %}Moderate
+                                    {% elif impact == "2" %}Minor
+                                    {% else %}Negligible{% endif %}
+                                </small></div>
+                            </td>
+                            {% for likelihood in "12345" %}
+                            {% with score=likelihood|add:impact|add:impact|add:impact|add:impact %}
+                            {% with cell_key=likelihood|add:"_"|add:impact %}
+                            {% with cell_data=matrix_data|default_if_none:dict %}
+                            <td class="matrix-cell 
+                                {% if score >= '15' %}critical
+                                {% elif score >= '10' %}high
+                                {% elif score >= '5' %}medium
+                                {% else %}low{% endif %}"
+                                data-likelihood="{{ likelihood }}"
+                                data-impact="{{ impact }}"
+                                onclick="showRisks('{{ cell_key }}')">
+                                <div style="font-size: 2rem;">{{ matrix_data|default_if_none:dict }}</div>
+                                <div style="font-size: 0.8rem; margin-top: 5px;">
+                                    {% for risk in matrix_data|default_if_none:dict %}
+                                    <div class="risk-badge" 
+                                         onclick="event.stopPropagation(); window.location.href='{% url 'risk_management:risk_detail' risk.id %}'">
+                                        {{ risk.risk_id }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            {% endwith %}
+                            {% endwith %}
+                            {% endwith %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Details Modal -->
+    <div class="modal fade" id="riskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Risks in this Cell</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Risk details will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Store matrix data
+const matrixData = {{ matrix_data|safe }};
+
+function showRisks(cellKey) {
+    const data = matrixData[cellKey];
+    if (!data || data.count === 0) {
+        return;
+    }
+    
+    const [likelihood, impact] = cellKey.split('_');
+    const score = parseInt(likelihood) * parseInt(impact);
+    
+    let html = `
+        <h6>Risk Score: ${score} (Likelihood ${likelihood} × Impact ${impact})</h6>
+        <p><strong>${data.count} risk(s) in this category:</strong></p>
+        <ul class="list-group">
+    `;
+    
+    data.risks.forEach(risk => {
+        html += `
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${risk.risk_id}:</strong> ${risk.title}
+                        <br><small class="text-muted">Priority: ${risk.priority}</small>
+                    </div>
+                    <a href="/risk-management/risks/${risk.id}/" class="btn btn-sm btn-primary">
+                        View Risk
+                    </a>
+                </div>
+            </li>
+        `;
+    });
+    
+    html += '</ul>';
+    
+    document.getElementById('modalBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('riskModal')).show();
+}
+</script>
+{% endblock %}

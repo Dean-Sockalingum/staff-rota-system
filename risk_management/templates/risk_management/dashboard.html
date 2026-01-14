@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Risk Management Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card.critical { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+    .stat-card.high { background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%); color: white; }
+    .stat-card.medium { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; }
+    .stat-card.low { background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
+    
+    .stat-number {
+        font-size: 3rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 5px;
+    }
+    
+    .risk-matrix-cell {
+        width: 20%;
+        height: 80px;
+        border: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .risk-matrix-cell:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .risk-matrix-cell.critical { background-color: #dc3545; color: white; }
+    .risk-matrix-cell.high { background-color: #fd7e14; color: white; }
+    .risk-matrix-cell.medium { background-color: #ffc107; color: #212529; }
+    .risk-matrix-cell.low { background-color: #28a745; color: white; }
+    
+    .badge-priority {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    
+    .badge-priority.critical { background-color: #dc3545; color: white; }
+    .badge-priority.high { background-color: #fd7e14; color: white; }
+    .badge-priority.medium { background-color: #ffc107; color: #212529; }
+    .badge-priority.low { background-color: #28a745; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-shield-alt"></i> Risk Management Dashboard</h1>
+        <div>
+            <a href="{% url 'risk_management:risk_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Register New Risk
+            </a>
+            <a href="{% url 'risk_management:risk_matrix' %}" class="btn btn-info">
+                <i class="fas fa-th"></i> Risk Matrix
+            </a>
+            <a href="{% url 'risk_management:reports' %}" class="btn btn-secondary">
+                <i class="fas fa-chart-bar"></i> Reports
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card critical">
+                <h2 class="stat-number">{{ critical_risks }}</h2>
+                <p class="stat-label">Critical Risks</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card high">
+                <h2 class="stat-number">{{ high_risks }}</h2>
+                <p class="stat-label">High Risks</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card medium">
+                <h2 class="stat-number">{{ medium_risks }}</h2>
+                <p class="stat-label">Medium Risks</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card low">
+                <h2 class="stat-number">{{ low_risks }}</h2>
+                <p class="stat-label">Low Risks</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mitigation Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Mitigation Progress</h5>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {% widthratio completed_mitigations total_mitigations 100 %}%;" 
+                             aria-valuenow="{{ completed_mitigations }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="{{ total_mitigations }}">
+                            {{ completed_mitigations }}/{{ total_mitigations }}
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        {% widthratio completed_mitigations total_mitigations 100 %}% Complete
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Overdue Mitigations</h5>
+                    <h2 class="text-danger">{{ overdue_mitigations }}</h2>
+                    <small class="text-muted">Require immediate attention</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Risks</h5>
+                    <h2>{{ total_risks }}</h2>
+                    <small class="text-muted">Active in register</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Distribution by Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Categories</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Matrix Heat Map -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">5x5 Risk Matrix (Residual Risk)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%;">Likelihood →<br>Impact ↓</th>
+                                    <th class="text-center">1 (Rare)</th>
+                                    <th class="text-center">2 (Unlikely)</th>
+                                    <th class="text-center">3 (Possible)</th>
+                                    <th class="text-center">4 (Likely)</th>
+                                    <th class="text-center">5 (Almost Certain)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for impact in "54321" %}
+                                <tr>
+                                    <td class="text-center"><strong>{{ impact }} {% if impact == "5" %}(Severe){% elif impact == "4" %}(Major){% elif impact == "3" %}(Moderate){% elif impact == "2" %}(Minor){% else %}(Negligible){% endif %}</strong></td>
+                                    {% for likelihood in "12345" %}
+                                    {% with score=likelihood|add:impact %}
+                                    {% with cell_key=likelihood|add:"_"|add:impact %}
+                                    <td class="risk-matrix-cell 
+                                        {% if likelihood|add:impact >= '8' %}critical
+                                        {% elif likelihood|add:impact >= '5' %}high
+                                        {% elif likelihood|add:impact >= '3' %}medium
+                                        {% else %}low{% endif %}"
+                                        data-likelihood="{{ likelihood }}"
+                                        data-impact="{{ impact }}"
+                                        title="Score: {% widthratio likelihood 1 1 %}×{% widthratio impact 1 1 %}={{ risk_matrix|default_if_none:0 }}">
+                                        {{ risk_matrix|default_if_none:0 }}
+                                    </td>
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Risks & Overdue Reviews -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Risks (by Score)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for risk in top_risks %}
+                        <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ risk.title }}</h6>
+                                    <small class="text-muted">{{ risk.care_home.name }} | {{ risk.category.name }}</small>
+                                </div>
+                                <div class="text-right">
+                                    <span class="badge-priority {{ risk.priority|lower }}">
+                                        Score: {{ risk.residual_score }}
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <p class="text-muted text-center my-3">No risks registered</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Overdue Reviews</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for risk in overdue_reviews %}
+                        <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ risk.title }}</h6>
+                                    <small class="text-muted">Next review: {{ risk.next_review_date }}</small>
+                                </div>
+                                <a href="{% url 'risk_management:review_create' risk.pk %}" class="btn btn-sm btn-warning">
+                                    Review Now
+                                </a>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <p class="text-success text-center my-3">
+                            <i class="fas fa-check-circle"></i> All reviews up to date
+                        </p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Risks -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Risks (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Risk ID</th>
+                                    <th>Title</th>
+                                    <th>Care Home</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Score</th>
+                                    <th>Identified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for risk in recent_risks %}
+                                <tr>
+                                    <td>{{ risk.risk_id }}</td>
+                                    <td>{{ risk.title }}</td>
+                                    <td>{{ risk.care_home.name }}</td>
+                                    <td><span class="badge badge-secondary">{{ risk.category.name }}</span></td>
+                                    <td><span class="badge badge-info">{{ risk.get_status_display }}</span></td>
+                                    <td>
+                                        <span class="badge-priority {{ risk.priority|lower }}">
+                                            {{ risk.residual_score }}
+                                        </span>
+                                    </td>
+                                    <td>{{ risk.identified_date }}</td>
+                                    <td>
+                                        <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="btn btn-sm btn-primary">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">No recent risks</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Fetch dashboard stats for charts
+fetch('{% url "risk_management:dashboard_stats" %}')
+    .then(response => response.json())
+    .then(data => {
+        // Status Chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data.status),
+                datasets: [{
+                    data: Object.values(data.status),
+                    backgroundColor: [
+                        '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#17a2b8', '#6c757d'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Category Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'bar',
+            data: {
+                labels: data.categories.map(c => c.category__name),
+                datasets: [{
+                    label: 'Risks',
+                    data: data.categories.map(c => c.count),
+                    backgroundColor: '#007bff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

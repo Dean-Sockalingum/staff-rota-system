@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conduct Risk Review - {{ risk.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-clipboard-check"></i> Conduct Risk Review</h1>
+        <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Risk
+        </a>
+    </div>
+    
+    <!-- Risk Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Risk Being Reviewed</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Risk ID:</dt>
+                <dd class="col-sm-9"><strong>{{ risk.risk_id }}</strong></dd>
+                
+                <dt class="col-sm-3">Title:</dt>
+                <dd class="col-sm-9">{{ risk.title }}</dd>
+                
+                <dt class="col-sm-3">Current Score:</dt>
+                <dd class="col-sm-9">
+                    <span class="badge {% if risk.residual_score >= 15 %}bg-danger
+                                  {% elif risk.residual_score >= 10 %}bg-warning
+                                  {% elif risk.residual_score >= 5 %}bg-info
+                                  {% else %}bg-success{% endif %}">
+                        {{ risk.residual_score }} (L{{ risk.residual_likelihood }} × I{{ risk.residual_impact }})
+                    </span>
+                </dd>
+                
+                <dt class="col-sm-3">Last Review:</dt>
+                <dd class="col-sm-9">{{ risk.last_reviewed|default:"Never reviewed" }}</dd>
+            </dl>
+        </div>
+    </div>
+    
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Reassessment -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Risk Reassessment</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Based on current circumstances and controls, reassess the likelihood and impact of this risk.
+                </p>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="reassessed_likelihood" class="form-label">Reassessed Likelihood (1-5) *</label>
+                        <select class="form-select" id="reassessed_likelihood" name="reassessed_likelihood" required>
+                            {% for choice in likelihood_choices %}
+                            <option value="{{ choice.0 }}" 
+                                    {% if choice.0 == risk.residual_likelihood %}selected{% endif %}>
+                                {{ choice.0 }} - {{ choice.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost Certain
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="reassessed_impact" class="form-label">Reassessed Impact (1-5) *</label>
+                        <select class="form-select" id="reassessed_impact" name="reassessed_impact" required>
+                            {% for choice in impact_choices %}
+                            <option value="{{ choice.0 }}" 
+                                    {% if choice.0 == risk.residual_impact %}selected{% endif %}>
+                                {{ choice.0 }} - {{ choice.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Severe
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>Calculated Score:</strong> 
+                    <span id="new-score">{{ risk.residual_score }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Assessment -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Control Effectiveness</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Are current controls effective? *</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="controls_effective" 
+                               id="controls_yes" value="on" required>
+                        <label class="form-check-label" for="controls_yes">
+                            Yes - Controls are working as intended
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="controls_effective" 
+                               id="controls_no" value="">
+                        <label class="form-check-label" for="controls_no">
+                            No - Controls need improvement
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="control_gaps" class="form-label">Control Gaps Identified</label>
+                    <textarea class="form-control" id="control_gaps" name="control_gaps" rows="3"
+                              placeholder="Describe any gaps or weaknesses in current controls"></textarea>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="new_mitigations_required" 
+                           name="new_mitigations_required">
+                    <label class="form-check-label" for="new_mitigations_required">
+                        New mitigation actions required
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Review Findings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Review Findings & Recommendations</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="recommended_actions" class="form-label">Recommended Actions</label>
+                    <textarea class="form-control" id="recommended_actions" name="recommended_actions" rows="4"
+                              placeholder="Recommendations for improving risk management"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="changes_in_environment" class="form-label">Changes in Environment</label>
+                    <textarea class="form-control" id="changes_in_environment" name="changes_in_environment" rows="3"
+                              placeholder="Any changes in regulatory, operational, or environmental factors"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="follow_up_actions" class="form-label">Follow-up Actions Required</label>
+                    <textarea class="form-control" id="follow_up_actions" name="follow_up_actions" rows="3"
+                              placeholder="Specific actions to be taken before next review"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Review Decision -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Review Decision *</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="decision" class="form-label">Decision</label>
+                    <select class="form-select" id="decision" name="decision" required>
+                        <option value="">Select decision...</option>
+                        {% for choice in decision_choices %}
+                        <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        <strong>Continue Monitoring:</strong> Risk managed adequately<br>
+                        <strong>Escalate:</strong> Requires senior management attention<br>
+                        <strong>Accept:</strong> Risk accepted at current level<br>
+                        <strong>Close:</strong> Risk no longer relevant
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="decision_rationale" class="form-label">Decision Rationale *</label>
+                    <textarea class="form-control" id="decision_rationale" name="decision_rationale" 
+                              rows="4" required
+                              placeholder="Explain the reasoning behind this decision"></textarea>
+                    <div class="invalid-feedback">Please provide rationale for your decision.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="next_review_date" class="form-label">Next Review Date *</label>
+                    <input type="date" class="form-control" id="next_review_date" 
+                           name="next_review_date" required>
+                    <div class="invalid-feedback">Please set the next review date.</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Additional Notes</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="review_date" class="form-label">Review Date</label>
+                    <input type="date" class="form-control" id="review_date" name="review_date" 
+                           value="{{ today|date:'Y-m-d' }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3"
+                              placeholder="Any additional comments or observations"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-check"></i> Complete Review
+            </button>
+            <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calculate and display new score
+function updateScore() {
+    const likelihood = parseInt(document.getElementById('reassessed_likelihood').value) || 1;
+    const impact = parseInt(document.getElementById('reassessed_impact').value) || 1;
+    const score = likelihood * impact;
+    document.getElementById('new-score').textContent = score + ' (L' + likelihood + ' × I' + impact + ')';
+}
+
+document.getElementById('reassessed_likelihood').addEventListener('change', updateScore);
+document.getElementById('reassessed_impact').addEventListener('change', updateScore);
+
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}
