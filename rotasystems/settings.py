@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'staff_records',
     'rotasystems.core',
     'email_config',  # UI-based email configuration
+    # TQM Module 1: Quality Audits & Inspections
+    'quality_audits',  # PDSA Tracker, Audit Templates, CAPA System
 ]
 
 MIDDLEWARE = [

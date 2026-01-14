@@ -1,7 +1,8 @@
 #!/bin/bash
 # Nightly Auto-Sync Script for Staff Rota System
-# Syncs Desktop → GitHub → NVMe 990 locations
+# Syncs Desktop → GitHub → NVMe 990 locations → Working dri → Desktop Future Iterations
 # Created: December 26, 2025
+# Updated: January 13, 2026 - Added 5-location sync
 
 LOG_FILE="$HOME/Library/Logs/staff_rota_sync.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
@@ -17,6 +18,12 @@ NVME_BACKUPS_PATH="/Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home
 
 # Location 3: NVMe 990 Production
 NVME_PRODUCTION_PATH="/Volumes/NVMe_990Pro/Staff_Rota_Production_Ready_2025-12-21"
+
+# Location 4: Working dri Volume - Future Iterations
+WORKING_DRI_PATH="/Volumes/Working dri/future iterations/2025-12-12_Multi-Home_Complete"
+
+# Location 5: Desktop Future Iterations
+DESKTOP_FUTURE_PATH="/Users/deansockalingum/Desktop/Future iterations/2025-12-12_Multi-Home_Complete"
 
 # Function to log messages
 log() {
@@ -97,9 +104,37 @@ else
     log "WARNING: NVMe 990 drive not mounted, skipping NVMe locations"
 fi
 
+# Step 4: Sync Working dri Volume - Future Iterations (rsync)
+log "=== STEP 4: Desktop → Working dri Future Iterations ==="
+if [ -d "/Volumes/Working dri" ]; then
+    log "Syncing to Working dri volume..."
+    rsync -av --delete --exclude='.venv' --exclude='__pycache__' --exclude='*.pyc' --exclude='db.sqlite3' --exclude='.git' "$DESKTOP_PATH/" "$WORKING_DRI_PATH/" >> "$LOG_FILE" 2>&1
+    if [ $? -eq 0 ]; then
+        log "Working dri sync successful"
+    else
+        log "ERROR: Working dri sync failed"
+    fi
+else
+    log "WARNING: Working dri volume not mounted, skipping"
+fi
+
+# Step 5: Sync Desktop Future Iterations (rsync)
+log "=== STEP 5: Desktop → Desktop Future Iterations ==="
+if [ -d "/Users/deansockalingum/Desktop/Future iterations" ]; then
+    log "Syncing to Desktop Future Iterations..."
+    rsync -av --delete --exclude='.venv' --exclude='__pycache__' --exclude='*.pyc' --exclude='db.sqlite3' --exclude='.git' "$DESKTOP_PATH/" "$DESKTOP_FUTURE_PATH/" >> "$LOG_FILE" 2>&1
+    if [ $? -eq 0 ]; then
+        log "Desktop Future Iterations sync successful"
+    else
+        log "ERROR: Desktop Future Iterations sync failed"
+    fi
+else
+    log "WARNING: Desktop Future iterations folder not found, skipping"
+fi
+
 # Summary
 log "=== SYNC COMPLETE ==="
-log "All locations synced successfully"
+log "All 5 locations synced successfully"
 echo "========================================" >> "$LOG_FILE"
 echo "" >> "$LOG_FILE"
 
