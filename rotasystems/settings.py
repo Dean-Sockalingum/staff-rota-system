@@ -82,6 +82,8 @@ INSTALLED_APPS = [
     'experience_feedback',  # Satisfaction Surveys, Complaints, EBCD, QoL Assessments
     # TQM Module 4: Training & Competency
     'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
+    # TQM Module 5: Document & Policy Management
+    'document_management',  # Document Repository, Version Control, Policy Lifecycle, Staff Acknowledgements
     # TQM Module 7: Performance Metrics & KPIs
     'performance_kpis',  # KPI Library, Executive Dashboards, Balanced Scorecard
 ]
