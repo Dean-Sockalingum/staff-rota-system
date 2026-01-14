@@ -42,8 +42,10 @@ def dashboard(request):
         required_competencies = RoleCompetencyRequirement.objects.filter(
             role=user.role
         ).select_related('competency')
+        total_required = required_competencies.count()
     else:
-        required_competencies = []
+        required_competencies = RoleCompetencyRequirement.objects.none()
+        total_required = 0
     
     # Get user's assessments
     assessments = CompetencyAssessment.objects.filter(
@@ -56,15 +58,18 @@ def dashboard(request):
     ).select_related('pathway', 'mentor').order_by('-enrollment_date')
     
     # Get available pathways for user's role
-    available_pathways = LearningPathway.objects.filter(
-        from_role=user.role,
-        status='ACTIVE',
-        is_active=True
-    ) if user.role else []
+    if user.role:
+        available_pathways = LearningPathway.objects.filter(
+            from_role=user.role,
+            status='ACTIVE',
+            is_active=True
+        )
+    else:
+        available_pathways = LearningPathway.objects.none()
     
     # Calculate competency completion stats
-    total_required = required_competencies.count()
-    completed_competencies = assessments.filter(
+    completed_competencies = CompetencyAssessment.objects.filter(
+        staff_member=user,
         outcome__in=['COMPETENT', 'HIGHLY_COMPETENT']
     ).values('competency').distinct().count()
     

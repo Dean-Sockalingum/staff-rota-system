@@ -1041,11 +1041,13 @@ html {
     transition: opacity var(--transition-normal), visibility var(--transition-normal);
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
 }
 
 .spinner-overlay.active {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
 }
 
 .spinner-container {

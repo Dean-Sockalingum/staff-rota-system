@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-clipboard-list"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <select name="survey_type" class="form-control mr-2">
+                    <option value="">All Survey Types</option>
+                    <option value="RESIDENT_ADMISSION">Resident - Admission</option>
+                    <option value="RESIDENT_ONGOING">Resident - Ongoing</option>
+                    <option value="FAMILY_ONGOING">Family - Ongoing</option>
+                </select>
+                <select name="care_home" class="form-control mr-2">
+                    <option value="">All Homes</option>
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}">{{ home.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="date" name="date_from" class="form-control mr-2" placeholder="From">
+                <input type="date" name="date_to" class="form-control mr-2" placeholder="To">
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Survey Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Care Home</th>
+                            <th>Respondent</th>
+                            <th>Avg Score</th>
+                            <th>NPS</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for survey in surveys %}
+                        <tr>
+                            <td>{{ survey.survey_date|date:"Y-m-d" }}</td>
+                            <td><span class="badge badge-info">{{ survey.get_survey_type_display }}</span></td>
+                            <td>{{ survey.care_home.name }}</td>
+                            <td>{% if survey.is_anonymous %}<em>Anonymous</em>{% else %}{{ survey.respondent_name }}{% endif %}</td>
+                            <td>
+                                {% with avg=survey.get_average_score %}
+                                <span class="badge {% if avg >= 4 %}badge-success{% elif avg >= 3 %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ avg|floatformat:1 }}/5.0
+                                </span>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                {% if survey.likelihood_recommend %}
+                                {{ survey.likelihood_recommend }}/10
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'experience_feedback:survey_detail' survey.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No surveys found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

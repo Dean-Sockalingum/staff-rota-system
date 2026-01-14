@@ -45,8 +45,10 @@ urlpatterns = [
     path('quality-audits/', include('quality_audits.urls')),
     # TQM Module 2: Incident & Safety Management
     path('incident-safety/', include('incident_safety.urls')),
+    # TQM Module 3: Experience & Feedback
+    path('experience-feedback/', include('experience_feedback.urls')),
     # TQM Module 4: Training & Competency
-    path('training-competency/', include('training_competency.urls')),
+    path('training_competency/', include('training_competency.urls')),
     # TQM Module 7: Performance Metrics & KPIs
     path('performance-kpis/', include('performance_kpis.urls')),
     # Task 38: Mobile App API
