@@ -78,6 +78,8 @@ INSTALLED_APPS = [
     'quality_audits',  # PDSA Tracker, Audit Templates, CAPA System
     # TQM Module 2: Incident & Safety Management
     'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
+    # TQM Module 3: Experience & Feedback
+    'experience_feedback',  # Satisfaction Surveys, Complaints, EBCD, QoL Assessments
     # TQM Module 4: Training & Competency
     'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
     # TQM Module 7: Performance Metrics & KPIs
