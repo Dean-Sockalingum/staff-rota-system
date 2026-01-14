@@ -49,6 +49,8 @@ urlpatterns = [
     path('experience-feedback/', include('experience_feedback.urls')),
     # TQM Module 4: Training & Competency
     path('training_competency/', include('training_competency.urls')),
+    # TQM Module 5: Document & Policy Management
+    path('documents/', include('document_management.urls')),
     # TQM Module 7: Performance Metrics & KPIs
     path('performance-kpis/', include('performance_kpis.urls')),
     # Task 38: Mobile App API

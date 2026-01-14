@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ document.title }} - TQM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .version-selector {
+        position: sticky;
+        top: 20px;
+    }
+    .compliance-badge {
+        font-size: 0.75rem;
+        margin: 2px;
+    }
+    .version-info {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .acknowledgement-box {
+        border: 2px solid #198754;
+        border-radius: 8px;
+        padding: 20px;
+        background-color: #d1e7dd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'document_management:document_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'document_management:document_list' %}">Documents</a></li>
+                    <li class="breadcrumb-item active">{{ document.document_code }}</li>
+                </ol>
+            </nav>
+            <h1 class="h3">{{ document.title }}</h1>
+            <p class="text-muted">{{ document.description }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'document_management:document_update' document.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a href="{% url 'document_management:version_create' document.id %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> New Version
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Document Metadata -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Document Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Document Code:</strong> {{ document.document_code }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Type:</strong>
+                            <span class="badge 
+                                {% if document.document_type == 'POLICY' %}bg-primary
+                                {% elif document.document_type == 'PROCEDURE' %}bg-success
+                                {% elif document.document_type == 'GUIDELINE' %}bg-info
+                                {% elif document.document_type == 'FORM' %}bg-warning text-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ document.get_document_type_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Status:</strong>
+                            <span class="badge 
+                                {% if document.status == 'DRAFT' %}bg-info
+                                {% elif document.status == 'IN_REVIEW' %}bg-warning text-dark
+                                {% elif document.status == 'APPROVED' %}bg-success
+                                {% elif document.status == 'PUBLISHED' %}bg-primary
+                                {% else %}bg-secondary{% endif %}">
+                                {{ document.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Category:</strong> {{ document.category.get_full_path|default:"—" }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Owner:</strong> {{ document.owner.get_full_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Approved By:</strong> {{ document.approved_by.get_full_name|default:"Pending" }}
+                        </div>
+                    </div>
+                    
+                    {% if document.compliance_frameworks %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Compliance Frameworks:</strong><br>
+                                {% for framework in document.compliance_frameworks %}
+                                    <span class="badge compliance-badge bg-info text-dark">{{ framework }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Current Version -->
+            <div class="version-info">
+                <h5><i class="bi bi-file-earmark"></i> Current Version: {{ document.current_version_number }}</h5>
+                <p class="mb-2">
+                    <strong>Last Updated:</strong> {{ document.last_version_date|date:"F d, Y" }}
+                    {% if document.versions.first %}
+                        by {{ document.versions.first.created_by.get_full_name }}
+                    {% endif %}
+                </p>
+                {% if document.versions.first and document.versions.first.summary_of_changes %}
+                    <p class="mb-0">
+                        <strong>Changes:</strong> {{ document.versions.first.summary_of_changes }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Version History -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Version History</h5>
+                    <a href="{% url 'document_management:version_list' document.id %}" class="btn btn-sm btn-outline-primary">
+                        View All Versions
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if versions %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Version</th>
+                                        <th>Change Type</th>
+                                        <th>Created</th>
+                                        <th>By</th>
+                                        <th>Summary</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for version in versions %}
+                                        <tr>
+                                            <td><span class="badge bg-secondary">v{{ version.version_number }}</span></td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if version.change_type == 'MAJOR' %}bg-danger
+                                                    {% elif version.change_type == 'MINOR' %}bg-warning text-dark
+                                                    {% elif version.change_type == 'CORRECTION' %}bg-info
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ version.get_change_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>{{ version.created_at|date:"M d, Y" }}</td>
+                                            <td>{{ version.created_by.get_full_name }}</td>
+                                            <td>{{ version.summary_of_changes|truncatewords:10 }}</td>
+                                            <td>
+                                                {% if version.file %}
+                                                    <a href="{{ version.file.url }}" class="btn btn-sm btn-outline-primary" download>
+                                                        <i class="bi bi-download"></i> Download
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No version history available</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Review History -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Review History</h5>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Scheduled</th>
+                                        <th>Reviewer</th>
+                                        <th>Status</th>
+                                        <th>Outcome</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for review in reviews %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ review.get_review_type_display }}</span>
+                                            </td>
+                                            <td>{{ review.scheduled_date|date:"M d, Y" }}</td>
+                                            <td>{{ review.reviewer.get_full_name }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if review.status == 'COMPLETED' %}bg-success
+                                                    {% elif review.status == 'IN_PROGRESS' %}bg-primary
+                                                    {% elif review.is_overdue %}bg-danger
+                                                    {% else %}bg-warning text-dark{% endif %}">
+                                                    {% if review.is_overdue and review.status != 'COMPLETED' %}
+                                                        OVERDUE
+                                                    {% else %}
+                                                        {{ review.get_status_display }}
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if review.outcome %}
+                                                    {{ review.get_outcome_display }}
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No review history</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Attachments -->
+            {% if attachments %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Attachments</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for attachment in attachments %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-paperclip"></i>
+                                        <strong>{{ attachment.file.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ attachment.get_file_type_display }} • {{ attachment.get_file_size_display }} • 
+                                            Uploaded {{ attachment.uploaded_at|date:"M d, Y" }}
+                                        </small>
+                                    </div>
+                                    <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" download>
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Review Status Card -->
+            <div class="card mb-4 version-selector">
+                <div class="card-header">
+                    <h5 class="mb-0">Review Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Review Frequency:</strong><br>
+                        <span class="badge bg-info">{{ document.get_review_frequency_display }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Next Review Date:</strong><br>
+                        {% if document.is_overdue_for_review %}
+                            <span class="text-danger">
+                                <i class="bi bi-exclamation-triangle"></i> {{ document.next_review_date|date:"F d, Y" }} (OVERDUE)
+                            </span>
+                        {% else %}
+                            {% with days=document.days_until_review %}
+                                {% if days <= 30 %}
+                                    <span class="text-warning">
+                                        <i class="bi bi-clock"></i> {{ document.next_review_date|date:"F d, Y" }} ({{ days }} days)
+                                    </span>
+                                {% else %}
+                                    <span class="text-success">
+                                        <i class="bi bi-check-circle"></i> {{ document.next_review_date|date:"F d, Y" }}
+                                    </span>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'document_management:review_detail' document.id %}" class="btn btn-sm btn-primary w-100">
+                        Schedule Review
+                    </a>
+                </div>
+            </div>
+
+            <!-- Acknowledgement Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Staff Acknowledgement</h5>
+                </div>
+                <div class="card-body">
+                    {% with rate=document.get_acknowledgement_rate %}
+                        <div class="mb-3">
+                            <strong>Acknowledgement Rate:</strong>
+                            <div class="progress mt-2" style="height: 25px;">
+                                <div class="progress-bar 
+                                    {% if rate >= 90 %}bg-success
+                                    {% elif rate >= 70 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ rate }}%">
+                                    {{ rate|floatformat:0 }}%
+                                </div>
+                            </div>
+                        </div>
+                    {% endwith %}
+                    
+                    <div class="mb-3">
+                        <strong>Total Acknowledgements:</strong> {{ acknowledgements.count }}
+                    </div>
+                    
+                    {% if user_acknowledgement %}
+                        <div class="acknowledgement-box">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <strong>You acknowledged this document</strong>
+                            <br>
+                            <small>{{ user_acknowledgement.acknowledged_at|date:"F d, Y" }}</small>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'document_management:acknowledgement_record' document.id %}" class="btn btn-success w-100">
+                            <i class="bi bi-check2-square"></i> Acknowledge Document
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'document_management:acknowledgement_tracker' %}?document={{ document.id }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        View All Acknowledgements
+                    </a>
+                </div>
+            </div>
+
+            <!-- Impact Assessments -->
+            {% if impact_assessments %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Impact Assessments</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for assessment in impact_assessments %}
+                            <div class="mb-3">
+                                <strong>{{ assessment.get_assessment_type_display }}</strong>
+                                <br>
+                                <span class="badge 
+                                    {% if assessment.impact_level == 'NONE' or assessment.impact_level == 'LOW' %}bg-info
+                                    {% elif assessment.impact_level == 'MEDIUM' %}bg-warning text-dark
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ assessment.get_impact_level_display }} Impact
+                                </span>
+                                <br>
+                                <small class="text-muted">{{ assessment.assessment_date|date:"M d, Y" }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
