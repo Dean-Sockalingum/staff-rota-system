@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # Load from environment variable for security
 # In test/CI environments, use a default insecure key
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-test-key-for-development-only' if TESTING else None)
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-j8k2m9n4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1g2h3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -78,6 +78,8 @@ INSTALLED_APPS = [
     'quality_audits',  # PDSA Tracker, Audit Templates, CAPA System
     # TQM Module 2: Incident & Safety Management
     'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
+    # TQM Module 4: Training & Competency
+    'training_competency',  # Competency Frameworks, Skills Matrix, Learning Pathways
 ]
 
 MIDDLEWARE = [
