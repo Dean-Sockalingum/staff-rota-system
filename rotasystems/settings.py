@@ -80,6 +80,8 @@ INSTALLED_APPS = [
     'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
     # TQM Module 4: Training & Competency
     'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
+    # TQM Module 7: Performance Metrics & KPIs
+    'performance_kpis',  # KPI Library, Executive Dashboards, Balanced Scorecard
 ]
 
 MIDDLEWARE = [
