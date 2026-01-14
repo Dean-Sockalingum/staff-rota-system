@@ -79,7 +79,7 @@ INSTALLED_APPS = [
     # TQM Module 2: Incident & Safety Management
     'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
     # TQM Module 4: Training & Competency
-    'training_competency',  # Competency Frameworks, Skills Matrix, Learning Pathways
+    'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
 ]
 
 MIDDLEWARE = [
