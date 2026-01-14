@@ -84,6 +84,8 @@ INSTALLED_APPS = [
     'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
     # TQM Module 5: Document & Policy Management
     'document_management',  # Document Repository, Version Control, Policy Lifecycle, Staff Acknowledgements
+    # TQM Module 6: Risk Management
+    'risk_management',  # Risk Register, Risk Assessment (5x5 Matrix), Mitigation Planning, Risk Reviews
     # TQM Module 7: Performance Metrics & KPIs
     'performance_kpis',  # KPI Library, Executive Dashboards, Balanced Scorecard
 ]
@@ -208,7 +210,7 @@ AXES_VERBOSE = True  # Log lockout attempts for monitoring
 SESSION_COOKIE_AGE = 3600  # 1 hour (3600 seconds)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
-SESSION_COOKIE_SAMESITE = 'Strict'  # Enhanced CSRF protection
+SESSION_COOKIE_SAMESITE = 'Lax'  # Changed from Strict to prevent logout CSRF issues
 SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 
 # Phase 6: CSRF Protection
@@ -216,7 +218,7 @@ SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for PWA/AJAX (was True)
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000', cast=Csv())
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000,http://localhost:8001,http://127.0.0.1:8001', cast=Csv())
 
 # Phase 6: Security Headers
 SECURE_BROWSER_XSS_FILTER = True

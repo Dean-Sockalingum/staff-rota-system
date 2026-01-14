@@ -129,7 +129,7 @@
             Document Management
         </h2>
         {% if perms.scheduling.can_manage_rota %}
-        <a href="{% url 'scheduling:document_upload' %}" class="btn btn-primary">
+        <a href="{% url 'document_upload' %}" class="btn btn-primary">
             <i class="fas fa-upload"></i> Upload Document
         </a>
         {% endif %}
@@ -175,17 +175,17 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="btn-group" role="group">
-                <a href="{% url 'scheduling:document_list' %}" class="btn btn-outline-primary {% if not request.GET %}active{% endif %}">
+                <a href="{% url 'document_list' %}" class="btn btn-outline-primary {% if not request.GET %}active{% endif %}">
                     <i class="fas fa-folder"></i> All Documents
                 </a>
-                <a href="{% url 'scheduling:my_documents' %}" class="btn btn-outline-primary">
+                <a href="{% url 'my_documents' %}" class="btn btn-outline-primary">
                     <i class="fas fa-user"></i> My Documents
                 </a>
-                <a href="{% url 'scheduling:shared_with_me' %}" class="btn btn-outline-primary">
+                <a href="{% url 'shared_with_me' %}" class="btn btn-outline-primary">
                     <i class="fas fa-share"></i> Shared With Me
                 </a>
                 {% if perms.scheduling.can_manage_rota %}
-                <a href="{% url 'scheduling:category_manage' %}" class="btn btn-outline-secondary">
+                <a href="{% url 'category_manage' %}" class="btn btn-outline-secondary">
                     <i class="fas fa-tags"></i> Manage Categories
                 </a>
                 {% endif %}
@@ -255,7 +255,7 @@
             
             <div class="document-content">
                 <div class="document-title">
-                    <a href="{% url 'scheduling:document_detail' document.id %}" class="text-decoration-none text-dark">
+                    <a href="{% url 'document_detail' document.id %}" class="text-decoration-none text-dark">
                         {{ document.title }}
                     </a>
                 </div>
@@ -306,24 +306,24 @@
             </div>
             
             <div class="document-actions">
-                <a href="{% url 'scheduling:document_detail' document.id %}" class="btn btn-sm btn-primary" title="View Details">
+                <a href="{% url 'document_detail' document.id %}" class="btn btn-sm btn-primary" title="View Details">
                     <i class="fas fa-eye"></i> View
                 </a>
                 
-                <a href="{% url 'scheduling:document_download' document.id %}" class="btn btn-sm btn-success" title="Download">
+                <a href="{% url 'document_download' document.id %}" class="btn btn-sm btn-success" title="Download">
                     <i class="fas fa-download"></i> Download
                 </a>
                 
                 {% if perms.scheduling.can_manage_rota and document.uploaded_by == request.user or request.user.is_superuser %}
-                <a href="{% url 'scheduling:document_edit' document.id %}" class="btn btn-sm btn-warning" title="Edit">
+                <a href="{% url 'document_edit' document.id %}" class="btn btn-sm btn-warning" title="Edit">
                     <i class="fas fa-edit"></i> Edit
                 </a>
                 
-                <a href="{% url 'scheduling:document_share' document.id %}" class="btn btn-sm btn-info" title="Share">
+                <a href="{% url 'document_share' document.id %}" class="btn btn-sm btn-info" title="Share">
                     <i class="fas fa-share"></i> Share
                 </a>
                 
-                <form method="post" action="{% url 'scheduling:document_delete' document.id %}" class="d-inline" onsubmit="return confirm('Archive this document?');">
+                <form method="post" action="{% url 'document_delete' document.id %}" class="d-inline" onsubmit="return confirm('Archive this document?');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger" title="Archive">
                         <i class="fas fa-trash"></i> Archive
@@ -368,12 +368,12 @@
             <h5>No documents found</h5>
             <p>{% if search_query or category_filter or access_level_filter or file_type_filter %}
                 Try adjusting your search filters or 
-                <a href="{% url 'scheduling:document_list' %}">clear all filters</a>.
+                <a href="{% url 'document_list' %}">clear all filters</a>.
             {% else %}
                 Get started by uploading your first document.
             {% endif %}</p>
             {% if perms.scheduling.can_manage_rota %}
-            <a href="{% url 'scheduling:document_upload' %}" class="btn btn-primary mt-3">
+            <a href="{% url 'document_upload' %}" class="btn btn-primary mt-3">
                 <i class="fas fa-upload"></i> Upload Document
             </a>
             {% endif %}
