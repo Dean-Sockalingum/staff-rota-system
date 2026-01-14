@@ -45,6 +45,8 @@ urlpatterns = [
     path('quality-audits/', include('quality_audits.urls')),
     # TQM Module 2: Incident & Safety Management
     path('incident-safety/', include('incident_safety.urls')),
+    # TQM Module 4: Training & Competency
+    path('training-competency/', include('training_competency.urls')),
     # Task 38: Mobile App API
     path('api/mobile/', include('scheduling.api_urls')),
     path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login
