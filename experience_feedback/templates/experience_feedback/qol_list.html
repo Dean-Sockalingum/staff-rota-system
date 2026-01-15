@@ -1,0 +1,61 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-heartbeat"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- QoL Assessments Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Resident</th>
+                            <th>Assessment Tool</th>
+                            <th>Overall Score</th>
+                            <th>Method</th>
+                            <th>Assessed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assessment in assessments %}
+                        <tr>
+                            <td>{{ assessment.assessment_date|date:"Y-m-d" }}</td>
+                            <td>{{ assessment.resident.full_name }}</td>
+                            <td><span class="badge badge-info">{{ assessment.get_assessment_tool_display }}</span></td>
+                            <td>
+                                {% with score=assessment.overall_qol_score|floatformat:2 %}
+                                <span class="badge {% if score >= '4.0' %}badge-success{% elif score >= '3.0' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ score }}/5.0
+                                </span>
+                                {% endwith %}
+                            </td>
+                            <td>{{ assessment.get_assessment_method_display }}</td>
+                            <td>{{ assessment.assessed_by.get_full_name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No assessments found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

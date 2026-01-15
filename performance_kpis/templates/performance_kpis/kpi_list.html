@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}KPI Library - Module 7{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3"><i class="fas fa-list"></i> KPI Library</h1>
+            <p class="text-muted">All performance indicators</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="GET" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control" placeholder="Search KPIs..." value="{{ search_query }}">
+                <select name="category" class="form-select" style="max-width: 200px;">
+                    <option value="">All Categories</option>
+                    {% for value, label in categories %}
+                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- KPI List -->
+    <div class="row">
+        {% for item in kpi_data %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title">{{ item.kpi.code }} - {{ item.kpi.name }}</h6>
+                    <p class="card-text text-muted small">{{ item.kpi.description|truncatewords:15 }}</p>
+                    
+                    {% if item.latest_measurement %}
+                    <div class="d-flex justify-content-between mt-2">
+                        <span><strong>Latest:</strong> {{ item.latest_measurement.actual_value }}</span>
+                        <span class="badge bg-{{ item.latest_measurement.rag_status|lower }}">{{ item.latest_measurement.rag_status }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'performance_kpis:kpi_detail' item.kpi.id %}" class="btn btn-sm btn-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No KPIs found.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

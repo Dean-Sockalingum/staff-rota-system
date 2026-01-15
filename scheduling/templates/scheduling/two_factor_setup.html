@@ -83,7 +83,7 @@
                     
                     <div class="mt-4">
                         <h6>Actions:</h6>
-                        <form method="post" action="{% url 'scheduling:regenerate_backup_codes' %}" style="display:inline;">
+                        <form method="post" action="{% url 'regenerate_backup_codes' %}" style="display:inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-warning">
                                 <i class="fas fa-sync"></i> Regenerate Backup Codes
@@ -91,7 +91,7 @@
                         </form>
                         
                         {% if not requires_2fa %}
-                        <form method="post" action="{% url 'scheduling:two_factor_disable' %}" style="display:inline;" 
+                        <form method="post" action="{% url 'two_factor_disable' %}" style="display:inline;" 
                               onsubmit="return confirm('Are you sure you want to disable 2FA? This will make your account less secure.');">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-danger">

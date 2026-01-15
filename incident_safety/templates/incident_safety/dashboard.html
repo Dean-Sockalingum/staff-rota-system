@@ -1,0 +1,522 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Incident & Safety Management - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .priority-badge {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="bi bi-shield-check"></i> Incident & Safety Management
+            </h1>
+            <p class="text-muted">Root Cause Analysis, CAPA, Duty of Candour & Trend Analysis</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'incident_safety:analytics' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-graph-up"></i> Analytics
+            </a>
+            <a href="{% url 'incident_safety:reports' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark-text"></i> Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #0d6efd;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total RCAs</h6>
+                    <div class="stat-value text-primary">{{ stats.total_rcas }}</div>
+                    <a href="{% url 'incident_safety:rca_list' %}" class="small">View all →</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #0dcaf0;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Open CAPAs</h6>
+                    <div class="stat-value text-info">{{ stats.open_capas }}</div>
+                    <small class="text-muted">of {{ stats.total_capas }} total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #ffc107;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Active DoC Cases</h6>
+                    <div class="stat-value text-warning">{{ stats.active_doc_cases }}</div>
+                    <a href="{% url 'incident_safety:doc_list' %}" class="small">View all →</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card h-100" style="border-left-color: #198754;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total CAPAs</h6>
+                    <div class="stat-value text-success">{{ stats.total_capas }}</div>
+                    <a href="{% url 'incident_safety:capa_list' %}" class="small">View all →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row">
+        <!-- Pending RCAs -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i> Pending Root Cause Analyses
+                    </h5>
+                    <a href="{% url 'incident_safety:rca_list' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if pending_rcas %}
+                        <div class="list-group list-group-flush">
+                            {% for rca in pending_rcas %}
+                            <a href="{% url 'incident_safety:rca_detail' rca.pk %}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ rca.incident.description|truncatewords:10 }}</h6>
+                                        <small class="text-muted">
+                                            Lead: {{ rca.lead_investigator.get_full_name }}
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-{{ rca.approval_status|yesno:'success,warning,danger' }}">
+                                        {{ rca.get_approval_status_display }}
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="bi bi-check-circle fs-3 d-block mb-2"></i>
+                            No pending RCAs
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue CAPAs -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle text-danger"></i> Overdue CAPAs
+                    </h5>
+                    <a href="{% url 'incident_safety:capa_list' %}?overdue=true" 
+                       class="btn btn-sm btn-outline-danger">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if overdue_capas %}
+                        <div class="list-group list-group-flush">
+                            {% for capa in overdue_capas %}
+                            <a href="{% url 'incident_safety:capa_detail' capa.pk %}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-{{ capa.priority|lower }} priority-badge me-2">
+                                                {{ capa.get_priority_display }}
+                                            </span>
+                                            <small class="text-muted">{{ capa.reference_number }}</small>
+                                        </div>
+                                        <h6 class="mb-1">{{ capa.description|truncatewords:8 }}</h6>
+                                        <small class="text-danger">
+                                            Due: {{ capa.target_completion_date }} 
+                                            ({{ capa.days_until_due }} days overdue)
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="badge bg-secondary">{{ capa.progress_percentage }}%</div>
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="bi bi-check-circle fs-3 d-block mb-2 text-success"></i>
+                            No overdue CAPAs
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Duty of Candour Cases -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-heart-pulse"></i> Active Duty of Candour
+                    </h5>
+                    <a href="{% url 'incident_safety:doc_list' %}" class="btn btn-sm btn-outline-warning">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if active_doc %}
+                        <div class="list-group list-group-flush">
+                            {% for doc in active_doc %}
+                            <a href="{% url 'incident_safety:doc_detail' doc.pk %}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-danger me-2">{{ doc.get_harm_level_display }}</span>
+                                            <span class="badge bg-info">{{ doc.get_status_display }}</span>
+                                        </div>
+                                        <h6 class="mb-1">{{ doc.incident.description|truncatewords:10 }}</h6>
+                                        <small class="text-muted">
+                                            Family: {{ doc.family_contact_name }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                            No active DoC cases
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trend Analyses -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up-arrow"></i> Recent Trend Analyses
+                    </h5>
+                    <a href="{% url 'incident_safety:trend_create' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> New Analysis
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_trends %}
+                        <div class="list-group list-group-flush">
+                            {% for trend in recent_trends %}
+                            <a href="{% url 'incident_safety:trend_detail' trend.pk %}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ trend.get_period_display }} Analysis</h6>
+                                        <small class="text-muted">
+                                            {{ trend.start_date }} to {{ trend.end_date }}
+                                        </small>
+                                        <div class="mt-1">
+                                            <span class="badge bg-{{ trend.trend_direction|lower }}">
+                                                {{ trend.get_trend_direction_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ trend.total_incidents }} incidents</small>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="bi bi-graph-up fs-3 d-block mb-2"></i>
+                            No trend analyses yet
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'incident_safety:rca_list' %}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-search"></i> View All RCAs
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'incident_safety:capa_list' %}" class="btn btn-outline-info w-100">
+                                <i class="bi bi-list-check"></i> View All CAPAs
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'incident_safety:doc_list' %}" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-heart-pulse"></i> View All DoC Records
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'incident_safety:trend_list' %}" class="btn btn-outline-success w-100">
+                                <i class="bi bi-graph-up-arrow"></i> View Trend Analyses
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> CAPA Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="capaStatusChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Incident Trend (Last 6 Months)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="incidentTrendChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> CAPA Priority Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="capaPriorityChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-speedometer2"></i> DoC Compliance Progress</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="docComplianceChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// CAPA Status Chart
+const capaStatusCtx = document.getElementById('capaStatusChart');
+if (capaStatusCtx) {
+    new Chart(capaStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['In Progress', 'Implemented', 'Under Verification', 'Verified', 'Identified', 'Planned', 'Closed'],
+            datasets: [{
+                data: [{{ stats.capas_in_progress }}, {{ stats.capas_verified }}, 
+                       {{ stats.capas_pending }}, {{ stats.capas_overdue }}, 
+                       5, 3, 2],  // Mock data - replace with real counts
+                backgroundColor: [
+                    '#0d6efd', '#198754', '#ffc107', '#20c997',
+                    '#6c757d', '#0dcaf0', '#495057'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + ' actions';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Incident Trend Chart
+const incidentTrendCtx = document.getElementById('incidentTrendChart');
+if (incidentTrendCtx) {
+    new Chart(incidentTrendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+            datasets: [{
+                label: 'Total Incidents',
+                data: [12, 15, 10, 18, 14, {{ stats.total_rcas }}],
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Severe/Death',
+                data: [2, 3, 1, 4, 2, 3],
+                borderColor: '#fd7e14',
+                backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 5
+                    }
+                }
+            }
+        }
+    });
+}
+
+// CAPA Priority Chart
+const capaPriorityCtx = document.getElementById('capaPriorityChart');
+if (capaPriorityCtx) {
+    new Chart(capaPriorityCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Immediate', 'High', 'Medium', 'Low'],
+            datasets: [{
+                label: 'Number of CAPAs',
+                data: [{{ stats.capas_overdue }}, {{ stats.capas_in_progress }}, 
+                       {{ stats.capas_pending }}, 5],
+                backgroundColor: [
+                    '#dc3545', '#fd7e14', '#ffc107', '#0dcaf0'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 2
+                    }
+                }
+            }
+        }
+    });
+}
+
+// DoC Compliance Chart
+const docComplianceCtx = document.getElementById('docComplianceChart');
+if (docComplianceCtx) {
+    new Chart(docComplianceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Assessment', 'Notified', 'Verbal Apology', 'Written Apology', 'Findings Shared', 'Complete'],
+            datasets: [{
+                label: 'Compliance %',
+                data: [100, 85, 70, 60, 45, {{ stats.doc_complete }}],
+                backgroundColor: function(context) {
+                    const value = context.parsed.y;
+                    return value >= 80 ? '#198754' : value >= 50 ? '#ffc107' : '#dc3545';
+                },
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Compliance: ' + context.parsed.x + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

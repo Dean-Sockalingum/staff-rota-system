@@ -2026,8 +2026,8 @@ function updateCurrentTime() {
     }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize dashboard function
+function initializeSeniorDashboard() {
     // Attach collapsible section handlers
     attachCollapsibleHandlers();
     
@@ -2083,24 +2083,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize executive charts
     loadExecutiveCharts();
-});
+}
+
+// Execute immediately if DOM is ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSeniorDashboard);
+} else {
+    initializeSeniorDashboard();
+}
 
 // Load Executive Analytics Charts
 let multiHomeStaffingChart, budgetActualChart, overtimeTrendChart, staffingGaugeChart, complianceScoreChart;
 
-async function loadExecutiveCharts() {
+function loadExecutiveCharts() {
     console.log('Loading Executive Analytics charts...');
+    
+    // Check if ChartHelpers is available, retry if not
+    if (typeof ChartHelpers === 'undefined' || typeof Chart === 'undefined') {
+        console.warn('ChartHelpers or Chart.js not loaded yet, retrying in 100ms...');
+        setTimeout(loadExecutiveCharts, 100);
+        return;
+    }
+    
+    console.log('✓ ChartHelpers and Chart.js are available');
+    
     try {
-        // Check if ChartHelpers is available
-        if (typeof ChartHelpers === 'undefined') {
-            console.error('ChartHelpers not loaded! Charts cannot be created.');
-            return;
-        }
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js not loaded! Charts cannot be created.');
-            return;
-        }
-        console.log('✓ ChartHelpers and Chart.js are available');
         
         // Generate last 7 days labels
         const last7Days = [];
@@ -2440,8 +2447,9 @@ async function loadExecutiveCharts() {
                     display: true,
                     position: 'top',
                     labels: {
-                        filter: function(item, chart) {
-                            return item.text !== 'Target Maximum' || chart.getDatasetMeta(1).visible;
+                        filter: function(item, data) {
+                            // Show all items (no filtering needed)
+                            return true;
                         }
                     }
                 },
@@ -2940,7 +2948,7 @@ function showStaffingDetail(dateLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/multi-home/staffing/${dateStr}/`)
+    fetch(`/api/multi-home/staffing/${dateStr}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3086,7 +3094,7 @@ function showBudgetBreakdown(homeLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/budget-breakdown/${homeId}/?month=${month}`)
+    fetch(`/api/budget-breakdown/${homeId}/?month=${month}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3217,7 +3225,7 @@ function showOvertimeDetail(dateLabel) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/overtime/${dateStr}/`)
+    fetch(`/api/overtime/${dateStr}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -3344,7 +3352,19 @@ function showComplianceActions(metric) {
     modal.show();
     
     const homeId = 3; // Default to Orchard Grove
+    
+    // Map display names to API metric names
+    const metricMap = {
+        'training': 'training',
+        'supervision': 'care_planning',  // Supervision maps to care_planning
+        'care_plans': 'care_planning',   // Care Plans also maps to care_planning
+        'incidents': 'safeguarding',     // Incidents maps to safeguarding
+        'staffing': 'training',          // Staffing maps to training (placeholder)
+        'documentation': 'documentation'
+    };
+    
     const metricSlug = metric.toLowerCase().replace(/ /g, '_');
+    const apiMetric = metricMap[metricSlug] || metricSlug;
     
     const contentDiv = document.getElementById('complianceActionsContent');
     contentDiv.innerHTML = `
@@ -3357,7 +3377,7 @@ function showComplianceActions(metric) {
     `;
     
     // Fetch data from API
-    fetch(`/scheduling/api/compliance/actions/${homeId}/${metricSlug}/`)
+    fetch(`/api/compliance/actions/${homeId}/${apiMetric}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {

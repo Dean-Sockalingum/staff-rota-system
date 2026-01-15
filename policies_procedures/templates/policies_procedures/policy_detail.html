@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ policy.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-file-contract me-2"></i>{{ policy.policy_number }}: {{ policy.title }}</h2>
+            <p class="text-muted mb-0">Version {{ policy.version }} | Effective: {{ policy.effective_date|date:"d M Y" }}</p>
+        </div>
+        <div>
+            <a href="{% url 'policies_procedures:policy_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+            <a href="{% url 'policies_procedures:policy_update' policy.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Edit
+            </a>
+        </div>
+    </div>
+
+    <!-- Status & Info Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Status</h6>
+                    {% if policy.status == 'active' %}
+                    <h4><span class="badge bg-success">Active</span></h4>
+                    {% elif policy.status == 'draft' %}
+                    <h4><span class="badge bg-secondary">Draft</span></h4>
+                    {% elif policy.status == 'under_review' %}
+                    <h4><span class="badge bg-warning">Under Review</span></h4>
+                    {% else %}
+                    <h4><span class="badge bg-dark">{{ policy.get_status_display }}</span></h4>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Category</h6>
+                    <h5>{{ policy.get_category_display }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Next Review</h6>
+                    {% if policy.is_overdue_review %}
+                    <h5 class="text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ policy.next_review_date|date:"d M Y" }}
+                    </h5>
+                    <small class="text-danger">{{ policy.days_until_review|abs }} days overdue</small>
+                    {% else %}
+                    <h5>{{ policy.next_review_date|date:"d M Y" }}</h5>
+                    <small class="text-muted">{{ policy.days_until_review }} days</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Acknowledgements</h6>
+                    <h5>{{ acknowledgements.count }}</h5>
+                    {% if policy.is_mandatory %}
+                    <small class="badge bg-danger">Mandatory</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="policyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                <i class="fas fa-info-circle me-1"></i>Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#versions" type="button">
+                <i class="fas fa-history me-1"></i>Versions ({{ versions.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#acknowledgements" type="button">
+                <i class="fas fa-signature me-1"></i>Acknowledgements ({{ acknowledgements.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reviews" type="button">
+                <i class="fas fa-clipboard-check me-1"></i>Reviews ({{ reviews.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#procedures" type="button">
+                <i class="fas fa-tasks me-1"></i>Procedures ({{ procedures.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#compliance" type="button">
+                <i class="fas fa-check-circle me-1"></i>Compliance ({{ compliance_checks.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#audit" type="button">
+                <i class="fas fa-book me-1"></i>Audit Trail ({{ audit_trail.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Summary</h5>
+                    <p>{{ policy.summary }}</p>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Policy Owner</h6>
+                            <p>{{ policy.owner.get_full_name|default:policy.owner.username }}</p>
+
+                            <h6>Department</h6>
+                            <p>{{ policy.department }}</p>
+
+                            <h6>Keywords</h6>
+                            <p>{{ policy.keywords }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Review Frequency</h6>
+                            <p>Every {{ policy.review_frequency_months }} months</p>
+
+                            <h6>Regulatory Framework</h6>
+                            <p>{{ policy.regulatory_framework }}</p>
+
+                            {% if policy.file_path %}
+                            <h6>Document</h6>
+                            <p><a href="{{ policy.file_path.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-download me-1"></i>Download Policy
+                            </a></p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if policy.is_mandatory and not user_acknowledged %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Action Required:</strong> This is a mandatory policy that requires your acknowledgement.
+                        <a href="{% url 'policies_procedures:acknowledge_policy' policy.pk %}" class="btn btn-sm btn-warning ms-2">
+                            Acknowledge Now
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Versions Tab -->
+        <div class="tab-pane fade" id="versions">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Version History</h5>
+                        <a href="{% url 'policies_procedures:version_create' policy.pk %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>New Version
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if versions %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Change Summary</th>
+                                    <th>Created By</th>
+                                    <th>Created Date</th>
+                                    <th>Current</th>
+                                    <th>Approved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for version in versions %}
+                                <tr>
+                                    <td><strong>{{ version.version_number }}</strong></td>
+                                    <td>{{ version.change_summary }}</td>
+                                    <td>{{ version.created_by.get_full_name|default:version.created_by.username }}</td>
+                                    <td>{{ version.created_date|date:"d M Y H:i" }}</td>
+                                    <td>
+                                        {% if version.is_current %}
+                                        <span class="badge bg-success">Current</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if version.approval_date %}
+                                        <i class="fas fa-check text-success"></i>
+                                        {{ version.approval_date|date:"d M Y" }}
+                                        {% else %}
+                                        <span class="text-muted">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No version history available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Acknowledgements Tab -->
+        <div class="tab-pane fade" id="acknowledgements">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Staff Acknowledgements</h5>
+                </div>
+                <div class="card-body">
+                    {% if acknowledgements %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Staff Member</th>
+                                    <th>Acknowledged Date</th>
+                                    <th>Method</th>
+                                    <th>Signature</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ack in acknowledgements %}
+                                <tr>
+                                    <td>{{ ack.staff_member.get_full_name|default:ack.staff_member.username }}</td>
+                                    <td>{{ ack.acknowledged_date|date:"d M Y H:i" }}</td>
+                                    <td><span class="badge bg-info">{{ ack.get_acknowledgement_method_display }}</span></td>
+                                    <td>{{ ack.signature }}</td>
+                                    <td><small class="text-muted">{{ ack.ip_address }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No acknowledgements yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Tab -->
+        <div class="tab-pane fade" id="reviews">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Policy Reviews</h5>
+                        <a href="{% url 'policies_procedures:review_create' policy.pk %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>Schedule Review
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Review Date</th>
+                                    <th>Reviewer</th>
+                                    <th>Outcome</th>
+                                    <th>Recommendations</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                <tr>
+                                    <td>{{ review.review_date|date:"d M Y" }}</td>
+                                    <td>{{ review.reviewer.get_full_name|default:review.reviewer.username }}</td>
+                                    <td><span class="badge bg-secondary">{{ review.get_review_outcome_display }}</span></td>
+                                    <td>{{ review.recommendations|truncatewords:15 }}</td>
+                                    <td>
+                                        {% if review.is_completed %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        <a href="{% url 'policies_procedures:review_update' review.pk %}" class="btn btn-sm btn-warning ms-2">
+                                            Complete
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No reviews scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Procedures Tab -->
+        <div class="tab-pane fade" id="procedures">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Related Procedures</h5>
+                </div>
+                <div class="card-body">
+                    {% if procedures %}
+                    {% for procedure in procedures %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <strong>{{ procedure.procedure_number }}: {{ procedure.title }}</strong>
+                        </div>
+                        <div class="card-body">
+                            <h6>Steps:</h6>
+                            <p style="white-space: pre-line;">{{ procedure.steps }}</p>
+                            {% if procedure.equipment_required %}
+                            <h6>Equipment Required:</h6>
+                            <p>{{ procedure.equipment_required }}</p>
+                            {% endif %}
+                            {% if procedure.safety_notes %}
+                            <div class="alert alert-warning">
+                                <strong><i class="fas fa-exclamation-triangle me-1"></i>Safety Notes:</strong>
+                                <p class="mb-0">{{ procedure.safety_notes }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center">No procedures defined for this policy.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Tab -->
+        <div class="tab-pane fade" id="compliance">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Compliance Checks</h5>
+                </div>
+                <div class="card-body">
+                    {% if compliance_checks %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Check Date</th>
+                                    <th>Checker</th>
+                                    <th>Status</th>
+                                    <th>Findings</th>
+                                    <th>Actions Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for check in compliance_checks %}
+                                <tr>
+                                    <td>{{ check.check_date|date:"d M Y" }}</td>
+                                    <td>{{ check.checker.get_full_name|default:check.checker.username }}</td>
+                                    <td>
+                                        {% if check.compliance_status == 'fully_compliant' %}
+                                        <span class="badge bg-success">Fully Compliant</span>
+                                        {% elif check.compliance_status == 'partially_compliant' %}
+                                        <span class="badge bg-warning">Partially Compliant</span>
+                                        {% elif check.compliance_status == 'non_compliant' %}
+                                        <span class="badge bg-danger">Non-Compliant</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ check.get_compliance_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ check.findings|truncatewords:10 }}</td>
+                                    <td>{{ check.actions_required|truncatewords:10 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No compliance checks recorded.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Trail Tab -->
+        <div class="tab-pane fade" id="audit">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Audit Trail</h5>
+                </div>
+                <div class="card-body">
+                    {% if audit_trail %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Action</th>
+                                    <th>Performed By</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in audit_trail %}
+                                <tr>
+                                    <td>{{ entry.timestamp|date:"d M Y H:i:s" }}</td>
+                                    <td><span class="badge bg-info">{{ entry.get_action_type_display }}</span></td>
+                                    <td>{{ entry.performed_by.get_full_name|default:entry.performed_by.username }}</td>
+                                    <td>{{ entry.details }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No audit trail entries.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

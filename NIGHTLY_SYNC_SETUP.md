@@ -1,15 +1,18 @@
 # Nightly Auto-Sync Setup Complete ✅
 
 **Created:** December 26, 2025  
+**Updated:** January 13, 2026 - Expanded to 5 locations  
 **Status:** Active and Running
 
 ## What Was Set Up
 
-An automatic nightly sync system that keeps all three Staff Rota locations synchronized:
+An automatic nightly sync system that keeps all five Staff Rota locations synchronized:
 
 1. **Desktop** → GitHub (commits & pushes changes)
 2. **GitHub** → NVMe 990 Backups (pulls updates)
 3. **GitHub** → NVMe 990 Production (pulls updates)
+4. **Desktop** → Working dri Future Iterations (rsync copy)
+5. **Desktop** → Desktop Future Iterations (rsync copy)
 
 ## Sync Schedule
 
@@ -57,6 +60,18 @@ Stderr: ~/Library/Logs/staff_rota_sync_stderr.log
 - **Action:** Pulls latest from GitHub
 - **Fallback:** Auto-resolves conflicts if needed
 
+### Location 4: Working dri Future Iterations (NEW - Jan 13, 2026)
+- **Path:** `/Volumes/Working dri/future iterations/2025-12-12_Multi-Home_Complete`
+- **Action:** Rsync copy from Desktop (non-git backup)
+- **Purpose:** Staging/iteration folder on external drive
+- **Excludes:** .venv, __pycache__, *.pyc, db.sqlite3, .git
+
+### Location 5: Desktop Future Iterations (NEW - Jan 13, 2026)
+- **Path:** `/Users/deansockalingum/Desktop/Future iterations/2025-12-12_Multi-Home_Complete`
+- **Action:** Rsync copy from Desktop (non-git backup)
+- **Purpose:** Local staging/iteration folder
+- **Excludes:** .venv, __pycache__, *.pyc, db.sqlite3, .git
+
 ## How It Works
 
 **Every night at 2 AM:**
@@ -67,11 +82,18 @@ Stderr: ~/Library/Logs/staff_rota_sync_stderr.log
 4. If NVMe 990 is mounted:
    - Pulls GitHub → NVMe Backups location
    - Pulls GitHub → NVMe Production location
-5. Logs all actions to log files
+5. If Working dri volume is mounted:
+   - Rsyncs Desktop → Working dri Future Iterations
+6. If Desktop Future iterations folder exists:
+   - Rsyncs Desktop → Desktop Future Iterations
+7. Logs all actions to log files
 
 **Safety Features:**
 - ✅ Checks if NVMe drive is mounted before syncing
+- ✅ Checks if Working dri volume is mounted before syncing
 - ✅ Auto-handles merge conflicts (prefers GitHub version)
+- ✅ Rsync uses --delete to keep copies identical
+- ✅ Excludes virtual environments and compiled files
 - ✅ Detailed logging for troubleshooting
 - ✅ Commits changes before pulling to avoid data loss
 

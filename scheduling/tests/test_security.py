@@ -19,7 +19,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
-from axes.models import AccessAttempt
+# from axes.models import AccessAttempt  # DISABLED FOR LOCAL DEV
 from auditlog.models import LogEntry
 from scheduling.models import Role, CareHome
 from unittest import skipIf

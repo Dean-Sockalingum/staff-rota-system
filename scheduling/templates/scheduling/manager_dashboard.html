@@ -716,7 +716,8 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+// Run on both DOMContentLoaded and immediate execution if DOM is ready
+function initializeDashboard() {
     console.log('Dashboard customization script loaded');
     
     // Load saved widget preferences
@@ -857,7 +858,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load preferences on page load
     loadWidgetPreferences();
-});
+}
+
+// Execute immediately if DOM is ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
+} else {
+    initializeDashboard();
+}
 </script>
 
 {% endblock %}

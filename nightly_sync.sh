@@ -1,7 +1,8 @@
 #!/bin/bash
 # Nightly Auto-Sync Script for Staff Rota System
-# Syncs Desktop → GitHub → NVMe 990 locations
+# Syncs Desktop → GitHub → NVMe 990 locations → Working dri → Desktop Future Iterations
 # Created: December 26, 2025
+# Updated: January 13, 2026 - Added 5-location sync
 
 LOG_FILE="$HOME/Library/Logs/staff_rota_sync.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')

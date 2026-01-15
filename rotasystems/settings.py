@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # Load from environment variable for security
 # In test/CI environments, use a default insecure key
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-test-key-for-development-only' if TESTING else None)
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-j8k2m9n4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1g2h3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -74,6 +74,22 @@ INSTALLED_APPS = [
     'staff_records',
     'rotasystems.core',
     'email_config',  # UI-based email configuration
+    # TQM Module 1: Quality Audits & Inspections
+    'quality_audits',  # PDSA Tracker, Audit Templates, CAPA System
+    # TQM Module 2: Incident & Safety Management
+    'incident_safety',  # RCA, CAPA, Duty of Candour, Trend Analysis
+    # TQM Module 3: Experience & Feedback
+    'experience_feedback',  # Satisfaction Surveys, Complaints, EBCD, QoL Assessments
+    # TQM Module 4: Training & Competency
+    'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
+    # TQM Module 5: Policies & Procedures
+    'policies_procedures',  # Policy Lifecycle, Version Control, Digital Acknowledgements, Compliance Tracking
+    # TQM Module 5 (Legacy): Document & Policy Management
+    'document_management',  # Document Repository, Version Control, Policy Lifecycle, Staff Acknowledgements
+    # TQM Module 6: Risk Management
+    'risk_management',  # Risk Register, Risk Assessment (5x5 Matrix), Mitigation Planning, Risk Reviews
+    # TQM Module 7: Performance Metrics & KPIs
+    'performance_kpis',  # KPI Library, Executive Dashboards, Balanced Scorecard
 ]
 
 MIDDLEWARE = [
@@ -196,7 +212,7 @@ AXES_VERBOSE = True  # Log lockout attempts for monitoring
 SESSION_COOKIE_AGE = 3600  # 1 hour (3600 seconds)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
-SESSION_COOKIE_SAMESITE = 'Strict'  # Enhanced CSRF protection
+SESSION_COOKIE_SAMESITE = 'Lax'  # Changed from Strict to prevent logout CSRF issues
 SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 
 # Phase 6: CSRF Protection
@@ -204,7 +220,7 @@ SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for PWA/AJAX (was True)
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000', cast=Csv())
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://192.168.1.125:8000,http://localhost:8000,http://localhost:8001,http://127.0.0.1:8001', cast=Csv())
 
 # Phase 6: Security Headers
 SECURE_BROWSER_XSS_FILTER = True

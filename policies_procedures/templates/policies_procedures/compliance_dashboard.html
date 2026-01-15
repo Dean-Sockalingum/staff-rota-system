@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compliance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tasks me-2"></i>Policy Compliance Dashboard</h2>
+        <a href="{% url 'policies_procedures:compliance_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>New Compliance Check
+        </a>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard-list fa-3x text-info mb-2"></i>
+                    <h3 class="mb-0">{{ total_checks }}</h3>
+                    <p class="text-muted mb-0">Total Checks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                    <h3 class="mb-0">{{ compliant_checks }}</h3>
+                    <p class="text-muted mb-0">Fully Compliant</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-2"></i>
+                    <h3 class="mb-0">{{ non_compliant_checks }}</h3>
+                    <p class="text-muted mb-0">Non-Compliant</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-3x text-warning mb-2"></i>
+                    <h3 class="mb-0">{{ overdue_actions }}</h3>
+                    <p class="text-muted mb-0">Overdue Actions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Compliance Checks -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Compliance Checks</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_checks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Policy</th>
+                                    <th>Check Date</th>
+                                    <th>Checker</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for check in recent_checks %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ check.policy.policy_number }}</strong><br>
+                                        <small>{{ check.policy.title|truncatewords:5 }}</small>
+                                    </td>
+                                    <td>{{ check.check_date|date:"d M Y" }}</td>
+                                    <td>{{ check.checker.get_full_name|default:check.checker.username }}</td>
+                                    <td>
+                                        {% if check.compliance_status == 'fully_compliant' %}
+                                        <span class="badge bg-success">Fully Compliant</span>
+                                        {% elif check.compliance_status == 'partially_compliant' %}
+                                        <span class="badge bg-warning">Partially Compliant</span>
+                                        {% elif check.compliance_status == 'non_compliant' %}
+                                        <span class="badge bg-danger">Non-Compliant</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ check.get_compliance_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'policies_procedures:policy_detail' check.policy.pk %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center my-3">No compliance checks recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance by Category -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Compliance by Category</h5>
+                </div>
+                <div class="card-body">
+                    {% if category_compliance %}
+                    <div class="list-group">
+                        {% for item in category_compliance %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>{{ item.policy__category|upper }}</strong>
+                                <span class="badge bg-primary">{{ item.total }}</span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                {% widthratio item.compliant item.total 100 as compliance_pct %}
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ compliance_pct }}%;" 
+                                     aria-valuenow="{{ compliance_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ compliance_pct }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ item.compliant }} of {{ item.total }} compliant</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No compliance data available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue Actions -->
+    {% if overdue_actions > 0 %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Overdue Corrective Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention Required:</strong> There are {{ overdue_actions }} overdue corrective action{{ overdue_actions|pluralize }} 
+                        that need immediate attention.
+                    </div>
+                    <p>Please review the compliance checks and complete any outstanding actions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

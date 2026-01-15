@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Documents - TQM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background-color: #f8f9fa;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+    .review-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .review-current { background-color: #198754; }
+    .review-due-soon { background-color: #ffc107; }
+    .review-overdue { background-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-file-earmark-text"></i> Document Repository
+            </h1>
+            <p class="text-muted">Policy & procedure library</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'document_management:document_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Document
+            </a>
+            <a href="{% url 'document_management:document_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card filter-card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Document Type</label>
+                    <select name="document_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="POLICY" {% if request.GET.document_type == 'POLICY' %}selected{% endif %}>Policy</option>
+                        <option value="PROCEDURE" {% if request.GET.document_type == 'PROCEDURE' %}selected{% endif %}>Procedure</option>
+                        <option value="GUIDELINE" {% if request.GET.document_type == 'GUIDELINE' %}selected{% endif %}>Guideline</option>
+                        <option value="FORM" {% if request.GET.document_type == 'FORM' %}selected{% endif %}>Form</option>
+                        <option value="TEMPLATE" {% if request.GET.document_type == 'TEMPLATE' %}selected{% endif %}>Template</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                        <option value="IN_REVIEW" {% if request.GET.status == 'IN_REVIEW' %}selected{% endif %}>In Review</option>
+                        <option value="APPROVED" {% if request.GET.status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                        <option value="PUBLISHED" {% if request.GET.status == 'PUBLISHED' %}selected{% endif %}>Published</option>
+                        <option value="ARCHIVED" {% if request.GET.status == 'ARCHIVED' %}selected{% endif %}>Archived</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if request.GET.category|add:"0" == cat.id %}selected{% endif %}>
+                                {{ cat.get_full_path }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Care Home</label>
+                    <select name="care_home" class="form-select">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                            <option value="{{ home.id }}" {% if request.GET.care_home|add:"0" == home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-9">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="Search by title, document code, or description..." value="{{ request.GET.search }}">
+                </div>
+                
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check me-3">
+                        <input type="checkbox" name="show_overdue" class="form-check-input" id="show_overdue" {% if request.GET.show_overdue %}checked{% endif %}>
+                        <label class="form-check-label" for="show_overdue">
+                            Overdue for review only
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <a href="{% url 'document_management:document_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">{{ documents.paginator.count }} Document{{ documents.paginator.count|pluralize }}</h5>
+        </div>
+        <div class="card-body">
+            {% if documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Document Code</th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Version</th>
+                                <th>Review Status</th>
+                                <th>Acknowledgement</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documents %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'document_management:document_detail' doc.id %}">
+                                            <strong>{{ doc.document_code }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'document_management:document_detail' doc.id %}">
+                                            {{ doc.title }}
+                                        </a>
+                                        {% if doc.compliance_frameworks %}
+                                            <br>
+                                            {% for framework in doc.compliance_frameworks %}
+                                                <span class="badge bg-info text-dark" style="font-size: 0.7rem;">{{ framework }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if doc.document_type == 'POLICY' %}bg-primary
+                                            {% elif doc.document_type == 'PROCEDURE' %}bg-success
+                                            {% elif doc.document_type == 'GUIDELINE' %}bg-info
+                                            {% elif doc.document_type == 'FORM' %}bg-warning text-dark
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ doc.get_document_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-status
+                                            {% if doc.status == 'DRAFT' %}bg-info
+                                            {% elif doc.status == 'IN_REVIEW' %}bg-warning text-dark
+                                            {% elif doc.status == 'APPROVED' %}bg-success
+                                            {% elif doc.status == 'PUBLISHED' %}bg-primary
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ doc.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">v{{ doc.current_version_number }}</span>
+                                        <br>
+                                        <small class="text-muted">{{ doc.last_version_date|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if doc.is_overdue_for_review %}
+                                            <span class="review-indicator review-overdue" title="Overdue"></span>
+                                            <span class="text-danger">OVERDUE</span>
+                                            <br>
+                                            <small class="text-muted">Due: {{ doc.next_review_date|date:"M d, Y" }}</small>
+                                        {% else %}
+                                            {% with days_until=doc.days_until_review %}
+                                                {% if days_until <= 30 %}
+                                                    <span class="review-indicator review-due-soon" title="Due soon"></span>
+                                                    <span class="text-warning">DUE SOON</span>
+                                                {% else %}
+                                                    <span class="review-indicator review-current" title="Current"></span>
+                                                    <span class="text-success">CURRENT</span>
+                                                {% endif %}
+                                                <br>
+                                                <small class="text-muted">Due: {{ doc.next_review_date|date:"M d, Y" }}</small>
+                                            {% endwith %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% with rate=doc.get_acknowledgement_rate %}
+                                            <div class="progress" style="height: 20px; min-width: 80px;">
+                                                <div class="progress-bar 
+                                                    {% if rate >= 90 %}bg-success
+                                                    {% elif rate >= 70 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ rate }}%">
+                                                    {{ rate|floatformat:0 }}%
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ doc.category.get_full_path|default:"—" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'document_management:document_detail' doc.id %}" 
+                                               class="btn btn-outline-primary" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'document_management:document_update' doc.id %}" 
+                                               class="btn btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if documents.has_other_pages %}
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if documents.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ documents.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ documents.number }} of {{ documents.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if documents.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ documents.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ documents.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
+                    <h5 class="mt-3 text-muted">No documents found</h5>
+                    <p class="text-muted">Try adjusting your filters or create a new document.</p>
+                    <a href="{% url 'document_management:document_create' %}" class="btn btn-primary mt-2">
+                        <i class="bi bi-plus-circle"></i> Create Document
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
