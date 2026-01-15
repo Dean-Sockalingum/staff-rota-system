@@ -15,6 +15,9 @@ from django.contrib import messages
 from django.db.models import Q, Count, Avg, F
 from django.http import JsonResponse
 from django.utils import timezone
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from datetime import timedelta
 
 from .models import (
@@ -26,6 +29,17 @@ from .models import (
     PathwayCompetency,
     PathwayTraining,
     StaffLearningPlan
+)
+from .forms import (
+    CompetencyFrameworkForm,
+    RoleCompetencyRequirementForm,
+    CompetencyAssessmentForm,
+    TrainingMatrixForm,
+    LearningPathwayForm,
+    PathwayCompetencyForm,
+    PathwayTrainingForm,
+    StaffLearningPlanForm,
+    QuickAssessmentForm
 )
 from scheduling.models import User, Role, TrainingCourse
 
@@ -386,3 +400,222 @@ def training_requirements(request):
     }
     
     return render(request, 'training_competency/training_requirements.html', context)
+
+
+# =====================================================================
+# COMPETENCY FRAMEWORK CRUD
+# =====================================================================
+
+class CompetencyFrameworkCreateView(LoginRequiredMixin, CreateView):
+    """Create a new competency framework"""
+    model = CompetencyFramework
+    form_class = CompetencyFrameworkForm
+    template_name = 'training_competency/competency_framework_form.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, f'Competency "{form.instance.name}" created successfully!')
+        return super().form_valid(form)
+
+
+class CompetencyFrameworkUpdateView(LoginRequiredMixin, UpdateView):
+    """Edit an existing competency framework"""
+    model = CompetencyFramework
+    form_class = CompetencyFrameworkForm
+    template_name = 'training_competency/competency_framework_form.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Competency "{form.instance.name}" updated successfully!')
+        return super().form_valid(form)
+
+
+class CompetencyFrameworkDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete a competency framework"""
+    model = CompetencyFramework
+    template_name = 'training_competency/competency_framework_confirm_delete.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def post(self, request, *args, **kwargs):
+        competency = self.get_object()
+        messages.success(request, f'Competency "{competency.name}" deleted successfully!')
+        return super().post(request, *args, **kwargs)
+
+
+# =====================================================================
+# COMPETENCY ASSESSMENT CRUD
+# =====================================================================
+
+class CompetencyAssessmentCreateView(LoginRequiredMixin, CreateView):
+    """Conduct a new competency assessment"""
+    model = CompetencyAssessment
+    form_class = CompetencyAssessmentForm
+    template_name = 'training_competency/assessment_form.html'
+    success_url = reverse_lazy('training_competency:my_assessments')
+    
+    def form_valid(self, form):
+        form.instance.assessor = self.request.user
+        form.instance.assessment_date = timezone.now().date()
+        messages.success(
+            self.request, 
+            f'Assessment for {form.instance.staff_member.get_full_name()} completed!'
+        )
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'New Competency Assessment'
+        return context
+
+
+class CompetencyAssessmentUpdateView(LoginRequiredMixin, UpdateView):
+    """Edit an existing competency assessment"""
+    model = CompetencyAssessment
+    form_class = CompetencyAssessmentForm
+    template_name = 'training_competency/assessment_form.html'
+    success_url = reverse_lazy('training_competency:my_assessments')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Assessment updated successfully!')
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Edit Assessment'
+        return context
+
+
+class CompetencyAssessmentDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete a competency assessment"""
+    model = CompetencyAssessment
+    template_name = 'training_competency/assessment_confirm_delete.html'
+    success_url = reverse_lazy('training_competency:my_assessments')
+    
+    def post(self, request, *args, **kwargs):
+        messages.success(request, 'Assessment deleted successfully!')
+        return super().post(request, *args, **kwargs)
+
+
+# =====================================================================
+# LEARNING PATHWAY CRUD
+# =====================================================================
+
+class LearningPathwayCreateView(LoginRequiredMixin, CreateView):
+    """Create a new learning pathway"""
+    model = LearningPathway
+    form_class = LearningPathwayForm
+    template_name = 'training_competency/pathway_form.html'
+    success_url = reverse_lazy('training_competency:learning_pathways')
+    
+    def form_valid(self, form):
+        form.instance.owner = self.request.user
+        form.instance.created_date = timezone.now().date()
+        messages.success(self.request, f'Learning pathway "{form.instance.name}" created successfully!')
+        return super().form_valid(form)
+
+
+class LearningPathwayUpdateView(LoginRequiredMixin, UpdateView):
+    """Edit an existing learning pathway"""
+    model = LearningPathway
+    form_class = LearningPathwayForm
+    template_name = 'training_competency/pathway_form.html'
+    success_url = reverse_lazy('training_competency:learning_pathways')
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Learning pathway "{form.instance.name}" updated successfully!')
+        return super().form_valid(form)
+
+
+class LearningPathwayDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete a learning pathway"""
+    model = LearningPathway
+    template_name = 'training_competency/pathway_confirm_delete.html'
+    success_url = reverse_lazy('training_competency:learning_pathways')
+    
+    def post(self, request, *args, **kwargs):
+        pathway = self.get_object()
+        messages.success(request, f'Learning pathway "{pathway.name}" deleted successfully!')
+        return super().post(request, *args, **kwargs)
+
+
+# =====================================================================
+# STAFF LEARNING PLAN CRUD
+# =====================================================================
+
+class StaffLearningPlanCreateView(LoginRequiredMixin, CreateView):
+    """Enroll staff in a learning pathway"""
+    model = StaffLearningPlan
+    form_class = StaffLearningPlanForm
+    template_name = 'training_competency/learning_plan_form.html'
+    success_url = reverse_lazy('training_competency:my_learning_plans')
+    
+    def form_valid(self, form):
+        form.instance.enrollment_date = timezone.now().date()
+        messages.success(
+            self.request, 
+            f'{form.instance.staff_member.get_full_name()} enrolled in "{form.instance.pathway.name}"!'
+        )
+        return super().form_valid(form)
+
+
+class StaffLearningPlanUpdateView(LoginRequiredMixin, UpdateView):
+    """Update a learning plan"""
+    model = StaffLearningPlan
+    form_class = StaffLearningPlanForm
+    template_name = 'training_competency/learning_plan_form.html'
+    success_url = reverse_lazy('training_competency:my_learning_plans')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Learning plan updated successfully!')
+        return super().form_valid(form)
+
+
+class StaffLearningPlanDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete a learning plan (unenroll)"""
+    model = StaffLearningPlan
+    template_name = 'training_competency/learning_plan_confirm_delete.html'
+    success_url = reverse_lazy('training_competency:my_learning_plans')
+    
+    def post(self, request, *args, **kwargs):
+        messages.success(request, 'Learning plan removed successfully!')
+        return super().post(request, *args, **kwargs)
+
+
+# =====================================================================
+# TRAINING MATRIX CRUD
+# =====================================================================
+
+class TrainingMatrixCreateView(LoginRequiredMixin, CreateView):
+    """Map a training course to a competency"""
+    model = TrainingMatrix
+    form_class = TrainingMatrixForm
+    template_name = 'training_competency/training_matrix_form.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Training-competency mapping created successfully!')
+        return super().form_valid(form)
+
+
+class TrainingMatrixUpdateView(LoginRequiredMixin, UpdateView):
+    """Edit a training-competency mapping"""
+    model = TrainingMatrix
+    form_class = TrainingMatrixForm
+    template_name = 'training_competency/training_matrix_form.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Training-competency mapping updated successfully!')
+        return super().form_valid(form)
+
+
+class TrainingMatrixDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete a training-competency mapping"""
+    model = TrainingMatrix
+    template_name = 'training_competency/training_matrix_confirm_delete.html'
+    success_url = reverse_lazy('training_competency:competency_list')
+    
+    def post(self, request, *args, **kwargs):
+        messages.success(request, 'Training-competency mapping deleted successfully!')
+        return super().post(request, *args, **kwargs)

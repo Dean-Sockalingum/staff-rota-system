@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-10 col-xl-8 mx-auto">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-clipboard-check text-success me-2"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">Assess staff competency and provide feedback</p>
+                </div>
+                <a href="{% url 'training_competency:my_assessments' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Assessments
+                </a>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Assessment Details -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user-check text-primary me-2"></i>
+                            Assessment Details
+                        </h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.staff_member.id_for_label }}" class="form-label fw-bold">
+                                    Staff Member <span class="text-danger">*</span>
+                                </label>
+                                {{ form.staff_member }}
+                                {% if form.staff_member.errors %}
+                                    <div class="text-danger small mt-1">{{ form.staff_member.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.competency.id_for_label }}" class="form-label fw-bold">
+                                    Competency <span class="text-danger">*</span>
+                                </label>
+                                {{ form.competency }}
+                                {% if form.competency.errors %}
+                                    <div class="text-danger small mt-1">{{ form.competency.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.achieved_level.id_for_label }}" class="form-label fw-bold">
+                                    Achieved Level
+                                </label>
+                                {{ form.achieved_level }}
+                                {% if form.achieved_level.errors %}
+                                    <div class="text-danger small mt-1">{{ form.achieved_level.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="{{ form.assessment_method.id_for_label }}" class="form-label fw-bold">
+                                    Assessment Method
+                                </label>
+                                {{ form.assessment_method }}
+                                {% if form.assessment_method.errors %}
+                                    <div class="text-danger small mt-1">{{ form.assessment_method.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="{{ form.outcome.id_for_label }}" class="form-label fw-bold">
+                                    Outcome <span class="text-danger">*</span>
+                                </label>
+                                {{ form.outcome }}
+                                {% if form.outcome.errors %}
+                                    <div class="text-danger small mt-1">{{ form.outcome.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Evidence & Feedback -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-file-alt text-info me-2"></i>
+                            Evidence & Feedback
+                        </h5>
+
+                        <div class="mb-3">
+                            <label for="{{ form.evidence_description.id_for_label }}" class="form-label fw-bold">
+                                Evidence Observed
+                            </label>
+                            {{ form.evidence_description }}
+                            {% if form.evidence_description.errors %}
+                                <div class="text-danger small mt-1">{{ form.evidence_description.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Document what you observed during the assessment.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.assessor_comments.id_for_label }}" class="form-label fw-bold">
+                                Assessor Comments
+                            </label>
+                            {{ form.assessor_comments }}
+                            {% if form.assessor_comments.errors %}
+                                <div class="text-danger small mt-1">{{ form.assessor_comments.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Provide detailed feedback on the assessment.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.staff_reflection.id_for_label }}" class="form-label fw-bold">
+                                Staff Reflection
+                            </label>
+                            {{ form.staff_reflection }}
+                            {% if form.staff_reflection.errors %}
+                                <div class="text-danger small mt-1">{{ form.staff_reflection.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Staff member's own reflection on their performance.</div>
+                        </div>
+
+                        <!-- Development Planning -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-tasks text-warning me-2"></i>
+                            Development Planning
+                        </h5>
+
+                        <div class="mb-3">
+                            <label for="{{ form.development_needs_identified.id_for_label }}" class="form-label fw-bold">
+                                Development Needs
+                            </label>
+                            {{ form.development_needs_identified }}
+                            {% if form.development_needs_identified.errors %}
+                                <div class="text-danger small mt-1">{{ form.development_needs_identified.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Areas for further development.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.action_plan.id_for_label }}" class="form-label fw-bold">
+                                Action Plan
+                            </label>
+                            {{ form.action_plan }}
+                            {% if form.action_plan.errors %}
+                                <div class="text-danger small mt-1">{{ form.action_plan.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Specific actions to address development needs.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.next_review_date.id_for_label }}" class="form-label fw-bold">
+                                Next Review Date
+                            </label>
+                            {{ form.next_review_date }}
+                            {% if form.next_review_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.next_review_date.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.next_review_date.help_text }}</div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <a href="{% url 'training_competency:my_assessments' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>
+                                Save Assessment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
