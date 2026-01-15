@@ -49,7 +49,9 @@ urlpatterns = [
     path('experience-feedback/', include('experience_feedback.urls')),
     # TQM Module 4: Training & Competency
     path('training_competency/', include('training_competency.urls')),
-    # TQM Module 5: Document & Policy Management
+    # TQM Module 5: Policies & Procedures (New)
+    path('policies/', include('policies_procedures.urls')),
+    # TQM Module 5: Document & Policy Management (Legacy)
     path('documents/', include('document_management.urls')),
     # TQM Module 6: Risk Management
     path('risk-management/', include('risk_management.urls')),

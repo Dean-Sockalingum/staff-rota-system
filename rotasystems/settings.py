@@ -82,7 +82,9 @@ INSTALLED_APPS = [
     'experience_feedback',  # Satisfaction Surveys, Complaints, EBCD, QoL Assessments
     # TQM Module 4: Training & Competency
     'training_competency.apps.TrainingCompetencyConfig',  # Competency Frameworks, Skills Matrix, Learning Pathways
-    # TQM Module 5: Document & Policy Management
+    # TQM Module 5: Policies & Procedures
+    'policies_procedures',  # Policy Lifecycle, Version Control, Digital Acknowledgements, Compliance Tracking
+    # TQM Module 5 (Legacy): Document & Policy Management
     'document_management',  # Document Repository, Version Control, Policy Lifecycle, Staff Acknowledgements
     # TQM Module 6: Risk Management
     'risk_management',  # Risk Register, Risk Assessment (5x5 Matrix), Mitigation Planning, Risk Reviews
