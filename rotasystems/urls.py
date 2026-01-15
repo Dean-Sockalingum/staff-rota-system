@@ -60,8 +60,6 @@ urlpatterns = [
     # Task 38: Mobile App API
     path('api/mobile/', include('scheduling.api_urls')),
     path('api-auth/', include('rest_framework.urls')),  # DRF browsable API login
-    # TQM Module 1: PDSA Tracker
-    path('quality-audits/', include('quality_audits.urls')),
     # SAML 2.0 Single Sign-On (CGI SSO Integration)
     path('saml/', include([
         path('login/', saml_views.saml_login, name='saml_login'),
