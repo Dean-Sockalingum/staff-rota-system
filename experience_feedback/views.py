@@ -26,7 +26,11 @@ from .models import (
     QualityOfLifeAssessment,
     FeedbackTheme,
 )
+from .forms import SatisfactionSurveyForm, PublicSurveyForm
 from scheduling.models import CareHome
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+import uuid
 
 
 @login_required
@@ -433,6 +437,152 @@ def nps_trend_data(request):
             })
         
         current_date = month_end
+    
+    return JsonResponse({'data': data_points})
+
+
+# ==================== Survey Creation & Public Access ====================
+
+@login_required
+def survey_create(request):
+    """Create a new satisfaction survey (staff-initiated)."""
+    survey_type = request.GET.get('type')  # Pre-select survey type from URL
+    
+    if request.method == 'POST':
+        form = SatisfactionSurveyForm(request.POST)
+        if form.is_valid():
+            survey = form.save(commit=False)
+            survey.created_by = request.user
+            survey.save()
+            messages.success(request, 'Survey created successfully.')
+            return redirect('experience_feedback:survey_detail', pk=survey.pk)
+    else:
+        form = SatisfactionSurveyForm(survey_type=survey_type)
+    
+    context = {
+        'form': form,
+        'page_title': 'Create Satisfaction Survey',
+        'survey_type': survey_type,
+    }
+    
+    return render(request, 'experience_feedback/survey_form.html', context)
+
+
+@login_required
+def survey_edit(request, pk):
+    """Edit an existing satisfaction survey."""
+    survey = get_object_or_404(SatisfactionSurvey, pk=pk)
+    
+    if request.method == 'POST':
+        form = SatisfactionSurveyForm(request.POST, instance=survey)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Survey updated successfully.')
+            return redirect('experience_feedback:survey_detail', pk=survey.pk)
+    else:
+        form = SatisfactionSurveyForm(instance=survey)
+    
+    context = {
+        'form': form,
+        'survey': survey,
+        'page_title': 'Edit Survey',
+    }
+    
+    return render(request, 'experience_feedback/survey_form.html', context)
+
+
+@login_required
+def survey_delete(request, pk):
+    """Delete a satisfaction survey."""
+    survey = get_object_or_404(SatisfactionSurvey, pk=pk)
+    
+    if request.method == 'POST':
+        survey.delete()
+        messages.success(request, 'Survey deleted successfully.')
+        return redirect('experience_feedback:survey_list')
+    
+    context = {
+        'survey': survey,
+        'page_title': 'Delete Survey',
+    }
+    
+    return render(request, 'experience_feedback/survey_confirm_delete.html', context)
+
+
+def public_survey(request, token):
+    """
+    Public survey form (no login required).
+    Token should be generated and sent to respondents via email/SMS.
+    """
+    # For now, use token to identify care home or resident
+    # In production, store tokens in database linked to specific surveys
+    
+    if request.method == 'POST':
+        form = PublicSurveyForm(request.POST)
+        if form.is_valid():
+            survey = form.save(commit=False)
+            # Set metadata from token (simplified for now)
+            survey.survey_type = 'RESIDENT_ONGOING'  # Default, would be from token
+            survey.save()
+            
+            return render(request, 'experience_feedback/public_survey_thanks.html')
+    else:
+        form = PublicSurveyForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Your Feedback Matters',
+    }
+    
+    return render(request, 'experience_feedback/public_survey.html', context)
+
+
+@login_required
+def survey_pdf(request, pk):
+    """Generate PDF version of survey (for printing or download)."""
+    survey = get_object_or_404(SatisfactionSurvey, pk=pk)
+    
+    # Render HTML template
+    html_string = render_to_string('experience_feedback/survey_pdf.html', {
+        'survey': survey,
+        'avg_score': survey.get_average_score(),
+        'nps_category': survey.get_nps_category(),
+    })
+    
+    # For now, return HTML (would use weasyprint/reportlab for actual PDF)
+    response = HttpResponse(html_string, content_type='text/html')
+    # To convert to PDF, install weasyprint and use:
+    # from weasyprint import HTML
+    # pdf = HTML(string=html_string).write_pdf()
+    # response = HttpResponse(pdf, content_type='application/pdf')
+    # response['Content-Disposition'] = f'attachment; filename="survey_{survey.pk}.pdf"'
+    
+    return response
+
+
+@login_required
+def blank_survey_pdf(request, survey_type):
+    """Generate blank printable survey template for paper distribution."""
+    
+    # Map survey type to friendly name
+    survey_type_names = {
+        'RESIDENT_ADMISSION': 'Resident - Admission Survey',
+        'RESIDENT_ONGOING': 'Resident - Ongoing Care Survey',
+        'RESIDENT_DISCHARGE': 'Resident - Discharge Survey',
+        'FAMILY_ADMISSION': 'Family - Admission Survey',
+        'FAMILY_ONGOING': 'Family - Ongoing Care Survey',
+        'FAMILY_BEREAVEMENT': 'Family - Bereavement Survey',
+        'STAFF_EXPERIENCE': 'Staff - Experience Survey',
+        'PROFESSIONAL_PARTNERSHIP': 'Professional - Partnership Survey',
+    }
+    
+    html_string = render_to_string('experience_feedback/blank_survey_pdf.html', {
+        'survey_type': survey_type,
+        'survey_type_name': survey_type_names.get(survey_type, 'Satisfaction Survey'),
+    })
+    
+    response = HttpResponse(html_string, content_type='text/html')
+    return response
     
     return JsonResponse({'data': data_points})
 

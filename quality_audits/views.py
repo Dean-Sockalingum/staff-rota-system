@@ -69,10 +69,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Cycles statistics
         all_cycles = PDSACycle.objects.filter(project__in=projects)
         context['total_cycles'] = all_cycles.count()
-        context['active_cycles'] = all_cycles.filter(status='in_progress').count()
+        context['active_cycles'] = all_cycles.filter(act_completed_date__isnull=True).count()
         
         # Success metrics
-        completed_cycles = all_cycles.filter(status='completed')
+        completed_cycles = all_cycles.filter(act_completed_date__isnull=False)
         if completed_cycles.exists():
             context['avg_success_score'] = completed_cycles.aggregate(
                 Avg('ai_success_score')
@@ -84,13 +84,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['recent_projects'] = projects.order_by('-created_at')[:5]
         context['recent_cycles'] = all_cycles.order_by('-created_at')[:5]
         
-        # Upcoming reviews (cycles with review date in next 7 days)
+        # Upcoming reviews (cycles near completion in next 7 days)
         next_week = timezone.now() + timedelta(days=7)
         context['upcoming_reviews'] = all_cycles.filter(
-            act_review_date__lte=next_week,
-            act_review_date__gte=timezone.now(),
-            status='in_progress'
-        ).order_by('act_review_date')[:5]
+            act_completed_date__isnull=True,
+            study_completed_date__isnull=False
+        ).order_by('-study_completed_date')[:5]
         
         return context
 
@@ -168,8 +167,8 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         # Calculate project metrics
         cycles = project.cycles.all()
         context['total_cycles'] = cycles.count()
-        context['completed_cycles'] = cycles.filter(status='completed').count()
-        context['active_cycles'] = cycles.filter(status='in_progress').count()
+        context['completed_cycles'] = cycles.filter(act_completed_date__isnull=False).count()
+        context['active_cycles'] = cycles.filter(act_completed_date__isnull=True).count()
         
         # Get all data points across all cycles
         all_data_points = PDSADataPoint.objects.filter(
@@ -278,7 +277,7 @@ class CycleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         'plan_prediction', 'plan_data_collection', 'do_implementation_start',
         'do_implementation_end', 'do_observations', 'do_challenges',
         'study_data_analysis', 'study_findings', 'study_unexpected_results',
-        'act_decision', 'act_next_steps', 'act_review_date'
+        'act_decision', 'act_next_steps', 'act_completed_date'
     ]
     
     def dispatch(self, request, *args, **kwargs):
@@ -351,7 +350,7 @@ class CycleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         'plan_prediction', 'plan_data_collection', 'do_implementation_start',
         'do_implementation_end', 'do_observations', 'do_challenges',
         'study_data_analysis', 'study_findings', 'study_unexpected_results',
-        'act_decision', 'act_next_steps', 'act_review_date', 'status'
+        'act_decision', 'act_next_steps', 'act_completed_date'
     ]
     
     def test_func(self):
@@ -767,6 +766,8 @@ class ReportsView(LoginRequiredMixin, TemplateView):
         
         context['projects'] = projects
         context['total_projects'] = projects.count()
+        context['completed_projects_count'] = projects.filter(status='COMPLETED').count()
+        context['active_projects_count'] = projects.filter(status='ACTIVE').count()
         
         return context
 
@@ -836,8 +837,8 @@ class ProjectStatusAPIView(LoginRequiredMixin, View):
                 'project_name': project.project_name,
                 'status': project.status,
                 'total_cycles': cycles.count(),
-                'completed_cycles': cycles.filter(status='completed').count(),
-                'active_cycles': cycles.filter(status='in_progress').count(),
+                'completed_cycles': cycles.filter(act_completed_date__isnull=False).count(),
+                'active_cycles': cycles.filter(act_completed_date__isnull=True).count(),
                 'baseline_value': float(project.baseline_value) if project.baseline_value else None,
                 'target_value': float(project.target_value) if project.target_value else None,
                 'measurement_unit': project.measurement_unit,

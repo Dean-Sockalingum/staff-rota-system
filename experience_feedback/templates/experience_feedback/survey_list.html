@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "scheduling/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
@@ -6,12 +6,50 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-md-6">
             <h2><i class="fas fa-clipboard-list"></i> {{ page_title }}</h2>
         </div>
-        <div class="col-md-4 text-right">
+        <div class="col-md-6 text-right">
+            <!-- Dropdown for Create Survey -->
+            <div class="btn-group me-2" role="group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-plus-circle me-1"></i>Create Survey
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=RESIDENT_ADMISSION">Resident - Admission</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=RESIDENT_ONGOING">Resident - Ongoing</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=RESIDENT_DISCHARGE">Resident - Discharge</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=FAMILY_ADMISSION">Family - Admission</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=FAMILY_ONGOING">Family - Ongoing</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=FAMILY_BEREAVEMENT">Family - Bereavement</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=STAFF_EXPERIENCE">Staff Experience</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:survey_create' %}?type=PROFESSIONAL_PARTNERSHIP">Professional Partnership</a></li>
+                </ul>
+            </div>
+            
+            <!-- Dropdown for Blank Templates -->
+            <div class="btn-group me-2" role="group">
+                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-file-pdf me-1"></i>Blank Templates
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'RESIDENT_ADMISSION' %}" target="_blank">Resident - Admission</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'RESIDENT_ONGOING' %}" target="_blank">Resident - Ongoing</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'RESIDENT_DISCHARGE' %}" target="_blank">Resident - Discharge</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'FAMILY_ADMISSION' %}" target="_blank">Family - Admission</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'FAMILY_ONGOING' %}" target="_blank">Family - Ongoing</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'FAMILY_BEREAVEMENT' %}" target="_blank">Family - Bereavement</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'STAFF_EXPERIENCE' %}" target="_blank">Staff Experience</a></li>
+                    <li><a class="dropdown-item" href="{% url 'experience_feedback:blank_survey_pdf' 'PROFESSIONAL_PARTNERSHIP' %}" target="_blank">Professional Partnership</a></li>
+                </ul>
+            </div>
+            
             <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> Dashboard
             </a>
         </div>
     </div>
@@ -22,9 +60,14 @@
             <form method="get" class="form-inline">
                 <select name="survey_type" class="form-control mr-2">
                     <option value="">All Survey Types</option>
-                    <option value="RESIDENT_ADMISSION">Resident - Admission</option>
-                    <option value="RESIDENT_ONGOING">Resident - Ongoing</option>
-                    <option value="FAMILY_ONGOING">Family - Ongoing</option>
+                    <option value="RESIDENT_ADMISSION" {% if request.GET.survey_type == 'RESIDENT_ADMISSION' %}selected{% endif %}>Resident - Admission</option>
+                    <option value="RESIDENT_ONGOING" {% if request.GET.survey_type == 'RESIDENT_ONGOING' %}selected{% endif %}>Resident - Ongoing Care</option>
+                    <option value="RESIDENT_DISCHARGE" {% if request.GET.survey_type == 'RESIDENT_DISCHARGE' %}selected{% endif %}>Resident - Discharge</option>
+                    <option value="FAMILY_ADMISSION" {% if request.GET.survey_type == 'FAMILY_ADMISSION' %}selected{% endif %}>Family - Admission</option>
+                    <option value="FAMILY_ONGOING" {% if request.GET.survey_type == 'FAMILY_ONGOING' %}selected{% endif %}>Family - Ongoing Care</option>
+                    <option value="FAMILY_BEREAVEMENT" {% if request.GET.survey_type == 'FAMILY_BEREAVEMENT' %}selected{% endif %}>Family - Bereavement</option>
+                    <option value="STAFF_EXPERIENCE" {% if request.GET.survey_type == 'STAFF_EXPERIENCE' %}selected{% endif %}>Staff - Experience Survey</option>
+                    <option value="PROFESSIONAL_PARTNERSHIP" {% if request.GET.survey_type == 'PROFESSIONAL_PARTNERSHIP' %}selected{% endif %}>Professional - Partnership Survey</option>
                 </select>
                 <select name="care_home" class="form-control mr-2">
                     <option value="">All Homes</option>

@@ -24,7 +24,8 @@ class SurveyType(models.TextChoices):
     FAMILY_ADMISSION = 'FAMILY_ADMISSION', 'Family - Admission'
     FAMILY_ONGOING = 'FAMILY_ONGOING', 'Family - Ongoing Care'
     FAMILY_BEREAVEMENT = 'FAMILY_BEREAVEMENT', 'Family - Bereavement'
-    STAFF_EXPERIENCE = 'STAFF_EXPERIENCE', 'Staff Experience'
+    STAFF_EXPERIENCE = 'STAFF_EXPERIENCE', 'Staff - Experience Survey'
+    PROFESSIONAL_PARTNERSHIP = 'PROFESSIONAL_PARTNERSHIP', 'Professional - Partnership Survey'
 
 
 class ComplaintSeverity(models.TextChoices):

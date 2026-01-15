@@ -13,7 +13,15 @@ urlpatterns = [
     
     # Satisfaction Surveys
     path('surveys/', views.survey_list, name='survey_list'),
+    path('surveys/new/', views.survey_create, name='survey_create'),
     path('surveys/<int:pk>/', views.survey_detail, name='survey_detail'),
+    path('surveys/<int:pk>/edit/', views.survey_edit, name='survey_edit'),
+    path('surveys/<int:pk>/delete/', views.survey_delete, name='survey_delete'),
+    path('surveys/<int:pk>/pdf/', views.survey_pdf, name='survey_pdf'),
+    path('surveys/blank/<str:survey_type>/pdf/', views.blank_survey_pdf, name='blank_survey_pdf'),
+    
+    # Public Survey (no login required)
+    path('public/<str:token>/', views.public_survey, name='public_survey'),
     
     # Complaints
     path('complaints/', views.complaint_list, name='complaint_list'),

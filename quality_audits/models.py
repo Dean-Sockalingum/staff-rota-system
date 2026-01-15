@@ -152,6 +152,16 @@ class PDSAProject(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
     
+    @property
+    def completed_cycles_count(self):
+        """Count of completed cycles (Act phase finished)"""
+        return self.cycles.filter(act_completed_date__isnull=False).count()
+    
+    @property
+    def active_cycles_count(self):
+        """Count of active cycles (Act phase not finished)"""
+        return self.cycles.filter(act_completed_date__isnull=True).count()
+    
     def get_progress_percentage(self):
         """Calculate project progress based on completed cycles"""
         total_cycles = self.cycles.count()

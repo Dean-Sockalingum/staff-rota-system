@@ -99,12 +99,12 @@
                     </div>
                     
                     <div class="progress mb-2" style="height: 8px;">
-                        {% widthratio project.cycles.filter.status='completed'.count project.cycles.count 100 as progress %}
+                        {% widthratio project.completed_cycles_count project.cycles.count 100 as progress %}
                         <div class="progress-bar bg-success" role="progressbar" 
                              style="width: {{ progress|default:0 }}%"></div>
                     </div>
                     <small class="text-muted">
-                        {{ project.cycles.filter.status='completed'.count }} of {{ project.cycles.count }} cycles completed
+                        {{ project.completed_cycles_count }} of {{ project.cycles.count }} cycles completed
                     </small>
                 </div>
                 <div class="card-footer bg-transparent">

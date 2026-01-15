@@ -55,7 +55,7 @@ class IncidentSafetyDashboardView(LoginRequiredMixin, TemplateView):
         
         # Get pending RCAs (incidents without completed RCA)
         context['pending_rcas'] = RootCauseAnalysis.objects.filter(
-            approval_status__in=['DRAFT', 'UNDER_REVIEW', 'NEEDS_REVISION']
+            status__in=['IN_PROGRESS', 'UNDER_REVIEW', 'REJECTED']
         ).select_related('incident', 'lead_investigator').order_by('-created_at')[:5]
         
         # Get overdue CAPAs
@@ -66,11 +66,11 @@ class IncidentSafetyDashboardView(LoginRequiredMixin, TemplateView):
         
         # Get active Duty of Candour cases
         context['active_doc'] = DutyOfCandourRecord.objects.filter(
-            status__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
+            current_stage__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
         ).select_related('incident').order_by('-created_at')[:5]
         
         # Get recent trend analyses
-        context['recent_trends'] = IncidentTrendAnalysis.objects.all().order_by('-created_at')[:3]
+        context['recent_trends'] = IncidentTrendAnalysis.objects.all().order_by('-generated_date')[:3]
         
         # KPIs
         context['stats'] = {
@@ -80,7 +80,7 @@ class IncidentSafetyDashboardView(LoginRequiredMixin, TemplateView):
                 status__in=['IDENTIFIED', 'IN_PROGRESS']
             ).count(),
             'active_doc_cases': DutyOfCandourRecord.objects.filter(
-                status__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
+                current_stage__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
             ).count(),
         }
         
@@ -106,7 +106,7 @@ class RCAListView(LoginRequiredMixin, ListView):
         # Filter by status
         status = self.request.GET.get('status')
         if status:
-            queryset = queryset.filter(approval_status=status)
+            queryset = queryset.filter(status=status)
         
         # Search by incident
         search = self.request.GET.get('search')
@@ -179,11 +179,11 @@ class RCAUpdateView(LoginRequiredMixin, UpdateView):
     fields = [
         'lead_investigator', 'investigation_team',
         'why_1', 'why_2', 'why_3', 'why_4', 'why_5',
-        'contributing_factor_people', 'contributing_factor_environment',
-        'contributing_factor_processes', 'contributing_factor_organizational',
-        'contributing_factor_external',
-        'identified_problems', 'root_causes', 'evidence_collected',
-        'recommendations', 'approval_status', 'reviewer_comments'
+        'factor_people', 'factor_environment',
+        'factor_processes', 'factor_organization',
+        'factor_external',
+        'root_cause_summary', 'lessons_learned', 'evidence_reviewed',
+        'recommendations', 'status', 'approval_comments'
     ]
     
     def form_valid(self, form):
@@ -545,7 +545,7 @@ class AnalyticsView(LoginRequiredMixin, TemplateView):
         context['doc_stats'] = {
             'total': DutyOfCandourRecord.objects.count(),
             'active': DutyOfCandourRecord.objects.filter(
-                status__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
+                current_stage__in=['ASSESSMENT', 'NOTIFICATION', 'APOLOGY', 'INVESTIGATION']
             ).count(),
         }
         

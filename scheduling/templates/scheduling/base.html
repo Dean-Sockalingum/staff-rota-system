@@ -198,6 +198,20 @@
                             <i class="fas fa-chart-bar"></i> Reports
                         </a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="tqmDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-clipboard-list"></i> TQM Modules
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="tqmDropdown">
+                            <li><a class="dropdown-item" href="/quality-audits/"><i class="fas fa-chart-line"></i> Quality Audits (PDSA)</a></li>
+                            <li><a class="dropdown-item" href="/incident-safety/"><i class="fas fa-exclamation-triangle"></i> Incident & Safety</a></li>
+                            <li><a class="dropdown-item" href="/experience-feedback/"><i class="fas fa-comments"></i> Experience & Feedback</a></li>
+                            <li><a class="dropdown-item" href="/training_competency/"><i class="fas fa-graduation-cap"></i> Training & Competency</a></li>
+                            <li><a class="dropdown-item" href="/documents/"><i class="fas fa-folder-open"></i> Document Management</a></li>
+                            <li><a class="dropdown-item" href="/risk-management/"><i class="fas fa-shield-alt"></i> Risk Management</a></li>
+                            <li><a class="dropdown-item" href="/performance-kpis/"><i class="fas fa-chart-pie"></i> Performance KPIs</a></li>
+                        </ul>
+                    </li>
                     {% if user.role.is_senior_management_team %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'senior_management_dashboard' %}">
