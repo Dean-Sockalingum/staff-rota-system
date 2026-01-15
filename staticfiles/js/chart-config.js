@@ -86,6 +86,15 @@
 
     // Helper to generate alpha variations
     function hexToRgba(hex, alpha = 1) {
+        // Return as-is if not a string (could be a function or already rgba)
+        if (typeof hex !== 'string') {
+            return hex;
+        }
+        // Return as-is if already rgba/rgb
+        if (hex.startsWith('rgba') || hex.startsWith('rgb')) {
+            return hex;
+        }
+        // Convert hex to rgba
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
@@ -286,9 +295,15 @@
                 const color = dataset.backgroundColor || chartColors[index % chartColors.length];
                 return {
                     ...dataset,
-                    backgroundColor: hexToRgba(color, 0.8),
-                    borderColor: color,
-                    borderWidth: 2,
+                    // Don't override if backgroundColor is a function
+                    backgroundColor: typeof dataset.backgroundColor === 'function' 
+                        ? dataset.backgroundColor 
+                        : hexToRgba(color, 0.8),
+                    // Don't override if borderColor is a function
+                    borderColor: typeof dataset.borderColor === 'function'
+                        ? dataset.borderColor
+                        : (dataset.borderColor || color),
+                    borderWidth: dataset.borderWidth || 2,
                     borderRadius: 8,
                     borderSkipped: false
                 };
