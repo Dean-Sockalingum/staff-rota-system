@@ -106,17 +106,8 @@ class ActivityLogModelTests(TestCase):
         self.assertEqual(recent.count(), 1)
         self.assertEqual(recent.first().title, 'Recent Activity')
     
-    @unittest.skip("ActivityCategory model doesn't exist - categories are defined as ACTIVITY_CATEGORIES constant")
-    def test_activity_categories(self):
-        """Test all activity categories are valid"""
-        categories = ActivityCategory.objects.all()
-        category_codes = [cat.code for cat in categories]
-        
-        # Check core categories exist
-        self.assertIn('LEAVE', category_codes)
-        self.assertIn('SHIFT', category_codes)
-        self.assertIn('COMPLIANCE', category_codes)
-        self.assertIn('SYSTEM', category_codes)
+    # Removed test_activity_categories - ActivityCategory model doesn't exist
+    # Categories are defined as ACTIVITY_CATEGORIES constant in RecentActivity model
 
 
 class UserNotificationTests(TestCase):

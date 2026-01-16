@@ -31,14 +31,12 @@ Date: December 2025
 """
 
 import logging
-
-logger = logging.getLogger(__name__)
-
 from django.utils import timezone
 from datetime import timedelta, date
 from typing import Dict, List, Optional
-import logging
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 # PDF generation (install: pip install reportlab)
 try:

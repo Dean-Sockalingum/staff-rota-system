@@ -1,0 +1,30 @@
+[flake8]
+# Flake8 configuration
+max-line-length = 127
+max-complexity = 10
+
+# Exclude directories with duplicate/backup code
+exclude =
+    .git,
+    __pycache__,
+    */migrations/*,
+    */static/*,
+    */staticfiles/*,
+    */templates/*,
+    .venv,
+    venv,
+    env,
+    */node_modules/*,
+    working-drive-full-code-and-docs,
+    ARCHIVED_DOCS,
+    ARCHIVED_PROJECTS,
+    COMPRESSED_ARCHIVES,
+    docs
+
+# Select specific error codes for strict checking
+select = E9,F63,F7,F82
+
+# Show source code for errors
+show-source = True
+statistics = True
+count = True
