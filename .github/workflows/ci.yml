@@ -217,6 +217,7 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run migrations
+      working-directory: 2025-12-12_Multi-Home_Complete
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         REDIS_URL: redis://localhost:6379/0
@@ -225,6 +226,7 @@ jobs:
         python manage.py migrate --noinput
     
     - name: Run LP solver benchmarks
+      working-directory: 2025-12-12_Multi-Home_Complete
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         REDIS_URL: redis://localhost:6379/0
