@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Root-level Django apps (duplicates - actual apps are in 2025-12-12_Multi-Home_Complete/)
+/scheduling/
+/staff_records/
+/quality_audits/
+/rotasystems/
+
 # C extensions
 *.so
 
