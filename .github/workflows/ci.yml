@@ -52,7 +52,9 @@ jobs:
     
     - name: Install system dependencies for LDAP
       run: |
-        sudo apt-get update
+        # Remove problematic Microsoft repositories that may be temporarily unavailable
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list 2>/dev/null || true
+        sudo apt-get update || sudo apt-get update  # Retry once if first attempt fails
         sudo apt-get install -y libsasl2-dev python3-dev libldap2-dev libssl-dev
     
     - name: Install dependencies
@@ -135,7 +137,9 @@ jobs:
     
     - name: Install system dependencies for LDAP
       run: |
-        sudo apt-get update
+        # Remove problematic Microsoft repositories that may be temporarily unavailable
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list 2>/dev/null || true
+        sudo apt-get update || sudo apt-get update  # Retry once if first attempt fails
         sudo apt-get install -y libsasl2-dev python3-dev libldap2-dev libssl-dev
     
     - name: Install dependencies
@@ -199,7 +203,9 @@ jobs:
     
     - name: Install system dependencies for LDAP
       run: |
-        sudo apt-get update
+        # Remove problematic Microsoft repositories that may be temporarily unavailable
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list 2>/dev/null || true
+        sudo apt-get update || sudo apt-get update  # Retry once if first attempt fails
         sudo apt-get install -y libsasl2-dev python3-dev libldap2-dev libssl-dev
     
     - name: Install dependencies
