@@ -1,7 +1,7 @@
 {% extends 'scheduling/base.html' %}
 {% load static %}
 
-{% block title %}Performance Dashboard{% endblock %}
+{% block title %}Absence Management{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -28,23 +28,48 @@
 <div class="container-fluid mt-4">
     <div class="row mb-4">
         <div class="col-12">
-            <h1><i class="fas fa-chart-line"></i> Performance Dashboard</h1>
+            <h1><i class="fas fa-award"></i> Absence Management</h1>
             <p class="text-muted">Track staff attendance, punctuality, and performance metrics</p>
         </div>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- Search and Filter Bar -->
     <div class="row mb-4">
-        <div class="col-12">
-            <a href="{% url 'generate_performance_report' %}" class="btn btn-primary">
-                <i class="fas fa-file-alt"></i> Generate Report
-            </a>
-            <a href="{% url 'create_performance_review' %}" class="btn btn-success">
-                <i class="fas fa-star"></i> Create Review
-            </a>
-            <a href="{% url 'team_performance_comparison' %}" class="btn btn-info">
-                <i class="fas fa-users"></i> Team Comparison
-            </a>
+        <div class="col-md-4 mb-3">
+            <label for="homeFilter" class="form-label">Filter by Care Home</label>
+            <select class="form-control" id="homeFilter">
+                <option value="">All Homes</option>
+                <option value="HAWTHORN_HOUSE">Hawthorn House</option>
+                <option value="MEADOWBURN">Meadowburn</option>
+                <option value="ORCHARD_GROVE">Orchard Grove</option>
+                <option value="RIVERSIDE">Riverside</option>
+                <option value="VICTORIA_GARDENS">Victoria Gardens</option>
+            </select>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label for="staffSearch" class="form-label">Search by Name or SAP ID</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="staffSearch" placeholder="Enter name or SAP ID...">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Actions</label>
+            <div class="btn-group d-block" role="group">
+                <a href="{% url 'generate_performance_report' %}" class="btn btn-primary">
+                    <i class="fas fa-file-alt"></i> Report
+                </a>
+                <a href="{% url 'create_performance_review' %}" class="btn btn-success">
+                    <i class="fas fa-star"></i> Review
+                </a>
+                <a href="{% url 'team_performance_comparison' %}" class="btn btn-info">
+                    <i class="fas fa-users"></i> Compare
+                </a>
+            </div>
         </div>
     </div>
 
@@ -326,4 +351,68 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search and filter functionality for staff performance
+const staffSearch = document.getElementById('staffSearch');
+const homeFilter = document.getElementById('homeFilter');
+const performerCards = document.querySelectorAll('.performer-card');
+
+function filterCards() {
+    const searchTerm = staffSearch.value.toLowerCase();
+    const selectedHome = homeFilter.value.toLowerCase();
+    
+    performerCards.forEach(card => {
+        const staffName = card.querySelector('h6 a').textContent.toLowerCase();
+        const staffInfo = card.querySelector('small').textContent.toLowerCase();
+        
+        // Check search term match
+        const matchesSearch = !searchTerm || 
+            staffName.includes(searchTerm) || 
+            staffInfo.includes(searchTerm);
+        
+        // Check home filter match
+        // Extract unit/home info from the card if available
+        const unitText = card.textContent.toLowerCase();
+        const matchesHome = !selectedHome || unitText.includes(selectedHome);
+        
+        // Show card only if both filters match
+        if (matchesSearch && matchesHome) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update result counts
+    updateResultCounts();
+}
+
+function updateResultCounts() {
+    const visibleCards = Array.from(performerCards).filter(card => card.style.display !== 'none');
+    console.log(`Showing ${visibleCards.length} of ${performerCards.length} staff members`);
+}
+
+// Event listeners
+staffSearch.addEventListener('input', filterCards);
+homeFilter.addEventListener('change', filterCards);
+
+// Clear filters button (optional enhancement)
+document.addEventListener('DOMContentLoaded', function() {
+    // Add a clear button if needed
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn btn-sm btn-outline-secondary mt-2';
+    clearBtn.innerHTML = '<i class="fas fa-times"></i> Clear Filters';
+    clearBtn.onclick = function() {
+        staffSearch.value = '';
+        homeFilter.value = '';
+        filterCards();
+    };
+    
+    // Append to search container if desired
+    // document.querySelector('.col-md-4:nth-child(2)').appendChild(clearBtn);
+});
+</script>
 {% endblock %}

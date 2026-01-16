@@ -1,0 +1,403 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{{ staff.first_name }} {{ staff.last_name }} - Performance Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s;
+    }
+    .metric-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .score-excellent { color: #28a745; border-left-color: #28a745 !important; }
+    .score-good { color: #17a2b8; border-left-color: #17a2b8 !important; }
+    .score-satisfactory { color: #ffc107; border-left-color: #ffc107 !important; }
+    .score-needs-improvement { color: #fd7e14; border-left-color: #fd7e14 !important; }
+    .score-poor { color: #dc3545; border-left-color: #dc3545 !important; }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .badge-issue {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    .calendar-day {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 2px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    .day-present { background: #28a745; color: white; }
+    .day-late { background: #ffc107; color: #333; }
+    .day-absent { background: #dc3545; color: white; }
+    .day-off { background: #e9ecef; color: #6c757d; }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'performance_dashboard' %}">Performance</a></li>
+                    <li class="breadcrumb-item active">{{ staff.first_name }} {{ staff.last_name }}</li>
+                </ol>
+            </nav>
+            <h1><i class="fas fa-user-chart"></i> {{ staff.first_name }} {{ staff.last_name }}</h1>
+            <p class="text-muted">SAP: {{ staff.sap }} | {{ staff.role.name|default:"No Role" }} | {{ staff.unit.name|default:"No Unit" }}</p>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-calendar"></i> Date Range</h5>
+                    <form method="get" class="form-inline">
+                        <label class="mr-2">Last</label>
+                        <select name="days" class="form-control mr-2" onchange="this.form.submit()">
+                            <option value="7" {% if days_back == 7 %}selected{% endif %}>7 days</option>
+                            <option value="14" {% if days_back == 14 %}selected{% endif %}>14 days</option>
+                            <option value="30" {% if days_back == 30 %}selected{% endif %}>30 days</option>
+                            <option value="60" {% if days_back == 60 %}selected{% endif %}>60 days</option>
+                            <option value="90" {% if days_back == 90 %}selected{% endif %}>90 days</option>
+                        </select>
+                        <span class="text-muted">{{ start_date|date:"d M Y" }} to {{ end_date|date:"d M Y" }}</span>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card {% if metrics.overall_score >= 90 %}score-excellent{% elif metrics.overall_score >= 75 %}score-good{% elif metrics.overall_score >= 60 %}score-satisfactory{% elif metrics.overall_score >= 40 %}score-needs-improvement{% else %}score-poor{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Overall Score</h6>
+                    <div class="metric-value">{{ metrics.overall_score|floatformat:1 }}%</div>
+                    <p class="mb-0">
+                        {% if metrics.overall_score >= 90 %}
+                            <span class="badge badge-success">Excellent</span>
+                        {% elif metrics.overall_score >= 75 %}
+                            <span class="badge badge-info">Good</span>
+                        {% elif metrics.overall_score >= 60 %}
+                            <span class="badge badge-warning">Satisfactory</span>
+                        {% elif metrics.overall_score >= 40 %}
+                            <span class="badge badge-warning">Needs Improvement</span>
+                        {% else %}
+                            <span class="badge badge-danger">Poor</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Attendance Rate</h6>
+                    <div class="metric-value text-primary">{{ metrics.attendance_rate|floatformat:1 }}%</div>
+                    <p class="text-muted mb-0">{{ metrics.total_shifts }} shifts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Punctuality Rate</h6>
+                    <div class="metric-value text-info">{{ metrics.punctuality_rate|floatformat:1 }}%</div>
+                    <p class="text-muted mb-0">{{ metrics.on_time_shifts }} on time</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Completion Rate</h6>
+                    <div class="metric-value text-success">{{ metrics.completion_rate|floatformat:1 }}%</div>
+                    <p class="text-muted mb-0">{{ metrics.shifts_completed }} completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Issues and Recommendations -->
+    {% if issues or recommendations %}
+    <div class="row mb-4">
+        {% if issues %}
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Performance Issues</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for issue in issues %}
+                        <li class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <span class="badge badge-{% if issue.severity == 'HIGH' %}danger{% elif issue.severity == 'MEDIUM' %}warning{% else %}info{% endif %} mr-2">{{ issue.severity|upper }}</span>
+                                <div>
+                                    <strong>{{ issue.type|title }}:</strong> {{ issue.description }}
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if recommendations %}
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for rec in recommendations %}
+                        <li class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <span class="badge badge-{% if rec.priority == 'CRITICAL' %}danger{% elif rec.priority == 'HIGH' %}warning{% else %}info{% endif %} mr-2">{{ rec.priority }}</span>
+                                <div>
+                                    <strong>{{ rec.category|title }}:</strong> {{ rec.action }}
+                                    {% if rec.details %}
+                                    <br><small class="text-muted">{{ rec.details }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Attendance Calendar -->
+    {% if calendar_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Attendance Calendar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="calendar-day day-present">P</span> Present
+                        <span class="calendar-day day-late ml-3">L</span> Late
+                        <span class="calendar-day day-absent ml-3">A</span> Absent
+                        <span class="calendar-day day-off ml-3">-</span> Day Off
+                    </div>
+                    <div class="calendar-grid">
+                        {% for day in calendar_data %}
+                        <span class="calendar-day {% if day.status == 'present' %}day-present{% elif day.status == 'late' %}day-late{% elif day.status == 'absent' %}day-absent{% else %}day-off{% endif %}" 
+                              title="{{ day.date|date:'d M Y' }}: {{ day.status|title }}">
+                            {{ day.date.day }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Performance History -->
+    {% if performance_history %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Performance Trend</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Review History -->
+    {% if review_history %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Performance Reviews</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Review Date</th>
+                                    <th>Period</th>
+                                    <th>Reviewer</th>
+                                    <th>Overall Rating</th>
+                                    <th>Comments</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in review_history %}
+                                <tr>
+                                    <td>{{ review.review_date|date:"d M Y" }}</td>
+                                    <td>{{ review.period_start|date:"d M Y" }} - {{ review.period_end|date:"d M Y" }}</td>
+                                    <td>{{ review.reviewer.first_name }} {{ review.reviewer.last_name }}</td>
+                                    <td>
+                                        {% if review.overall_rating >= 4.5 %}
+                                            <span class="badge badge-success">{{ review.overall_rating|floatformat:1 }}/5</span>
+                                        {% elif review.overall_rating >= 3.5 %}
+                                            <span class="badge badge-info">{{ review.overall_rating|floatformat:1 }}/5</span>
+                                        {% elif review.overall_rating >= 2.5 %}
+                                            <span class="badge badge-warning">{{ review.overall_rating|floatformat:1 }}/5</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">{{ review.overall_rating|floatformat:1 }}/5</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ review.comments|truncatewords:15 }}</td>
+                                    <td>
+                                        <a href="{% url 'performance_review_detail' review.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'performance_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="{% url 'create_performance_review' %}?staff={{ staff.sap }}" class="btn btn-success">
+                <i class="fas fa-star"></i> Create Review
+            </a>
+            <a href="{% url 'generate_performance_report' %}?staff={{ staff.sap }}&days={{ days_back }}" class="btn btn-primary">
+                <i class="fas fa-file-pdf"></i> Generate Report
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    {% if performance_history %}
+    // Performance Trend Chart
+    const ctx = document.getElementById('performanceChart');
+    const performanceData = {
+        labels: [
+            {% for perf in performance_history reversed %}
+            '{{ perf.period_end|date:"M Y" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [
+            {
+                label: 'Overall Score',
+                data: [
+                    {% for perf in performance_history reversed %}
+                    {{ perf.overall_score|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Attendance',
+                data: [
+                    {% for perf in performance_history reversed %}
+                    {{ perf.attendance_rate|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Punctuality',
+                data: [
+                    {% for perf in performance_history reversed %}
+                    {{ perf.punctuality_rate|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#17a2b8',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Completion',
+                data: [
+                    {% for perf in performance_history reversed %}
+                    {{ perf.completion_rate|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                tension: 0.4
+            }
+        ]
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: performanceData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

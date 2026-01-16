@@ -112,12 +112,12 @@ class ProjectListView(LoginRequiredMixin, ListView):
             Q(created_by=user) | Q(team_members__user=user)
         ).distinct().select_related('created_by').prefetch_related('team_members')
         
-        # Search by project name or aim
+        # Search by project title or aim
         search = self.request.GET.get('search', '')
         if search:
             queryset = queryset.filter(
-                Q(project_name__icontains=search) |
-                Q(project_aim__icontains=search)
+                Q(title__icontains=search) |
+                Q(aim_statement__icontains=search)
             )
         
         # Filter by status
@@ -188,23 +188,24 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = PDSAProject
     template_name = 'quality_audits/project_form.html'
     fields = [
-        'project_name', 'project_aim', 'care_home', 'department',
-        'quality_domain', 'project_category', 'baseline_value',
-        'target_value', 'measurement_unit', 'measurement_frequency',
-        'start_date', 'expected_end_date'
+        'title', 'aim_statement', 'problem_description', 'target_population',
+        'care_home', 'unit', 'category', 'priority',
+        'baseline_value', 'target_value', 'measurement_unit',
+        'start_date', 'target_completion_date'
     ]
     
     def form_valid(self, form):
-        """Set the created_by user and generate AI aim if requested."""
-        form.instance.created_by = self.request.user
+        """Set the lead_user and generate AI aim if requested."""
+        form.instance.lead_user = self.request.user
         
         # Check if AI aim generation was requested
         generate_ai = self.request.POST.get('generate_ai_aim', False)
-        if generate_ai and form.instance.project_aim:
+        if generate_ai and form.instance.aim_statement:
             try:
                 aim_generator = SMARTAimGenerator()
-                improved_aim = aim_generator.improve_aim(form.instance.project_aim)
-                form.instance.ai_aim_generated = improved_aim['improved_aim']
+                improved_aim = aim_generator.improve_aim(form.instance.aim_statement)
+                form.instance.aim_statement = improved_aim['improved_aim']
+                form.instance.ai_aim_generated = True
                 messages.success(
                     self.request,
                     f"AI-enhanced SMART aim generated (SMART score: {improved_aim['smartness_score']}%)"
@@ -215,7 +216,7 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
                     f"Could not generate AI aim: {str(e)}"
                 )
         
-        messages.success(self.request, f"Project '{form.instance.project_name}' created successfully!")
+        messages.success(self.request, f"Project '{form.instance.title}' created successfully!")
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -227,20 +228,19 @@ class ProjectUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = PDSAProject
     template_name = 'quality_audits/project_form.html'
     fields = [
-        'project_name', 'project_aim', 'care_home', 'department',
-        'quality_domain', 'project_category', 'baseline_value',
-        'target_value', 'measurement_unit', 'measurement_frequency',
-        'start_date', 'expected_end_date', 'actual_end_date', 'status'
+        'title', 'aim_statement', 'problem_description', 'target_population',
+        'care_home', 'unit', 'category', 'priority', 'status',
+        'baseline_value', 'target_value', 'measurement_unit',
+        'start_date', 'target_completion_date', 'actual_completion_date'
     ]
     
     def test_func(self):
-        """Only allow project creator or team members to edit."""
+        """Only allow project lead to edit."""
         project = self.get_object()
-        user = self.request.user
-        return project.created_by == user or project.team_members.filter(user=user).exists()
+        return project.lead_user == self.request.user
     
     def form_valid(self, form):
-        messages.success(self.request, f"Project '{form.instance.project_name}' updated successfully!")
+        messages.success(self.request, f"Project '{form.instance.title}' updated successfully!")
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -254,13 +254,13 @@ class ProjectDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy('quality_audits:project_list')
     
     def test_func(self):
-        """Only allow project creator to delete."""
+        """Only allow project lead to delete."""
         project = self.get_object()
-        return project.created_by == self.request.user
+        return project.lead_user == self.request.user
     
     def delete(self, request, *args, **kwargs):
         project = self.get_object()
-        messages.success(request, f"Project '{project.project_name}' deleted successfully!")
+        messages.success(request, f"Project '{project.title}' deleted successfully!")
         return super().delete(request, *args, **kwargs)
 
 

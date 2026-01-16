@@ -8,7 +8,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' cycle.project.pk %}">{{ cycle.project.project_name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' cycle.project.pk %}">{{ cycle.project.title }}</a></li>
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:cycle_detail' cycle.pk %}">Cycle #{{ cycle.cycle_number }}</a></li>
             <li class="breadcrumb-item active">{% if object %}Edit{% else %}Add{% endif %} Data Point</li>
         </ol>

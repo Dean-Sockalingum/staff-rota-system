@@ -32,7 +32,11 @@ urlpatterns = [
     path('data/<int:pk>/update/', views.DataPointUpdateView.as_view(), name='datapoint_update'),
     path('data/<int:pk>/delete/', views.DataPointDeleteView.as_view(), name='datapoint_delete'),
     
-    # ML/AI Feature URLs
+    # ML/AI Feature URLs (standalone - no project context needed)
+    path('ai/generate-aim/', views.GenerateSMARTAimView.as_view(), name='generate_smart_aim'),
+    path('ai/suggest-hypotheses/', views.SuggestHypothesesView.as_view(), name='ai_suggest_hypotheses'),
+    
+    # ML/AI Feature URLs (project/cycle-specific)
     path('projects/<int:pk>/generate-aim/', views.GenerateSMARTAimView.as_view(), name='generate_aim'),
     path('projects/<int:pk>/suggest-hypotheses/', views.SuggestHypothesesView.as_view(), name='suggest_hypotheses'),
     path('cycles/<int:pk>/analyze/', views.AnalyzeCycleDataView.as_view(), name='analyze_cycle'),

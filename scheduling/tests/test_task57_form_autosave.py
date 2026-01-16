@@ -146,7 +146,7 @@ class FormSubmissionTests(TestCase):
         # Verify leave request was created
         leave_requests = LeaveRequest.objects.filter(
             staff_profile=self.user.staff_profile,
-            leave_type=leave_type
+            leave_type='ANNUAL'
         )
         self.assertTrue(leave_requests.exists())
     

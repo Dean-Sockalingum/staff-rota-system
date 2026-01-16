@@ -41,8 +41,8 @@
                     <select class="form-select" id="sort" name="sort">
                         <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest First</option>
                         <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Oldest First</option>
-                        <option value="project_name" {% if sort == 'project_name' %}selected{% endif %}>Name (A-Z)</option>
-                        <option value="-project_name" {% if sort == '-project_name' %}selected{% endif %}>Name (Z-A)</option>
+                        <option value="title" {% if sort == 'title' %}selected{% endif %}>Name (A-Z)</option>
+                        <option value="-title" {% if sort == '-title' %}selected{% endif %}>Name (Z-A)</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
@@ -65,7 +65,7 @@
                         <h5 class="card-title mb-0">
                             <a href="{% url 'quality_audits:project_detail' project.pk %}" 
                                class="text-decoration-none">
-                                {{ project.project_name }}
+                                {{ project.title }}
                             </a>
                         </h5>
                         <span class="badge badge-status-{{ project.status }}">
@@ -73,7 +73,7 @@
                         </span>
                     </div>
                     
-                    <p class="card-text text-muted">{{ project.project_aim|truncatewords:20 }}</p>
+                    <p class="card-text text-muted">{{ project.aim_statement|truncatewords:20 }}</p>
                     
                     <div class="mb-3">
                         <small class="text-muted">

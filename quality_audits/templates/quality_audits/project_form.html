@@ -25,28 +25,41 @@
                     <form method="post" id="projectForm">
                         {% csrf_token %}
                         
+                        {{ form.as_p }}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> {% if object %}Update{% else %}Create{% endif %} Project
+                            </button>
+                            <a href="{% if object %}{% url 'quality_audits:project_detail' object.pk %}{% else %}{% url 'quality_audits:project_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                        
                         <!-- Basic Information -->
                         <h5 class="border-bottom pb-2 mb-3">
                             <i class="bi bi-info-circle"></i> Basic Information
                         </h5>
                         
                         <div class="mb-3">
-                            <label for="id_project_name" class="form-label">Project Name *</label>
-                            <input type="text" class="form-control {% if form.project_name.errors %}is-invalid{% endif %}" 
-                                   id="id_project_name" name="project_name" 
-                                   value="{{ form.project_name.value|default:'' }}" required>
-                            {% if form.project_name.errors %}
-                                <div class="invalid-feedback">{{ form.project_name.errors.0 }}</div>
+                            <label for="id_title" class="form-label">Project Name *</label>
+                            <input type="text" class="form-control {% if form.title.errors %}is-invalid{% endif %}" 
+                                   id="id_title" name="title" 
+                                   value="{{ form.title.value|default:'' }}" required>
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback">{{ form.title.errors.0 }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="id_project_aim" class="form-label">Project Aim *</label>
-                            <textarea class="form-control {% if form.project_aim.errors %}is-invalid{% endif %}" 
-                                      id="id_project_aim" name="project_aim" rows="3" required>{{ form.project_aim.value|default:'' }}</textarea>
+                            <label for="id_aim_statement" class="form-label">Project Aim *</label>
+                            <textarea class="form-control {% if form.aim_statement.errors %}is-invalid{% endif %}" 
+                                      id="id_aim_statement" name="aim_statement" rows="3" required>{{ form.aim_statement.value|default:'' }}</textarea>
                             <div class="form-text">Describe what you want to achieve</div>
-                            {% if form.project_aim.errors %}
-                                <div class="invalid-feedback">{{ form.project_aim.errors.0 }}</div>
+                            {% if form.aim_statement.errors %}
+                                <div class="invalid-feedback">{{ form.aim_statement.errors.0 }}</div>
                             {% endif %}
                             
                             {% if not object %}
@@ -213,7 +226,7 @@
 $(document).ready(function() {
     // AI Aim Generation
     $('#generateAimBtn').click(function() {
-        const aim = $('#id_project_aim').val();
+        const aim = $('#id_aim_statement').val();
         if (!aim.trim()) {
             alert('Please enter a project aim first');
             return;
@@ -223,7 +236,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Generating...');
         
         $.ajax({
-            url: '{% url "quality_audits:generate_smart_aim" %}',
+            url: '{% url \"quality_audits:generate_smart_aim\" %}',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ aim: aim }),
@@ -247,7 +260,7 @@ $(document).ready(function() {
     // Use AI Aim
     $('#useAimBtn').click(function() {
         const aiAim = $('#aiAimText').text();
-        $('#id_project_aim').val(aiAim);
+        $('#id_aim_statement').val(aiAim);
         $('#aiAimResult').addClass('d-none');
     });
 });

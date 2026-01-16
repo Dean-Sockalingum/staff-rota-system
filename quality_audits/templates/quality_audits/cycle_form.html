@@ -8,7 +8,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' project.pk %}">{{ project.project_name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' project.pk %}">{{ project.title }}</a></li>
             <li class="breadcrumb-item active">{% if object %}Edit{% else %}New{% endif %} Cycle</li>
         </ol>
     </nav>
@@ -21,7 +21,7 @@
                         <i class="bi bi-arrow-repeat"></i>
                         {% if object %}Edit Cycle #{{ object.cycle_number }}{% else %}Create New PDSA Cycle{% endif %}
                     </h4>
-                    <p class="mb-0 text-muted">Project: {{ project.project_name }}</p>
+                    <p class="mb-0 text-muted">Project: {{ project.title }}</p>
                 </div>
                 <div class="card-body">
                     <form method="post">
@@ -200,13 +200,13 @@
 <script>
 $(document).ready(function() {
     $('#suggestHypothesisBtn').click(function() {
-        const context = '{{ project.project_name }}: {{ project.project_aim }}'.substring(0, 200);
+        const context = '{{ project.title }}: {{ project.aim_statement }}'.substring(0, 200);
         const btn = $(this);
         
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Generating...');
         
         $.ajax({
-            url: '{% url "quality_audits:suggest_hypotheses" %}',
+            url: '{% url \"quality_audits:ai_suggest_hypotheses\" %}',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ context: context }),

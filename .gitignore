@@ -141,3 +141,4 @@ media/
 # Legacy backup files
 rotasystems/.DS_Store
 scheduling/budget_optimizer_backup.py
+.env

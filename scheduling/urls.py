@@ -569,8 +569,9 @@ urlpatterns = [
     # Task 34: Staff Performance Tracking URLs
     path('performance/', views.performance_dashboard, name='performance_dashboard'),
     path('performance/attendance/<int:shift_id>/', views.record_attendance_view, name='record_attendance'),
-    path('performance/staff/<int:staff_id>/', views.staff_performance_detail, name='staff_performance_detail'),
+    path('performance/staff/<str:staff_id>/', views.staff_performance_detail, name='staff_performance_detail'),
     path('performance/generate-report/', views.generate_performance_report, name='generate_performance_report'),
+    path('performance/api/search-staff/', views.search_staff_for_performance, name='search_staff_for_performance'),
     path('performance/review/create/', views.create_performance_review_view, name='create_performance_review'),
     path('performance/review/<int:review_id>/', views.performance_review_detail, name='performance_review_detail'),
     path('performance/team-comparison/', views.team_performance_comparison, name='team_performance_comparison'),

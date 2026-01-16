@@ -35,7 +35,7 @@
             <h1 class="mb-2">
                 <i class="bi bi-shield-check"></i> Incident & Safety Management
             </h1>
-            <p class="text-muted">Root Cause Analysis, CAPA, Duty of Candour & Trend Analysis</p>
+            <p class="text-muted">Root Cause Analysis, Safety Actions, Duty of Candour & Trend Analysis</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{% url 'incident_safety:analytics' %}" class="btn btn-outline-primary me-2">
@@ -61,7 +61,7 @@
         <div class="col-md-3 mb-3">
             <div class="card stats-card h-100" style="border-left-color: #0dcaf0;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">Open CAPAs</h6>
+                    <h6 class="text-muted mb-2">Open Safety Actions</h6>
                     <div class="stat-value text-info">{{ stats.open_capas }}</div>
                     <small class="text-muted">of {{ stats.total_capas }} total</small>
                 </div>
@@ -79,7 +79,7 @@
         <div class="col-md-3 mb-3">
             <div class="card stats-card h-100" style="border-left-color: #198754;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">Total CAPAs</h6>
+                    <h6 class="text-muted mb-2">Total Safety Actions</h6>
                     <div class="stat-value text-success">{{ stats.total_capas }}</div>
                     <a href="{% url 'incident_safety:capa_list' %}" class="small">View all →</a>
                 </div>
@@ -130,12 +130,12 @@
             </div>
         </div>
 
-        <!-- Overdue CAPAs -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <!-- Overdue Safety Actions -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="bi bi-exclamation-triangle text-danger"></i> Overdue CAPAs
+                        <i class="bi bi-exclamation-triangle text-danger"></i> Overdue Safety Actions
                     </h5>
                     <a href="{% url 'incident_safety:capa_list' %}?overdue=true" 
                        class="btn btn-sm btn-outline-danger">
@@ -282,7 +282,7 @@
                         </div>
                         <div class="col-md-3 mb-2">
                             <a href="{% url 'incident_safety:capa_list' %}" class="btn btn-outline-info w-100">
-                                <i class="bi bi-list-check"></i> View All CAPAs
+                                <i class="bi bi-list-check"></i> View All Safety Actions
                             </a>
                         </div>
                         <div class="col-md-3 mb-2">
@@ -306,7 +306,7 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> CAPA Status Distribution</h5>
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Safety Actions Status Distribution</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="capaStatusChart" height="250"></canvas>
@@ -329,7 +329,7 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> CAPA Priority Breakdown</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Safety Actions Priority Breakdown</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="capaPriorityChart" height="250"></canvas>

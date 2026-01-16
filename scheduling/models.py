@@ -106,6 +106,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
     
     SHIFT_PREFERENCE_CHOICES = [
+        ('DAY', 'Day Shift Preferred'),
+        ('NIGHT', 'Night Shift Preferred'),
+        ('NO_PREFERENCE', 'No Preference'),
+        # Legacy choices for backward compatibility
         ('DAY_SENIOR', 'Day Shift (SSCW/SCW)'),
         ('DAY_ASSISTANT', 'Day Shift (SCA)'),
         ('NIGHT_SENIOR', 'Night Shift (SSCW/SCW)'),

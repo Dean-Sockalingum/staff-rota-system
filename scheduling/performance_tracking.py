@@ -54,7 +54,7 @@ def calculate_performance_metrics(staff_member, start_date=None, end_date=None):
     
     # Get all shifts for this staff member in the period
     shifts = Shift.objects.filter(
-        staff_member=staff_member,
+        user=staff_member,
         date__gte=start_date,
         date__lte=end_date
     )
@@ -70,13 +70,13 @@ def calculate_performance_metrics(staff_member, start_date=None, end_date=None):
             'unauthorized_absences': 0,
             'shifts_completed': 0,
             'total_minutes_late': 0,
-            'attendance_rate': 100,
-            'punctuality_rate': 100,
-            'completion_rate': 100,
-            'attendance_score': 100,
-            'punctuality_score': 100,
-            'completion_score': 100,
-            'overall_score': 100,
+            'attendance_rate': Decimal('100'),
+            'punctuality_rate': Decimal('100'),
+            'completion_rate': Decimal('100'),
+            'attendance_score': Decimal('100'),
+            'punctuality_score': Decimal('100'),
+            'completion_score': Decimal('100'),
+            'overall_score': Decimal('100'),
         }
     
     # Get attendance records
@@ -111,12 +111,12 @@ def calculate_performance_metrics(staff_member, start_date=None, end_date=None):
     )['total'] or 0
     
     # Calculate rates
-    attendance_rate = (shifts_attended / total_shifts * 100) if total_shifts > 0 else 100
+    attendance_rate = Decimal(str((shifts_attended / total_shifts * 100))) if total_shifts > 0 else Decimal('100')
     
     on_time_shifts = shifts_attended - shifts_late
-    punctuality_rate = (on_time_shifts / total_shifts * 100) if total_shifts > 0 else 100
+    punctuality_rate = Decimal(str((on_time_shifts / total_shifts * 100))) if total_shifts > 0 else Decimal('100')
     
-    completion_rate = (shifts_completed / total_shifts * 100) if total_shifts > 0 else 100
+    completion_rate = Decimal(str((shifts_completed / total_shifts * 100))) if total_shifts > 0 else Decimal('100')
     
     # Calculate scores (same as rates for simplicity)
     attendance_score = attendance_rate
@@ -153,6 +153,16 @@ def generate_performance_record(staff_member, start_date, end_date):
     """Generate or update a performance record for a staff member"""
     from .models import StaffPerformance
     
+    # Determine care home from unit or home_unit
+    care_home = None
+    if staff_member.unit and staff_member.unit.care_home:
+        care_home = staff_member.unit.care_home
+    elif staff_member.home_unit and staff_member.home_unit.care_home:
+        care_home = staff_member.home_unit.care_home
+    
+    if not care_home:
+        raise ValueError(f"Cannot generate performance record: Staff member {staff_member.sap} has no associated care home")
+    
     metrics = calculate_performance_metrics(staff_member, start_date, end_date)
     
     # Get or create performance record
@@ -161,9 +171,12 @@ def generate_performance_record(staff_member, start_date, end_date):
         period_start=start_date,
         period_end=end_date,
         defaults={
-            'care_home': staff_member.care_home,
+            'care_home': care_home,
         }
     )
+    
+    # Ensure care_home is set (for existing records or if unit was updated)
+    performance.care_home = care_home
     
     # Update metrics
     performance.total_shifts = metrics['total_shifts']

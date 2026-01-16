@@ -141,7 +141,7 @@ def training_compliance_dashboard(request):
                         expired_staff.append({
                             'staff': staff, 
                             'record': latest_record,
-                            'days_overdue': abs(latest_record.days_until_expiry)
+                            'days_overdue': abs(latest_record.days_until_expiry())
                         })
                 else:
                     missing_count += 1

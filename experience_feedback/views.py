@@ -583,6 +583,4 @@ def blank_survey_pdf(request, survey_type):
     
     response = HttpResponse(html_string, content_type='text/html')
     return response
-    
-    return JsonResponse({'data': data_points})
 

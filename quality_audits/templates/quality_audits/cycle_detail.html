@@ -8,7 +8,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' cycle.project.pk %}">{{ cycle.project.project_name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' cycle.project.pk %}">{{ cycle.project.title }}</a></li>
             <li class="breadcrumb-item active">Cycle #{{ cycle.cycle_number }}</li>
         </ol>
     </nav>
@@ -233,7 +233,7 @@
 $(document).ready(function() {
     // Load chart data
     $.ajax({
-        url: '{% url "quality_audits:cycle_chart_data" cycle.pk %}',
+        url: '{% url "quality_audits:api_cycle_chart_data" cycle.pk %}',
         method: 'GET',
         success: function(response) {
             if (response.success) {
@@ -291,7 +291,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Analyzing...');
         
         $.ajax({
-            url: '{% url "quality_audits:analyze_cycle_data" cycle.pk %}',
+            url: '{% url "quality_audits:analyze_cycle" cycle.pk %}',
             method: 'GET',
             success: function(response) {
                 if (response.success) {

@@ -1,6 +1,6 @@
 {% extends "quality_audits/base.html" %}
 
-{% block title %}{{ project.project_name }} - PDSA Tracker{% endblock %}
+{% block title %}{{ project.title }} - PDSA Tracker{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -9,15 +9,15 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
-            <li class="breadcrumb-item active">{{ project.project_name }}</li>
+            <li class="breadcrumb-item active">{{ project.title }}</li>
         </ol>
     </nav>
     
     <!-- Project Header -->
     <div class="row mb-4">
         <div class="col">
-            <h1 class="display-6 fw-bold">{{ project.project_name }}</h1>
-            <p class="lead">{{ project.project_aim }}</p>
+            <h1 class="display-6 fw-bold">{{ project.title }}</h1>
+            <p class="lead">{{ project.aim_statement }}</p>
         </div>
         <div class="col-auto">
             <div class="btn-group">
@@ -104,7 +104,7 @@
                         <dd class="col-sm-7">{{ project.start_date|date:"M d, Y"|default:"N/A" }}</dd>
                         
                         <dt class="col-sm-5">Created By:</dt>
-                        <dd class="col-sm-7">{{ project.created_by.get_full_name }}</dd>
+                        <dd class="col-sm-7">{{ project.lead_user.get_full_name }}</dd>
                     </dl>
                     
                     {% if project.ai_success_score %}

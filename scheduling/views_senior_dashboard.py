@@ -314,13 +314,13 @@ def senior_management_dashboard(request):
     ).select_related('user', 'user__unit').order_by('created_at')
     
     pending_by_home = {}
-    for request in manual_reviews:
-        if request.user and request.user.unit:
-            home = request.user.unit.care_home
+    for leave_request in manual_reviews:
+        if leave_request.user and leave_request.user.unit:
+            home = leave_request.user.unit.care_home
             home_name = home.get_name_display() if home else 'Unknown'
             if home_name not in pending_by_home:
                 pending_by_home[home_name] = []
-            pending_by_home[home_name].append(request)
+            pending_by_home[home_name].append(leave_request)
     
     # Pending reallocations
     pending_reallocations = StaffReallocation.objects.filter(

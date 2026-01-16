@@ -30,6 +30,10 @@ Author: AI Assistant Enhancement Sprint
 Date: December 2025
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from django.utils import timezone
 from datetime import timedelta, date
 from typing import Dict, List, Optional

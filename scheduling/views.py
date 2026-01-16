@@ -1,4 +1,5 @@
 from collections import defaultdict
+from decimal import Decimal
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
@@ -7,9 +8,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .decorators_api import api_login_required, api_permission_required
 from django.utils import timezone
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Count, Sum, Avg
 from django.db import models
 from django.http import JsonResponse
+from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from datetime import datetime, timedelta, date
 from pathlib import Path
@@ -22,22 +25,34 @@ from django.utils.dateparse import parse_date
 
 # Import export utilities
 from .utils.exports import PDFExporter, ExcelExporter
+from .utils.pdf_export import RotaPDFExporter, LeaveReportPDFExporter, ShiftAllocationPDFExporter
 
 from .models import (
     ActivityLog,
+    AnomalyDetection,
+    AuditTrail,
+    BudgetForecast,
     CarePlanReview,
+    CostAnalysis,
+    AgencyCostComparison,
+    CoverageGap,
     LeaveRequest,
     Notification,
     Resident,
     Role,
+    SeasonalityPattern,
     Shift,
+    ShiftPattern,
     ShiftSwapRequest,
     ShiftType,
     StaffReallocation,
+    TrendAnalysis,
     Unit,
     User,
     IncidentReport,
+    WorkloadDistribution,
 )
+from .models_audit import ComplianceCheck
 from .models_multi_home import CareHome
 from .models_feedback import DemoFeedback, FeatureRequest
 from .forms_feedback import DemoFeedbackForm, FeatureRequestForm
@@ -5924,7 +5939,7 @@ def _process_vacancy_query(query):
                     'home': profile.user.unit.care_home.name if profile.user.unit else 'N/A',
                     'end_date': profile.end_date,
                     'days_vacant': days_vacant,
-                    'hours': getattr(profile.user, 'hours_per_week', 37.5)
+                    'hours': profile.contracted_hours_per_week
                 })
             else:
                 days_until = (profile.end_date - today).days
@@ -5935,7 +5950,7 @@ def _process_vacancy_query(query):
                     'home': profile.user.unit.care_home.name if profile.user.unit else 'N/A',
                     'end_date': profile.end_date,
                     'days_until': days_until,
-                    'hours': getattr(profile.user, 'hours_per_week', 37.5)
+                    'hours': profile.contracted_hours_per_week
                 })
     
     # Build response
@@ -7378,7 +7393,7 @@ def ot_agency_report_csv(request):
             
             for shift in ot_shifts:
                 staff_name = f"{shift.user.first_name} {shift.user.last_name}" if shift.user else 'Unknown'
-                sap_id = shift.user.sap_id if shift.user else 'N/A'
+                sap_id = shift.user.sap if shift.user else 'N/A'
                 role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
                 unit = shift.unit.name if shift.unit else 'N/A'
                 shift_type = shift.shift_type.name if shift.shift_type else 'N/A'
@@ -7448,7 +7463,7 @@ def ot_agency_report_csv(request):
             
             for shift in agency_shifts:
                 staff_name = f"{shift.user.first_name} {shift.user.last_name}" if shift.user else 'Unknown'
-                sap_id = shift.user.sap_id if shift.user else 'N/A'
+                sap_id = shift.user.sap if shift.user else 'N/A'
                 role = shift.user.role.name if shift.user and shift.user.role else 'Unknown'
                 unit = shift.unit.name if shift.unit else 'N/A'
                 shift_type = shift.shift_type.name if shift.shift_type else 'N/A'
@@ -7580,11 +7595,12 @@ def staff_vacancies_report(request):
             
         home_name = profile.user.unit.care_home.name
         days_ago = (today - profile.end_date).days if profile.end_date else 0
-        hours = getattr(profile.user, 'hours_per_week', 37.5)
+        # Use a default of 35 hours if no hours specified
+        hours = 35
         
         vacancy_data = {
             'name': profile.user.full_name if profile.user else 'Unknown',
-            'sap_id': profile.user.sap_id if profile.user else 'N/A',
+            'sap_id': profile.user.sap if profile.user else 'N/A',
             'role': profile.user.role.name if profile.user and profile.user.role else 'Unknown',
             'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
             'end_date': profile.end_date,
@@ -7603,11 +7619,12 @@ def staff_vacancies_report(request):
             
         home_name = profile.user.unit.care_home.name
         days_until = (profile.end_date - today).days if profile.end_date else 0
-        hours = getattr(profile.user, 'hours_per_week', 37.5)
+        # Use a default of 35 hours if no hours specified
+        hours = 35
         
         vacancy_data = {
             'name': profile.user.full_name if profile.user else 'Unknown',
-            'sap_id': profile.user.sap_id if profile.user else 'N/A',
+            'sap_id': profile.user.sap if profile.user else 'N/A',
             'role': profile.user.role.name if profile.user and profile.user.role else 'Unknown',
             'unit': profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
             'end_date': profile.end_date,
@@ -7718,12 +7735,12 @@ def staff_vacancies_report_csv(request):
             
             home_current_hours = 0
             for profile in home_data['current']:
-                hours = getattr(profile.user, 'hours_per_week', 37.5)
+                hours = profile.contracted_hours_per_week
                 days_ago = (today - profile.end_date).days if profile.end_date else 0
                 
                 writer.writerow([
                     profile.user.full_name if profile.user else 'Unknown',
-                    profile.user.sap_id if profile.user else 'N/A',
+                    profile.user.sap if profile.user else 'N/A',
                     profile.user.role.name if profile.user and profile.user.role else 'Unknown',
                     profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
                     profile.end_date.strftime('%d/%m/%Y') if profile.end_date else 'N/A',
@@ -7748,12 +7765,12 @@ def staff_vacancies_report_csv(request):
             
             home_upcoming_hours = 0
             for profile in home_data['upcoming']:
-                hours = getattr(profile.user, 'hours_per_week', 37.5)
+                hours = profile.contracted_hours_per_week
                 days_until = (profile.end_date - today).days if profile.end_date else 0
                 
                 writer.writerow([
                     profile.user.full_name if profile.user else 'Unknown',
-                    profile.user.sap_id if profile.user else 'N/A',
+                    profile.user.sap if profile.user else 'N/A',
                     profile.user.role.name if profile.user and profile.user.role else 'Unknown',
                     profile.user.unit.name if profile.user and profile.user.unit else 'N/A',
                     profile.end_date.strftime('%d/%m/%Y') if profile.end_date else 'N/A',
@@ -7778,8 +7795,8 @@ def staff_vacancies_report_csv(request):
     writer.writerow(['=' * 100])
     writer.writerow([])
     writer.writerow(['Category', 'Number of Positions', 'Total Hours/Week'])
-    writer.writerow(['Current Vacancies', grand_current, f'{sum(getattr(p.user, "hours_per_week", 37.5) for p in current_vacancies):.1f}'])
-    writer.writerow(['Upcoming Leavers', grand_upcoming, f'{sum(getattr(p.user, "hours_per_week", 37.5) for p in upcoming_vacancies):.1f}'])
+    writer.writerow(['Current Vacancies', grand_current, f'{sum(p.contracted_hours_per_week for p in current_vacancies):.1f}'])
+    writer.writerow(['Upcoming Leavers', grand_upcoming, f'{sum(p.contracted_hours_per_week for p in upcoming_vacancies):.1f}'])
     writer.writerow(['TOTAL', grand_current + grand_upcoming, f'{grand_hours:.1f}'])
     
     return response
@@ -14746,10 +14763,11 @@ def performance_dashboard(request):
         review_date__gte=start_date
     ).select_related('staff_member', 'reviewer').order_by('-review_date')[:5]
     
-    # Performance alerts
+    # Performance alerts - only for staff with actual shift data
     alerts = []
     for performer in team_data['bottom_performers']:
-        if performer['overall_score'] < 60:
+        # Only show alerts for staff who have worked shifts
+        if performer.get('total_shifts', 0) > 0 and performer['overall_score'] < 60:
             alerts.append({
                 'type': 'danger',
                 'staff': performer['staff_member'],
@@ -14829,7 +14847,7 @@ def staff_performance_detail(request, staff_id):
     from . import performance_tracking
     from .models import StaffPerformance, PerformanceReview
     
-    staff = get_object_or_404(User, id=staff_id)
+    staff = get_object_or_404(User, sap=staff_id)
     
     # Date range from request or default
     days_back = int(request.GET.get('days', 30))
@@ -14881,27 +14899,90 @@ def generate_performance_report(request):
     
     if request.method == 'POST':
         staff_id = request.POST.get('staff_id')
-        start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-%d').date()
+        start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-d').date()
         end_date = datetime.strptime(request.POST.get('end_date'), '%Y-%m-%d').date()
         
-        staff = get_object_or_404(User, id=staff_id)
+        staff = get_object_or_404(User, sap=staff_id)
         
         # Generate performance record
-        performance = performance_tracking.generate_performance_record(
-            staff, start_date, end_date
-        )
-        
-        messages.success(request, f'Performance report generated for {staff.get_full_name()}')
-        return redirect('staff_performance_detail', staff_id=staff.id)
+        try:
+            performance = performance_tracking.generate_performance_record(
+                staff, start_date, end_date
+            )
+            messages.success(request, f'Performance report generated for {staff.get_full_name()}')
+            return redirect('staff_performance_detail', staff_id=staff.sap)
+        except ValueError as e:
+            # Staff member has no associated care home
+            messages.error(
+                request, 
+                f'Cannot generate performance report: {staff.get_full_name()} (SAP: {staff.sap}) is not assigned to a care home. '
+                f'Please ensure this staff member has a Unit or Home Unit with an associated care home in their profile.'
+            )
+            # Re-display form with error message
+            from .models import CareHome
+            care_homes = CareHome.objects.all().order_by('name')
+            context = {
+                'care_homes': care_homes,
+                'selected_staff_id': staff_id,
+                'start_date': request.POST.get('start_date'),
+                'end_date': request.POST.get('end_date'),
+            }
+            return render(request, 'scheduling/generate_performance_report.html', context)
     
     # GET request - show form
-    care_home = request.user.care_home
-    staff_list = User.objects.filter(care_home=care_home, is_active=True)
+    from .models import CareHome
+    
+    # Get care homes for filtering
+    care_homes = CareHome.objects.all().order_by('name')
     
     context = {
-        'staff_list': staff_list,
+        'care_homes': care_homes,
     }
     return render(request, 'scheduling/generate_performance_report.html', context)
+
+
+@login_required
+def search_staff_for_performance(request):
+    """API endpoint to search staff for performance reports"""
+    from django.http import JsonResponse
+    from django.db.models import Q
+    
+    query = request.GET.get('q', '').strip()
+    care_home_id = request.GET.get('care_home_id', '').strip()
+    
+    if not query or len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    # Build filter
+    filters = Q(is_active=True) & Q(unit__isnull=False) & Q(home_unit__isnull=False)
+    
+    # Filter by care home if specified
+    if care_home_id:
+        filters &= Q(unit__care_home_id=care_home_id)
+    
+    # Search by name or SAP
+    search_filter = (
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(sap__icontains=query)
+    )
+    
+    # Get staff
+    staff = User.objects.filter(filters & search_filter).select_related(
+        'role', 'unit', 'unit__care_home'
+    )[:20]  # Limit to 20 results
+    
+    results = [{
+        'id': s.sap,
+        'text': f'{s.first_name} {s.last_name} ({s.sap}) - {s.role.name if s.role else "No Role"} - {s.unit.care_home.name if s.unit and s.unit.care_home else "No Home"}',
+        'sap': s.sap,
+        'name': f'{s.first_name} {s.last_name}',
+        'role': s.role.name if s.role else 'No Role',
+        'unit': str(s.unit) if s.unit else 'No Unit',
+        'care_home': s.unit.care_home.name if s.unit and s.unit.care_home else 'No Home'
+    } for s in staff]
+    
+    return JsonResponse({'results': results})
 
 
 @login_required
