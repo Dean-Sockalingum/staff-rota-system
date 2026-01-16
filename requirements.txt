@@ -53,6 +53,7 @@ seaborn>=0.12.0  # Statistical visualization
 PuLP>=2.7.0  # Linear programming for optimization
 transformers>=4.35.0  # Hugging Face transformers for NLP/ML models
 torch>=2.0.0  # PyTorch deep learning framework (required by transformers)
+sentence-transformers>=2.2.0  # Sentence embeddings for semantic similarity (quality_audits ML)
 
 # Performance Monitoring
 psutil>=5.9.0  # System and process utilities for performance benchmarks
