@@ -39,6 +39,19 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      
+      elasticsearch:
+        image: elasticsearch:7.17.0
+        ports:
+          - 9200:9200
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+        options: >-
+          --health-cmd="curl -f http://localhost:9200/_cat/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     
     steps:
     - name: Checkout code
@@ -84,6 +97,9 @@ jobs:
         DB_HOST: localhost
         DB_PORT: 5432
         REDIS_URL: redis://localhost:6379/0
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
         python manage.py migrate --noinput
@@ -98,6 +114,9 @@ jobs:
         DB_HOST: localhost
         DB_PORT: 5432
         REDIS_URL: redis://localhost:6379/0
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
         coverage run --source='scheduling' manage.py test scheduling --noinput --verbosity=2
@@ -121,6 +140,9 @@ jobs:
         DB_PASSWORD: postgres
         DB_HOST: localhost
         DB_PORT: 5432
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
         python manage.py makemigrations --check --dry-run --noinput

@@ -212,7 +212,7 @@ AXES_VERBOSE = True  # Log lockout attempts for monitoring
 SESSION_COOKIE_AGE = 3600  # 1 hour (3600 seconds)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
-SESSION_COOKIE_SAMESITE = 'Lax'  # Changed from Strict to prevent logout CSRF issues
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')  # Changed from Strict to prevent logout CSRF issues, but allow override for tests
 SESSION_SAVE_EVERY_REQUEST = True  # Update expiry on every request
 
 # Phase 6: CSRF Protection
