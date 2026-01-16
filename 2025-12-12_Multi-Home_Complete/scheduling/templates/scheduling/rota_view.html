@@ -1,0 +1,2618 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Rota View - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Role color coding - specific classes with high specificity */
+/* Management roles - Pink */
+.shift-card.role-sm, .card.role-sm,
+.shift-card.role-om, .card.role-om {
+    background-color: #FFB6C1 !important;
+    color: #333 !important;
+    border-left: 4px solid #FF69B4 !important;
+    border: 1px solid #FF69B4 !important;
+}
+
+/* SSCW (Day Supernumerary) - Light Yellow */
+.shift-card.role-sscw, .card.role-sscw {
+    background-color: #FFFF99 !important;
+    color: #333 !important;
+    border-left: 4px solid #FFD700 !important;
+    border: 1px solid #FFD700 !important;
+}
+
+/* SSCWN (Night Supernumerary) - Gold */
+.shift-card.role-sscwn, .card.role-sscwn {
+    background-color: #FFD700 !important;
+    color: #333 !important;
+    border-left: 4px solid #FFA500 !important;
+    border: 1px solid #FFA500 !important;
+}
+
+/* SCW (Day Care Worker) - Light Green */
+.shift-card.role-scw, .card.role-scw {
+    background-color: #90EE90 !important;
+    color: #333 !important;
+    border-left: 4px solid #32CD32 !important;
+    border: 1px solid #32CD32 !important;
+}
+
+/* SCWN (Night Care Worker) - Steel Blue */
+.shift-card.role-scwn, .card.role-scwn {
+    background-color: #4682B4 !important;
+    color: #fff !important;
+    border-left: 4px solid #1E3A5F !important;
+    border: 1px solid #1E3A5F !important;
+}
+
+/* SCA (Day Care Assistant) - Light Purple */
+.shift-card.role-sca, .card.role-sca {
+    background-color: #DDA0DD !important;
+    color: #333 !important;
+    border-left: 4px solid #BA55D3 !important;
+    border: 1px solid #BA55D3 !important;
+}
+
+/* SCAN (Night Care Assistant) - Medium Purple */
+.shift-card.role-scan, .card.role-scan {
+    background-color: #9370DB !important;
+    color: #fff !important;
+    border-left: 4px solid #663399 !important;
+    border: 1px solid #663399 !important;
+}
+
+/* Additional specificity for table cells */
+.table tbody td .shift-card.role-sm,
+.table tbody td .shift-card.role-om,
+.calendar-day .shift-card.role-sm,
+.calendar-day .shift-card.role-om,
+td.calendar-day .shift-card.role-sm,
+td.calendar-day .shift-card.role-om {
+    background-color: #FFB6C1 !important;
+    color: #333 !important;
+    border-left: 4px solid #FF69B4 !important;
+}
+
+.table tbody td .shift-card.role-sscw,
+.calendar-day .shift-card.role-sscw,
+td.calendar-day .shift-card.role-sscw {
+    background-color: #FFFF99 !important;
+    color: #333 !important;
+    border-left: 4px solid #FFD700 !important;
+}
+
+.table tbody td .shift-card.role-sscwn,
+.calendar-day .shift-card.role-sscwn,
+td.calendar-day .shift-card.role-sscwn {
+    background-color: #FFD700 !important;
+    color: #333 !important;
+    border-left: 4px solid #FFA500 !important;
+}
+
+.table tbody td .shift-card.role-scw,
+.calendar-day .shift-card.role-scw,
+td.calendar-day .shift-card.role-scw {
+    background-color: #90EE90 !important;
+    color: #333 !important;
+    border-left: 4px solid #32CD32 !important;
+}
+
+.table tbody td .shift-card.role-scwn,
+.calendar-day .shift-card.role-scwn,
+td.calendar-day .shift-card.role-scwn {
+    background-color: #4682B4 !important;
+    color: #fff !important;
+    border-left: 4px solid #1E3A5F !important;
+}
+
+.table tbody td .shift-card.role-sca,
+.calendar-day .shift-card.role-sca,
+td.calendar-day .shift-card.role-sca {
+    background-color: #DDA0DD !important;
+    color: #333 !important;
+    border-left: 4px solid #BA55D3 !important;
+}
+
+.table tbody td .shift-card.role-scan,
+.calendar-day .shift-card.role-scan,
+td.calendar-day .shift-card.role-scan {
+    background-color: #9370DB !important;
+    color: #fff !important;
+    border-left: 4px solid #663399 !important;
+}
+
+.shift-card {
+    margin-bottom: 1px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+/* Ensure shift-day and shift-night don't have default backgrounds */
+.shift-day, .shift-night {
+    background-color: transparent;
+}
+
+.role-badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: bold;
+    margin-left: 3px;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.team-badge {
+    display: inline-block;
+    margin-left: 3px;
+    font-size: 0.6rem;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 600;
+    background-color: #f8f9fa;
+    color: #343a40;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.hidden {
+    display: none;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-only {
+        display: block !important;
+    }
+    
+    body {
+        font-size: 12px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .shift-card {
+        break-inside: avoid;
+        border: 1px solid #333;
+        margin-bottom: 3px;
+        padding: 5px;
+        background-color: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Keep role highlighting simple for print-friendly output */
+    .shift-card.role-sm, .card.role-sm,
+    .shift-card.role-om, .card.role-om {
+        border-left: 4px solid #FF69B4 !important;
+    }
+
+    .shift-card.role-sscw, .card.role-sscw,
+    .shift-card.role-sscwn, .card.role-sscwn {
+        border-left: 4px solid #FFD700 !important;
+    }
+
+    .shift-card.role-scw, .card.role-scw,
+    .shift-card.role-scwn, .card.role-scwn {
+        border-left: 4px solid #32CD32 !important;
+    }
+
+    .shift-card.role-sca, .card.role-sca,
+    .shift-card.role-scan, .card.role-scan {
+        border-left: 4px solid #BA55D3 !important;
+    }
+
+    .shift-card .role-badge {
+        background-color: transparent !important;
+        color: #000 !important;
+        border: 1px solid currentColor;
+    }
+
+    .shift-card .team-badge {
+        background-color: transparent !important;
+        color: #000 !important;
+        border: 1px solid #333 !important;
+    }
+
+    .sscw-admin-item {
+        background-color: #ffffff !important;
+        border: 1px dashed #333 !important;
+    }
+
+    .sscw-admin-item .badge-admin {
+        background-color: transparent !important;
+        color: #000 !important;
+        border: 1px solid currentColor;
+    }
+
+    .leave-banner {
+        background-color: #ffffff !important;
+        border-color: #333 !important;
+    }
+
+    .leave-chip {
+        background-color: #ffffff !important;
+        border-color: #333 !important;
+        color: #000 !important;
+    }
+    
+    .modal-content, .modal-dialog, .modal-body {
+        margin: 0;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        max-width: 100%;
+    }
+}
+
+.print-only {
+    display: none;
+}
+
+/* Table and column width fixes */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table.table-bordered {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 1600px; /* Increased from 1200px for better spacing */
+}
+
+.table.table-bordered thead th {
+    width: 14.2%; /* Adjusted for 7 equal day columns */
+    min-width: 180px; /* Increased from 120px */
+    text-align: center;
+    vertical-align: middle;
+    padding: 10px 5px;
+}
+
+.table.table-bordered thead th:first-child {
+    width: 120px;
+    min-width: 120px;
+}
+
+.table.table-bordered tbody td {
+    width: 14.2%; /* Adjusted for 7 equal day columns */
+    min-width: 180px; /* Increased from 120px */
+    vertical-align: top;
+    padding: 0; /* Remove default padding for consistent alignment */
+}
+
+.table.table-bordered tbody td:first-child {
+    width: 120px;
+    min-width: 120px;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+/* Legend styles */
+.role-legend {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+/* Unit group alignment - CSS Grid for perfect vertical alignment */
+.calendar-day {
+    display: grid;
+    grid-template-rows: 2rem 2rem auto 1fr; /* FIXED heights for first 2 rows */
+    gap: 0;
+    padding: 0.5rem;
+    min-height: 100px;
+    align-items: start;
+}
+
+/* Ensure sections always take up exact space */
+.management-section {
+    grid-row: 1; /* Always in row 1 */
+    height: 2rem; /* FIXED height */
+    overflow: hidden;
+}
+
+.duty-sscw-section {
+    grid-row: 2; /* Always in row 2 */
+    height: 2rem; /* FIXED height */
+    overflow: hidden;
+}
+
+.units-container {
+    grid-row: 3; /* Always in row 3 */
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+/* Section headers - compact height */
+.section-header {
+    margin-bottom: 0.15rem;
+    line-height: 1.1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-height: 1.2rem; /* Fixed minimum height for alignment */
+}
+
+.unit-group {
+    position: relative;
+    margin-bottom: 0 !important;
+    padding: 0.1rem 0;
+}
+
+.unit-header {
+    position: relative;
+    padding: 2px 6px;
+    margin-bottom: 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+/* Day shift unit headers */
+.unit-header-day {
+    background-color: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+}
+
+/* Night shift unit headers */
+.unit-header-night {
+    background-color: #2c3e50;
+    border-left: 3px solid #f39c12;
+}
+
+/* Empty unit placeholder */
+.unit-empty {
+    min-height: 20px;
+    padding: 2px 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+}
+
+.legend-scw {
+    background-color: #90EE90 !important;
+    border: 1px solid #32CD32 !important;
+}
+
+.legend-scwn {
+    background-color: #4682B4 !important;
+    border: 1px solid #1E3A5F !important;
+}
+
+.legend-sca {
+    background-color: #DDA0DD !important;
+    border: 1px solid #BA55D3 !important;
+}
+
+.legend-scan {
+    background-color: #9370DB !important;
+    border: 1px solid #663399 !important;
+}
+
+.legend-sscw {
+    background-color: #FFFF99 !important;
+    border: 1px solid #FFD700 !important;
+}
+
+.legend-sscwn {
+    background-color: #FFD700 !important;
+    border: 1px solid #FFA500 !important;
+}
+
+.legend-sm, .legend-om {
+    background-color: #FFB6C1 !important;
+    border: 1px solid #FF69B4 !important;
+}
+
+/* Ensure print preview cards stay readable on screen */
+#printPreviewModal .print-preview-container {
+    min-height: 400px;
+    background-color: #ffffff;
+}
+
+#printPreviewModal .preview-card {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 6px;
+}
+
+#printPreviewModal .preview-card * {
+    color: #000000 !important;
+}
+
+#printPreviewContent .preview-card .card-title,
+#printPreviewContent .preview-card .card-text,
+#printPreviewContent .preview-card .card-text small,
+#printPreviewContent .preview-card .role-badge {
+    color: #000000 !important;
+}
+
+#printPreviewContent .preview-card .role-badge {
+    background-color: transparent !important;
+    border: 1px solid currentColor;
+}
+
+#printPreviewModal .preview-card[data-role="scw"] { border-left: 4px solid #3498db !important; }
+#printPreviewModal .preview-card[data-role="sca"] { border-left: 4px solid #2ecc71 !important; }
+#printPreviewModal .preview-card[data-role="sscw"] { border-left: 4px solid #e74c3c !important; }
+#printPreviewModal .preview-card[data-role="operations_manager"] { border-left: 4px solid #9b59b6 !important; }
+
+.shift-groups-container .unit-section + .unit-section {
+    margin-top: 1.5rem;
+}
+
+.shift-groups-container .unit-section h5 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+
+.shift-groups-container .list-group-item {
+    font-size: 0.9rem;
+    position: relative;
+    padding-left: 1.75rem;
+}
+
+.shift-groups-container .list-group-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    border-radius: 4px 0 0 4px;
+    background: transparent;
+}
+
+.shift-groups-container .list-group-item.role-sscw::before {
+    background: #e74c3c;
+}
+
+.shift-groups-container .list-group-item.role-sscw {
+    background-color: #fdecea;
+    border-color: #f5c2c2;
+}
+
+.shift-groups-container .list-group-item.role-scw::before {
+    background: #3498db;
+}
+
+.shift-groups-container .list-group-item.role-scw {
+    background-color: #e8f2fc;
+    border-color: #b6d4fe;
+}
+
+.shift-groups-container .list-group-item.role-sca::before {
+    background: #2ecc71;
+}
+
+.shift-groups-container .list-group-item.role-sca {
+    background-color: #e9f9f0;
+    border-color: #a8e4c5;
+}
+
+.shift-groups-container .list-group-item .badge {
+    font-weight: 500;
+}
+
+.sscw-admin-list {
+    margin-bottom: 0.5rem;
+}
+
+.sscw-admin-item {
+    background-color: #fdecea;
+    border: 1px dashed #f5c2c2;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+.sscw-admin-item:last-child {
+    margin-bottom: 0;
+}
+
+.sscw-admin-item .badge-admin {
+    background-color: #ffffff;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+    margin-left: 6px;
+}
+
+.leave-banner {
+    background-color: #fff4e5;
+    border: 1px dashed #f0ad4e;
+    border-radius: 4px;
+    padding: 6px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+}
+
+.leave-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: #ffe8cc;
+    border: 1px solid #f0ad4e;
+    margin-bottom: 4px;
+}
+
+.leave-chip:last-child {
+    margin-bottom: 0;
+}
+
+.leave-chip .leave-meta {
+    font-size: 0.7rem;
+    color: #a5670f;
+}
+
+/* Shift edit button styling */
+.shift-edit-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.shift-card:hover .shift-edit-btn {
+    opacity: 1;
+}
+
+.shift-edit-btn .btn {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border-color: rgba(255,255,255,0.3) !important;
+}
+
+.shift-edit-btn .btn:hover {
+    background-color: rgba(255,255,255,0.2) !important;
+    border-color: rgba(255,255,255,0.5) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-calendar-week"></i> Rota Management</h2>
+        <p class="text-muted mb-1">Week of {{ view_start_date|date:"F j" }} - {{ view_end_date|date:"F j, Y" }}</p>
+        <p class="text-muted">Home: {{ selected_home_label }} · Unit: {{ selected_unit_label }} · Team: {{ selected_team_label }}</p>
+    </div>
+</div>
+
+<!-- Controls & Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'-1' }}&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-chevron-left"></i> Previous Week
+                            </a>
+                            <a href="{% url 'rota_view' %}?week_offset=0&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
+                               class="btn btn-primary">
+                                This Week
+                            </a>
+                            <a href="{% url 'rota_view' %}?week_offset={{ week_offset|add:'1' }}&care_home={{ selected_home }}&unit={{ selected_unit }}&team={{ selected_team }}" 
+                               class="btn btn-outline-primary">
+                                Next Week <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                        <form id="rotaFilterForm" method="get" class="form-row align-items-center">
+                            <input type="hidden" name="week_offset" value="{{ week_offset }}">
+                            <div class="form-group col-sm-4 mb-2 mb-sm-0">
+                                <label for="rotaCareHomeFilter" class="sr-only visually-hidden">Care Home</label>
+                                <select class="form-select" id="rotaCareHomeFilter" name="care_home" aria-label="Filter rota by care home" onchange="document.getElementById('rotaFilterForm').submit();">
+                                    <option value="all" {% if selected_home == 'all' %}selected{% endif %}>All Homes</option>
+                                    {% for home in care_homes %}
+                                        <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                            {{ home.get_name_display }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-4 mb-2 mb-sm-0">
+                                <label for="rotaUnitFilter" class="sr-only visually-hidden">Unit</label>
+                                <select class="form-select" id="rotaUnitFilter" name="unit" aria-label="Filter rota by unit" onchange="document.getElementById('rotaFilterForm').submit();">
+                                    <option value="all" {% if selected_unit == 'all' %}selected{% endif %}>All Units</option>
+                                    {% for unit in units %}
+                                        <option value="{{ unit.name }}" {% if selected_unit == unit.name %}selected{% endif %}>
+                                            {{ unit.get_name_display }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-4">
+                                <label for="rotaTeamFilter" class="sr-only visually-hidden">Team</label>
+                                <select class="form-select" id="rotaTeamFilter" name="team" aria-label="Filter rota by team" onchange="document.getElementById('rotaFilterForm').submit();">
+                                    <option value="all" {% if selected_team == 'all' %}selected{% endif %}>All Teams</option>
+                                    {% for team in team_choices %}
+                                        <option value="{{ team.code }}" {% if selected_team == team.code %}selected{% endif %}>{{ team.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-12 text-lg-end mb-3 mb-lg-0">
+                        {% if request.user.role and request.user.role.can_manage_rota %}
+                            <button class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#staffSearchModal">
+                                <i class="fas fa-search"></i> Search Staff
+                            </button>
+                            <button class="btn btn-warning me-2" onclick="window.location.href='{% url 'overtime_preferences_list' %}'">
+                                <i class="fas fa-robot"></i> Intelligent OT
+                            </button>
+                        {% endif %}
+                        <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addShiftModal">
+                            <i class="fas fa-plus"></i> Add Shift
+                        </button>
+                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#printPreviewModal">
+                            <i class="fas fa-print"></i> Print Daily Sheet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Role Legend -->
+<div class="row mb-3 no-print">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="role-legend">
+                    <strong>Role Legend:</strong>
+                    {% for role in roles %}
+                        <div class="legend-item">
+                            <div class="legend-color legend-{{ role.name|lower }}"></div>
+                            <span>{{ role.name }} - {{ role.get_name_display }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Intelligent Staff Reallocation Suggestions -->
+{% if reallocation_data %}
+<div class="row mb-3 no-print">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-sync-alt"></i> Intelligent Staff Reallocation Suggestions
+                    <small class="float-end">Auto-balancing within homes, then cross-home before overtime/agency</small>
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for date, realloc in reallocation_data.items %}
+                    {% if realloc.day.within_home or realloc.night.within_home or realloc.day.cross_home_matches or realloc.night.cross_home_matches %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <strong class="text-primary">{{ date|date:"l, j F Y" }}</strong>
+                        
+                        <!-- Within-Home Reallocations (Day) -->
+                        {% if realloc.day.within_home %}
+                        <div class="mt-2">
+                            <span class="badge bg-info">Day Shift - Within {{ selected_home_label }}</span>
+                            <ul class="list-unstyled ms-3 mt-1">
+                                {% for suggestion in realloc.day.within_home %}
+                                <li class="small">
+                                    <i class="fas fa-arrow-right text-success"></i>
+                                    Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                    from <span class="text-danger">{{ suggestion.from_unit }}</span>
+                                    to <span class="text-success">{{ suggestion.to_unit }}</span>
+                                    <span class="text-muted">({{ suggestion.shift_time }})</span>
+                                    <button class="btn btn-xs btn-success ms-2" onclick="applyReallocation({{ suggestion.shift_id }}, '{{ suggestion.to_unit }}')" title="Apply this reallocation">
+                                        <i class="fas fa-check"></i> Apply
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% if realloc.day.excess_available > 0 %}
+                            <div class="alert alert-warning alert-sm ms-3 mb-0">
+                                <i class="fas fa-exclamation-circle"></i> After balancing, <strong>{{ realloc.day.excess_available }} staff</strong> available for cross-home deployment
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Within-Home Reallocations (Night) -->
+                        {% if realloc.night.within_home %}
+                        <div class="mt-2">
+                            <span class="badge bg-warning text-dark">Night Shift - Within {{ selected_home_label }}</span>
+                            <ul class="list-unstyled ms-3 mt-1">
+                                {% for suggestion in realloc.night.within_home %}
+                                <li class="small">
+                                    <i class="fas fa-arrow-right text-success"></i>
+                                    Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                    from <span class="text-danger">{{ suggestion.from_unit }}</span>
+                                    to <span class="text-success">{{ suggestion.to_unit }}</span>
+                                    <span class="text-muted">({{ suggestion.shift_time }})</span>
+                                    <button class="btn btn-xs btn-success ms-2" onclick="applyReallocation({{ suggestion.shift_id }}, '{{ suggestion.to_unit }}')" title="Apply this reallocation">
+                                        <i class="fas fa-check"></i> Apply
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% if realloc.night.excess_available > 0 %}
+                            <div class="alert alert-warning alert-sm ms-3 mb-0">
+                                <i class="fas fa-exclamation-circle"></i> After balancing, <strong>{{ realloc.night.excess_available }} staff</strong> available for cross-home deployment
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Cross-Home Matches (All Homes View) -->
+                        {% if realloc.day.cross_home_matches %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">Day Shift - Cross-Home Opportunities</span>
+                            {% for shortage_home, available_staff in realloc.day.cross_home_matches.items %}
+                            <div class="ms-3 mt-1">
+                                <strong>{{ shortage_home }}</strong> needs staff:
+                                <ul class="list-unstyled ms-3">
+                                    {% for staff in available_staff %}
+                                    <li class="small">
+                                        <i class="fas fa-building text-primary"></i>
+                                        <strong>{{ staff.staff_name }}</strong> ({{ staff.role }}) from {{ staff.from_home }}
+                                        currently at {{ staff.current_unit }}
+                                        <button class="btn btn-xs btn-primary ms-2" onclick="offerCrossHome({{ staff.shift_id }}, '{{ shortage_home }}')" title="Offer to this home">
+                                            <i class="fas fa-share"></i> Offer
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if realloc.night.cross_home_matches %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">Night Shift - Cross-Home Opportunities</span>
+                            {% for shortage_home, available_staff in realloc.night.cross_home_matches.items %}
+                            <div class="ms-3 mt-1">
+                                <strong>{{ shortage_home }}</strong> needs staff:
+                                <ul class="list-unstyled ms-3">
+                                    {% for staff in available_staff %}
+                                    <li class="small">
+                                        <i class="fas fa-building text-primary"></i>
+                                        <strong>{{ staff.staff_name }}</strong> ({{ staff.role }}) from {{ staff.from_home }}
+                                        currently at {{ staff.current_unit }}
+                                        <button class="btn btn-xs btn-primary ms-2" onclick="offerCrossHome({{ staff.shift_id }}, '{{ shortage_home }}')" title="Offer to this home">
+                                            <i class="fas fa-share"></i> Offer
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if not reallocation_data %}
+                <div class="text-muted text-center py-2">
+                    <i class="fas fa-check-circle text-success"></i> All homes are optimally staffed - no reallocations needed
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Rota Grid -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt"></i> 
+                    {% if selected_unit != 'all' %}
+                        {% for unit in units %}
+                            {% if unit.name == selected_unit %}
+                                {{ unit.get_name_display }} - 
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    Weekly Schedule
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Shift Type</th>
+                                {% for date in date_range %}
+                                    <th class="text-center">
+                                        {{ date|date:"D" }}<br>
+                                        <small>{{ date|date:"M j" }}</small>
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Day Shifts</strong></td>
+                                {% for date in date_range %}
+                                    <td class="calendar-day">
+                                        {% for shift_date, shift_data in shifts_by_date.items %}
+                                            {% if shift_date == date %}
+                                                {% if shift_data.leave %}
+                                                    <div class="leave-banner">
+                                                        {% for leave in shift_data.leave %}
+                                                            <div class="leave-chip">
+                                                                <span><i class="fas fa-plane-departure me-1"></i>{{ leave.user.full_name }} · {{ leave.get_leave_type_display }}</span>
+                                                                <span class="leave-meta">{{ leave.get_status_display }}</span>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+
+                                                <!-- Management Section - Always show for alignment -->
+                                                <div class="management-section">
+                                                    <div class="section-header text-danger fw-semibold small">
+                                                        {% if shift_data.day_management %}Management{% else %}&nbsp;{% endif %}
+                                                    </div>
+                                                    {% if shift_data.day_management %}
+                                                        {% for shift in shift_data.day_management %}
+                                                            <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div style="flex: 1; min-width: 0;">
+                                                                        <strong>{{ shift.user.full_name }}</strong>
+                                                                        <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                        {% if shift.user.team %}
+                                                                            <span class="team-badge">T{{ shift.user.team }}</span>
+                                                                        {% endif %}
+                                                                        <span style="font-size: 0.7rem; margin-left: 4px;">{{ shift.unit.name }}</span>
+                                                                    </div>
+                                                                    <div class="shift-edit-btn">
+                                                                        <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Duty SSCW Section - Always show for alignment -->
+                                                <div class="duty-sscw-section">
+                                                    <div class="section-header text-primary fw-semibold small">
+                                                        {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}Duty SSCW (Supernumerary){% else %}&nbsp;{% endif %}
+                                                    </div>
+                                                    {% if shift_data.day_supernumerary_duty or shift_data.day_supernumerary_admin %}
+                                                    {% for shift in shift_data.day_supernumerary_duty %}
+                                                        <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div style="flex: 1; min-width: 0;">
+                                                                    <strong>{{ shift.user.full_name }}</strong>
+                                                                    <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                    {% if shift.user.team %}
+                                                                        <span class="team-badge">T{{ shift.user.team }}</span>
+                                                                    {% endif %}
+                                                                    <span style="font-size: 0.7rem; margin-left: 4px;">{{ shift.unit.name }}</span>
+                                                                </div>
+                                                                <div class="shift-edit-btn">
+                                                                    <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                    {% if shift_data.day_supernumerary_admin %}
+                                                        <div class="text-primary fw-semibold small mt-2 mb-1">SSCW Admin (Supernumerary)</div>
+                                                        <div class="sscw-admin-list">
+                                                            {% for shift in shift_data.day_supernumerary_admin %}
+                                                                <div class="sscw-admin-item">
+                                                                    <span>
+                                                                        <strong>{{ shift.user.full_name }}</strong>
+                                                                        <span class="badge badge-admin">Admin Day</span>
+                                                                        {% if shift.user.team %}
+                                                                            <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                        {% endif %}
+                                                                    </span>
+                                                                    <div class="text-muted small">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Units Container - Grid Row 3 -->
+                                                <div class="units-container">
+                                                {% for unit_name, unit_shifts in shift_data.day_care_by_unit.items %}
+                                                    {% if unit_shifts %}
+                                                        <div class="unit-group mb-2" data-unit="{{ unit_name }}">
+                                                            <div class="unit-header unit-header-day">
+                                                                <small class="fw-bold text-primary">{{ unit_name }}</small>
+                                                            </div>
+                                                            {% for shift in unit_shifts %}
+                                                                <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <div style="flex: 1; min-width: 0;">
+                                                                            <strong>{{ shift.user.full_name }}</strong>
+                                                                            <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                            {% if shift.user.team %}
+                                                                                <span class="team-badge">T{{ shift.user.team }}</span>
+                                                                            {% endif %}
+                                                                            <span class="text-muted" style="font-size: 0.7rem; margin-left: 4px;">{{ shift.shift_type.start_time|date:"H:i" }}-{{ shift.shift_type.end_time|date:"H:i" }}</span>
+                                                                        </div>
+                                                                        <div class="shift-edit-btn">
+                                                                            <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                                <i class="fas fa-edit"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% for shift in shift_data.day_other %}
+                                                    <div class="shift-card shift-day role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div>
+                                                                <strong>{{ shift.user.full_name }}</strong>
+                                                                <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                {% if shift.user.team %}
+                                                                    <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                {% endif %}
+                                                                <br>
+                                                                <small>{{ shift.unit.get_name_display }}</small>
+                                                                <br>
+                                                                <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                            </div>
+                                                            <div class="shift-edit-btn">
+                                                                <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                                </div><!-- Close units-container -->
+                                    </td>
+                                {% endfor %}
+                            </tr>
+            <tr>
+                                <td><strong>Night Shifts</strong></td>
+                                {% for date in date_range %}
+                                    <td class="calendar-day">
+                                        {% for shift_date, shift_data in shifts_by_date.items %}
+                                            {% if shift_date == date %}
+                                                <!-- Management Section - Always show for alignment -->
+                                                <div class="management-section">
+                                                    <div class="section-header text-danger fw-semibold small">
+                                                        {% if shift_data.night_management %}Management{% else %}&nbsp;{% endif %}
+                                                    </div>
+                                                    {% if shift_data.night_management %}
+                                                        {% for shift in shift_data.night_management %}
+                                                            <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                <div class="d-flex justify-content-between align-items-start">
+                                                                    <div>
+                                                                        <strong>{{ shift.user.full_name }}</strong>
+                                                                        <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                        {% if shift.user.team %}
+                                                                            <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                        {% endif %}
+                                                                        <br>
+                                                                        <small>{{ shift.unit.get_name_display }}</small>
+                                                                        <br>
+                                                                        <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                    </div>
+                                                                    <div class="shift-edit-btn">
+                                                                        <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Duty SSCWN Section - Always show for alignment -->
+                                                <div class="duty-sscw-section">
+                                                    <div class="section-header text-primary fw-semibold small">
+                                                        {% if shift_data.night_supernumerary %}Duty SSCWN (Supernumerary){% else %}&nbsp;{% endif %}
+                                                    </div>
+                                                    {% if shift_data.night_supernumerary %}
+                                                    {% for shift in shift_data.night_supernumerary %}
+                                                        <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <strong>{{ shift.user.full_name }}</strong>
+                                                                    <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                    <br>
+                                                                    <small>{{ shift.unit.get_name_display }}</small>
+                                                                    <br>
+                                                                    <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                                </div>
+                                                                <div class="shift-edit-btn">
+                                                                    <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Units Container - Grid Row 3 -->
+                                                <div class="units-container">
+                                                {% for unit_name, unit_shifts in shift_data.night_care_by_unit.items %}
+                                                    {% if unit_shifts %}
+                                                        <div class="unit-group mb-2" data-unit="{{ unit_name }}">
+                                                            <div class="unit-header unit-header-night">
+                                                                <small class="fw-bold text-warning">{{ unit_name }}</small>
+                                                            </div>
+                                                            {% for shift in unit_shifts %}
+                                                                <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <div style="flex: 1; min-width: 0;">
+                                                                            <strong>{{ shift.user.full_name }}</strong>
+                                                                            <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                            {% if shift.user.team %}
+                                                                                <span class="team-badge">T{{ shift.user.team }}</span>
+                                                                            {% endif %}
+                                                                            <span class="text-muted" style="font-size: 0.7rem; margin-left: 4px;">{{ shift.shift_type.start_time|date:"H:i" }}-{{ shift.shift_type.end_time|date:"H:i" }}</span>
+                                                                        </div>
+                                                                        <div class="shift-edit-btn">
+                                                                            <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                                <i class="fas fa-edit"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% for shift in shift_data.night_other %}
+                                                    <div class="shift-card shift-night role-{{ shift.user.role.name|lower }}" data-shift-id="{{ shift.id }}">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div>
+                                                                <strong>{{ shift.user.full_name }}</strong>
+                                                                <span class="role-badge">{{ shift.user.role.name }}</span>
+                                                                {% if shift.user.team %}
+                                                                    <span class="team-badge">Team {{ shift.user.team }}</span>
+                                                                {% endif %}
+                                                                <br>
+                                                                <small>{{ shift.unit.get_name_display }}</small>
+                                                                <br>
+                                                                <small class="text-muted">{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</small>
+                                                            </div>
+                                                            <div class="shift-edit-btn">
+                                                                <button class="btn btn-sm btn-outline-light edit-shift-btn" data-shift-id="{{ shift.id }}" title="Edit Shift">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                                </div><!-- Close units-container -->
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Intelligent Reallocation Suggestions -->
+{% if reallocation_data %}
+{% for date, realloc in reallocation_data.items %}
+    {% if realloc.day.within_home or realloc.night.within_home or realloc.day.cross_home_matches or realloc.night.cross_home_matches %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h6 class="alert-heading">
+                    <i class="fas fa-lightbulb"></i> Smart Staffing Suggestions for {{ date|date:"l, j F Y" }}
+                </h6>
+                <hr>
+                
+                <!-- Within-Home Reallocations (when viewing specific home) -->
+                {% if realloc.day.within_home %}
+                    <div class="mb-3">
+                        <strong class="text-primary"><i class="fas fa-exchange-alt"></i> Day Shift - Within-Home Rebalancing:</strong>
+                        <ul class="mt-2 mb-0">
+                            {% for suggestion in realloc.day.within_home %}
+                            <li>
+                                Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                from <span class="badge bg-warning text-dark">{{ suggestion.from_unit }}</span>
+                                to <span class="badge bg-success">{{ suggestion.to_unit }}</span>
+                                <small class="text-muted">({{ suggestion.shift_time }})</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if realloc.day.excess_available > 0 %}
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <i class="fas fa-info-circle text-success"></i>
+                            After rebalancing, <strong>{{ realloc.day.excess_available }} staff member(s)</strong> available to assist other homes
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                {% if realloc.night.within_home %}
+                    <div class="mb-3">
+                        <strong class="text-warning"><i class="fas fa-exchange-alt"></i> Night Shift - Within-Home Rebalancing:</strong>
+                        <ul class="mt-2 mb-0">
+                            {% for suggestion in realloc.night.within_home %}
+                            <li>
+                                Move <strong>{{ suggestion.staff_name }}</strong> ({{ suggestion.role }})
+                                from <span class="badge bg-warning text-dark">{{ suggestion.from_unit }}</span>
+                                to <span class="badge bg-success">{{ suggestion.to_unit }}</span>
+                                <small class="text-muted">({{ suggestion.shift_time }})</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if realloc.night.excess_available > 0 %}
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <i class="fas fa-info-circle text-success"></i>
+                            After rebalancing, <strong>{{ realloc.night.excess_available }} staff member(s)</strong> available to assist other homes
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                <!-- Cross-Home Matches (when viewing all homes) -->
+                {% if realloc.day.cross_home_matches %}
+                    <div class="mb-3">
+                        <strong class="text-primary"><i class="fas fa-hospital"></i> Day Shift - Cross-Home Support Available:</strong>
+                        {% for shortage_home, available_staff in realloc.day.cross_home_matches.items %}
+                        <div class="mt-2 p-2 border rounded">
+                            <strong>{{ shortage_home }}</strong> can receive support from:
+                            <ul class="mt-1 mb-0">
+                                {% for staff in available_staff %}
+                                <li>
+                                    <strong>{{ staff.staff_name }}</strong> ({{ staff.role }})
+                                    from <span class="badge bg-info">{{ staff.from_home }}</span>
+                                    - currently at {{ staff.current_unit }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-check-circle"></i> These staff are excess after within-home balancing and available before resorting to overtime/agency
+                            </small>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if realloc.night.cross_home_matches %}
+                    <div class="mb-3">
+                        <strong class="text-warning"><i class="fas fa-hospital"></i> Night Shift - Cross-Home Support Available:</strong>
+                        {% for shortage_home, available_staff in realloc.night.cross_home_matches.items %}
+                        <div class="mt-2 p-2 border rounded">
+                            <strong>{{ shortage_home }}</strong> can receive support from:
+                            <ul class="mt-1 mb-0">
+                                {% for staff in available_staff %}
+                                <li>
+                                    <strong>{{ staff.staff_name }}</strong> ({{ staff.role }})
+                                    from <span class="badge bg-info">{{ staff.from_home }}</span>
+                                    - currently at {{ staff.current_unit }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-check-circle"></i> These staff are excess after within-home balancing and available before resorting to overtime/agency
+                            </small>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endif %}
+
+<!-- Staffing Alerts -->
+{% if staffing_alerts %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-danger" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Staffing Shortages Detected</h5>
+            <hr>
+            <div class="row">
+                {% for alert in staffing_alerts %}
+                <div class="col-md-6 mb-2">
+                    <strong>{{ alert.date|date:"l, j F Y" }}</strong> - {{ alert.shift }} Shift<br>
+                    <small>
+                        Staff on duty: <strong>{{ alert.actual }}</strong> / Required: <strong>{{ alert.required }}</strong>
+                        <span class="badge bg-danger ms-2">Deficit: {{ alert.deficit }}</span>
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+            <hr>
+            <p class="mb-0"><i class="fas fa-info-circle"></i> <strong>Action Required:</strong> Please review and address these staffing shortages immediately.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Summary Bar -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Daily Staffing Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for date, summary in daily_summary.items %}
+                        <div class="col text-center">
+                            <strong>{{ date|date:"D M j" }}</strong><br>
+                            <small>
+                                Day: <span class="status-{{ summary.day_status }}">SSCW {{ summary.day_sscw }}/{{ summary.day_sscw_required }} · Care {{ summary.day_care }}/{{ summary.day_required }}</span>
+                            </small><br>
+                            <small>
+                                Night: <span class="status-{{ summary.night_status }}">SSCW {{ summary.night_sscw }}/{{ summary.night_sscw_required }} · Care {{ summary.night_care }}/{{ summary.night_required }}</span>
+                            </small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff Search Modal -->
+<div class="modal fade" id="staffSearchModal" tabindex="-1" aria-labelledby="staffSearchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staffSearchModalLabel">
+                    <i class="fas fa-search"></i> Search Staff Schedule
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="staffSearchInput" class="form-label">Search by SAP Number or Name:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="staffSearchInput" placeholder="Enter SAP number, first name, or last name...">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="staffSearchResults" class="mb-3 hidden">
+                    <h6>Search Results:</h6>
+                    <div class="list-group" id="staffList">
+                        <!-- Search results will be populated here -->
+                    </div>
+                </div>
+                
+                <div id="staffScheduleView" class="hidden">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 id="selectedStaffInfo"></h6>
+                        <button class="btn btn-sm btn-secondary" id="backToSearchBtn">
+                            <i class="fas fa-arrow-left"></i> Back to Search
+                        </button>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>6-Week Schedule Overview</strong> - Off-duty days are highlighted in green.
+                    </div>
+                    
+                    <div id="scheduleContent">
+                        <!-- Schedule will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Shift Modal -->
+<div class="modal fade" id="editShiftModal" tabindex="-1" aria-labelledby="editShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editShiftModalLabel">
+                    <i class="fas fa-edit"></i> Edit Shift
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editShiftForm">
+                    <input type="hidden" id="editShiftId">
+                    
+                    <div class="mb-3">
+                        <label for="editStaffSap" class="form-label">Staff Member (SAP):</label>
+                        <input type="text" class="form-control" id="editStaffSap" placeholder="Enter SAP number">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editUnit" class="form-label">Unit:</label>
+                        <select class="form-select" id="editUnit">
+                            <option value="">Select Unit</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.name }}">{{ unit.get_name_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editShiftType" class="form-label">Shift Type:</label>
+                        <select class="form-select" id="editShiftType">
+                            <option value="">Select Shift Type</option>
+                            <option value="DAY_SENIOR">Day Shift (Senior)</option>
+                            <option value="DAY_ASSISTANT">Day Shift (Assistant)</option>
+                            <option value="NIGHT_SENIOR">Night Shift (Senior)</option>
+                            <option value="NIGHT_ASSISTANT">Night Shift (Assistant)</option>
+                            <option value="ADMIN">Admin Day</option>
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> Changes will be logged and may affect staffing levels. Ensure adequate coverage is maintained.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteShiftBtn">
+                    <i class="fas fa-trash"></i> Delete Shift
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveShiftBtn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Shift Modal -->
+<div class="modal fade" id="addShiftModal" tabindex="-1" aria-labelledby="addShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addShiftModalLabel">
+                    <i class="fas fa-plus"></i> Add New Shift (Agency/OT)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addShiftForm">
+                    <!-- Shift Classification -->
+                    <div class="mb-3">
+                        <label for="addShiftClassification" class="form-label">Shift Type:</label>
+                        <select class="form-select" id="addShiftClassification" required onchange="toggleAgencyFields()">
+                            <option value="">Select Type</option>
+                            <option value="REGULAR">Regular Shift</option>
+                            <option value="OVERTIME">Overtime (Existing Staff)</option>
+                            <option value="AGENCY">Agency Staff</option>
+                        </select>
+                        <small class="text-muted">Select whether this is overtime or agency cover</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addStaffSap" class="form-label">Staff Member (SAP):</label>
+                        <input type="text" class="form-control" id="addStaffSap" placeholder="Enter SAP number" required>
+                        <small class="text-muted">Enter SAP number of staff or agency worker</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addShiftDate" class="form-label">Shift Date:</label>
+                        <input type="date" class="form-control" id="addShiftDate" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addUnit" class="form-label">Unit:</label>
+                        <select class="form-select" id="addUnit" required>
+                            <option value="">Select Unit</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.name }}">{{ unit.get_name_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Shift Pattern -->
+                    <div class="mb-3">
+                        <label for="addShiftPattern" class="form-label">Shift Pattern:</label>
+                        <select class="form-select" id="addShiftPattern" required onchange="toggleCustomTimes()">
+                            <option value="DAY_0800_2000">Day Shift (08:00 - 20:00)</option>
+                            <option value="NIGHT_2000_0800">Night Shift (20:00 - 08:00)</option>
+                            <option value="CUSTOM">Custom Times</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Custom Times (hidden by default) -->
+                    <div id="customTimesSection" class="mb-3 d-none">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="addCustomStartTime" class="form-label">Start Time:</label>
+                                <input type="time" class="form-control" id="addCustomStartTime">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="addCustomEndTime" class="form-label">End Time:</label>
+                                <input type="time" class="form-control" id="addCustomEndTime">
+                            </div>
+                        </div>
+                        <small class="text-muted">Use 24-hour format. End time can be next day for night shifts.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addShiftType" class="form-label">Role Level:</label>
+                        <select class="form-select" id="addShiftType" required>
+                            <option value="">Select Role Level</option>
+                            <option value="DAY">Day (Senior: SSCW/SCW)</option>
+                            <option value="NIGHT">Night (Senior: SSCW/SCW)</option>
+                            <option value="DAY_ASSISTANT">Day (Assistant: SCA)</option>
+                            <option value="NIGHT_ASSISTANT">Night (Assistant: SCA)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Agency Fields (hidden by default) -->
+                    <div id="agencyFieldsSection" class="d-none">
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-building"></i> Agency Information (for billing)</h6>
+                        
+                        <div class="mb-3">
+                            <label for="addAgencyCompany" class="form-label">Agency Company: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="addAgencyCompany" onchange="updateAgencyRate()">
+                                <option value="">Select Agency</option>
+                                <!-- Will be populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="addAgencyStaffName" class="form-label">Agency Staff Name (optional):</label>
+                            <input type="text" class="form-control" id="addAgencyStaffName" placeholder="e.g., John Smith">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="addAgencyRate" class="form-label">Hourly Rate (£):</label>
+                            <input type="number" class="form-control" id="addAgencyRate" step="0.01" min="0" placeholder="0.00">
+                            <small class="text-muted">Rate will auto-fill from agency defaults, can be overridden</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addShiftNotes" class="form-label">Notes (optional):</label>
+                        <textarea class="form-control" id="addShiftNotes" rows="2" placeholder="e.g., Agency cover for sick leave"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> This shift will be added to the rota and logged for audit purposes. Agency shifts will be included in weekly billing reports.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="addShiftBtn">
+                    <i class="fas fa-plus"></i> Add Shift
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Preview Modal -->
+<div class="modal fade" id="printPreviewModal" tabindex="-1" aria-labelledby="printPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header no-print">
+                <h5 class="modal-title" id="printPreviewModalLabel">
+                    <i class="fas fa-print"></i> Print Preview - Daily Sheet
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Date selector -->
+                <div class="row mb-3 no-print">
+                    <div class="col-md-6">
+                        <label for="printDate" class="form-label">Select Date to Print:</label>
+                        <select class="form-select" id="printDate" onchange="updatePrintPreview();">
+                            {% for date in date_range %}
+                                <option value="{{ date|date:'Y-m-d' }}">{{ date|date:'l, F j, Y' }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="printUnit" class="form-label">Unit (optional):</label>
+                        <select class="form-select" id="printUnit" onchange="updatePrintPreview();">
+                            <option value="all">All Units</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.name }}">{{ unit.get_name_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Print preview content -->
+                <div id="printPreviewDebug" class="alert alert-info no-print d-none"></div>
+                <div id="printPreviewContent" class="border p-3 print-preview-container">
+                    <div class="print-only">
+                        <div class="text-center mb-4">
+                            <h2>Daily Staff Schedule</h2>
+                            <h4 id="printPreviewDate"></h4>
+                            <h5 id="printPreviewUnit"></h5>
+                        </div>
+                    </div>
+                    
+                    <div id="dayShiftsPreview">
+                        <h4 class="text-primary border-bottom"><i class="fas fa-sun"></i> Day Shifts</h4>
+                        <div id="dayShiftsContent" class="shift-groups-container">
+                            <!-- Day shifts will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div id="nightShiftsPreview" class="mt-4">
+                        <h4 class="text-primary border-bottom"><i class="fas fa-moon"></i> Night Shifts</h4>
+                        <div id="nightShiftsContent" class="shift-groups-container">
+                            <!-- Night shifts will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="print-only mt-4">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Prepared by:</strong> _________________<br>
+                                <strong>Date:</strong> {{ today|date:'F j, Y' }}
+                            </div>
+                            <div class="col-6">
+                                <strong>Approved by:</strong> _________________<br>
+                                <strong>Signature:</strong> _________________
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printDailySheet()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ shifts_serialized|json_script:'shifts-data' }}
+
+<script>
+// Staff Search and Edit Functionality
+let searchTimeout;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Staff Search Functionality
+    const staffSearchInput = document.getElementById('staffSearchInput');
+    if (staffSearchInput) {
+        staffSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (searchTerm.length < 2) {
+                document.getElementById('staffSearchResults').style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`{% url 'staff_search_rota' %}?search=${encodeURIComponent(searchTerm)}`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displaySearchResults(data.staff);
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        showAlert('Error searching staff. Please try again.', 'danger');
+                    });
+            }, 300);
+        });
+    }
+
+    // Clear search functionality
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            document.getElementById('staffSearchInput').value = '';
+            document.getElementById('staffSearchResults').style.display = 'none';
+            document.getElementById('staffScheduleView').style.display = 'none';
+        });
+    }
+
+    // Back to search functionality
+    const backToSearchBtn = document.getElementById('backToSearchBtn');
+    if (backToSearchBtn) {
+        backToSearchBtn.addEventListener('click', function() {
+            document.getElementById('staffScheduleView').style.display = 'none';
+            document.getElementById('staffSearchResults').style.display = 'block';
+        });
+    }
+
+    // Edit shift functionality
+    document.querySelectorAll('.edit-shift-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const shiftId = this.dataset.shiftId;
+            
+            // Populate edit form with current values
+            document.getElementById('editShiftId').value = shiftId;
+            
+            // Show the edit modal
+            const editModal = new bootstrap.Modal(document.getElementById('editShiftModal'));
+            editModal.show();
+        });
+    });
+
+    // Save shift changes
+    const saveShiftBtn = document.getElementById('saveShiftBtn');
+    if (saveShiftBtn) {
+        saveShiftBtn.addEventListener('click', function() {
+            const shiftId = document.getElementById('editShiftId').value;
+            const staffSap = document.getElementById('editStaffSap').value;
+            const unit = document.getElementById('editUnit').value;
+            const shiftType = document.getElementById('editShiftType').value;
+            
+            const data = {
+                shift_id: shiftId,
+                action: 'edit'
+            };
+            
+            if (staffSap) data.user_sap = staffSap;
+            if (unit) data.unit = unit;
+            if (shiftType) data.shift_type = shiftType;
+            
+            fetch('{% url "edit_shift" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => location.reload(), 1000); // Refresh to show changes
+                } else {
+                    showAlert(data.error || 'Error updating shift', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Edit error:', error);
+                showAlert('Error updating shift. Please try again.', 'danger');
+            });
+        });
+    }
+
+    // Delete shift
+    const deleteShiftBtn = document.getElementById('deleteShiftBtn');
+    if (deleteShiftBtn) {
+        deleteShiftBtn.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to delete this shift? This action cannot be undone.')) {
+                return;
+            }
+            
+            const shiftId = document.getElementById('editShiftId').value;
+            
+            fetch('{% url "edit_shift" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    shift_id: shiftId,
+                    action: 'delete'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => location.reload(), 1000); // Refresh to show changes
+                } else {
+                    showAlert(data.error || 'Error deleting shift', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Delete error:', error);
+                showAlert('Error deleting shift. Please try again.', 'danger');
+            });
+        });
+    }
+
+    // Add new shift
+    const addShiftBtn = document.getElementById('addShiftBtn');
+    if (addShiftBtn) {
+        addShiftBtn.addEventListener('click', function() {
+            const staffSap = document.getElementById('addStaffSap').value;
+            const shiftDate = document.getElementById('addShiftDate').value;
+            const unit = document.getElementById('addUnit').value;
+            const shiftType = document.getElementById('addShiftType').value;
+            const notes = document.getElementById('addShiftNotes').value;
+            
+            // New fields
+            const shiftClassification = document.getElementById('addShiftClassification').value;
+            const shiftPattern = document.getElementById('addShiftPattern').value;
+            const customStartTime = document.getElementById('addCustomStartTime').value;
+            const customEndTime = document.getElementById('addCustomEndTime').value;
+            const agencyCompanyId = document.getElementById('addAgencyCompany').value;
+            const agencyStaffName = document.getElementById('addAgencyStaffName').value;
+            const agencyRate = document.getElementById('addAgencyRate').value;
+            
+            // Validation
+            if (!staffSap || !shiftDate || !unit || !shiftType || !shiftClassification) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            // Validate custom times if custom pattern selected
+            if (shiftPattern === 'CUSTOM' && (!customStartTime || !customEndTime)) {
+                showAlert('Please enter start and end times for custom shift pattern', 'warning');
+                return;
+            }
+            
+            // Validate agency fields if agency shift
+            if (shiftClassification === 'AGENCY' && !agencyCompanyId) {
+                showAlert('Please select an agency company for agency shifts', 'warning');
+                return;
+            }
+            
+            const data = {
+                user_sap: staffSap,
+                shift_date: shiftDate,
+                unit: unit,
+                shift_type: shiftType,
+                notes: notes,
+                shift_classification: shiftClassification,
+                shift_pattern: shiftPattern
+            };
+            
+            // Add custom times if applicable
+            if (shiftPattern === 'CUSTOM') {
+                data.custom_start_time = customStartTime;
+                data.custom_end_time = customEndTime;
+            }
+            
+            // Add agency fields if applicable
+            if (shiftClassification === 'AGENCY') {
+                data.agency_company_id = agencyCompanyId;
+                data.agency_staff_name = agencyStaffName;
+                if (agencyRate) {
+                    data.agency_hourly_rate = agencyRate;
+                }
+            }
+            
+            fetch('{% url "add_shift" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addShiftModal'));
+                    modal.hide();
+                    // Reset form
+                    document.getElementById('addShiftForm').reset();
+                    // Refresh to show changes
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(data.error || 'Error adding shift', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Add shift error:', error);
+                showAlert('Error adding shift. Please try again.', 'danger');
+            });
+        });
+    }
+
+    // Reset modals when they're hidden
+    const staffSearchModal = document.getElementById('staffSearchModal');
+    if (staffSearchModal) {
+        staffSearchModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('staffSearchInput').value = '';
+            document.getElementById('staffSearchResults').style.display = 'none';
+            document.getElementById('staffScheduleView').style.display = 'none';
+        });
+    }
+    
+    const editShiftModal = document.getElementById('editShiftModal');
+    if (editShiftModal) {
+        editShiftModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('editShiftForm').reset();
+        });
+    }
+    
+    const addShiftModal = document.getElementById('addShiftModal');
+    if (addShiftModal) {
+        addShiftModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('addShiftForm').reset();
+        });
+    }
+});
+
+function displaySearchResults(staff) {
+    const resultsDiv = document.getElementById('staffSearchResults');
+    const staffList = document.getElementById('staffList');
+    
+    if (staff.length === 0) {
+        staffList.innerHTML = '<div class="list-group-item text-muted">No staff found matching your search.</div>';
+    } else {
+        staffList.innerHTML = staff.map(member => 
+            `<a href="#" class="list-group-item list-group-item-action staff-result-item" data-sap="${member.sap}">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${member.name}</h6>
+                    <small>${member.role}</small>
+                </div>
+                <p class="mb-1">SAP: ${member.sap}</p>
+                <small>Unit: ${member.unit}</small>
+            </a>`
+        ).join('');
+    }
+    
+    resultsDiv.style.display = 'block';
+    
+    // Add click handlers for staff selection
+    document.querySelectorAll('.staff-result-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sap = this.dataset.sap;
+            loadStaffSchedule(sap);
+        });
+    });
+}
+
+function loadStaffSchedule(sap) {
+    const formData = new FormData();
+    formData.append('sap', sap);
+    
+    fetch('{% url "staff_search_rota" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'danger');
+            return;
+        }
+        displayStaffSchedule(data);
+    })
+    .catch(error => {
+        console.error('Schedule load error:', error);
+        showAlert('Error loading staff schedule. Please try again.', 'danger');
+    });
+}
+
+function displayStaffSchedule(scheduleData) {
+    document.getElementById('staffSearchResults').style.display = 'none';
+    document.getElementById('staffScheduleView').style.display = 'block';
+    
+    // Update staff info
+    const staffInfo = scheduleData.staff_info;
+    document.getElementById('selectedStaffInfo').innerHTML = 
+        `<strong>${staffInfo.name}</strong> (${staffInfo.sap}) - ${staffInfo.role} - ${staffInfo.unit} - ${staffInfo.shifts_per_week} shifts/week`;
+    
+    // Generate schedule HTML
+    let scheduleHtml = '<div class="accordion" id="scheduleAccordion">';
+    
+    scheduleData.weeks.forEach((week, index) => {
+        const isFirstWeek = index === 0;
+        scheduleHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading${week.week_number}">
+                    <button class="accordion-button ${isFirstWeek ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#collapse${week.week_number}" aria-expanded="${isFirstWeek}" aria-controls="collapse${week.week_number}">
+                        Week ${week.week_number} (${week.start_date} to ${week.end_date}) - 
+                        ${week.total_shifts} shifts, ${week.off_duty_days} off-duty days
+                    </button>
+                </h2>
+                <div id="collapse${week.week_number}" class="accordion-collapse collapse ${isFirstWeek ? 'show' : ''}" 
+                     aria-labelledby="heading${week.week_number}" data-bs-parent="#scheduleAccordion">
+                    <div class="accordion-body">
+                        <div class="row">`;
+        
+        week.days.forEach(day => {
+            const offDutyClass = day.is_off_duty ? 'bg-success text-white' : '';
+            // Format date to show "Mon Oct 13" format
+            const dateObj = new Date(day.date + 'T00:00:00');
+            const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            scheduleHtml += `
+                <div class="col-md-6 col-lg-4 mb-2">
+                    <div class="card ${offDutyClass}">
+                        <div class="card-body p-2">
+                            <h6 class="card-title mb-1">${day.day_name}</h6>
+                            <small class="text-muted">${formattedDate}</small>
+                            
+                            ${day.shifts.length > 0 ? `
+                                <div class="mt-1">
+                                    ${day.shifts.map(shift => 
+                                        `<div class="small">
+                                            <strong>${shift.shift_type}</strong><br>
+                                            ${shift.unit}<br>
+                                            ${shift.start_time} - ${shift.end_time}
+                                        </div>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
+                            
+                            ${day.leave.length > 0 ? `
+                                <div class="mt-1">
+                                    ${day.leave.map(leave => 
+                                        `<div class="small text-warning">
+                                            <i class="fas fa-plane-departure"></i> ${leave.type} (${leave.status})
+                                        </div>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
+                            
+                            ${day.is_off_duty ? '<div class="small"><i class="fas fa-home"></i> Off Duty</div>' : ''}
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        scheduleHtml += `
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    });
+    
+    scheduleHtml += '</div>';
+    document.getElementById('scheduleContent').innerHTML = scheduleHtml;
+}
+
+// Utility functions
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Insert at top of page
+    const container = document.querySelector('.container-fluid');
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+// JavaScript for print preview functionality
+const shiftsDataElement = document.getElementById('shifts-data');
+let shiftsData = {};
+const debugPanel = document.getElementById('printPreviewDebug');
+
+function showDebug(message, level = 'info') {
+    if (!debugPanel) {
+        return;
+    }
+    debugPanel.className = `alert alert-${level} no-print`;
+    debugPanel.classList.remove('d-none');
+    debugPanel.textContent = message;
+}
+
+if (shiftsDataElement) {
+    try {
+        shiftsData = JSON.parse(shiftsDataElement.textContent || '{}');
+        const dayCounts = Object.entries(shiftsData).map(([dateKey, data]) => `${dateKey}: ${data.day.length} day / ${data.night.length} night`);
+        
+        // Format as readable table
+        if (dayCounts.length) {
+            const dateObj = new Date(Object.keys(shiftsData)[0]);
+            const formattedTable = Object.entries(shiftsData).map(([dateKey, data]) => {
+                const date = new Date(dateKey);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return `<tr><td><strong>${dayName} ${dateStr}</strong></td><td class="text-end">${data.day.length} day shifts</td><td class="text-end">${data.night.length} night shifts</td></tr>`;
+            }).join('');
+            
+            debugPanel.className = 'alert alert-info no-print';
+            debugPanel.classList.remove('d-none');
+            debugPanel.innerHTML = `
+                <strong>📅 Loaded ${dayCounts.length} days of shifts:</strong>
+                <table class="table table-sm table-borderless mt-2 mb-0" style="max-width: 500px;">
+                    <tbody>${formattedTable}</tbody>
+                </table>
+            `;
+        } else {
+            showDebug('Shifts data present but no entries found.', 'warning');
+        }
+        
+        window.SHIFTS_DEBUG = { raw: shiftsData, dayCounts };
+    } catch (parseError) {
+        console.error('Failed to parse shifts data for print preview', parseError);
+        showDebug('Failed to read shifts data. Check console for JSON parse errors.', 'danger');
+    }
+} else {
+    console.warn('shifts-data script element not found; print preview will be empty.');
+    showDebug('Could not find embedded shifts data. Reload the page and ensure you are logged in.', 'warning');
+}
+
+function updatePrintPreview() {
+    const selectedDate = document.getElementById('printDate').value;
+    const selectedUnit = document.getElementById('printUnit').value;
+    
+    // Update header
+    const dateObj = new Date(selectedDate);
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('printPreviewDate').textContent = dateObj.toLocaleDateString('en-US', options);
+    
+    const unitText = selectedUnit === 'all' ? 'All Units' : document.getElementById('printUnit').selectedOptions[0].text;
+    document.getElementById('printPreviewUnit').textContent = unitText;
+    
+    // Get shifts for selected date
+    const dayShifts = (shiftsData[selectedDate] && shiftsData[selectedDate].day) || [];
+    const nightShifts = (shiftsData[selectedDate] && shiftsData[selectedDate].night) || [];
+
+    if (!dayShifts.length && !nightShifts.length) {
+        console.debug('No shifts found for selected date in preview', selectedDate, selectedUnit, shiftsData[selectedDate]);
+        showDebug(`No shifts found for ${selectedDate}. Selected unit: ${selectedUnit}.`, 'warning');
+    }
+    
+    // Filter by unit if specific unit selected
+    const filteredDayShifts = selectedUnit === 'all' ? dayShifts : dayShifts.filter(shift => shift.unit_code === selectedUnit);
+    const filteredNightShifts = selectedUnit === 'all' ? nightShifts : nightShifts.filter(shift => shift.unit_code === selectedUnit);
+
+    if (dayShifts.length && !filteredDayShifts.length && selectedUnit !== 'all') {
+        console.debug('Day shifts exist but none match unit filter', selectedDate, selectedUnit, dayShifts);
+        showDebug(`Day shifts exist on ${selectedDate} but none match unit ${selectedUnit}.`, 'warning');
+    }
+    if (nightShifts.length && !filteredNightShifts.length && selectedUnit !== 'all') {
+        console.debug('Night shifts exist but none match unit filter', selectedDate, selectedUnit, nightShifts);
+        showDebug(`Night shifts exist on ${selectedDate} but none match unit ${selectedUnit}.`, 'warning');
+    }
+    
+    // Update day shifts
+    const dayContent = document.getElementById('dayShiftsContent');
+    renderShiftGroups(filteredDayShifts, dayContent, {
+        emptyMessage: 'No day shifts scheduled for this date/unit.',
+        dutyHeading: 'Duty SSCW',
+    });
+    
+    const nightContent = document.getElementById('nightShiftsContent');
+    renderShiftGroups(filteredNightShifts, nightContent, {
+        emptyMessage: 'No night shifts scheduled for this date/unit.',
+        dutyHeading: 'Duty SSCW (Night)',
+    });
+}
+
+const ROLE_SORT_PRIORITY = {
+    SSCW: 0,
+    SCW: 1,
+    DAY_SENIOR: 1,
+    DAY_ASSISTANT: 2,
+    SCA: 3,
+    OPERATIONS_MANAGER: 4,
+    NIGHT_SENIOR: 5,
+    NIGHT_ASSISTANT: 6,
+};
+
+function renderShiftGroups(shifts, container, options = {}) {
+    const { emptyMessage = 'No shifts scheduled for this date/unit.', dutyHeading = 'Duty SSCW' } = options;
+
+    // Defensive: ensure shifts is always an array
+    if (!Array.isArray(shifts)) {
+        shifts = [];
+    }
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (!shifts.length) {
+        const emptyPara = document.createElement('p');
+        emptyPara.className = 'text-muted';
+        emptyPara.textContent = emptyMessage;
+        container.appendChild(emptyPara);
+        return;
+    }
+
+    const normalized = shifts.map(shift => ({ ...shift }));
+    normalized.sort((a, b) => {
+        const roleA = (a.role || '').toUpperCase();
+        const roleB = (b.role || '').toUpperCase();
+        const priorityA = ROLE_SORT_PRIORITY.hasOwnProperty(roleA) ? ROLE_SORT_PRIORITY[roleA] : 99;
+        const priorityB = ROLE_SORT_PRIORITY.hasOwnProperty(roleB) ? ROLE_SORT_PRIORITY[roleB] : 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return (a.user || '').localeCompare(b.user || '');
+    });
+
+    const dutyShifts = normalized.filter(shift => {
+        const role = (shift.role || '').toUpperCase();
+        return role === 'SSCW' || role === 'SSCWN';
+    });
+    const dutyAdminShifts = dutyShifts.filter(shift => (shift.category || '').toUpperCase() === 'SSCW_ADMIN');
+    const dutyDutyShifts = dutyShifts.filter(shift => (shift.category || '').toUpperCase() !== 'SSCW_ADMIN');
+    const otherShifts = normalized.filter(shift => {
+        const role = (shift.role || '').toUpperCase();
+        return role !== 'SSCW' && role !== 'SSCWN';
+    });
+
+    if (dutyDutyShifts.length) {
+        const dutySection = createShiftGroupSection(dutyHeading, dutyDutyShifts, { showUnit: true });
+        container.appendChild(dutySection);
+    }
+
+    if (dutyAdminShifts.length) {
+        const adminSection = createShiftGroupSection('SSCW Admin (Supernumerary)', dutyAdminShifts, { variant: 'admin' });
+        container.appendChild(adminSection);
+    }
+
+    const shiftsByUnit = {};
+    otherShifts.forEach(shift => {
+        const unitName = shift.unit || 'Unassigned';
+        if (!Array.isArray(shiftsByUnit[unitName])) {
+            shiftsByUnit[unitName] = [];
+        }
+        shiftsByUnit[unitName].push(shift);
+    });
+
+    Object.keys(shiftsByUnit)
+        .sort((a, b) => a.localeCompare(b))
+        .forEach(unitName => {
+            const section = createShiftGroupSection(unitName, Array.isArray(shiftsByUnit[unitName]) ? shiftsByUnit[unitName] : [], {});
+            container.appendChild(section);
+        });
+}
+
+function createShiftGroupSection(title, shifts, options = {}) {
+    const { showUnit = false, variant = 'default' } = options;
+    const section = document.createElement('div');
+    section.className = 'unit-section';
+
+    const heading = document.createElement('h5');
+    heading.textContent = title;
+    section.appendChild(heading);
+
+    const list = variant === 'admin' ? document.createElement('div') : document.createElement('ul');
+    list.className = variant === 'admin' ? 'sscw-admin-list' : 'list-group list-group-flush';
+
+    shifts.forEach(shift => {
+        list.appendChild(createShiftListItem(shift, { showUnit, variant }));
+    });
+
+    section.appendChild(list);
+    return section;
+}
+
+function createShiftListItem(shift, options = {}) {
+    const { showUnit = false, variant = 'default' } = options;
+    const roleClass = `role-${(shift.role || '').toLowerCase()}`;
+
+    if (variant === 'admin') {
+        const adminItem = document.createElement('div');
+        adminItem.className = `sscw-admin-item ${roleClass}`;
+
+        const nameWrap = document.createElement('span');
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = shift.user || 'Unassigned';
+        nameWrap.appendChild(nameEl);
+
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-admin ms-2';
+        badge.textContent = 'Admin Day';
+        nameWrap.appendChild(badge);
+
+        if ((shift.team || '').trim()) {
+            const teamBadge = document.createElement('span');
+            teamBadge.className = 'badge rounded-pill bg-light text-dark border ms-2';
+            teamBadge.textContent = `Team ${shift.team}`;
+            nameWrap.appendChild(teamBadge);
+        }
+
+        adminItem.appendChild(nameWrap);
+
+        const timing = document.createElement('div');
+        timing.className = 'text-muted small';
+        const timingText = [shift.start_time, shift.end_time].filter(Boolean).join(' - ') || 'Time TBC';
+        timing.textContent = timingText;
+        adminItem.appendChild(timing);
+
+        return adminItem;
+    }
+
+    const listItem = document.createElement('li');
+    listItem.className = `list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center ${roleClass}`;
+
+    const infoWrap = document.createElement('div');
+    infoWrap.className = 'me-md-3';
+
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = shift.user || 'Unassigned';
+    infoWrap.appendChild(nameEl);
+
+    const roleBadge = document.createElement('span');
+    roleBadge.className = 'badge rounded-pill bg-light text-dark border ms-2';
+    roleBadge.textContent = shift.role || 'Role TBC';
+    infoWrap.appendChild(roleBadge);
+
+    if ((shift.team || '').trim()) {
+        const teamBadge = document.createElement('span');
+        teamBadge.className = 'badge rounded-pill bg-light text-dark border ms-2';
+        teamBadge.textContent = `Team ${shift.team}`;
+        infoWrap.appendChild(teamBadge);
+    }
+
+    if (showUnit || !(shift.unit || '').trim()) {
+        const unitLine = document.createElement('div');
+        unitLine.className = 'small text-muted';
+        unitLine.textContent = shift.unit ? `Unit: ${shift.unit}` : 'Unit: Unassigned';
+        infoWrap.appendChild(unitLine);
+    }
+
+    const timingWrap = document.createElement('div');
+    timingWrap.className = 'text-muted small mt-2 mt-md-0';
+    const timingText = [shift.start_time, shift.end_time].filter(Boolean).join(' - ') || 'Time TBC';
+    timingWrap.textContent = timingText;
+
+    listItem.appendChild(infoWrap);
+    listItem.appendChild(timingWrap);
+
+    return listItem;
+}
+
+function printDailySheet() {
+    // Get current selection from modal
+    const selectedDate = document.getElementById('printDate').value;
+    const selectedUnit = document.getElementById('printUnit').value;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    const printContent = document.getElementById('printPreviewContent').innerHTML;
+    
+    // Get role styles for printing
+    const roleStyles = `
+        .shift-card {
+            background-color: #fff !important;
+            color: #000 !important;
+            border: 1px solid #333 !important;
+        }
+        .role-badge {
+            background-color: transparent !important;
+            color: #000 !important;
+            border: 1px solid currentColor;
+        }
+        .shift-card[data-role="scw"] {
+            border-left: 4px solid #3498db !important;
+        }
+        .shift-card[data-role="sca"] {
+            border-left: 4px solid #2ecc71 !important;
+        }
+        .shift-card[data-role="sscw"] {
+            border-left: 4px solid #e74c3c !important;
+        }
+        .shift-card[data-role="operations_manager"] {
+            border-left: 4px solid #9b59b6 !important;
+        }
+    `;
+    
+    // Write HTML to print window
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Rota View</title>
+            <title>Daily Staff Schedule</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    font-size: 12px; 
+                    margin: 20px;
+                }
+                .shift-card {
+                    margin-bottom: 10px;
+                    padding: 8px;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
+                    border: 1px solid #ddd;
+                    break-inside: avoid;
+                }
+                .role-badge {
+                    font-size: 0.7rem;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                    margin-left: 5px;
+                }
+                ${roleStyles}
+                @media print {
+                    body { margin: 0; }
+                    .shift-card { break-inside: avoid; }
+                }
+                .text-primary { color: #0d6efd !important; }
+                .border-bottom { border-bottom: 1px solid #dee2e6 !important; }
+            </style>
+        </head>
+        <body>
+            ${printContent}
+        </body>
+        </html>
+    `);
+    // Wait for content to load then print
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+// Initialize preview when modal opens
+const printModalElement = document.getElementById('printPreviewModal');
+if (printModalElement) {
+    printModalElement.addEventListener('shown.bs.modal', function () {
+        updatePrintPreview();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    updatePrintPreview();
+    loadAgencyCompanies();
+});
+
+// Toggle agency fields based on shift classification
+function toggleAgencyFields() {
+    const classification = document.getElementById('addShiftClassification').value;
+    const agencySection = document.getElementById('agencyFieldsSection');
+    
+    if (classification === 'AGENCY') {
+        agencySection.classList.remove('d-none');
+        document.getElementById('addAgencyCompany').required = true;
+    } else {
+        agencySection.classList.add('d-none');
+        document.getElementById('addAgencyCompany').required = false;
+    }
+}
+
+// Toggle custom time fields based on shift pattern
+function toggleCustomTimes() {
+    const pattern = document.getElementById('addShiftPattern').value;
+    const customSection = document.getElementById('customTimesSection');
+    
+    if (pattern === 'CUSTOM') {
+        customSection.classList.remove('d-none');
+        document.getElementById('addCustomStartTime').required = true;
+        document.getElementById('addCustomEndTime').required = true;
+    } else {
+        customSection.classList.add('d-none');
+        document.getElementById('addCustomStartTime').required = false;
+        document.getElementById('addCustomEndTime').required = false;
+    }
+}
+
+// Load agency companies from API
+function loadAgencyCompanies() {
+    fetch('/api/agency-companies/', {
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('addAgencyCompany');
+        if (data.agencies && data.agencies.length > 0) {
+            data.agencies.forEach(agency => {
+                const option = document.createElement('option');
+                option.value = agency.id;
+                option.textContent = agency.name;
+                option.dataset.dayRate = agency.hourly_rate_day || 0;
+                option.dataset.nightRate = agency.hourly_rate_night || 0;
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading agencies:', error);
+    });
+}
+
+// Update agency rate based on selected company and shift pattern
+function updateAgencyRate() {
+    const agencySelect = document.getElementById('addAgencyCompany');
+    const selectedOption = agencySelect.options[agencySelect.selectedIndex];
+    const shiftPattern = document.getElementById('addShiftPattern').value;
+    const rateInput = document.getElementById('addAgencyRate');
+    
+    if (selectedOption && selectedOption.value) {
+        const isNightShift = shiftPattern === 'NIGHT_2000_0800';
+        const rate = isNightShift ? 
+            selectedOption.dataset.nightRate : 
+            selectedOption.dataset.dayRate;
+        
+        if (rate && parseFloat(rate) > 0) {
+            rateInput.value = parseFloat(rate).toFixed(2);
+        }
+    }
+}
+
+// Intelligent Reallocation Functions
+function applyReallocation(shiftId, toUnit) {
+    if (!confirm('Apply this reallocation? This will move the staff member to the suggested unit.')) {
+        return;
+    }
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/shifts/${shiftId}/reallocate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            to_unit: toUnit
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`Staff member successfully moved to ${toUnit}`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert(data.error || 'Failed to apply reallocation', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Reallocation error:', error);
+        showAlert('Error applying reallocation', 'danger');
+    });
+}
+
+function offerCrossHome(shiftId, targetHome) {
+    if (!confirm(`Offer this staff member to ${targetHome}? This will create a reallocation request.`)) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/shifts/${shiftId}/offer-cross-home/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            target_home: targetHome
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`Staff member offered to ${targetHome}. Awaiting approval.`, 'info');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert(data.error || 'Failed to create cross-home offer', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Cross-home offer error:', error);
+        showAlert('Error creating cross-home offer', 'danger');
+    });
+}
+</script>
+{% endblock %}

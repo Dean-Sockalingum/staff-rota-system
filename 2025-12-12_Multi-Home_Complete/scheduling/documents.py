@@ -1,0 +1,235 @@
+"""
+Task 49: Elasticsearch Document Definitions
+Defines how Django models are indexed in Elasticsearch for full-text search
+"""
+from django.db import models
+from django_elasticsearch_dsl import Document, fields
+from django_elasticsearch_dsl.registries import registry
+from .models import User, Shift, LeaveRequest, CareHome, Role
+
+
+@registry.register_document
+class UserDocument(Document):
+    """
+    Elasticsearch document for User/Staff search
+    Indexes: name, SAP number, email, role, care home
+    """
+    # Related fields
+    role_name = fields.TextField(attr='role.name')
+    care_home_name = fields.TextField(attr='unit.care_home.name')
+    
+    # Computed fields
+    full_name = fields.TextField()
+    
+    class Index:
+        name = 'staff'
+        settings = {
+            'number_of_shards': 1,
+            'number_of_replicas': 0,
+            'max_result_window': 10000,
+        }
+    
+    class Django:
+        model = User
+        fields = [
+            'sap',
+            'first_name',
+            'last_name',
+            'email',
+            'is_active',
+        ]
+        related_models = [Role, CareHome]
+    
+    def get_instances_from_related(self, related_instance):
+        """
+        Update document when related models change
+        """
+        if isinstance(related_instance, Role):
+            # Update all users with this role
+            return User.objects.filter(role=related_instance)
+        elif isinstance(related_instance, CareHome):
+            # Update all users in units belonging to this care home
+            return User.objects.filter(unit__care_home=related_instance)
+    
+    def prepare_full_name(self, instance):
+        """Generate full name for search"""
+        return f"{instance.first_name} {instance.last_name}".strip()
+
+
+@registry.register_document
+class ShiftDocument(Document):
+    """
+    Elasticsearch document for Shift search
+    Indexes: date, time, care home, assigned staff, shift type
+    """
+    # Related fields
+    care_home_name = fields.TextField(attr='unit.care_home.name')
+    user_name = fields.TextField()
+    user_sap = fields.KeywordField(attr='user.sap')
+    
+    # Date fields for range filtering
+    date = fields.DateField()
+    start_time = fields.KeywordField()
+    end_time = fields.KeywordField()
+    
+    # Shift details
+    shift_type = fields.KeywordField(attr='shift_type.name')
+    shift_type_display = fields.TextField()
+    notes = fields.TextField()
+    
+    class Index:
+        name = 'shifts'
+        settings = {
+            'number_of_shards': 1,
+            'number_of_replicas': 0,
+            'max_result_window': 10000,
+        }
+    
+    class Django:
+        model = Shift
+        fields = [
+            'id',
+        ]
+        related_models = [User, CareHome]
+    
+    def get_instances_from_related(self, related_instance):
+        """Update when User or CareHome changes"""
+        if isinstance(related_instance, User):
+            return related_instance.shifts.all()
+        elif isinstance(related_instance, CareHome):
+            return Shift.objects.filter(unit__care_home=related_instance)
+    
+    def prepare_user_name(self, instance):
+        """Get full name of assigned user"""
+        return instance.user.full_name if instance.user else ''
+    
+    def prepare_start_time(self, instance):
+        """Convert time to string"""
+        if not instance.shift_type or not instance.shift_type.start_time:
+            return ''
+        start = instance.shift_type.start_time
+        # Handle already-converted strings
+        if isinstance(start, str):
+            return start
+        return start.strftime('%H:%M')
+    
+    def prepare_end_time(self, instance):
+        """Convert time to string"""
+        if not instance.shift_type or not instance.shift_type.end_time:
+            return ''
+        end = instance.shift_type.end_time
+        # Handle already-converted strings
+        if isinstance(end, str):
+            return end
+        return end.strftime('%H:%M')
+    
+    def prepare_shift_type_display(self, instance):
+        """Get human-readable shift type"""
+        return instance.shift_type.name if instance.shift_type else 'Unknown'
+
+
+@registry.register_document
+class LeaveRequestDocument(Document):
+    """
+    Elasticsearch document for Leave Request search
+    Indexes: staff name, dates, reason, approval status
+    """
+    # Related fields
+    staff_name = fields.TextField()
+    staff_sap = fields.KeywordField(attr='user.sap')
+    approved_by_name = fields.TextField()
+    
+    # Date fields for range filtering
+    start_date = fields.DateField()
+    end_date = fields.DateField()
+    requested_at = fields.DateField()
+    
+    # Fields
+    reason = fields.TextField()
+    notes = fields.TextField()
+    approved = fields.BooleanField()
+    
+    # Status field
+    approval_status = fields.TextField()
+    
+    class Index:
+        name = 'leave_requests'
+        settings = {
+            'number_of_shards': 1,
+            'number_of_replicas': 0,
+            'max_result_window': 10000,
+        }
+    
+    class Django:
+        model = LeaveRequest
+        fields = [
+            'id',
+        ]
+        related_models = [User]
+    
+    def get_instances_from_related(self, related_instance):
+        """Update when User changes"""
+        if isinstance(related_instance, User):
+            # Update leave requests for this user (both as requester and approver)
+            return LeaveRequest.objects.filter(
+                models.Q(user=related_instance) | models.Q(approved_by=related_instance)
+            )
+    
+    def prepare_staff_name(self, instance):
+        """Get full name of requesting user"""
+        return instance.user.full_name if instance.user else ''
+    
+    def prepare_approved_by_name(self, instance):
+        """Get full name of approver"""
+        return instance.approved_by.full_name if instance.approved_by else ''
+    
+    def prepare_approval_status(self, instance):
+        """Generate approval status text"""
+        # LeaveRequest uses status CharField, not approved boolean
+        if instance.status == 'PENDING':
+            return "Pending"
+        elif instance.status == 'APPROVED':
+            return "Approved"
+        elif instance.status == 'DENIED':
+            return "Denied"
+        else:
+            return instance.status
+
+
+@registry.register_document
+class CareHomeDocument(Document):
+    """
+    Elasticsearch document for Care Home search
+    Indexes: name, address, contact details
+    """
+    # Fields
+    name = fields.KeywordField()
+    location_address = fields.TextField()
+    postcode = fields.KeywordField()
+    main_phone = fields.KeywordField()
+    main_email = fields.KeywordField()
+    
+    # Nested address field
+    full_address = fields.TextField()
+    
+    class Index:
+        name = 'care_homes'
+        settings = {
+            'number_of_shards': 1,
+            'number_of_replicas': 0,
+            'max_result_window': 10000,
+        }
+    
+    class Django:
+        model = CareHome
+        fields = [
+            'id',
+            'bed_capacity',
+            'current_occupancy',
+            'is_active',
+        ]
+    
+    def prepare_full_address(self, instance):
+        """Generate full address for search"""
+        parts = [instance.location_address, instance.postcode]
+        return ", ".join([p for p in parts if p])

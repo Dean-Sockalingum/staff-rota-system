@@ -1,0 +1,8 @@
+SAP,First_Name,Last_Name,Email,Phone,Role,Home_Unit,Team,Shift_Preference,Contracted_Hours,Annual_Leave_Days,Is_Active,Is_Management
+ADMIN001,John,Smith,john.smith@example.com,01234567890,OPERATIONS_MANAGER,ADMIN,A,DAY_SENIOR,35,28,TRUE,TRUE
+SSCW001,Jane,Doe,jane.doe@example.com,01234567891,SSCW,BLUE,A,DAY_SENIOR,35,28,TRUE,FALSE
+SSCW002,Robert,Johnson,robert.johnson@example.com,01234567892,SSCW,BLUE,B,NIGHT_SENIOR,35,28,TRUE,FALSE
+SCW001,Emily,Williams,emily.williams@example.com,01234567893,SCW,GREEN,A,DAY_SENIOR,24,17,TRUE,FALSE
+SCW002,Michael,Brown,michael.brown@example.com,01234567894,SCW,GREEN,B,NIGHT_SENIOR,24,17,TRUE,FALSE
+SCA001,Sarah,Davis,sarah.davis@example.com,01234567895,SCA,ORANGE,A,DAY_ASSISTANT,24,17,TRUE,FALSE
+SCA002,David,Wilson,david.wilson@example.com,01234567896,SCA,ORANGE,C,NIGHT_ASSISTANT,24,17,TRUE,FALSE

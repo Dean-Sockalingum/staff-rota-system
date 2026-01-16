@@ -1,0 +1,162 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Generate Audit Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-form {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .btn-group-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-bar"></i> Generate Audit Report</h2>
+        <a href="{% url 'audit_report_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Reports
+        </a>
+    </div>
+    
+    <div class="report-form">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="report_type">Report Type</label>
+                <select name="report_type" id="report_type" class="form-control" required>
+                    <option value="">Select a report type...</option>
+                    <option value="DAILY_ACTIVITY">Daily Activity Report</option>
+                    <option value="WEEKLY_SUMMARY">Weekly Summary</option>
+                    <option value="MONTHLY_COMPLIANCE">Monthly Compliance Report</option>
+                    <option value="USER_ACTIVITY">User Activity Report</option>
+                    <option value="DATA_CHANGES">Data Changes Report</option>
+                    <option value="COMPLIANCE_VIOLATIONS">Compliance Violations Report</option>
+                    <option value="SHIFT_AUDIT">Shift Audit Report</option>
+                    <option value="LEAVE_AUDIT">Leave Audit Report</option>
+                    <option value="CUSTOM">Custom Report</option>
+                </select>
+                <div class="help-text">Select the type of audit report to generate</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="title">Report Title</label>
+                <input type="text" name="title" id="title" class="form-control" required
+                       placeholder="e.g., November 2025 Compliance Report">
+                <div class="help-text">Give this report a descriptive title</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description (Optional)</label>
+                <textarea name="description" id="description" class="form-control" rows="3"
+                          placeholder="Optional description or notes about this report"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="period_start">Period Start Date</label>
+                <input type="date" name="period_start" id="period_start" class="form-control" required>
+                <div class="help-text">Start date for the reporting period</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="period_end">Period End Date</label>
+                <input type="date" name="period_end" id="period_end" class="form-control" required>
+                <div class="help-text">End date for the reporting period</div>
+            </div>
+            
+            <div class="btn-group-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Generate Report
+                </button>
+                <a href="{% url 'audit_report_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="alert alert-info mt-4" style="max-width: 800px; margin: 20px auto 0;">
+        <h5><i class="fas fa-info-circle"></i> Report Types Explained</h5>
+        <ul class="mb-0">
+            <li><strong>Daily Activity:</strong> Summary of all system activity for a single day</li>
+            <li><strong>Weekly Summary:</strong> Aggregated activity over a week</li>
+            <li><strong>Monthly Compliance:</strong> Comprehensive compliance status for the month</li>
+            <li><strong>User Activity:</strong> Detailed activity log for specific users</li>
+            <li><strong>Data Changes:</strong> All data modifications during the period</li>
+            <li><strong>Compliance Violations:</strong> List of all compliance issues detected</li>
+            <li><strong>Shift Audit:</strong> Shift allocation and changes audit</li>
+            <li><strong>Leave Audit:</strong> Leave requests and approvals audit</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    // Auto-set date ranges based on report type
+    document.getElementById('report_type').addEventListener('change', function() {
+        const reportType = this.value;
+        const today = new Date();
+        const periodStart = document.getElementById('period_start');
+        const periodEnd = document.getElementById('period_end');
+        
+        let startDate, endDate;
+        
+        switch(reportType) {
+            case 'DAILY_ACTIVITY':
+                startDate = endDate = today;
+                break;
+            case 'WEEKLY_SUMMARY':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 7);
+                endDate = today;
+                break;
+            case 'MONTHLY_COMPLIANCE':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            default:
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 30);
+                endDate = today;
+        }
+        
+        periodStart.valueAsDate = startDate;
+        periodEnd.valueAsDate = endDate;
+    });
+</script>
+{% endblock %}

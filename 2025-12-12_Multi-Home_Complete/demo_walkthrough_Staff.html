@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Rota System - Care Staff Mobile Walkthrough</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            overflow-x: hidden;
+        }
+
+        .walkthrough-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 1000;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #17a2b8, #138496);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(23, 162, 184, 0.3);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 24px;
+        }
+
+        .step.active {
+            background: #d1ecf1;
+            border-radius: 8px;
+        }
+
+        .step.completed {
+            background: #bee5eb;
+            border-radius: 8px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            border-radius: 50%;
+            background: #ccc;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .step.active .step-number {
+            background: #17a2b8;
+            animation: pulse 2s infinite;
+        }
+
+        .step.completed .step-number {
+            background: #138496;
+        }
+
+        .step.completed .step-number::before {
+            content: '✓';
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .dashboard-view {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 30px;
+            min-height: 600px;
+            display: none;
+        }
+
+        .dashboard-view.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mobile-frame {
+            max-width: 400px;
+            margin: 0 auto 30px;
+            background: #000;
+            border-radius: 40px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .mobile-screen {
+            background: white;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .mobile-header {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .mobile-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .mobile-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .mobile-content {
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        .dashboard-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #17a2b8;
+            border: 2px solid #17a2b8;
+        }
+
+        .shift-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .shift-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            border-color: #17a2b8;
+        }
+
+        .shift-date {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .shift-time {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .shift-type {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .type-early {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .type-late {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .type-night {
+            background: #d6d8db;
+            color: #383d41;
+        }
+
+        .shift-location {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert-box.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .alert-box.info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+
+        .alert-icon {
+            font-size: 24px;
+        }
+
+        .narration-box {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+            box-shadow: 0 4px 20px rgba(23, 162, 184, 0.3);
+        }
+
+        .narration-box strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #17a2b8;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feature-list {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .feature-item {
+            padding: 15px;
+            background: white;
+            border-left: 4px solid #17a2b8;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            border-color: #17a2b8;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .action-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .action-label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .notification-badge {
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .step-indicator {
+                flex-direction: column;
+            }
+
+            .step:not(:last-child)::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -10px;
+                transform: translateX(50%);
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="walkthrough-container">
+        <div class="header">
+            <h1>📱 Care Staff Mobile Experience</h1>
+            <p>Interactive Walkthrough - Your Shifts in Your Pocket</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-title">My Shifts</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-title">Leave Requests</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-title">Swap Shifts</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-title">Profile & Training</div>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-title">Benefits</div>
+            </div>
+        </div>
+
+        <!-- Step 1: My Shifts -->
+        <div class="dashboard-view active" id="step1">
+            <div class="narration-box">
+                <strong>Your Shifts, Anywhere, Anytime</strong>
+                No more calling the office to ask "When am I working?" Your phone shows your complete rota for the next 4 weeks. Get notified instantly when shifts are published or changed.
+            </div>
+
+            <div class="dashboard-title">📱 Mobile View</div>
+
+            <div class="mobile-frame">
+                <div class="mobile-screen">
+                    <div class="mobile-header">
+                        <h2>👋 Hi Sarah!</h2>
+                        <p>Victoria Gardens - Registered Nurse</p>
+                    </div>
+                    <div class="mobile-content">
+                        <h3 style="margin-bottom: 15px; font-size: 18px;">📅 This Week's Shifts</h3>
+                        
+                        <div class="shift-card" style="border-left: 4px solid #856404;">
+                            <div class="shift-date">Monday, Jan 15</div>
+                            <div class="shift-time">11:00 PM - 7:00 AM</div>
+                            <div class="shift-type type-night">Night Shift</div>
+                            <div class="shift-location">📍 Victoria Gardens</div>
+                        </div>
+
+                        <div class="shift-card" style="border-left: 4px solid #856404;">
+                            <div class="shift-date">Tuesday, Jan 16</div>
+                            <div class="shift-time">11:00 PM - 7:00 AM</div>
+                            <div class="shift-type type-night">Night Shift</div>
+                            <div class="shift-location">📍 Victoria Gardens</div>
+                        </div>
+
+                        <div class="shift-card" style="border-left: 4px solid #856404;">
+                            <div class="shift-date">Wednesday, Jan 17</div>
+                            <div class="shift-time">11:00 PM - 7:00 AM</div>
+                            <div class="shift-type type-night">Night Shift</div>
+                            <div class="shift-location">📍 Victoria Gardens</div>
+                        </div>
+
+                        <div class="alert-box success" style="margin-top: 20px;">
+                            <div class="alert-icon">✅</div>
+                            <div style="font-size: 13px;">
+                                <strong>All set!</strong> 3 shifts this week, 2 days off coming up.
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" style="margin-top: 15px;">
+                            📅 View Full Month
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box info">
+                <div class="alert-icon">📲</div>
+                <div>
+                    <strong>Instant Notifications:</strong> Get push notifications when new rotas are published, shifts change, or you're requested to cover. No more missing updates!
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px; text-align: center;">📊 What Staff Love Most</h3>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-title">📅 4-Week Visibility</div>
+                    <div class="feature-desc">See all your shifts for the next month. Plan your life, book childcare, make appointments.</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-title">🔔 Real-Time Updates</div>
+                    <div class="feature-desc">Instant push notifications for rota changes, shift swaps, or cover requests.</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-title">📱 Works Offline</div>
+                    <div class="feature-desc">Downloaded shifts available even without internet. Perfect for checking schedules anywhere.</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-title">🗓️ Calendar Sync</div>
+                    <div class="feature-desc">One-tap sync to iPhone/Android calendar. Your shifts appear alongside personal appointments.</div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" disabled>← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Request Leave →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Leave Requests -->
+        <div class="dashboard-view" id="step2">
+            <div class="narration-box">
+                <strong>Leave Requests Made Easy</strong>
+                No more paper forms or waiting weeks for approval. Request leave in 30 seconds on your phone. The AI checks if your leave causes staffing issues and Service Manager gets instant notification.
+            </div>
+
+            <div class="dashboard-title">📱 Request Leave</div>
+
+            <div class="mobile-frame">
+                <div class="mobile-screen">
+                    <div class="mobile-header">
+                        <h2>🏖️ Leave Request</h2>
+                        <p>Quick & Easy - Instant Status</p>
+                    </div>
+                    <div class="mobile-content">
+                        <h3 style="margin-bottom: 15px; font-size: 16px;">Request Time Off</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">From:</label>
+                            <input type="date" value="2026-02-05" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px;">
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">To:</label>
+                            <input type="date" value="2026-02-12" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px;">
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Reason:</label>
+                            <select style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px;">
+                                <option selected>Annual Leave</option>
+                                <option>Medical Appointment</option>
+                                <option>Family Emergency</option>
+                                <option>Training/Development</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid #28a745;">
+                            <strong style="color: #28a745;">✅ Good News!</strong><br>
+                            AI checked staffing - this leave request is safe to approve. 12 HCAs available during this period (requirement: 8).
+                        </div>
+
+                        <button class="btn btn-success">
+                            📤 Submit Request
+                        </button>
+
+                        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Expected Response Time:</div>
+                            <div style="font-size: 18px; font-weight: bold; color: #17a2b8;">Within 4 hours</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px; text-align: center;">📊 Leave Request History</h3>
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div class="shift-card" style="border-left: 4px solid #28a745;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>Dec 20-27, 2025</strong>
+                        <span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">✓ Approved</span>
+                    </div>
+                    <div style="font-size: 14px; color: #666;">7 days Annual Leave | Approved in 2 hours</div>
+                </div>
+
+                <div class="shift-card" style="border-left: 4px solid #17a2b8;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>Feb 5-12, 2026</strong>
+                        <span style="background: #ffc107; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 12px;">⏳ Pending</span>
+                    </div>
+                    <div style="font-size: 14px; color: #666;">7 days Annual Leave | Submitted 5 mins ago</div>
+                </div>
+
+                <div class="shift-card" style="border-left: 4px solid #28a745;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>Nov 15, 2025</strong>
+                        <span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">✓ Approved</span>
+                    </div>
+                    <div style="font-size: 14px; color: #666;">1 day Medical Appointment | Approved in 30 mins</div>
+                </div>
+            </div>
+
+            <div class="alert-box success" style="margin-top: 30px;">
+                <div class="alert-icon">⚡</div>
+                <div>
+                    <strong>Average Approval Time: 4 minutes</strong> (was 2-3 days). AI pre-checks staffing, Service Manager just clicks approve.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Swap Shifts →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Shift Swapping -->
+        <div class="dashboard-view" id="step3">
+            <div class="narration-box">
+                <strong>Swap Shifts with Colleagues</strong>
+                Need to swap a shift? The app finds colleagues who work the same role, have opposite shift patterns, and are WTD-compliant. Both of you approve, Service Manager gets notified, done.
+            </div>
+
+            <div class="dashboard-title">🔄 Shift Swap</div>
+
+            <div class="mobile-frame">
+                <div class="mobile-screen">
+                    <div class="mobile-header">
+                        <h2>🔄 Swap Shifts</h2>
+                        <p>Find & Swap with Colleagues</p>
+                    </div>
+                    <div class="mobile-content">
+                        <h3 style="margin-bottom: 15px; font-size: 16px;">My Shift to Swap</h3>
+                        
+                        <div class="shift-card" style="border-left: 4px solid #dc3545;">
+                            <div class="shift-date">Monday, Jan 15</div>
+                            <div class="shift-time">11:00 PM - 7:00 AM</div>
+                            <div class="shift-type type-night">Night Shift</div>
+                            <div class="shift-location">📍 Victoria Gardens</div>
+                            <button class="btn btn-primary" style="margin-top: 10px; padding: 8px 16px; font-size: 13px;">
+                                🔍 Find Available Staff
+                            </button>
+                        </div>
+
+                        <h3 style="margin: 20px 0 15px; font-size: 16px;">✨ Suggested Swaps</h3>
+
+                        <div class="shift-card" style="border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                <div>
+                                    <strong style="font-size: 16px;">David Wilson (RN)</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Last swapped 2 months ago</div>
+                                </div>
+                                <span style="background: #28a745; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">96% Match</span>
+                            </div>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
+                                ✅ Has shift: Jan 17 Night (you're off)<br>
+                                ✅ Wants: Jan 15 Night (your shift)<br>
+                                ✅ WTD safe for both parties<br>
+                                ✅ Same qualification (RN)
+                            </div>
+                            <button class="btn btn-success" style="padding: 8px 16px; font-size: 13px;">
+                                🔄 Propose Swap
+                            </button>
+                        </div>
+
+                        <div class="shift-card" style="border-left: 4px solid #17a2b8;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                <div>
+                                    <strong style="font-size: 16px;">Fiona Grant (RN)</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Reliable swap partner</div>
+                                </div>
+                                <span style="background: #17a2b8; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">89% Match</span>
+                            </div>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
+                                ✅ Available Jan 15 Night<br>
+                                ⚠️ Prefers days (but might help)<br>
+                                ✅ WTD safe<br>
+                                ✅ Same qualification (RN)
+                            </div>
+                            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 13px;">
+                                🔄 Propose Swap
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px; text-align: center;">How Swap Approval Works</h3>
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+                    <div style="flex: 1; text-align: center;">
+                        <div style="background: #17a2b8; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 10px;">1</div>
+                        <strong>You Propose</strong>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">Select colleague & shifts to swap</div>
+                    </div>
+                    <div style="font-size: 30px; color: #ccc;">→</div>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="background: #17a2b8; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 10px;">2</div>
+                        <strong>They Accept</strong>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">Colleague gets notification, approves</div>
+                    </div>
+                    <div style="font-size: 30px; color: #ccc;">→</div>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="background: #28a745; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 10px;">3</div>
+                        <strong>Auto-Approved</strong>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">SM notified, rota updated</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box success" style="margin-top: 30px;">
+                <div class="alert-icon">⚡</div>
+                <div>
+                    <strong>Average Swap Time: 15 minutes</strong> (was 2-3 days of phone calls). AI finds matches, validates WTD, auto-approves safe swaps.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Your Profile →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Profile & Training -->
+        <div class="dashboard-view" id="step4">
+            <div class="narration-box">
+                <strong>Your Profile & Training Tracker</strong>
+                See your training status, upcoming renewals, and qualifications. Get reminded 2 weeks before any training expires. Track your induction progress if you're new.
+            </div>
+
+            <div class="dashboard-title">📱 Your Profile</div>
+
+            <div class="mobile-frame">
+                <div class="mobile-screen">
+                    <div class="mobile-header">
+                        <h2>👤 Sarah MacKenzie</h2>
+                        <p>Registered Nurse (RN)</p>
+                    </div>
+                    <div class="mobile-content">
+                        <div class="quick-actions">
+                            <div class="action-btn">
+                                <div class="action-icon">📚</div>
+                                <div class="action-label">My Training</div>
+                            </div>
+                            <div class="action-btn">
+                                <div class="action-icon">📊</div>
+                                <div class="action-label">My Stats</div>
+                            </div>
+                            <div class="action-btn">
+                                <div class="action-icon">⚙️</div>
+                                <div class="action-label">Settings</div>
+                            </div>
+                            <div class="action-btn">
+                                <div class="action-icon">📞</div>
+                                <div class="action-label">Contact SM</div>
+                            </div>
+                        </div>
+
+                        <h3 style="margin: 20px 0 15px; font-size: 16px;">📚 Training Status</h3>
+                        
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>Fire Safety</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Valid until Jun 2026</div>
+                                </div>
+                                <span style="color: #28a745; font-size: 24px;">✓</span>
+                            </div>
+                        </div>
+
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>Medication Admin</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Valid until May 2026</div>
+                                </div>
+                                <span style="color: #28a745; font-size: 24px;">✓</span>
+                            </div>
+                        </div>
+
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>Moving & Handling</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Valid until Aug 2026</div>
+                                </div>
+                                <span style="color: #28a745; font-size: 24px;">✓</span>
+                            </div>
+                        </div>
+
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>Safeguarding Adults</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 3px;">Valid until Apr 2026</div>
+                                </div>
+                                <span style="color: #28a745; font-size: 24px;">✓</span>
+                            </div>
+                        </div>
+
+                        <div class="alert-box success" style="margin-top: 20px;">
+                            <div style="font-size: 13px;">
+                                <strong>🎉 All Training Current!</strong><br>
+                                You'll get reminders 2 weeks before any renewal is due.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px; text-align: center;">📊 Your Annual Stats</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 800px; margin: 0 auto;">
+                <div class="stat-card">
+                    <div class="stat-value">248</div>
+                    <div class="stat-label">Shifts Worked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Training Compliance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">28</div>
+                    <div class="stat-label">Days Leave Taken</div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Benefits →</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Benefits -->
+        <div class="dashboard-view" id="step5">
+            <div class="narration-box">
+                <strong>What This Means for You</strong>
+                No more calling the office 3 times a week asking about shifts. No more waiting days for leave approval. No more paper forms. Everything is instant, mobile, and stress-free.
+            </div>
+
+            <div class="dashboard-title">✨ Your Benefits</div>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-title">⏱️ Time Saved</div>
+                    <div class="feature-desc">
+                        <strong>Before:</strong> 3 hours/month calling office, checking schedules, submitting forms<br>
+                        <strong>Now:</strong> 10 minutes/month checking app<br>
+                        <strong>Saved:</strong> 2 hours 50 mins/month = 34 hours/year per person
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-title">🎯 Better Planning</div>
+                    <div class="feature-desc">
+                        See 4 weeks ahead instead of 1 week. Book childcare, make appointments, plan your life with confidence.
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-title">⚡ Instant Answers</div>
+                    <div class="feature-desc">
+                        Leave requests approved in 4 minutes (was 2-3 days). Shift swaps done in 15 minutes (was 2-3 days of calls).
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-title">😊 Less Stress</div>
+                    <div class="feature-desc">
+                        No more uncertainty about your schedule. No more phone tag with the office. Everything in one place, always up-to-date.
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-title">🔔 Never Miss Updates</div>
+                    <div class="feature-desc">
+                        Push notifications for rota changes, approved leave, shift swap requests. Stay informed without checking constantly.
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-title">📱 Your Terms</div>
+                    <div class="feature-desc">
+                        Check schedules at 11 PM from your couch. Request leave while waiting for the bus. Life on your schedule, not office hours.
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 40px 0 20px; text-align: center; font-size: 24px;">Organization-Wide Staff Benefits</h3>
+            <div style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 40px; border-radius: 12px; text-align: center;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px;">
+                    <div>
+                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">Before This System</div>
+                        <div style="font-size: 48px; font-weight: bold; margin-bottom: 10px;">3 hrs/month</div>
+                        <div style="font-size: 14px; opacity: 0.8;">per staff member on admin tasks</div>
+                        <div style="margin-top: 15px; font-size: 14px; background: rgba(255,255,255,0.15); padding: 10px; border-radius: 6px;">
+                            Calls to office, checking schedules,<br>submitting forms, waiting for approvals
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">With This System</div>
+                        <div style="font-size: 48px; font-weight: bold; margin-bottom: 10px; color: #90EE90;">10 mins/month</div>
+                        <div style="font-size: 14px; opacity: 0.8;">per staff member on app</div>
+                        <div style="margin-top: 15px; font-size: 14px; background: rgba(144,238,144,0.2); padding: 10px; border-radius: 6px;">
+                            Quick app checks,<br>instant approvals,<br>automated notifications
+                        </div>
+                    </div>
+                </div>
+                <div style="border-top: 2px solid rgba(255,255,255,0.3); padding-top: 30px;">
+                    <div style="font-size: 20px; margin-bottom: 15px;">All 150 Care Staff</div>
+                    <div style="font-size: 48px; font-weight: bold; margin-bottom: 10px;">3,600-5,400 hours saved/year</div>
+                    <div style="font-size: 28px; color: #90EE90;">= £72,000-£108,000 value</div>
+                    <div style="margin-top: 20px; font-size: 16px; opacity: 0.9;">
+                        That's 34 hours per person per year back in your life ❤️
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 40px 0 20px; text-align: center; font-size: 24px;">Real Staff Feedback</h3>
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="shift-card" style="border-left: 4px solid #28a745;">
+                    <div style="font-style: italic; margin-bottom: 10px; font-size: 15px;">
+                        "I used to call the office 4-5 times a week asking about shifts. Now I just open the app. It's changed my life - I can actually plan weekends now!"
+                    </div>
+                    <div style="font-size: 13px; color: #666;">— Emma, HCA (Victoria Gardens)</div>
+                </div>
+
+                <div class="shift-card" style="border-left: 4px solid #28a745;">
+                    <div style="font-style: italic; margin-bottom: 10px; font-size: 15px;">
+                        "Leave requests used to take 3 days. Now I get approval notifications before I finish my lunch break. Amazing!"
+                    </div>
+                    <div style="font-size: 13px; color: #666;">— James, HCA (Orchard Grove)</div>
+                </div>
+
+                <div class="shift-card" style="border-left: 4px solid #28a745;">
+                    <div style="font-style: italic; margin-bottom: 10px; font-size: 15px;">
+                        "Swapping shifts with colleagues is so easy now. We sort it between ourselves in minutes instead of days of back-and-forth."
+                    </div>
+                    <div style="font-size: 13px; color: #666;">— Michael, SSW (Meadowburn)</div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-success" onclick="restartWalkthrough()">🔄 Restart Walkthrough</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showStep(stepNum) {
+            document.querySelectorAll('.dashboard-view').forEach(view => {
+                view.classList.remove('active');
+            });
+
+            document.getElementById('step' + stepNum).classList.add('active');
+
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                const stepNumber = index + 1;
+                
+                if (stepNumber < stepNum) {
+                    step.classList.add('completed');
+                } else if (stepNumber === stepNum) {
+                    step.classList.add('active');
+                }
+            });
+
+            currentStep = stepNum;
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function restartWalkthrough() {
+            showStep(1);
+        }
+
+        document.querySelectorAll('.step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepNum = parseInt(this.dataset.step);
+                showStep(stepNum);
+            });
+        });
+
+        updateProgress();
+    </script>
+</body>
+</html>

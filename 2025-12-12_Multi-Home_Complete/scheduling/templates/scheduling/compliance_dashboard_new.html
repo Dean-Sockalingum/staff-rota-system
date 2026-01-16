@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compliance Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cert-status-valid { color: #28a745; }
+    .cert-status-expiring { color: #ffc107; }
+    .cert-status-expired { color: #dc3545; }
+    .check-status-pass { background: #d4edda; }
+    .check-status-warning { background: #fff3cd; }
+    .check-status-fail { background: #f8d7da; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-clipboard-check"></i> Compliance Monitoring</h1>
+            <p class="text-muted">Track certifications, regulatory checks, and audit trail</p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'run_compliance_check' %}" class="btn btn-primary">
+                <i class="fas fa-check-circle"></i> Run Compliance Check
+            </a>
+            <a href="{% url 'certification_expiry_list' %}" class="btn btn-warning">
+                <i class="fas fa-certificate"></i> Expiring Certifications
+            </a>
+            <a href="{% url 'audit_trail_view' %}" class="btn btn-info">
+                <i class="fas fa-history"></i> Audit Trail
+            </a>
+            <a href="{% url 'compliance_report_view' %}" class="btn btn-success">
+                <i class="fas fa-file-alt"></i> Generate Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Compliance Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Compliance Score</h6>
+                    <div class="display-4 {% if compliance_score >= 80 %}text-success{% elif compliance_score >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ compliance_score|floatformat:0 }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Certifications Expiring</h6>
+                    <div class="display-4 text-warning">{{ expiring_certifications_count }}</div>
+                    <small>Within 30 days</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Expired Certifications</h6>
+                    <div class="display-4 text-danger">{{ expired_certifications_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Overdue Actions</h6>
+                    <div class="display-4 text-danger">{{ overdue_checks_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Compliance Checks -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Recent Compliance Checks</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_checks %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Check Type</th>
+                                        <th>Status</th>
+                                        <th>Score</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for check in recent_checks %}
+                                    <tr class="{% if check.status == 'PASS' %}check-status-pass{% elif check.status == 'WARNING' %}check-status-warning{% elif check.status == 'FAIL' %}check-status-fail{% endif %}">
+                                        <td>{{ check.check_date|date:"M d" }}</td>
+                                        <td>{{ check.get_check_type_display }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if check.status == 'PASS' %}success{% elif check.status == 'WARNING' %}warning{% elif check.status == 'FAIL' %}danger{% else %}secondary{% endif %}">
+                                                {{ check.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ check.compliance_score|floatformat:0 }}%</td>
+                                        <td>
+                                            <a href="{% url 'compliance_check_detail' check.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No recent compliance checks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiring Certifications -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</h5>
+                </div>
+                <div class="card-body">
+                    {% if expiring_certifications %}
+                        {% for cert in expiring_certifications %}
+                        <div class="card mb-2">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">{{ cert.staff_member.get_full_name }}</h6>
+                                        <small class="text-muted">{{ cert.get_certification_type_display }}</small>
+                                    </div>
+                                    <div class="text-right">
+                                        <strong class="{% if cert.is_expired %}cert-status-expired{% elif cert.days_until_expiry <= 7 %}cert-status-expired{% else %}cert-status-expiring{% endif %}">
+                                            {{ cert.days_until_expiry }} days
+                                        </strong><br>
+                                        <small class="text-muted">{{ cert.expiry_date|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">All certifications current</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Failed Checks & Actions Required -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-times-circle"></i> Actions Required</h5>
+                </div>
+                <div class="card-body">
+                    {% if failed_checks %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Check</th>
+                                        <th>Severity</th>
+                                        <th>Findings</th>
+                                        <th>Action Required</th>
+                                        <th>Deadline</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for check in failed_checks %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ check.check_name }}</strong><br>
+                                            <small class="text-muted">{{ check.get_check_type_display }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{% if check.severity == 'CRITICAL' %}danger{% elif check.severity == 'HIGH' %}warning{% else %}info{% endif %}">
+                                                {{ check.severity }}
+                                            </span>
+                                        </td>
+                                        <td>{{ check.findings|truncatewords:10 }}</td>
+                                        <td>
+                                            {% if check.action_required %}
+                                                <span class="text-danger"><i class="fas fa-exclamation"></i> {{ check.action_plan|truncatewords:8 }}</span>
+                                            {% else %}
+                                                <span class="text-muted">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if check.action_deadline %}
+                                                {{ check.action_deadline|date:"M d, Y" }}
+                                                {% if check.is_overdue %}
+                                                    <span class="badge badge-danger">OVERDUE</span>
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'compliance_check_detail' check.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No failed checks or actions required</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

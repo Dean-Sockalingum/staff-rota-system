@@ -1,0 +1,67 @@
+AXES: BEGIN version 8.1.0, blocking by ip_address
+COMPLETE TUESDAY COVERAGE ANALYSIS: 2026-01-14
+================================================================================
+
+HAWTHORN_HOUSE
+--------------------------------------------------------------------------------
+  Required: 18 day shifts
+  Scheduled: 22 day shifts
+  Shortfall: 3 shifts
+
+  Units with shortfalls:
+    HH_IRIS: 1/2 (short 1)
+    HH_PRIMROSE: 0/2 (short 2)
+
+MEADOWBURN
+--------------------------------------------------------------------------------
+  Required: 17 day shifts
+  Scheduled: 22 day shifts
+  Shortfall: 2 shifts
+
+  Units with shortfalls:
+    MB_BLUEBELL: 1/2 (short 1)
+    MB_DAISY: 1/2 (short 1)
+
+ORCHARD_GROVE
+--------------------------------------------------------------------------------
+  Required: 17 day shifts
+  Scheduled: 41 day shifts
+  Shortfall: 0 shifts
+
+RIVERSIDE
+--------------------------------------------------------------------------------
+  Required: 17 day shifts
+  Scheduled: 22 day shifts
+  Shortfall: 3 shifts
+
+  Units with shortfalls:
+    RS_DAFFODIL: 1/2 (short 1)
+    RS_JASMINE: 0/2 (short 2)
+
+VICTORIA_GARDENS
+--------------------------------------------------------------------------------
+  Required: 10 day shifts
+  Scheduled: 22 day shifts
+  Shortfall: 0 shifts
+
+================================================================================
+SYSTEM TOTALS:
+  Total Required: 79 day shifts
+  Total Scheduled: 129 day shifts
+  Total Shortfall: 8 shifts
+================================================================================
+
+⚠️  User reported 18 staff short, but calculation shows 8
+   Checking if night shifts are also included...
+
+   Night shifts required: 79
+   Night shifts scheduled: 107
+   Night shortfall: 0
+
+   COMBINED SHORTFALL: 8 shifts
+
+================================================================================
+STAFF AVAILABILITY CHECK:
+  Total active care staff: 2149
+  Staff scheduled on 2026-01-14: 250
+  Staff NOT scheduled: 1899

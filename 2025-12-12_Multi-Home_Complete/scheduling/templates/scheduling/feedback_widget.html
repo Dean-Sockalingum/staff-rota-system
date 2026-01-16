@@ -1,0 +1,269 @@
+<!-- Task 11: AI Assistant Feedback Widget -->
+<style>
+    /* Feedback Widget Styles */
+    .feedback-widget {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 3px solid #0066CC;
+    }
+    
+    .feedback-widget.submitted {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .feedback-title {
+        font-size: 0.9em;
+        color: #495057;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    .star-rating {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .star {
+        font-size: 1.8em;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #dee2e6;
+    }
+    
+    .star:hover,
+    .star.active {
+        color: #ffc107;
+        transform: scale(1.1);
+    }
+    
+    .feedback-types {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .feedback-type-btn {
+        padding: 6px 12px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .feedback-type-btn:hover {
+        border-color: #0066CC;
+        background: #e7f1ff;
+    }
+    
+    .feedback-type-btn.selected {
+        background: #0066CC;
+        color: white;
+        border-color: #0066CC;
+    }
+    
+    .feedback-comment {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        resize: vertical;
+        min-height: 60px;
+    }
+    
+    .feedback-submit {
+        padding: 8px 16px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .feedback-submit:hover {
+        background: #0052a3;
+    }
+    
+    .feedback-submit:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .feedback-success {
+        color: #28a745;
+        font-size: 0.9em;
+        margin-top: 10px;
+    }
+</style>
+
+<script>
+// Task 11: Feedback Widget JavaScript
+
+// Store last query for feedback
+let lastQueryData = {query: '', intent: '', confidence: 0, response: '', data: {}};
+
+// Create feedback widget element
+function createFeedbackWidget() {
+    const widget = document.createElement('div');
+    widget.className = 'feedback-widget';
+    widget.innerHTML = `
+        <div class="feedback-title">💬 Was this response helpful?</div>
+        <div class="star-rating">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+        </div>
+        <div class="feedback-types" style="display:none;">
+            <button class="feedback-type-btn" data-type="HELPFUL">✅ Helpful</button>
+            <button class="feedback-type-btn" data-type="INACCURATE">❌ Inaccurate</button>
+            <button class="feedback-type-btn" data-type="INCOMPLETE">⚠️ Incomplete</button>
+            <button class="feedback-type-btn" data-type="TOO_TECHNICAL">🔧 Too Technical</button>
+            <button class="feedback-type-btn" data-type="TOO_SIMPLE">📚 Too Simple</button>
+            <button class="feedback-type-btn" data-type="WRONG_INTENT">🎯 Wrong Answer</button>
+        </div>
+        <textarea class="feedback-comment" placeholder="Additional comments (optional)" style="display:none;"></textarea>
+        <button class="feedback-submit" style="display:none;">Submit Feedback</button>
+        <div class="feedback-success" style="display:none;">✓ Thank you for your feedback!</div>
+    `;
+    
+    let selectedRating = 0;
+    let selectedType = null;
+    
+    // Get elements
+    const stars = widget.querySelectorAll('.star');
+    const feedbackTypes = widget.querySelector('.feedback-types');
+    const comment = widget.querySelector('.feedback-comment');
+    const submitBtn = widget.querySelector('.feedback-submit');
+    const successMsg = widget.querySelector('.feedback-success');
+    
+    // Star rating interaction
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            selectedRating = parseInt(this.dataset.rating);
+            
+            // Update star display
+            stars.forEach((s, idx) => {
+                if (idx < selectedRating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+            
+            // Show additional options
+            feedbackTypes.style.display = 'flex';
+            comment.style.display = 'block';
+            submitBtn.style.display = 'inline-block';
+        });
+        
+        // Hover effect
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            stars.forEach((s, idx) => {
+                if (idx < rating) {
+                    s.style.color = '#ffc107';
+                }
+            });
+        });
+        
+        star.addEventListener('mouseleave', function() {
+            stars.forEach((s, idx) => {
+                if (idx < selectedRating) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#dee2e6';
+                }
+            });
+        });
+    });
+    
+    // Feedback type buttons
+    const typeButtons = widget.querySelectorAll('.feedback-type-btn');
+    typeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            typeButtons.forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedType = this.dataset.type;
+        });
+    });
+    
+    // Submit feedback
+    submitBtn.addEventListener('click', function() {
+        if (selectedRating === 0) {
+            alert('Please select a rating');
+            return;
+        }
+        
+        submitFeedback({
+            rating: selectedRating,
+            feedback_type: selectedType,
+            comment: comment.value
+        });
+        
+        // Show success and disable widget
+        widget.classList.add('submitted');
+        submitBtn.style.display = 'none';
+        successMsg.style.display = 'block';
+    });
+    
+    return widget;
+}
+
+// Submit feedback to API
+function submitFeedback(feedback) {
+    const csrfToken = getCSRFToken();
+    
+    const payload = {
+        query_text: lastQueryData.query,
+        intent_detected: lastQueryData.intent,
+        confidence_score: lastQueryData.confidence,
+        response_text: lastQueryData.response,
+        response_data: lastQueryData.data,
+        rating: feedback.rating,
+        feedback_type: feedback.feedback_type,
+        feedback_comment: feedback.comment || ''
+    };
+    
+    fetch('/api/ai-assistant/feedback/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Feedback submitted:', data);
+        if (data.preferences_updated) {
+            console.log('User preferences updated:', data.user_preferences);
+        }
+    })
+    .catch(error => {
+        console.error('Feedback submission error:', error);
+    });
+}
+
+// Store query data when AI responds
+function storeQueryData(query, intent, confidence, response, data) {
+    lastQueryData = {
+        query: query,
+        intent: intent || 'UNKNOWN',
+        confidence: confidence || 0,
+        response: response,
+        data: data || {}
+    };
+}
+</script>

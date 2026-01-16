@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cost Analytics - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .stats-card p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .opportunity-card {
+        background: white;
+        border-left: 4px solid;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .opportunity-card.priority-high {
+        border-left-color: #dc3545;
+    }
+    
+    .opportunity-card.priority-medium {
+        border-left-color: #ffc107;
+    }
+    
+    .opportunity-card.priority-low {
+        border-left-color: #17a2b8;
+    }
+    
+    .analysis-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        transition: transform 0.2s;
+    }
+    
+    .analysis-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .badge-priority {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .badge-priority.high {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .badge-priority.medium {
+        background-color: #ffc107;
+        color: #333;
+    }
+    
+    .badge-priority.low {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .efficiency-score {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+    
+    .efficiency-high {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .efficiency-medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .efficiency-low {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 0.5rem;">
+                <h1 class="mb-2">💰 Cost Analytics Dashboard</h1>
+                <p class="mb-3">Track staffing costs, analyze agency spending, and forecast budgets</p>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'cost_analysis_run' %}" class="btn btn-light">
+                        <i class="fas fa-chart-line"></i> Run Cost Analysis
+                    </a>
+                    <a href="{% url 'agency_comparison_run' %}" class="btn btn-light">
+                        <i class="fas fa-balance-scale"></i> Compare Agency vs Permanent
+                    </a>
+                    <a href="{% url 'budget_forecast_create' %}" class="btn btn-light">
+                        <i class="fas fa-crystal-ball"></i> Create Budget Forecast
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alerts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h3>{{ high_agency_count }}</h3>
+                <p><i class="fas fa-exclamation-triangle"></i> High Agency Usage Alerts</p>
+                <small>Analyses with >30% agency staffing</small>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <h3>{{ low_efficiency_count }}</h3>
+                <p><i class="fas fa-chart-line"></i> Low Efficiency Alerts</p>
+                <small>Cost efficiency score <60</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cost Optimization Opportunities -->
+    {% if opportunities %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-3"><i class="fas fa-lightbulb text-warning"></i> Cost Optimization Opportunities</h2>
+            {% for opp in opportunities %}
+            <div class="opportunity-card priority-{{ opp.priority|lower }}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">
+                            {{ opp.title }}
+                            <span class="badge-priority {{ opp.priority|lower }}">{{ opp.priority }}</span>
+                        </h5>
+                        <p class="mb-2 text-muted">{{ opp.description }}</p>
+                        <p class="mb-1"><strong>Potential Savings:</strong> £{{ opp.potential_savings|floatformat:2 }}</p>
+                        <p class="mb-0 text-primary"><i class="fas fa-arrow-right"></i> {{ opp.action }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Recent Analyses -->
+    <div class="row">
+        <!-- Cost Analyses -->
+        <div class="col-md-4">
+            <h3 class="mb-3"><i class="fas fa-calculator"></i> Recent Cost Analyses</h3>
+            {% if recent_analyses %}
+                {% for analysis in recent_analyses %}
+                <div class="analysis-card">
+                    <h5 class="mb-2">
+                        <a href="{% url 'cost_analysis_detail' analysis.id %}">{{ analysis.name }}</a>
+                    </h5>
+                    <div class="mb-2">
+                        <strong>Total Cost:</strong> £{{ analysis.total_cost|floatformat:2 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Cost per Shift:</strong> £{{ analysis.cost_per_shift|floatformat:2 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Agency Usage:</strong> {{ analysis.agency_percentage|floatformat:1 }}%
+                    </div>
+                    <div class="mb-2">
+                        <strong>Efficiency Score:</strong>
+                        {% if analysis.cost_efficiency_score >= 75 %}
+                        <span class="efficiency-score efficiency-high">{{ analysis.cost_efficiency_score|floatformat:0 }}</span>
+                        {% elif analysis.cost_efficiency_score >= 50 %}
+                        <span class="efficiency-score efficiency-medium">{{ analysis.cost_efficiency_score|floatformat:0 }}</span>
+                        {% else %}
+                        <span class="efficiency-score efficiency-low">{{ analysis.cost_efficiency_score|floatformat:0 }}</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">
+                        {{ analysis.start_date }} to {{ analysis.end_date }}
+                    </small>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                    <p>No cost analyses yet</p>
+                    <a href="{% url 'cost_analysis_run' %}" class="btn btn-primary">Run First Analysis</a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Agency Comparisons -->
+        <div class="col-md-4">
+            <h3 class="mb-3"><i class="fas fa-balance-scale"></i> Recent Agency Comparisons</h3>
+            {% if recent_comparisons %}
+                {% for comp in recent_comparisons %}
+                <div class="analysis-card">
+                    <h5 class="mb-2">
+                        <a href="{% url 'agency_comparison_detail' comp.id %}">Agency vs Permanent</a>
+                        <span class="badge-priority {{ comp.priority|lower }}">{{ comp.priority }}</span>
+                    </h5>
+                    <div class="mb-2">
+                        <strong>Agency Premium:</strong> {{ comp.agency_premium|floatformat:1 }}%
+                    </div>
+                    <div class="mb-2">
+                        <strong>Total Premium Paid:</strong> £{{ comp.total_premium_paid|floatformat:2 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Potential Monthly Savings:</strong>
+                        <span class="text-success">£{{ comp.potential_monthly_savings|floatformat:2 }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">{{ comp.recommendation }}</small>
+                    </div>
+                    <small class="text-muted">
+                        {{ comp.start_date }} to {{ comp.end_date }}
+                    </small>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-balance-scale fa-3x mb-3"></i>
+                    <p>No comparisons yet</p>
+                    <a href="{% url 'agency_comparison_run' %}" class="btn btn-primary">Run First Comparison</a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Budget Forecasts -->
+        <div class="col-md-4">
+            <h3 class="mb-3"><i class="fas fa-crystal-ball"></i> Recent Budget Forecasts</h3>
+            {% if recent_forecasts %}
+                {% for forecast in recent_forecasts %}
+                <div class="analysis-card">
+                    <h5 class="mb-2">
+                        <a href="{% url 'budget_forecast_detail' forecast.id %}">{{ forecast.name }}</a>
+                    </h5>
+                    <div class="mb-2">
+                        <strong>Forecasted Total:</strong> £{{ forecast.forecasted_total_cost|floatformat:2 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Monthly Average:</strong> £{{ forecast.forecasted_monthly_average|floatformat:2 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Trend:</strong>
+                        {% if forecast.trend_direction == 'INCREASING' %}
+                        <span class="text-danger"><i class="fas fa-arrow-up"></i> {{ forecast.trend_direction }}</span>
+                        {% elif forecast.trend_direction == 'DECREASING' %}
+                        <span class="text-success"><i class="fas fa-arrow-down"></i> {{ forecast.trend_direction }}</span>
+                        {% else %}
+                        <span class="text-muted"><i class="fas fa-arrows-alt-h"></i> {{ forecast.trend_direction }}</span>
+                        {% endif %}
+                        ({{ forecast.trend_percentage|floatformat:1 }}%)
+                    </div>
+                    <div class="mb-2">
+                        <strong>Confidence:</strong> {{ forecast.confidence_level|floatformat:0 }}%
+                        <small class="text-muted">(±{{ forecast.margin_of_error|floatformat:0 }}%)</small>
+                    </div>
+                    {% if forecast.budget_target %}
+                    <div class="mb-2">
+                        <strong>Budget Status:</strong>
+                        {% if forecast.is_within_budget %}
+                        <span class="text-success"><i class="fas fa-check-circle"></i> Within Budget</span>
+                        {% else %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Over Budget</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <small class="text-muted">
+                        {{ forecast.forecast_months }} months - {{ forecast.forecast_method }}
+                    </small>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-crystal-ball fa-3x mb-3"></i>
+                    <p>No forecasts yet</p>
+                    <a href="{% url 'budget_forecast_create' %}" class="btn btn-primary">Create First Forecast</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

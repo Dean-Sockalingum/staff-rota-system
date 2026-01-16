@@ -1,0 +1,273 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}{{ staff_member.full_name }} - Staff Details - Rota System{% endblock %}
+
+{% block page_title %}Staff Details: {{ staff_member.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .info-card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .shift-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+    
+    .leave-status {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'staff_management' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Staff Management
+            </a>
+        </div>
+    </div>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">{{ staff_member.full_name }}</h2>
+                <p class="mb-1"><i class="fas fa-id-badge"></i> SAP: {{ staff_member.sap }}</p>
+                {% if staff_member.role %}
+                <p class="mb-1"><i class="fas fa-user-tag"></i> Role: {{ staff_member.role.name }}</p>
+                {% endif %}
+                {% if staff_member.email %}
+                <p class="mb-1"><i class="fas fa-envelope"></i> {{ staff_member.email }}</p>
+                {% endif %}
+                {% if staff_member.phone_number %}
+                <p class="mb-0"><i class="fas fa-phone"></i> {{ staff_member.phone_number }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="stats-number">{{ shifts_this_month }}</div>
+                <p class="mb-0">Shifts This Month</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Staff Information -->
+        <div class="col-md-4">
+            <div class="card info-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Staff Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>SAP Number:</strong></td>
+                            <td>{{ staff_member.sap }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Full Name:</strong></td>
+                            <td>{{ staff_member.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Role:</strong></td>
+                            <td>
+                                {% if staff_member.role %}
+                                <span class="badge {% if staff_member.role.is_management %}bg-success{% else %}bg-info{% endif %}">
+                                    {{ staff_member.role.name }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">No Role Assigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                {% if staff_member.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Annual Leave:</strong></td>
+                            <td>{{ staff_member.annual_leave_allowance }} days</td>
+                        </tr>
+                        <tr>
+                        <div class="error-message">Error</div>
+                            <td>{{ staff_member.date_joined|date:"d M Y" }}</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-edit"></i> Edit Details
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-key"></i> Reset Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-md-8">
+            <!-- Upcoming Shifts -->
+            <div class="card info-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Upcoming Shifts</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_shifts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shift Type</th>
+                                    <th>Unit</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in upcoming_shifts %}
+                                <tr>
+                                    <td>{{ shift.date|date:"d M Y" }}</td>
+                                    <td>
+                                        <span class="badge shift-badge" style="background-color: {{ shift.shift_type.color }};">
+                                            {{ shift.shift_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ shift.unit.name }}</td>
+                                    <td>{{ shift.shift_type.start_time }} - {{ shift.shift_type.end_time }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No upcoming shifts scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Shifts -->
+            <div class="card info-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Shifts (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_shifts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shift Type</th>
+                                    <th>Unit</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in recent_shifts %}
+                                <tr>
+                                    <td>{{ shift.date|date:"d M Y" }}</td>
+                                    <td>
+                                        <span class="badge shift-badge" style="background-color: {{ shift.shift_type.color }};">
+                                            {{ shift.shift_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ shift.unit.name }}</td>
+                                    <td>
+                                        {% if shift.date < today %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif shift.date == today %}
+                                        <span class="badge bg-warning">Today</span>
+                                        {% else %}
+                                        <span class="badge bg-primary">Scheduled</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No recent shifts found.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Leave Requests -->
+            <div class="card info-card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-times"></i> Recent Leave Requests</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_leave %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Status</th>
+                                    <th>Requested</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in recent_leave %}
+                                <tr>
+                                    <td>{{ leave.leave_type|title }}</td>
+                                    <td>{{ leave.start_date|date:"d M Y" }}</td>
+                                    <td>{{ leave.end_date|date:"d M Y" }}</td>
+                                    <td>
+                                        <span class="leave-status 
+                                            {% if leave.status == 'approved' %}bg-success text-white
+                                            {% elif leave.status == 'denied' %}bg-danger text-white
+                                            {% else %}bg-warning text-dark{% endif %}">
+                                            {{ leave.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ leave.created_at|date:"d M Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No leave requests found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,575 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Create Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .builder-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .builder-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.5rem;
+    }
+    
+    .builder-sidebar {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .builder-main {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .section-box {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .field-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+    
+    .field-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    
+    .field-item:hover {
+        background: #e5e7eb;
+        transform: translateX(5px);
+    }
+    
+    .field-item.selected {
+        background: #dbeafe;
+        border: 2px solid #3b82f6;
+    }
+    
+    .field-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    .selected-fields-zone {
+        min-height: 200px;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #f8fafc;
+    }
+    
+    .selected-field-tag {
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+    }
+    
+    .selected-field-tag .remove {
+        margin-left: 0.5rem;
+        cursor: pointer;
+        opacity: 0.8;
+    }
+    
+    .selected-field-tag .remove:hover {
+        opacity: 1;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .preview-table {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    .preview-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .preview-table th {
+        background: #667eea;
+        color: white;
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+    
+    .preview-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .preview-table tr:hover {
+        background: #f9fafb;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+    }
+    
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="builder-header">
+        <h1>
+            <i class="fas fa-tools me-2"></i>
+            Report Builder
+        </h1>
+    </div>
+    
+    <div class="builder-container">
+        <!-- Sidebar: Configuration -->
+        <div class="builder-sidebar">
+            <!-- Report Type -->
+            <div class="section-box">
+                <label class="section-title">Report Type</label>
+                <select id="reportType" class="form-select" onchange="updateAvailableFields()">
+                    {% for value, label in report_types %}
+                    <option value="{{ value }}" {% if value == selected_report_type %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Filters -->
+            <div class="section-box">
+                <label class="section-title">Filters</label>
+                
+                <div class="mb-3">
+                    <label class="form-label">Date Range</label>
+                    <input type="date" id="dateFrom" class="form-control mb-2" placeholder="From">
+                    <input type="date" id="dateTo" class="form-control" placeholder="To">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Care Home</label>
+                    <select id="careHome" class="form-select">
+                        <option value="">All Homes</option>
+                        {% for home in care_homes %}
+                        <option value="{{ home.id }}">{{ home.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Unit</label>
+                    <select id="unit" class="form-select">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                        <option value="{{ unit.id }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <select id="role" class="form-select">
+                        <option value="">All Roles</option>
+                        {% for role in roles %}
+                        <option value="{{ role.name }}">{{ role.get_name_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="activeOnly" class="form-check-input">
+                    <label class="form-check-label" for="activeOnly">Active Only</label>
+                </div>
+            </div>
+            
+            <!-- Output Format -->
+            <div class="section-box">
+                <label class="section-title">Output Format</label>
+                <select id="outputFormat" class="form-select">
+                    {% for value, label in output_formats %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Template Options -->
+            <div class="section-box">
+                <label class="section-title">Template Options</label>
+                
+                <div class="mb-3">
+                    <label class="form-label">Template Name</label>
+                    <input type="text" id="templateName" class="form-control" 
+                           value="{{ template.name|default:'' }}" 
+                           placeholder="My Custom Report">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea id="templateDescription" class="form-control" rows="2" 
+                              placeholder="Optional description">{{ template.description|default:'' }}</textarea>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="isPublic" class="form-check-input" 
+                           {% if template.is_public %}checked{% endif %}>
+                    <label class="form-check-label" for="isPublic">Make Public (Share with other managers)</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main: Field Selection & Preview -->
+        <div class="builder-main">
+            <!-- Available Fields -->
+            <div class="section-box">
+                <label class="section-title">
+                    <i class="fas fa-list me-2"></i>Available Fields
+                </label>
+                <p class="text-muted small">Click fields to add them to your report</p>
+                
+                <div class="field-list" id="availableFields">
+                    {% for field_name, field_config in available_fields.items %}
+                    <div class="field-item" onclick="toggleField('{{ field_name }}', '{{ field_config.label }}')">
+                        <span>{{ field_config.label }}</span>
+                        <input type="checkbox" class="field-checkbox" id="field_{{ field_name }}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Selected Fields -->
+            <div class="section-box">
+                <label class="section-title">
+                    <i class="fas fa-check-square me-2"></i>Selected Fields
+                    <span class="badge bg-primary ms-2" id="selectedCount">0</span>
+                </label>
+                
+                <div class="selected-fields-zone" id="selectedFields">
+                    <p class="text-muted text-center">No fields selected yet. Click on fields above to add them.</p>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="section-box">
+                <button class="btn btn-primary" onclick="previewReport()">
+                    <i class="fas fa-eye me-2"></i>Preview Report
+                </button>
+                <button class="btn btn-success" onclick="generateReport()">
+                    <i class="fas fa-file-download me-2"></i>Generate & Download
+                </button>
+                <button class="btn btn-info" onclick="saveTemplate()">
+                    <i class="fas fa-save me-2"></i>Save Template
+                </button>
+                <a href="{% url 'report_builder_dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+            
+            <!-- Preview Section -->
+            <div class="section-box" id="previewSection" style="display: none;">
+                <label class="section-title">
+                    <i class="fas fa-table me-2"></i>Report Preview
+                </label>
+                
+                <div class="summary-stats" id="summaryStats"></div>
+                
+                <div class="preview-table" id="previewTable"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFields = new Set();
+{% if template %}
+// Load template fields
+{% for field in template.selected_fields %}
+selectedFields.add('{{ field }}');
+{% endfor %}
+updateSelectedFieldsDisplay();
+{% endif %}
+
+function toggleField(fieldName, fieldLabel) {
+    if (selectedFields.has(fieldName)) {
+        selectedFields.delete(fieldName);
+        document.getElementById('field_' + fieldName).checked = false;
+    } else {
+        selectedFields.add(fieldName);
+        document.getElementById('field_' + fieldName).checked = true;
+    }
+    updateSelectedFieldsDisplay();
+}
+
+function updateSelectedFieldsDisplay() {
+    const container = document.getElementById('selectedFields');
+    const countBadge = document.getElementById('selectedCount');
+    
+    if (selectedFields.size === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No fields selected yet. Click on fields above to add them.</p>';
+        countBadge.textContent = '0';
+        return;
+    }
+    
+    countBadge.textContent = selectedFields.size;
+    
+    let html = '';
+    selectedFields.forEach(fieldName => {
+        const checkbox = document.getElementById('field_' + fieldName);
+        const label = checkbox.closest('.field-item').querySelector('span').textContent;
+        html += `
+            <span class="selected-field-tag">
+                ${label}
+                <i class="fas fa-times remove" onclick="toggleField('${fieldName}', '${label}')"></i>
+            </span>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function getFilters() {
+    return {
+        date_from: document.getElementById('dateFrom').value,
+        date_to: document.getElementById('dateTo').value,
+        care_home: document.getElementById('careHome').value,
+        unit: document.getElementById('unit').value,
+        role: document.getElementById('role').value,
+        active_only: document.getElementById('activeOnly').checked
+    };
+}
+
+function previewReport() {
+    if (selectedFields.size === 0) {
+        alert('Please select at least one field');
+        return;
+    }
+    
+    const data = {
+        report_type: document.getElementById('reportType').value,
+        selected_fields: Array.from(selectedFields),
+        filters: getFilters()
+    };
+    
+    fetch("{% url 'report_preview' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        displayPreview(result);
+    })
+    .catch(error => {
+        alert('Error generating preview: ' + error);
+    });
+}
+
+function displayPreview(result) {
+    const previewSection = document.getElementById('previewSection');
+    const summaryStats = document.getElementById('summaryStats');
+    const previewTable = document.getElementById('previewTable');
+    
+    // Show section
+    previewSection.style.display = 'block';
+    
+    // Display summary stats
+    summaryStats.innerHTML = `
+        <div class="stat-box">
+            <div class="stat-value">${result.summary.total_records}</div>
+            <div class="stat-label">Total Records</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">${result.total_available}</div>
+            <div class="stat-label">Available</div>
+        </div>
+    `;
+    
+    // Display table
+    if (result.data.length === 0) {
+        previewTable.innerHTML = '<p class="text-muted text-center">No data available for selected criteria.</p>';
+        return;
+    }
+    
+    const headers = Object.keys(result.data[0]);
+    let tableHTML = '<table><thead><tr>';
+    headers.forEach(header => {
+        tableHTML += `<th>${header}</th>`;
+    });
+    tableHTML += '</tr></thead><tbody>';
+    
+    result.data.forEach(row => {
+        tableHTML += '<tr>';
+        headers.forEach(header => {
+            tableHTML += `<td>${row[header] || ''}</td>`;
+        });
+        tableHTML += '</tr>';
+    });
+    
+    tableHTML += '</tbody></table>';
+    previewTable.innerHTML = tableHTML;
+    
+    // Scroll to preview
+    previewSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+function generateReport() {
+    if (selectedFields.size === 0) {
+        alert('Please select at least one field');
+        return;
+    }
+    
+    const data = {
+        report_type: document.getElementById('reportType').value,
+        selected_fields: Array.from(selectedFields),
+        filters: getFilters(),
+        output_format: document.getElementById('outputFormat').value,
+        report_name: document.getElementById('templateName').value || 'Custom Report'
+    };
+    
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{% url 'report_execute' %}";
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    form.appendChild(csrfInput);
+    
+    const dataInput = document.createElement('input');
+    dataInput.type = 'hidden';
+    dataInput.name = 'data';
+    dataInput.value = JSON.stringify(data);
+    form.appendChild(dataInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function saveTemplate() {
+    if (selectedFields.size === 0) {
+        alert('Please select at least one field');
+        return;
+    }
+    
+    const templateName = document.getElementById('templateName').value;
+    if (!templateName) {
+        alert('Please enter a template name');
+        return;
+    }
+    
+    const data = {
+        {% if template %}template_id: {{ template.id }},{% endif %}
+        name: templateName,
+        description: document.getElementById('templateDescription').value,
+        report_type: document.getElementById('reportType').value,
+        selected_fields: Array.from(selectedFields),
+        filters: getFilters(),
+        output_format: document.getElementById('outputFormat').value,
+        is_public: document.getElementById('isPublic').checked
+    };
+    
+    fetch("{% url 'report_template_save' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(result.message);
+            window.location.href = "{% url 'report_builder_dashboard' %}";
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => {
+        alert('Error saving template: ' + error);
+    });
+}
+
+function updateAvailableFields() {
+    const reportType = document.getElementById('reportType').value;
+    window.location.href = "{% url 'report_builder_create' %}?type=" + reportType;
+}
+</script>
+{% endblock %}

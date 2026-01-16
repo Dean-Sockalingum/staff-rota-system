@@ -1,0 +1,276 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║         🎯 ONE-CLICK DEMO ACCESS - YOUR DESKTOP SHORTCUTS           ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+📱 YOUR DESKTOP NOW HAS 4 SHORTCUTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Start_Demo.command          ← DOUBLE-CLICK THIS TO DEMO!
+   ┗━━ Launches demo in one click
+   ┗━━ Opens browser to http://127.0.0.1:8000  
+   ┗━━ Login: admin / admin
+   ┗━━ Orange banner = DEMO mode (safe)
+
+2. Switch_Mode.command
+   ┗━━ Interactive menu
+   ┗━━ Switch between DEMO and PRODUCTION
+   ┗━━ View current status
+
+3. Stop_Server.command
+   ┗━━ Stop the running server
+   ┗━━ Use when finished testing
+
+4. Reset_Demo.command
+   ┗━━ Reset demo to clean state
+   ┗━━ Fresh data for next demo
+
+
+🎨 VISUAL INDICATORS ON EVERY PAGE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🟠 DEMO MODE:
+   ╔═════════════════════════════════════════════════════════════╗
+   ║ 🟠 DEMO MODE - All changes are isolated from production data ║
+   ╚═════════════════════════════════════════════════════════════╝
+   
+   Navigation Bar:
+   [📅 Staff Rota System 🟠DEMO]
+   
+   ✅ Safe for testing, demonstrations, training
+   ✅ Changes won't affect production
+   ✅ Can reset anytime
+
+
+🔴 PRODUCTION MODE:
+   ╔═════════════════════════════════════════════════════════════╗
+   ║ 🔴 PRODUCTION MODE - Live data in use                        ║
+   ╚═════════════════════════════════════════════════════════════╝
+   
+   Navigation Bar:
+   [📅 Staff Rota System 🔴LIVE]
+   
+   ⚠️  Changes are permanent
+   ⚠️  Affects real schedules
+   ⚠️  Staff will see changes
+
+
+🚀 HOW TO START A DEMO (30 SECONDS):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: Look at your Desktop
+        Find "Start_Demo.command"
+
+Step 2: Double-click it
+        Terminal window opens
+        
+Step 3: Wait for "Starting development server..."
+        Takes ~5 seconds
+
+Step 4: Browser opens automatically to:
+        http://127.0.0.1:8000
+
+Step 5: Login with:
+        Username: admin
+        Password: admin
+
+Step 6: See the orange banner?
+        You're in DEMO mode! ✅
+
+Step 7: Test anything you want
+        - Create shifts
+        - Request leave
+        - View reports
+        - Make changes
+
+Step 8: When done, press Ctrl+C
+        Or double-click "Stop_Server.command"
+
+
+📋 TYPICAL DEMO WORKFLOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEFORE MEETING:
+  1. Double-click Start_Demo.command
+  2. Verify orange DEMO banner appears
+  3. Log out and close browser
+  4. Keep server running in background
+
+DURING MEETING:
+  1. Open http://127.0.0.1:8000
+  2. Point out orange DEMO banner
+  3. Login and demonstrate features
+  4. Show stakeholders they can't break anything
+  5. Answer questions and test scenarios
+
+AFTER MEETING:
+  1. Press Ctrl+C to stop server
+  2. Double-click Reset_Demo.command
+  3. Demo data is fresh for next time
+
+
+🔄 SWITCHING BETWEEN MODES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To DEMO Mode:
+  1. Double-click Switch_Mode.command
+  2. Choose option 1
+  3. See orange banner
+
+To PRODUCTION Mode:
+  1. Double-click Switch_Mode.command
+  2. Choose option 2
+  3. Type "PRODUCTION" to confirm
+  4. See red banner
+  
+Check Current Mode:
+  1. Double-click Switch_Mode.command
+  2. Choose option 4
+  3. See database info
+
+
+♻️  RESETTING DEMO DATA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After testing/demos:
+  1. Double-click Reset_Demo.command
+  2. Demo returns to clean state
+  3. All test data removed
+  4. Ready for next demo
+
+Note: This only affects DEMO database
+      Production data is never touched
+
+
+🎯 WHAT'S SAFE TO DO IN DEMO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Create and delete shifts
+✅ Request annual leave  
+✅ Swap shifts
+✅ Approve/reject requests
+✅ View reports
+✅ Test all features
+✅ Make mistakes
+✅ Show to anyone
+✅ Let others test
+✅ Try "what if" scenarios
+
+All changes stay in DEMO database only!
+
+
+⚠️  WHAT HAPPENS IN PRODUCTION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  All changes are PERMANENT
+⚠️  Staff see your changes
+⚠️  Affects real schedules
+⚠️  No "undo" button
+⚠️  Requires careful actions
+
+Only switch to production when ready!
+
+
+🔒 SAFETY FEATURES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Separate databases (demo & production never mix)
+✅ Automatic backups before switching
+✅ Must type "PRODUCTION" to confirm production mode
+✅ Visual indicators on every page
+✅ Easy demo reset without affecting production
+✅ Mode tracking prevents confusion
+
+
+📁 DATABASE FILES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Location: /Users/deansockalingum/Desktop/Staff_Rota_Backups/
+          2025-12-12_Multi-Home_Complete/
+
+Files:
+  • db.sqlite3           (Active - currently DEMO)
+  • db_demo.sqlite3      (Demo database - 36.50 MB)
+  • db_production.sqlite3 (Production - created when you switch)
+  • .current_mode        (Tracks mode: DEMO or PRODUCTION)
+
+
+🎓 TRAINING STAFF:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For Home Managers:
+  1. Start in DEMO mode
+  2. Give them login credentials
+  3. Let them explore and make mistakes
+  4. Point out orange DEMO banner
+  5. Explain nothing will break
+  6. Reset demo when done
+
+For Senior Team:
+  1. Demo the full workflow
+  2. Show reports and dashboards
+  3. Explain demo vs production
+  4. Show them the visual indicators
+  5. Answer questions in safe environment
+
+
+❓ TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"Shortcut doesn't work"
+  → Right-click → Open → Click "Open" again
+  → macOS may block first time
+
+"Don't know which mode I'm in"
+  → Look at banner at top of page
+  → Orange = DEMO, Red = PRODUCTION
+  → Or double-click Switch_Mode.command
+
+"Server won't start"
+  → Double-click Stop_Server.command first
+  → Wait 2 seconds
+  → Try again
+
+"Made changes by mistake in production"
+  → Contact your administrator
+  → May need to restore from backup
+  → This is why we test in DEMO first!
+
+"Want completely fresh demo"
+  → Double-click Reset_Demo.command
+  → Or: python3 manage.py reset_demo
+
+
+📚 DOCUMENTATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick Start:
+  QUICK_START_DEMO.md ← Start here!
+
+Full Guide:
+  DEMO_PRODUCTION_MODE_GUIDE.md
+
+Implementation Details:
+  DEMO_PRODUCTION_IMPLEMENTATION_SUMMARY.md
+
+This Visual Guide:
+  DESKTOP_SHORTCUTS_VISUAL_GUIDE.txt (you are here)
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                    ┃
+┃  🎉 YOU'RE ALL SET!                                               ┃
+┃                                                                    ┃
+┃  Just double-click Start_Demo.command on your Desktop             ┃
+┃  to launch the demo in one click!                                 ┃
+┃                                                                    ┃
+┃  Look for the orange 🟠 DEMO banner to confirm safe mode.        ┃
+┃                                                                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+
+Created: December 18, 2025
+Status: ✅ READY TO USE
+Current Mode: 🟠 DEMO

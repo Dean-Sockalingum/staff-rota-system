@@ -1,0 +1,229 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ pathway.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'training_competency:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'training_competency:learning_pathways' %}">Learning Pathways</a></li>
+                    <li class="breadcrumb-item active">{{ pathway.title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Pathway Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">{{ pathway.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="lead">{{ pathway.description }}</p>
+                            
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-secondary me-2">{{ pathway.from_role.name }}</span>
+                                <i class="fas fa-arrow-right me-2"></i>
+                                <span class="badge bg-success">{{ pathway.to_role.name }}</span>
+                            </div>
+
+                            {% if pathway.prerequisites %}
+                                <div class="alert alert-warning">
+                                    <strong><i class="fas fa-exclamation-triangle"></i> Prerequisites:</strong><br>
+                                    {{ pathway.prerequisites|linebreaks }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>Pathway Details</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-clock text-primary"></i> <strong>Duration:</strong> {{ pathway.estimated_duration_months }} months</li>
+                                        <li><i class="fas fa-hourglass text-info"></i> <strong>Learning Hours:</strong> {{ pathway.total_learning_hours|default:"TBD" }}</li>
+                                        <li><i class="fas fa-signal text-success"></i> <strong>Status:</strong> {{ pathway.get_status_display }}</li>
+                                        {% if pathway.owner %}
+                                            <li><i class="fas fa-user text-secondary"></i> <strong>Owner:</strong> {{ pathway.owner.get_full_name }}</li>
+                                        {% endif %}
+                                    </ul>
+
+                                    {% if not user_plan %}
+                                        <a href="{% url 'training_competency:enroll_pathway' pathway.pk %}" class="btn btn-success w-100 mt-3">
+                                            <i class="fas fa-plus-circle"></i> Enroll Now
+                                        </a>
+                                    {% else %}
+                                        <div class="alert alert-success mt-3 mb-0">
+                                            <i class="fas fa-check-circle"></i> You are enrolled in this pathway
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Progress (if enrolled) -->
+    {% if user_plan %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Your Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3" style="height: 30px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ user_plan.percent_complete }}%"
+                                 aria-valuenow="{{ user_plan.percent_complete }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ user_plan.percent_complete }}%
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Enrolled:</strong> {{ user_plan.enrollment_date|date:"d M Y" }}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-info">{{ user_plan.get_status_display }}</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if user_plan.target_completion_date %}
+                                    <p><strong>Target Completion:</strong> {{ user_plan.target_completion_date|date:"d M Y" }}</p>
+                                {% endif %}
+                                {% if user_plan.mentor %}
+                                    <p><strong>Mentor:</strong> {{ user_plan.mentor.get_full_name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Required Competencies -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Required Competencies</h5>
+                </div>
+                <div class="card-body">
+                    {% if pathway_competencies %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sequence</th>
+                                        <th>Competency</th>
+                                        <th>Required Level</th>
+                                        {% if user_plan %}
+                                            <th>Your Status</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pc in pathway_competencies %}
+                                        <tr>
+                                            <td><span class="badge bg-secondary">{{ pc.sequence_order }}</span></td>
+                                            <td>
+                                                <a href="{% url 'training_competency:competency_detail' pc.competency.pk %}">
+                                                    <strong>{{ pc.competency.code }}</strong>: {{ pc.competency.title }}
+                                                </a>
+                                            </td>
+                                            <td><span class="badge bg-info">{{ pc.get_required_level_display }}</span></td>
+                                            {% if user_plan %}
+                                                <td>
+                                                    {% if pc.user_completed %}
+                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Completed</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> Pending</span>
+                                                    {% endif %}
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No competencies defined for this pathway yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required Training -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-book-open"></i> Required Training</h5>
+                </div>
+                <div class="card-body">
+                    {% if pathway_training %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sequence</th>
+                                        <th>Training Course</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pt in pathway_training %}
+                                        <tr>
+                                            <td><span class="badge bg-secondary">{{ pt.sequence_order }}</span></td>
+                                            <td>
+                                                <strong>{{ pt.training_course.name }}</strong>
+                                                {% if pt.training_course.description %}
+                                                    <br><small class="text-muted">{{ pt.training_course.description|truncatewords:15 }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if pt.is_mandatory %}
+                                                    <span class="badge bg-danger">Mandatory</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Recommended</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No training courses defined for this pathway yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'training_competency:learning_pathways' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Pathways
+            </a>
+            {% if user_plan %}
+                <a href="{% url 'training_competency:my_learning_plans' %}" class="btn btn-info">
+                    <i class="fas fa-graduation-cap"></i> My Learning Plans
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

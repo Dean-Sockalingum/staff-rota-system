@@ -1,0 +1,270 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}OT Fairness Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fairness-row {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: background 0.2s;
+    }
+    .fairness-row:hover {
+        background: #f9fafb;
+    }
+    
+    .ot-bar {
+        flex: 1;
+        height: 24px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+    .ot-bar-fill {
+        height: 100%;
+        background: linear-gradient(to right, #3b82f6, #10b981);
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .ot-bar-fill.warning {
+        background: linear-gradient(to right, #f59e0b, #ef4444);
+    }
+    .ot-bar-fill.low {
+        background: linear-gradient(to right, #6b7280, #9ca3af);
+    }
+    
+    .avg-line {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #1f2937;
+        z-index: 1;
+    }
+    
+    .filter-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-balance-scale"></i> OT Fairness Report</h2>
+            <p class="text-muted">Ensuring equitable distribution of overtime opportunities across all staff</p>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="filter-card">
+        <form method="GET" class="row align-items-end">
+            <div class="col-md-3">
+                <label class="font-weight-bold">Date Range</label>
+                <select name="days" class="form-control">
+                    <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                    <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
+                    <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                    <option value="180" {% if days == 180 %}selected{% endif %}>Last 6 months</option>
+                    <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-sync"></i> Update Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ staff_count }}</h3>
+                    <p class="text-muted mb-0">OT-Willing Staff</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ total_ot_hours }}</h3>
+                    <p class="text-muted mb-0">Total OT Hours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ avg_ot_hours|floatformat:1 }}</h3>
+                    <p class="text-muted mb-0">Average Hours/Staff</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ underutilized|length }}</h3>
+                    <p class="text-muted mb-0">Below Average</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Distribution Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> OT Distribution (Last {{ days }} Days)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for item in staff_data %}
+                    <div class="fairness-row">
+                        <div style="min-width: 200px;">
+                            <strong>{{ item.staff.full_name }}</strong>
+                            <div class="text-muted small">{{ item.staff.role.name }}</div>
+                        </div>
+                        <div style="min-width: 120px; text-align: center;">
+                            <strong>{{ item.ot_hours }}</strong> hours
+                            <div class="text-muted small">{{ item.ot_shifts }} shifts</div>
+                        </div>
+                        <div class="ot-bar">
+                            <div class="avg-line" style="left: {{ avg_ot_hours|floatformat:0 }}%"></div>
+                            <div class="ot-bar-fill {% if item.ot_hours > avg_ot_hours|add:avg_ot_hours|floatformat:0 %}warning{% elif item.ot_hours < 10 %}low{% endif %}" 
+                                 style="width: {% if total_ot_hours > 0 %}{{ item.ot_hours|floatformat:0|add:'0'|floatformat:0 }}%{% else %}0%{% endif %}; max-width: 100%;">
+                                {% if item.ot_hours > 0 %}
+                                    {{ item.ot_hours }}h
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div style="min-width: 100px; text-align: center;">
+                            <span class="badge badge-{% if item.acceptance_rate >= 80 %}success{% elif item.acceptance_rate >= 60 %}info{% elif item.acceptance_rate >= 40 %}warning{% else %}secondary{% endif %}">
+                                {{ item.acceptance_rate|floatformat:0 }}% acceptance
+                            </span>
+                        </div>
+                        <div style="min-width: 150px; text-align: right;">
+                            {% if item.last_ot_date %}
+                                <small class="text-muted">Last OT: {{ item.last_ot_date|date:"M d, Y" }}</small>
+                            {% else %}
+                                <small class="text-muted">Never worked OT</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted">
+                        No OT data available for this period
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Under-Utilized Staff Alert -->
+    {% if underutilized %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Under-Utilized Staff (Below Average)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">These staff are available for OT but receiving fewer hours than average. Consider prioritizing them for upcoming callouts.</p>
+                    <ul class="list-unstyled mb-0">
+                        {% for item in underutilized %}
+                        <li class="mb-2">
+                            <strong>{{ item.staff.full_name }}</strong> 
+                            <span class="badge badge-secondary">{{ item.ot_hours }}h</span>
+                            <span class="text-muted small">
+                                ({{ avg_ot_hours|floatformat:0|add:item.ot_hours|floatformat:0|add:'-' }}h below avg)
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% if overutilized %}
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-clock"></i> 
+                        Over-Utilized Staff (Above 1.5x Average)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">These staff are working significantly more OT than average. Monitor for burnout risk and redistribute where possible.</p>
+                    <ul class="list-unstyled mb-0">
+                        {% for item in overutilized %}
+                        <li class="mb-2">
+                            <strong>{{ item.staff.full_name }}</strong> 
+                            <span class="badge badge-danger">{{ item.ot_hours }}h</span>
+                            <span class="text-muted small">
+                                ({{ item.ot_hours|floatformat:0|add:avg_ot_hours|floatformat:0|add:'-'|cut:'-' }}h above avg)
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Explanation -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> How to Use This Report</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>Bar Length</h6>
+                            <p class="small text-muted">Represents total OT hours worked. Longer bar = more OT.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Black Vertical Line</h6>
+                            <p class="small text-muted">Shows the average OT hours. Staff below this line are receiving less than average.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Color Coding</h6>
+                            <p class="small text-muted">
+                                <span class="badge badge-primary">Blue</span> = Normal distribution<br>
+                                <span class="badge badge-warning">Orange/Red</span> = Over-utilized (>1.5x avg)<br>
+                                <span class="badge badge-secondary">Gray</span> = Under-utilized (<10h)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

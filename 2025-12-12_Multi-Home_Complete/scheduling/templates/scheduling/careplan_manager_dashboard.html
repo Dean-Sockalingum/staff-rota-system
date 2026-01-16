@@ -1,0 +1,391 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Care Plan Manager Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .stat-card.critical {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #fff 0%, #ffe6e6 100%);
+    }
+    .stat-card.warning {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #fff 0%, #fff8e1 100%);
+    }
+    .stat-card.info {
+        border-color: #17a2b8;
+        background: linear-gradient(135deg, #fff 0%, #e6f7ff 100%);
+    }
+    .stat-card.success {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #fff 0%, #e6ffe6 100%);
+    }
+    .compliance-meter {
+        height: 20px;
+        border-radius: 10px;
+        background: #e9ecef;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    .compliance-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+    .unit-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    .unit-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .badge-lg {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    .review-row {
+        transition: background-color 0.2s;
+    }
+    .review-row:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-clipboard-check text-primary"></i> Care Plan Manager Dashboard</h2>
+            <p class="text-muted">Approve reviews, monitor compliance, and manage overdue items</p>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Care Home:</label>
+                    <select name="care_home" class="form-control" onchange="this.form.submit()">
+                        <option value="">All Homes</option>
+                        {% for home in all_care_homes %}
+                        <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                            {{ home.get_name_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Filter by Unit:</label>
+                    <select name="unit" class="form-control" onchange="this.form.submit()">
+                        <option value="">All Units</option>
+                        {% for unit in all_units %}
+                        <option value="{{ unit.name }}" {% if selected_unit == unit.name %}selected{% endif %}>
+                            {{ unit.get_name_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if selected_care_home or selected_unit %}
+                <div class="col-md-4 d-flex align-items-end">
+                    <a href="{% url 'careplan_manager_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4 text-end d-flex align-items-end justify-content-end">
+            <a href="{% url 'careplan_overview' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list"></i> All Reviews
+            </a>
+            <a href="{% url 'careplan_compliance_report' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-bar"></i> Compliance Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card critical">
+                <div class="card-body text-center">
+                    <h3 class="text-danger mb-0">{{ total_pending_approvals }}</h3>
+                    <p class="mb-0"><i class="fas fa-clock"></i> Pending Approvals</p>
+                    <small class="text-muted">Awaiting your review</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card warning">
+                <div class="card-body text-center">
+                    <h3 class="text-danger mb-0">{{ total_overdue }}</h3>
+                    <p class="mb-0"><i class="fas fa-exclamation-triangle"></i> Overdue</p>
+                    <small class="text-muted">Requires immediate action</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card info">
+                <div class="card-body text-center">
+                    <h3 class="text-warning mb-0">{{ total_due_soon }}</h3>
+                    <p class="mb-0"><i class="fas fa-calendar-alt"></i> Due Soon</p>
+                    <small class="text-muted">Within 7 days</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card success">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-0">{{ overall_compliance }}%</h3>
+                    <p class="mb-0"><i class="fas fa-check-circle"></i> Compliance Rate</p>
+                    <small class="text-muted">Last 6 months</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approvals Section -->
+    {% if total_pending_approvals > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> Pending Approvals ({{ total_pending_approvals }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Resident</th>
+                                    <th>Unit</th>
+                                    <th>Due Date</th>
+                                    <th>Keyworker</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in pending_approvals %}
+                                <tr class="review-row">
+                                    <td>
+                                        <strong>{{ review.resident.full_name }}</strong><br>
+                                        <small class="text-muted">{{ review.resident.resident_id }}</small>
+                                    </td>
+                                    <td>{{ review.resident.unit.get_name_display }}</td>
+                                    <td>
+                                        {% if review.due_date < today %}
+                                        <span class="badge bg-danger text-white">
+                                            <i class="fas fa-exclamation-circle"></i> {{ review.due_date }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-dark">{{ review.due_date }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ review.keyworker.full_name }}</td>
+                                    <td>{{ review.started_date|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'careplan_approve_review' review.id %}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-check"></i> Review & Approve
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Overdue Reviews Section -->
+    {% if total_overdue > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Overdue Reviews ({{ total_overdue }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Resident</th>
+                                    <th>Unit</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Keyworker</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in overdue_reviews %}
+                                <tr class="review-row">
+                                    <td>
+                                        <strong>{{ review.resident.full_name }}</strong><br>
+                                        <small class="text-muted">{{ review.resident.resident_id }}</small>
+                                    </td>
+                                    <td>{{ review.resident.unit.get_name_display }}</td>
+                                    <td>
+                                        <span class="badge bg-danger text-white">
+                                            {{ review.due_date }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% with days_overdue=review.due_date|timesince:today %}
+                                        <span class="text-danger font-weight-bold">{{ days_overdue }}</span>
+                                        {% endwith %}
+                                    </td>
+                                    <td>{{ review.keyworker.full_name|default:"Unassigned" }}</td>
+                                    <td>
+                                        <a href="{% url 'careplan_review_detail' review.id %}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Unit Compliance Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building"></i> Compliance by Unit
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for unit_stat in units_stats %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card unit-card h-100" onclick="window.location.href='{% url 'careplan_unit_view' unit_stat.unit.name %}'">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        {{ unit_stat.unit.get_name_display }}
+                                        <span class="badge badge-{{  unit_stat.status_color }} float-right">
+                                            {{ unit_stat.compliance_rate }}%
+                                        </span>
+                                    </h5>
+                                    
+                                    <div class="compliance-meter">
+                                        <div class="compliance-fill bg-{{ unit_stat.status_color }}" 
+                                             style="width: {{ unit_stat.compliance_rate }}%"></div>
+                                    </div>
+                                    
+                                    <div class="row text-center mt-3">
+                                        <div class="col-4">
+                                            <small class="text-muted">Total</small><br>
+                                            <strong>{{ unit_stat.total }}</strong>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted">Overdue</small><br>
+                                            <strong class="text-danger">{{ unit_stat.overdue }}</strong>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted">Pending</small><br>
+                                            <strong class="text-warning">{{ unit_stat.pending_approval }}</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-center mt-2 mb-0">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar"></i> {{ unit_stat.due_this_month }} due this month
+                                        </small>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Recent Completions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Resident</th>
+                                    <th>Unit</th>
+                                    <th>Completed By</th>
+                                    <th>Approved By</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activity %}
+                                <tr>
+                                    <td>{{ activity.completed_date }}</td>
+                                    <td>{{ activity.resident.full_name }}</td>
+                                    <td>{{ activity.resident.unit.get_name_display }}</td>
+                                    <td>{{ activity.completed_by.full_name }}</td>
+                                    <td>{{ activity.manager_approved_by.full_name|default:"-" }}</td>
+                                    <td>
+                                        {% if activity.completed_date <= activity.due_date %}
+                                        <span class="badge badge-success">On Time</span>
+                                        {% else %}
+                                        <span class="badge badge-warning">Late</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No recent completions</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 5 minutes
+setTimeout(function() {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+/**
+ * Form Auto-Save Styles - Task 57
+ */
+
+/* Auto-save indicator */
+.autosave-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.autosave-icon {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.autosave-text {
+    color: #6c757d;
+}
+
+/* Status variations */
+.autosave-saved {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+}
+
+.autosave-saved .autosave-icon {
+    color: #0f5132;
+}
+
+.autosave-saved .autosave-text {
+    color: #0f5132;
+}
+
+.autosave-unsaved {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+}
+
+.autosave-unsaved .autosave-icon {
+    color: #997404;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.autosave-unsaved .autosave-text {
+    color: #997404;
+}
+
+.autosave-error {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+.autosave-error .autosave-icon {
+    color: #842029;
+}
+
+.autosave-error .autosave-text {
+    color: #842029;
+}
+
+.autosave-cleared {
+    background-color: #cfe2ff;
+    border-color: #b6d4fe;
+}
+
+.autosave-cleared .autosave-icon {
+    color: #084298;
+}
+
+.autosave-cleared .autosave-text {
+    color: #084298;
+}
+
+/* Pulse animation for unsaved */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Restore notification */
+.autosave-restore-alert {
+    position: relative;
+    margin-top: 15px;
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .autosave-indicator {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    .autosave-icon {
+        font-size: 14px;
+    }
+}

@@ -1,0 +1,472 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Predictive Staffing - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prediction-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 8px;
+    }
+    
+    .model-stats-card {
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .stat-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 5px;
+    }
+    
+    .stat-badge.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .stat-badge.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .stat-badge.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .recommendation-card {
+        background: white;
+        border-left: 4px solid;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    
+    .recommendation-card:hover {
+        transform: translateX(5px);
+    }
+    
+    .recommendation-card.urgent {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .recommendation-card.warning {
+        border-left-color: #ffc107;
+        background-color: #fffef5;
+    }
+    
+    .recommendation-card.optimal {
+        border-left-color: #28a745;
+        background-color: #f5fff5;
+    }
+    
+    .pattern-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .pattern-label {
+        font-size: 14px;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .pattern-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    
+    .feature-importance-bar {
+        background-color: #e9ecef;
+        height: 30px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    .feature-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+        color: white;
+        font-weight: 600;
+        font-size: 12px;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .ml-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prediction-header">
+    <div class="container">
+        <h1 class="mb-2">
+            <i class="fas fa-brain"></i> Predictive Staffing Dashboard
+        </h1>
+        <p class="mb-0">
+            Machine Learning-powered staffing forecasts
+            {% if selected_unit %}
+                for {{ selected_unit.name }}
+            {% elif selected_care_home %}
+                for {{ selected_care_home.name }}
+            {% else %}
+                across all care homes
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filters -->
+    <div class="filter-bar">
+        <form method="get">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="care_home">Care Home</label>
+                    <select class="form-control" name="care_home" id="care_home">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                            <option value="{{ home.id }}" {% if selected_care_home.id == home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="unit">Unit</label>
+                    <select class="form-control" name="unit" id="unit">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_unit.id == unit.id %}selected{% endif %}>
+                                {{ unit.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="days_ahead">Forecast Period (Days)</label>
+                    <select class="form-control" name="days_ahead" id="days_ahead">
+                        <option value="7" {% if days_ahead == 7 %}selected{% endif %}>7 days</option>
+                        <option value="14" {% if days_ahead == 14 %}selected{% endif %}>14 days</option>
+                        <option value="21" {% if days_ahead == 21 %}selected{% endif %}>21 days</option>
+                        <option value="30" {% if days_ahead == 30 %}selected{% endif %}>30 days</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-success btn-block">
+                        <i class="fas fa-sync-alt"></i> Update Forecast
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- ML Model Stats -->
+    <div class="model-stats-card">
+        <h3 class="mb-3">
+            <i class="fas fa-cogs"></i> ML Model Performance
+            {% if model_stats.available %}
+                <span class="ml-badge">Active</span>
+            {% else %}
+                <span class="badge badge-warning">Rule-Based</span>
+            {% endif %}
+        </h3>
+        
+        {% if model_stats.available %}
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-badge success">
+                        <i class="fas fa-check-circle"></i> 
+                        Accuracy: {{ model_stats.accuracy }}%
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-badge info">
+                        <i class="fas fa-database"></i> 
+                        Training Samples: {{ model_stats.training_samples }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-badge info">
+                        <i class="fas fa-layer-group"></i> 
+                        Model: {{ model_stats.model_type }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-badge info">
+                        <i class="fas fa-chart-bar"></i> 
+                        Features: {{ model_stats.features_count }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feature Importance -->
+            {% if model_stats.feature_importance %}
+            <div class="mt-4">
+                <h5>Feature Importance (What Drives Staffing Needs)</h5>
+                {% for feature in model_stats.feature_importance %}
+                <div class="mb-2">
+                    <small class="text-muted">{{ feature.description }}</small>
+                    <div class="feature-importance-bar">
+                        <div class="feature-fill" style="width: {{ feature.importance }}%">
+                            {{ feature.importance }}%
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>ML Mode Unavailable:</strong> {{ model_stats.error }}
+                <br>
+                Using rule-based predictions based on historical averages.
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recommendations Summary -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="pattern-box" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <div class="pattern-label">Critical Days</div>
+                <div class="pattern-value">
+                    <i class="fas fa-exclamation-circle"></i> {{ recommendations.summary.critical_days }}
+                </div>
+                <small>Severely under-staffed</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="pattern-box" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <div class="pattern-label">Total Staff Gap</div>
+                <div class="pattern-value">
+                    {% if recommendations.summary.total_gap > 0 %}
+                        <i class="fas fa-arrow-up"></i> +{{ recommendations.summary.total_gap }}
+                    {% else %}
+                        <i class="fas fa-arrow-down"></i> {{ recommendations.summary.total_gap }}
+                    {% endif %}
+                </div>
+                <small>Shifts over next {{ recommendations.summary.days_analyzed }} days</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="pattern-box">
+                <div class="pattern-label">Forecast Confidence</div>
+                <div class="pattern-value">
+                    <i class="fas fa-percentage"></i> {{ recommendations.summary.avg_confidence }}
+                </div>
+                <small>Average prediction accuracy</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Urgent Recommendations -->
+    {% if recommendations.urgent %}
+    <div class="model-stats-card">
+        <h3 class="text-danger">
+            <i class="fas fa-exclamation-triangle"></i> Urgent Staffing Needs
+        </h3>
+        <p class="text-muted mb-3">These days require immediate attention (5+ shifts short)</p>
+        
+        {% for rec in recommendations.urgent %}
+        <div class="recommendation-card urgent">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <strong>{{ rec.date }}</strong><br>
+                    <small class="text-muted">{{ rec.day_name }}</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <span class="badge badge-danger" style="font-size: 16px;">
+                        Gap: +{{ rec.gap }}
+                    </span>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Predicted: {{ rec.predicted }} | Scheduled: {{ rec.scheduled }}</small>
+                </div>
+                <div class="col-md-3">
+                    {{ rec.recommendation }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Warning Recommendations -->
+    {% if recommendations.warnings %}
+    <div class="model-stats-card">
+        <h3 class="text-warning">
+            <i class="fas fa-exclamation-circle"></i> Staffing Warnings
+        </h3>
+        <p class="text-muted mb-3">These days need attention soon</p>
+        
+        {% for rec in recommendations.warnings %}
+        <div class="recommendation-card warning">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <strong>{{ rec.date }}</strong><br>
+                    <small class="text-muted">{{ rec.day_name }}</small>
+                </div>
+                <div class="col-md-2 text-center">
+                    <span class="badge badge-warning" style="font-size: 14px;">
+                        Gap: {{ rec.gap }}
+                    </span>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Predicted: {{ rec.predicted }} | Scheduled: {{ rec.scheduled }}</small>
+                </div>
+                <div class="col-md-3">
+                    {{ rec.recommendation }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Optimal Days -->
+    {% if recommendations.optimal %}
+    <div class="model-stats-card">
+        <h3 class="text-success">
+            <i class="fas fa-check-circle"></i> Optimally Staffed Days
+        </h3>
+        <p class="text-muted mb-3">{{ recommendations.optimal|length }} days are well-staffed</p>
+        
+        <div class="row">
+            {% for rec in recommendations.optimal %}
+            <div class="col-md-2 mb-2">
+                <div class="recommendation-card optimal text-center" style="padding: 10px;">
+                    <strong>{{ rec.date }}</strong><br>
+                    <small class="text-muted">{{ rec.day_name }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Staffing Patterns -->
+    {% if patterns and not patterns.error %}
+    <div class="model-stats-card">
+        <h3><i class="fas fa-chart-line"></i> Staffing Patterns Analysis</h3>
+        
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <div class="text-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="text-muted mb-2">Busiest Day</div>
+                    <h4 class="text-primary">{{ patterns.busiest_day }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="text-muted mb-2">Quietest Day</div>
+                    <h4 class="text-success">{{ patterns.quietest_day }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="text-muted mb-2">Avg Weekday</div>
+                    <h4 class="text-info">{{ patterns.avg_weekday }}</h4>
+                    <small>shifts/day</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="text-muted mb-2">Avg Weekend</div>
+                    <h4 class="text-warning">{{ patterns.avg_weekend }}</h4>
+                    <small>shifts/day</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <p class="mb-2"><strong>Insight:</strong></p>
+            <ul>
+                <li>Weekend staffing is {{ patterns.weekend_vs_weekday_ratio }}% of weekday levels</li>
+                <li>{{ patterns.seasonal_trend }}</li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Actions -->
+    <div class="row mt-4 mb-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <a href="{% url 'predictive_week_forecast' %}{% if selected_care_home %}?care_home={{ selected_care_home.id }}{% endif %}" 
+                       class="btn btn-success mr-2">
+                        <i class="fas fa-calendar-week"></i> Weekly Forecast
+                    </a>
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-primary mr-2">
+                        <i class="fas fa-chart-line"></i> Analytics Dashboard
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Main Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit on filter change
+document.getElementById('care_home').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('unit').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('days_ahead').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
+{% endblock %}

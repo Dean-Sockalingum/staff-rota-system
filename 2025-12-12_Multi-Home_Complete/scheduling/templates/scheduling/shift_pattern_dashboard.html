@@ -1,0 +1,233 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Shift Pattern Analysis - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">Shift Pattern Analysis</h1>
+                <p class="text-indigo-100">Optimize staffing patterns and identify coverage gaps</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{% url 'shift_pattern_analyze' %}" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200">
+                    Analyze Patterns
+                </a>
+                <a href="{% url 'coverage_gaps_detect' %}" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200">
+                    Detect Gaps
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coverage Gaps Alert -->
+    {% if coverage_gaps %}
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Upcoming Coverage Gaps</h2>
+            <div class="flex space-x-2">
+                {% if critical_gaps > 0 %}
+                <span class="px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-full">
+                    {{ critical_gaps }} Critical
+                </span>
+                {% endif %}
+                {% if high_gaps > 0 %}
+                <span class="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full">
+                    {{ high_gaps }} High
+                </span>
+                {% endif %}
+                {% if medium_gaps > 0 %}
+                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
+                    {{ medium_gaps }} Medium
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shift Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gap</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Impact</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for gap in coverage_gaps %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm text-gray-900 font-semibold">{{ gap.gap_date|date:"M d, Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ gap.shift_type }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if gap.severity == 'CRITICAL' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">CRITICAL</span>
+                            {% elif gap.severity == 'HIGH' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">HIGH</span>
+                            {% elif gap.severity == 'MEDIUM' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">MEDIUM</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">LOW</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ gap.required_staff }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ gap.actual_staff }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="text-red-600 font-semibold">-{{ gap.gap_size }}</span>
+                            <span class="text-gray-500 text-xs ml-1">({{ gap.gap_percentage|floatformat:0 }}%)</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ gap.impact_score|floatformat:0 }}/100</td>
+                        <td class="px-4 py-3 text-sm">
+                            <a href="{% url 'coverage_gap_fill' gap.id %}" class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Fill Gap
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Optimization Recommendations -->
+    {% if recommendations %}
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Optimization Recommendations</h2>
+        <div class="space-y-3">
+            {% for rec in recommendations %}
+            <div class="border-l-4 {% if rec.priority == 'CRITICAL' %}border-red-500 bg-red-50{% elif rec.priority == 'HIGH' %}border-orange-500 bg-orange-50{% elif rec.priority == 'MEDIUM' %}border-yellow-500 bg-yellow-50{% else %}border-blue-500 bg-blue-50{% endif %} p-4 rounded-r-lg">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold text-gray-900">{{ rec.title }}</h3>
+                    <span class="px-2 py-1 {% if rec.priority == 'CRITICAL' %}bg-red-100 text-red-800{% elif rec.priority == 'HIGH' %}bg-orange-100 text-orange-800{% elif rec.priority == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %} text-xs font-semibold rounded-full">
+                        {{ rec.priority }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-700 mb-2">{{ rec.description }}</p>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-600">
+                        <strong>Impact:</strong> {{ rec.impact }}
+                    </p>
+                    <p class="text-xs text-indigo-600 font-medium">
+                        {{ rec.action }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Pattern Analyses -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Recent Shift Pattern Analyses</h2>
+            <a href="{% url 'shift_pattern_heat_map' %}" class="text-indigo-600 hover:text-indigo-900 font-semibold">
+                View Heat Map →
+            </a>
+        </div>
+
+        {% if recent_patterns %}
+        <div class="grid grid-cols-1 gap-4">
+            {% for pattern in recent_patterns %}
+            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ pattern.name }}</h3>
+                        <p class="text-sm text-gray-600 mt-1">{{ pattern.description }}</p>
+                    </div>
+                    <div class="ml-4">
+                        {% if pattern.pattern_type == 'UNDERSTAFFED' %}
+                        <span class="px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-full">
+                            UNDERSTAFFED
+                        </span>
+                        {% elif pattern.pattern_type == 'OVERSTAFFED' %}
+                        <span class="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full">
+                            OVERSTAFFED
+                        </span>
+                        {% elif pattern.pattern_type == 'BALANCED' %}
+                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                            BALANCED
+                        </span>
+                        {% elif pattern.pattern_type == 'PEAK' %}
+                        <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
+                            PEAK
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
+                            TROUGH
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3">
+                    <div>
+                        <p class="text-xs text-gray-500">Day/Shift</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ pattern.get_day_of_week_display|default:"All Days" }} {{ pattern.shift_type }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Avg Staff</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ pattern.average_staff_count|floatformat:1 }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Required</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ pattern.required_staff_count|floatformat:1 }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Coverage</p>
+                        <p class="text-sm font-semibold {% if pattern.coverage_percentage < 80 %}text-red-600{% elif pattern.coverage_percentage > 120 %}text-orange-600{% else %}text-green-600{% endif %}">
+                            {{ pattern.coverage_percentage|floatformat:0 }}%
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Priority</p>
+                        <span class="px-2 py-1 {% if pattern.priority == 'CRITICAL' %}bg-red-100 text-red-800{% elif pattern.priority == 'HIGH' %}bg-orange-100 text-orange-800{% elif pattern.priority == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %} text-xs font-semibold rounded-full">
+                            {{ pattern.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if pattern.recommendation %}
+                <div class="bg-gray-50 rounded p-3 mb-2">
+                    <p class="text-sm text-gray-700">
+                        <strong class="text-gray-900">Recommendation:</strong> {{ pattern.recommendation }}
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-between items-center text-sm text-gray-600">
+                    <span>
+                        Analyzed {{ pattern.analyzed_at|date:"M d, Y" }} by {{ pattern.analyzed_by.get_full_name }}
+                    </span>
+                    <span>
+                        {{ pattern.frequency }} occurrences
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">No Pattern Analyses Yet</h3>
+            <p class="text-gray-600 mb-4">Analyze shift patterns to identify optimization opportunities</p>
+            <a href="{% url 'shift_pattern_analyze' %}" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200">
+                Run Pattern Analysis
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,359 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Weekly Forecast - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .forecast-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 8px;
+    }
+    
+    .forecast-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    
+    .forecast-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .day-header {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .metric-box {
+        text-align: center;
+        padding: 15px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 10px;
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin-top: 5px;
+    }
+    
+    .gap-indicator {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .gap-indicator.positive {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .gap-indicator.negative {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .gap-indicator.zero {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .summary-stat {
+        text-align: center;
+    }
+    
+    .summary-stat-label {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+    
+    .summary-stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        margin-top: 5px;
+    }
+    
+    .confidence-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.3);
+        font-size: 12px;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="forecast-header">
+    <div class="container">
+        <h1 class="mb-2">
+            <i class="fas fa-calendar-week"></i> Weekly Staffing Forecast
+        </h1>
+        <p class="mb-0">
+            Predictive analysis for {{ week_start }} to {{ week_end }}
+            {% if selected_unit %}
+                - {{ selected_unit.name }}
+            {% elif selected_care_home %}
+                - {{ selected_care_home.name }}
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="care_home">Care Home</label>
+                        <select class="form-control" name="care_home" id="care_home">
+                            <option value="">All Care Homes</option>
+                            {% for home in care_homes %}
+                                <option value="{{ home.id }}" {% if selected_care_home.id == home.id %}selected{% endif %}>
+                                    {{ home.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="unit">Unit</label>
+                        <select class="form-control" name="unit" id="unit">
+                            <option value="">All Units</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}" {% if selected_unit.id == unit.id %}selected{% endif %}>
+                                    {{ unit.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="week_start">Week Starting (Monday)</label>
+                        <input type="date" class="form-control" name="week_start" id="week_start" value="{{ week_start }}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-sync-alt"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Summary -->
+    <div class="summary-card">
+        <div class="row">
+            <div class="col-md-3 summary-stat">
+                <div class="summary-stat-label">Total Predicted</div>
+                <div class="summary-stat-value">{{ summary.total_predicted }}</div>
+                <small>shifts needed this week</small>
+            </div>
+            <div class="col-md-3 summary-stat">
+                <div class="summary-stat-label">Currently Scheduled</div>
+                <div class="summary-stat-value">{{ summary.total_scheduled }}</div>
+                <small>shifts already filled</small>
+            </div>
+            <div class="col-md-3 summary-stat">
+                <div class="summary-stat-label">Total Gap</div>
+                <div class="summary-stat-value">
+                    {% if summary.total_gap > 0 %}
+                        +{{ summary.total_gap }}
+                    {% else %}
+                        {{ summary.total_gap }}
+                    {% endif %}
+                </div>
+                <small>shifts to fill</small>
+            </div>
+            <div class="col-md-3 summary-stat">
+                <div class="summary-stat-label">Confidence</div>
+                <div class="summary-stat-value">{{ summary.avg_confidence }}%</div>
+                <small>prediction accuracy</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Forecasts -->
+    <div class="row">
+        {% for day in predictions %}
+        <div class="col-md-6 col-lg-4">
+            <div class="forecast-card">
+                <div class="day-header">
+                    {{ day.day_name }}
+                    <span class="confidence-badge">
+                        <i class="fas fa-chart-line"></i> {{ day.confidence }}%
+                    </span>
+                </div>
+                
+                <div class="text-muted mb-3" style="font-size: 14px;">
+                    {{ day.date }}
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <div class="metric-box">
+                            <div class="metric-label">Predicted</div>
+                            <div class="metric-value text-primary">{{ day.predicted_shifts }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-box">
+                            <div class="metric-label">Scheduled</div>
+                            <div class="metric-value text-info">{{ day.current_scheduled }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    {% if day.gap > 0 %}
+                        <span class="gap-indicator negative">
+                            <i class="fas fa-exclamation-triangle"></i> Need {{ day.gap }} more
+                        </span>
+                    {% elif day.gap < 0 %}
+                        <span class="gap-indicator positive">
+                            <i class="fas fa-check-circle"></i> {{ day.gap|abs }} excess
+                        </span>
+                    {% else %}
+                        <span class="gap-indicator zero">
+                            <i class="fas fa-check"></i> Optimal
+                        </span>
+                    {% endif %}
+                </div>
+                
+                {% if day.leave_count > 0 %}
+                <div class="mt-2 text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-user-clock"></i> {{ day.leave_count }} staff on leave
+                    </small>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        {{ day.recommendation }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Recommendations -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Weekly Recommendations</h5>
+        </div>
+        <div class="card-body">
+            {% if summary.total_gap > 10 %}
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Critical Staffing Shortage</h5>
+                    <p>You need {{ summary.total_gap }} additional shifts this week. Consider:</p>
+                    <ul>
+                        <li>Contacting agency staff immediately</li>
+                        <li>Offering overtime to existing staff</li>
+                        <li>Redistributing staff from less critical units</li>
+                        <li>Reviewing leave approvals for this week</li>
+                    </ul>
+                </div>
+            {% elif summary.total_gap > 0 %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-info-circle"></i> Staffing Gap Detected</h5>
+                    <p>You need {{ summary.total_gap }} additional shifts this week. Suggestions:</p>
+                    <ul>
+                        <li>Review overtime availability with current staff</li>
+                        <li>Check for staff willing to pick up extra shifts</li>
+                        <li>Plan ahead for similar weeks in the future</li>
+                    </ul>
+                </div>
+            {% elif summary.total_gap < -10 %}
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-check-circle"></i> Over-Staffed Week</h5>
+                    <p>You have {{ summary.total_gap|abs }} excess shifts this week. Consider:</p>
+                    <ul>
+                        <li>Reducing overtime assignments</li>
+                        <li>Allowing flexible scheduling for staff</li>
+                        <li>Using time for training and development</li>
+                        <li>Redistributing staff to understaffed units</li>
+                    </ul>
+                </div>
+            {% else %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-thumbs-up"></i> Optimal Staffing</h5>
+                    <p>Your staffing levels are well-balanced this week! Continue monitoring for any changes in leave requests or occupancy.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row mt-4 mb-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <a href="{% url 'predictive_staffing_dashboard' %}{% if selected_care_home %}?care_home={{ selected_care_home.id }}{% endif %}" 
+                       class="btn btn-success mr-2">
+                        <i class="fas fa-brain"></i> Predictive Dashboard
+                    </a>
+                    <a href="{% url 'create_shift' %}" class="btn btn-primary mr-2">
+                        <i class="fas fa-plus"></i> Create Shifts
+                    </a>
+                    <a href="{% url 'bulk_assign_shifts' %}" class="btn btn-info mr-2">
+                        <i class="fas fa-users"></i> Bulk Assign
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Main Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Navigation helpers
+document.getElementById('week_start').addEventListener('change', function() {
+    // Ensure it's a Monday
+    var date = new Date(this.value);
+    if (date.getDay() !== 1) {
+        alert('Please select a Monday for the week start date');
+    }
+});
+</script>
+{% endblock %}

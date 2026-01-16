@@ -1,0 +1,182 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}SMS Notification Preferences{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>📱 SMS Notification Preferences</h1>
+    
+    {% if not twilio_enabled %}
+    <div class="alert alert-warning">
+        <strong>⚠️ SMS notifications are currently disabled system-wide.</strong>
+        <p>Contact your IT administrator to enable SMS notifications.</p>
+    </div>
+    {% endif %}
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Your SMS Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Phone Number -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Phone Number</strong></label>
+                            <div class="input-group">
+                                <input type="tel" 
+                                       class="form-control" 
+                                       name="phone_number" 
+                                       value="{{ user.phone_number|default:'' }}"
+                                       placeholder="+447700900123"
+                                       pattern="^\+[1-9]\d{1,14}$">
+                                <button type="submit" name="action" value="update_phone" class="btn btn-secondary">
+                                    Update
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Use international format (e.g., +44 for UK, +1 for US/Canada)
+                            </small>
+                        </div>
+                        
+                        <!-- Current Status -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>SMS Notifications</strong></label>
+                            <div class="alert {% if user.sms_notifications_enabled %}alert-success{% else %}alert-secondary{% endif %}">
+                                {% if user.sms_notifications_enabled %}
+                                    ✅ <strong>Enabled</strong>
+                                    {% if user.sms_emergency_only %}
+                                        (Emergency alerts only)
+                                    {% else %}
+                                        (All urgent alerts)
+                                    {% endif %}
+                                    {% if user.sms_opted_in_date %}
+                                        <br><small>Opted in on {{ user.sms_opted_in_date|date:"d/m/Y H:i" }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    ❌ <strong>Disabled</strong>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if not user.sms_notifications_enabled %}
+                        <!-- Enable SMS -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6>Enable SMS Notifications</h6>
+                                <p class="small mb-3">
+                                    Receive text message alerts for urgent shift updates, emergency coverage requests, and time-critical notifications.
+                                </p>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           name="emergency_only" 
+                                           id="emergency_only">
+                                    <label class="form-check-label" for="emergency_only">
+                                        <strong>Emergency alerts only</strong>
+                                        <small class="d-block text-muted">
+                                            Only receive SMS for critical/emergency situations
+                                        </small>
+                                    </label>
+                                </div>
+                                
+                                <button type="submit" 
+                                        name="action" 
+                                        value="enable" 
+                                        class="btn btn-success"
+                                        {% if not user.phone_number %}disabled{% endif %}>
+                                    📱 Enable SMS Notifications
+                                </button>
+                                
+                                {% if not user.phone_number %}
+                                <small class="d-block text-danger mt-2">
+                                    ⚠️ Please add your phone number first
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- Disable SMS -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6>Disable SMS Notifications</h6>
+                                <p class="small mb-3">
+                                    You will stop receiving SMS alerts. Email notifications will continue.
+                                </p>
+                                
+                                <button type="submit" 
+                                        name="action" 
+                                        value="disable" 
+                                        class="btn btn-danger">
+                                    🔕 Disable SMS Notifications
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Info Panel -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">ℹ️ About SMS Notifications</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small"><strong>You may receive SMS for:</strong></p>
+                    <ul class="small">
+                        <li>Emergency shift coverage requests</li>
+                        <li>Late clock-in reminders</li>
+                        <li>Last-minute shift cancellations</li>
+                        <li>Urgent schedule changes</li>
+                        <li>Critical compliance alerts</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <p class="small"><strong>Privacy & Data:</strong></p>
+                    <ul class="small">
+                        <li>Your phone number is secure</li>
+                        <li>SMS limited to work-related alerts</li>
+                        <li>Standard message rates may apply</li>
+                        <li>Opt-out anytime</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <p class="small"><strong>Need Help?</strong></p>
+                    <p class="small">
+                        Contact IT support if you have issues with SMS notifications or need to update your phone number.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- SMS Stats (if enabled) -->
+            {% if user.sms_notifications_enabled %}
+            <div class="card mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">📊 Your SMS Activity</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small">
+                        <strong>Status:</strong> Active<br>
+                        <strong>Preference:</strong> 
+                        {% if user.sms_emergency_only %}
+                            Emergency only
+                        {% else %}
+                            All urgent alerts
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

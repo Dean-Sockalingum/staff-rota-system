@@ -1,0 +1,366 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Leave Usage Targets - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .target-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 15px;
+        border-radius: 6px;
+        background: #f8f9fa;
+    }
+    
+    .stat-box h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .stat-box .value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .stat-box.green {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    
+    .stat-box.green .value {
+        color: #28a745;
+    }
+    
+    .stat-box.amber {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .stat-box.amber .value {
+        color: #ffc107;
+    }
+    
+    .stat-box.red {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .stat-box.red .value {
+        color: #dc3545;
+    }
+    
+    .staff-table {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-badge.green {
+        background: #28a745;
+        color: white;
+    }
+    
+    .status-badge.amber {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .status-badge.red {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .variance-positive {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .variance-negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .progress-bar-container {
+        width: 100%;
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s;
+    }
+    
+    .progress-bar.green {
+        background: #28a745;
+    }
+    
+    .progress-bar.amber {
+        background: #ffc107;
+    }
+    
+    .progress-bar.red {
+        background: #dc3545;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #0066cc;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .info-box h5 {
+        margin: 0 0 10px 0;
+        color: #0066cc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>📊 Annual Leave Usage Targets</h2>
+            <p class="text-muted">40-week strategy to prevent year-end leave build-up</p>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+        <h5>🎯 About the 40-Week Target</h5>
+        <p class="mb-0">
+            Staff should use their annual leave <strong>evenly over 40 working weeks</strong> (~1 day/week or ~4-5 days/month).
+            This prevents year-end rushes, ensures adequate rest, and maintains service coverage.
+            <a href="{% url 'staff_guidance' %}?doc=leave-usage-targets" target="_blank">View full guide →</a>
+        </p>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <form method="get" class="form-inline">
+            <label class="mr-2"><strong>Year:</strong></label>
+            <select name="year" class="form-control mr-3" onchange="this.form.submit()">
+                {% for y in "2024 2025 2026 2027"|make_list %}
+                    {% if y|add:"0" %}
+                        <option value="{{ y }}" {% if year == y|add:"0" %}selected{% endif %}>{{ y }}</option>
+                    {% endif %}
+                {% endfor %}
+                <option value="2024" {% if year == 2024 %}selected{% endif %}>2024</option>
+                <option value="2025" {% if year == 2025 %}selected{% endif %}>2025</option>
+                <option value="2026" {% if year == 2026 %}selected{% endif %}>2026</option>
+                <option value="2027" {% if year == 2027 %}selected{% endif %}>2027</option>
+            </select>
+            
+            <label class="mr-2"><strong>Unit:</strong></label>
+            <select name="unit" class="form-control mr-3" onchange="this.form.submit()">
+                <option value="">All Units</option>
+                {% for unit in all_units %}
+                    <option value="{{ unit }}" {% if selected_unit == unit %}selected{% endif %}>{{ unit }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row">
+        <div class="col-md-2">
+            <div class="stat-box">
+                <h4>Weeks Elapsed</h4>
+                <div class="value">{{ weeks_elapsed }}</div>
+                <small>of 52 weeks</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box green">
+                <h4>On Target</h4>
+                <div class="value">{{ status_counts.green }}</div>
+                <small>{{ status_counts.green|floatformat:0 }} staff ✅</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box amber">
+                <h4>Slightly Behind</h4>
+                <div class="value">{{ status_counts.amber }}</div>
+                <small>{{ status_counts.amber|floatformat:0 }} staff ⚠️</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box red">
+                <h4>Behind Target</h4>
+                <div class="value">{{ status_counts.red }}</div>
+                <small>{{ status_counts.red|floatformat:0 }} staff 🔴</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <h4>Team Total</h4>
+                <div class="value">{{ team_percent_of_expected }}%</div>
+                <small>of expected usage</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <h4>Remaining</h4>
+                <div class="value">{{ total_remaining_days|floatformat:0 }}</div>
+                <small>total days left</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Table -->
+    <div class="staff-table mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Staff Leave Usage Status</h4>
+            <span class="badge badge-secondary">{{ total_staff }} staff members</span>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Staff Member</th>
+                        <th>SAP</th>
+                        <th>Unit</th>
+                        <th>Entitlement</th>
+                        <th>Used</th>
+                        <th>Expected</th>
+                        <th>Variance</th>
+                        <th>% of Target</th>
+                        <th>Remaining</th>
+                        <th>Weekly Target</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_data %}
+                    <tr>
+                        <td>
+                            <span class="status-badge {{ staff.status }}">
+                                {{ staff.status_icon }} {{ staff.status_label }}
+                            </span>
+                        </td>
+                        <td><strong>{{ staff.name }}</strong></td>
+                        <td>{{ staff.sap }}</td>
+                        <td>{{ staff.unit }}</td>
+                        <td>{{ staff.total_days }} days</td>
+                        <td>{{ staff.used_days }} days</td>
+                        <td>{{ staff.expected_days }} days</td>
+                        <td>
+                            {% if staff.variance_days >= 0 %}
+                                <span class="variance-positive">+{{ staff.variance_days }} days</span>
+                            {% else %}
+                                <span class="variance-negative">{{ staff.variance_days }} days</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {{ staff.status }}" 
+                                     style="width: {% if staff.percent_of_expected > 100 %}100{% else %}{{ staff.percent_of_expected }}{% endif %}%"
+                                     title="{{ staff.percent_of_expected }}%">
+                                </div>
+                            </div>
+                            <small>{{ staff.percent_of_expected }}%</small>
+                        </td>
+                        <td>{{ staff.remaining_days }} days</td>
+                        <td>
+                            {{ staff.target_days_per_week }} days/week
+                            <br><small class="text-muted">({{ staff.target_days_per_month }} days/month)</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'staff_detail' staff.sap %}" class="btn btn-sm btn-primary">View</a>
+                            {% if staff.status == 'red' %}
+                                <span class="badge badge-danger">Action Required</span>
+                            {% elif staff.status == 'amber' %}
+                                <span class="badge badge-warning">Monitor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="12" class="text-center text-muted">
+                            No leave entitlement data found for {{ year }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="target-card mt-4">
+        <h5>Status Legend</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <span class="status-badge green">✅ On Target</span>
+                <p class="mt-2 mb-0">
+                    <small>Staff member has used ≥90% of expected leave for this point in the year. No action required.</small>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <span class="status-badge amber">⚠️ Slightly Behind</span>
+                <p class="mt-2 mb-0">
+                    <small>Staff member has used 75-90% of expected leave. Consider gentle reminder about leave booking.</small>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <span class="status-badge red">🔴 Significantly Behind</span>
+                <p class="mt-2 mb-0">
+                    <small>Staff member has used <75% of expected leave. Intervention required - schedule discussion about leave plans.</small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="target-card mt-4">
+        <h5>Quick Actions</h5>
+        <a href="{% url 'reports_dashboard' %}" class="btn btn-primary mr-2">
+            <i class="fas fa-chart-bar"></i> View All Reports
+        </a>
+        <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-success mr-2">
+            <i class="fas fa-check-circle"></i> Leave Approvals
+        </a>
+        <a href="{% url 'staff_management' %}" class="btn btn-info mr-2">
+            <i class="fas fa-users-cog"></i> Staff Management
+        </a>
+        <a href="{% url 'staff_guidance' %}?doc=leave-usage-targets" class="btn btn-secondary" target="_blank">
+            <i class="fas fa-book"></i> View Full Guide
+        </a>
+    </div>
+</div>
+{% endblock %}

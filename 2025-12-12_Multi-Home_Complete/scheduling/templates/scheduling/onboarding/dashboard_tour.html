@@ -1,0 +1,155 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Tour{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/onboarding.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="tour-overlay" id="tourOverlay">
+        <div class="tour-content">
+            <div class="tour-header">
+                <h2><i class="fas fa-compass"></i> Dashboard Tour</h2>
+                <button class="btn-skip" onclick="skipTour()">Skip Tour</button>
+            </div>
+            
+            <div class="tour-step active" id="step-1">
+                <div class="tour-step-content">
+                    <h3>Welcome to Your Dashboard</h3>
+                    <p>This is your central hub for managing shifts, staff, and viewing key metrics.</p>
+                    {% if is_management %}
+                    <p>As a manager, you'll see comprehensive insights across your care home.</p>
+                    {% else %}
+                    <p>Here you'll find your upcoming shifts, leave balance, and quick actions.</p>
+                    {% endif %}
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-2">
+                <div class="tour-step-content">
+                    <h3>Navigation Menu</h3>
+                    <p>Access all features from the left sidebar:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-tachometer-alt"></i> Dashboard - Your home screen</li>
+                        <li><i class="fas fa-calendar-alt"></i> Rota View - Weekly schedules</li>
+                        {% if is_management %}
+                        <li><i class="fas fa-users"></i> Staff Management - Manage your team</li>
+                        <li><i class="fas fa-chart-bar"></i> Reports - Analytics and insights</li>
+                        {% else %}
+                        <li><i class="fas fa-exchange-alt"></i> Shift Swaps - Trade shifts</li>
+                        <li><i class="fas fa-umbrella-beach"></i> Leave Requests - Book time off</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-3">
+                <div class="tour-step-content">
+                    <h3>Quick Stats</h3>
+                    {% if is_management %}
+                    <p>Monitor key metrics at a glance:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-users-medical"></i> Current staffing levels</li>
+                        <li><i class="fas fa-exclamation-triangle"></i> Compliance alerts</li>
+                        <li><i class="fas fa-calendar-times"></i> Unfilled shifts</li>
+                        <li><i class="fas fa-pound-sign"></i> Weekly cost tracking</li>
+                    </ul>
+                    {% else %}
+                    <p>View your personal stats:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-calendar-check"></i> Upcoming shifts</li>
+                        <li><i class="fas fa-umbrella-beach"></i> Leave balance</li>
+                        <li><i class="fas fa-clock"></i> Hours this week</li>
+                        <li><i class="fas fa-exchange-alt"></i> Pending swap requests</li>
+                    </ul>
+                    {% endif %}
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-4">
+                <div class="tour-step-content">
+                    <h3>AI Assistant</h3>
+                    <p>Click the <i class="fas fa-robot text-primary"></i> icon in the top right to access your AI assistant.</p>
+                    <p>Try commands like:</p>
+                    <ul class="feature-list">
+                        {% if is_management %}
+                        <li>"Show me unfilled shifts this week"</li>
+                        <li>"Generate next week's rota"</li>
+                        <li>"Who's working tomorrow?"</li>
+                        {% else %}
+                        <li>"Show my upcoming shifts"</li>
+                        <li>"Request leave for next Friday"</li>
+                        <li>"When is my next shift?"</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-success" onclick="completeTour()">Got It! <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function showStep(stepNumber) {
+    document.querySelectorAll('.tour-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.getElementById('step-' + stepNumber).classList.add('active');
+    currentStep = stepNumber;
+}
+
+function nextStep() {
+    if (currentStep < totalSteps) {
+        showStep(currentStep + 1);
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        showStep(currentStep - 1);
+    }
+}
+
+function skipTour() {
+    if (confirm('Are you sure you want to skip this tour? You can always access it later from the help menu.')) {
+        window.location.href = "{{ next_url }}";
+    }
+}
+
+function completeTour() {
+    // Mark tour as complete via AJAX
+    fetch('{% url "onboarding_mark_step_complete" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            step: 'dashboard_tour'
+        })
+    }).then(response => {
+        window.location.href = "{{ next_url }}";
+    });
+}
+</script>
+{% endblock %}

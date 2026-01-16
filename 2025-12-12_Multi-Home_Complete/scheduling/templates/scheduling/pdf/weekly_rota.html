@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <!-- Print header -->
+    <div class="print-title">{{ title }}</div>
+    <div class="print-date">Generated: {{ generated_date|date:"d/m/Y H:i" }}</div>
+    
+    <!-- Report metadata -->
+    <div class="print-info">
+        <strong>Report Type:</strong> {{ report_type }}<br>
+        <strong>Home:</strong> {{ home.name }}<br>
+        <strong>Period:</strong> {{ week_start|date:"d/m/Y" }} - {{ week_end|date:"d/m/Y" }}<br>
+        <strong>Week Commencing:</strong> {{ week_start|date:"l, d F Y" }}
+    </div>
+    
+    <!-- Weekly rota table -->
+    <h2>Weekly Shift Schedule</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%">Date</th>
+                <th style="width: 10%">Day</th>
+                <th style="width: 25%">Early Shift</th>
+                <th style="width: 25%">Late Shift</th>
+                <th style="width: 25%">Night Shift</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for date, shifts in shifts_by_date.items %}
+            <tr>
+                <td><strong>{{ date|date:"d/m/Y" }}</strong></td>
+                <td>{{ date|date:"l" }}</td>
+                <td>
+                    {% for shift in shifts.early %}
+                        {{ shift.staff.first_name }} {{ shift.staff.last_name }}<br>
+                    {% empty %}
+                        <em>No staff assigned</em>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for shift in shifts.late %}
+                        {{ shift.staff.first_name }} {{ shift.staff.last_name }}<br>
+                    {% empty %}
+                        <em>No staff assigned</em>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for shift in shifts.night %}
+                        {{ shift.staff.first_name }} {{ shift.staff.last_name }}<br>
+                    {% empty %}
+                        <em>No staff assigned</em>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Summary section -->
+    <div class="page-break-before"></div>
+    <h2>Weekly Summary</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Staff Member</th>
+                <th>Total Shifts</th>
+                <th>Early</th>
+                <th>Late</th>
+                <th>Night</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% regroup shifts_by_date.items|dictsort:"0" by 0 as date_groups %}
+            {% for date_group in date_groups %}
+                {% for shift_type, shifts_list in date_group.list.1.items %}
+                    {% for shift in shifts_list %}
+                        <!-- Staff shift counts would go here -->
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Footer -->
+    <div class="print-footer">
+        <p>Glasgow HSCP - Staff Rota Management System | Confidential Document</p>
+    </div>
+</body>
+</html>

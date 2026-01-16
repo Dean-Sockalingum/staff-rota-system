@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Document Management Dashboard - TQM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .metric-card.primary { border-color: #0d6efd; }
+    .metric-card.success { border-color: #198754; }
+    .metric-card.warning { border-color: #ffc107; }
+    .metric-card.danger { border-color: #dc3545; }
+    
+    .activity-item {
+        padding: 12px;
+        border-left: 3px solid #dee2e6;
+        margin-bottom: 10px;
+    }
+    .activity-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .badge-document-type {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-file-earmark-text"></i> Document Management Dashboard
+            </h1>
+            <p class="text-muted">Policy lifecycle, version control, and staff acknowledgements</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'document_management:document_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Document
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter by Care Home -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <form method="get" class="card card-body">
+                <label class="form-label">Filter by Care Home</label>
+                <select name="care_home" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Care Homes</option>
+                    {% for home in care_homes %}
+                        <option value="{{ home.id }}" {% if care_home.id == home.id %}selected{% endif %}>
+                            {{ home.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Documents</h6>
+                            <h2 class="mb-0">{{ total_documents }}</h2>
+                            <small class="text-success">
+                                <i class="bi bi-check-circle"></i> {{ published_documents }} published
+                            </small>
+                        </div>
+                        <div class="text-primary" style="font-size: 2.5rem;">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Overdue Reviews</h6>
+                            <h2 class="mb-0">{{ overdue_reviews }}</h2>
+                            <small class="text-danger" title="Requires immediate attention">
+                                <i class="bi bi-exclamation-triangle"></i> Action required
+                            </small>
+                        </div>
+                        <div class="text-warning" style="font-size: 2.5rem;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Acknowledgement Rate</h6>
+                            <h2 class="mb-0">{{ acknowledgement_rate|floatformat:0 }}%</h2>
+                            <div class="progress mt-2" style="height: 6px;">
+                                <div class="progress-bar {% if acknowledgement_rate >= 90 %}bg-success{% elif acknowledgement_rate >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ acknowledgement_rate }}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-success" style="font-size: 2.5rem;">
+                            <i class="bi bi-check2-square"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Pending Acknowledgements</h6>
+                            <h2 class="mb-0">{{ pending_acknowledgements }}</h2>
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> {{ overdue_acknowledgements }} overdue
+                            </small>
+                        </div>
+                        <div class="text-danger" style="font-size: 2.5rem;">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Document Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Acknowledgement Trends (30 days)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="acknowledgementChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Alerts Row -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Overdue Reviews</h5>
+                    <a href="{% url 'document_management:review_list' %}?status=overdue" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if overdue_review_list %}
+                        <div class="list-group list-group-flush">
+                            {% for review in overdue_review_list %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <a href="{% url 'document_management:document_detail' review.document.id %}">
+                                                    {{ review.document.title }}
+                                                </a>
+                                            </h6>
+                                            <small class="text-muted">
+                                                <span class="badge badge-document-type bg-secondary">{{ review.document.document_code }}</span>
+                                                Due: {{ review.scheduled_date|date:"M d, Y" }}
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-danger">
+                                            {{ review.get_days_overdue }} days overdue
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">
+                            <i class="bi bi-check-circle text-success"></i> No overdue reviews
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Activity</h5>
+                    <a href="{% url 'document_management:document_list' %}" class="btn btn-sm btn-outline-primary">
+                        All Documents
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                        {% for activity in recent_activity %}
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ activity.title }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {% if activity.action == 'created' %}
+                                                <i class="bi bi-plus-circle text-success"></i> Created
+                                            {% elif activity.action == 'updated' %}
+                                                <i class="bi bi-pencil text-primary"></i> Updated
+                                            {% elif activity.action == 'published' %}
+                                                <i class="bi bi-check2-circle text-success"></i> Published
+                                            {% endif %}
+                                            by {{ activity.user }}
+                                        </small>
+                                    </div>
+                                    <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-3">No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Document Status Distribution Chart
+    fetch('{% url "document_management:document_stats_api" %}{% if care_home %}?care_home={{ care_home.id }}{% endif %}')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: [
+                            '#0d6efd',  // DRAFT - blue
+                            '#ffc107',  // IN_REVIEW - yellow
+                            '#198754',  // APPROVED - green
+                            '#20c997',  // PUBLISHED - teal
+                            '#6c757d'   // ARCHIVED - gray
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        });
+
+    // Acknowledgement Trends Chart
+    fetch('{% url "document_management:acknowledgement_trends_api" %}{% if care_home %}?care_home={{ care_home.id }}{% endif %}')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('acknowledgementChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Acknowledgement Rate (%)',
+                        data: data.values,
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}

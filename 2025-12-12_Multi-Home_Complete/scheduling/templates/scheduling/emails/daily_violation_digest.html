@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Compliance Violation Digest</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 700px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #ffc107;
+            color: #333;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header .date {
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .summary-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #dc3545;
+        }
+        .summary-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 5px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #ffc107;
+        }
+        .violation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .violation-table th {
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .violation-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+        .violation-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .severity-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .severity-high {
+            background-color: #dc3545;
+            color: #ffffff;
+        }
+        .severity-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .time {
+            color: #666;
+            font-size: 13px;
+        }
+        .staff-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .no-violations {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .button-container {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Daily Compliance Violation Digest</h1>
+            <div class="date">{{ date|date:"l, d F Y" }}</div>
+        </div>
+        
+        <div class="content">
+            <div class="summary-box">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value">{{ total_count }}</div>
+                        <div class="summary-label">Total Violations</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">{{ high_count }}</div>
+                        <div class="summary-label">High Priority</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">{{ medium_count }}</div>
+                        <div class="summary-label">Medium Priority</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">{{ open_count }}</div>
+                        <div class="summary-label">Still Open</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if high_violations %}
+            <div class="section">
+                <h2>🔴 High Priority Violations</h2>
+                <table class="violation-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Rule</th>
+                            <th>Staff</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for violation in high_violations %}
+                        <tr>
+                            <td class="time">{{ violation.detected_at|date:"H:i" }}</td>
+                            <td>{{ violation.rule.name }}</td>
+                            <td>
+                                {% if violation.affected_user %}
+                                    <span class="staff-name">{{ violation.affected_user.full_name }}</span>
+                                {% else %}
+                                    System-wide
+                                {% endif %}
+                            </td>
+                            <td>{{ violation.description|truncatewords:15 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if medium_violations %}
+            <div class="section">
+                <h2>🟡 Medium Priority Violations</h2>
+                <table class="violation-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Rule</th>
+                            <th>Staff</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for violation in medium_violations %}
+                        <tr>
+                            <td class="time">{{ violation.detected_at|date:"H:i" }}</td>
+                            <td>{{ violation.rule.name }}</td>
+                            <td>
+                                {% if violation.affected_user %}
+                                    <span class="staff-name">{{ violation.affected_user.full_name }}</span>
+                                {% else %}
+                                    System-wide
+                                {% endif %}
+                            </td>
+                            <td>{{ violation.description|truncatewords:15 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if not high_violations and not medium_violations %}
+            <div class="no-violations">
+                <p>✅ No HIGH or MEDIUM priority violations detected today.</p>
+                <p>Compliance monitoring continues as scheduled.</p>
+            </div>
+            {% endif %}
+            
+            <div class="button-container">
+                <a href="{{ violations_url }}" class="button">View All Violations</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Staff Rota System - Daily Compliance Digest</strong></p>
+            <p>This automated report summarizes compliance violations detected in the last 24 hours.</p>
+            <p>For detailed information, visit the <a href="{{ dashboard_url }}">Compliance Dashboard</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,223 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}My Induction Progress{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .week-checklist {
+        list-style: none;
+        padding: 0;
+    }
+    .week-checklist li {
+        padding: 10px;
+        margin-bottom: 8px;
+        background-color: white;
+        border-radius: 5px;
+        border-left: 4px solid #dee2e6;
+    }
+    .week-checklist li.completed {
+        border-left-color: #2ecc71;
+        background-color: #d4edda;
+    }
+    .week-checklist li.completed::before {
+        content: "✓ ";
+        color: #2ecc71;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+    .competency-progress {
+        margin-bottom: 15px;
+    }
+    .competency-progress .progress {
+        height: 25px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <h2><i class="fas fa-graduation-cap"></i> My 12-Week Induction Progress</h2>
+            <p class="text-muted">Track your progress through the Care Inspectorate induction program</p>
+
+            <!-- Overall Progress -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Overall Completion: {{ completion_percentage }}%</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ completion_percentage }}%;" 
+                             aria-valuenow="{{ completion_percentage }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                            {{ completion_percentage }}%
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h4>{{ induction.start_date|date:"d M Y" }}</h4>
+                            <p class="text-muted">Start Date</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ weeks_elapsed }}</h4>
+                            <p class="text-muted">Weeks Completed</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ days_remaining }}</h4>
+                            <p class="text-muted">Days Remaining</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4>{{ induction.expected_completion_date|date:"d M Y" }}</h4>
+                            <p class="text-muted">Expected Completion</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 12-Week Checklist -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list-check"></i> Weekly Progress Checklist</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="week-checklist">
+                        <li {% if induction.week_1_completed %}class="completed"{% endif %}>
+                            <strong>Week 1:</strong> Welcome & Introduction
+                        </li>
+                        <li {% if induction.week_2_completed %}class="completed"{% endif %}>
+                            <strong>Week 2:</strong> Policies & Procedures
+                        </li>
+                        <li {% if induction.week_3_completed %}class="completed"{% endif %}>
+                            <strong>Week 3:</strong> Person-Centred Care
+                        </li>
+                        <li {% if induction.week_4_completed %}class="completed"{% endif %}>
+                            <strong>Week 4:</strong> Communication Skills
+                        </li>
+                        <li {% if induction.week_5_completed %}class="completed"{% endif %}>
+                            <strong>Week 5:</strong> Health & Safety
+                        </li>
+                        <li {% if induction.week_6_completed %}class="completed"{% endif %}>
+                            <strong>Week 6:</strong> Infection Control
+                        </li>
+                        <li {% if induction.week_7_completed %}class="completed"{% endif %}>
+                            <strong>Week 7:</strong> Food Safety & Nutrition
+                        </li>
+                        <li {% if induction.week_8_completed %}class="completed"{% endif %}>
+                            <strong>Week 8:</strong> Medication Awareness
+                        </li>
+                        <li {% if induction.week_9_completed %}class="completed"{% endif %}>
+                            <strong>Week 9:</strong> Safeguarding Adults
+                        </li>
+                        <li {% if induction.week_10_completed %}class="completed"{% endif %}>
+                            <strong>Week 10:</strong> Moving & Handling
+                        </li>
+                        <li {% if induction.week_11_completed %}class="completed"{% endif %}>
+                            <strong>Week 11:</strong> Documentation & Records
+                        </li>
+                        <li {% if induction.week_12_completed %}class="completed"{% endif %}>
+                            <strong>Week 12:</strong> Final Review & Assessment
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Competency Hours -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Competency Hours Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="competency-progress">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Personal Care:</strong></span>
+                            <span>{{ induction.personal_care_hours|default:"0" }} / 20 hours</span>
+                        </div>
+                        <div class="progress">
+                            {% widthratio induction.personal_care_hours|default:0 20 100 as pc_percent %}
+                            <div class="progress-bar bg-info" style="width: {{ pc_percent }}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="competency-progress">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Meals & Nutrition:</strong></span>
+                            <span>{{ induction.meals_nutrition_hours|default:"0" }} / 10 hours</span>
+                        </div>
+                        <div class="progress">
+                            {% widthratio induction.meals_nutrition_hours|default:0 10 100 as meals_percent %}
+                            <div class="progress-bar bg-success" style="width: {{ meals_percent }}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="competency-progress">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Documentation:</strong></span>
+                            <span>{{ induction.documentation_hours|default:"0" }} / 10 hours</span>
+                        </div>
+                        <div class="progress">
+                            {% widthratio induction.documentation_hours|default:0 10 100 as doc_percent %}
+                            <div class="progress-bar bg-warning" style="width: {{ doc_percent }}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="competency-progress">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Medication:</strong></span>
+                            <span>{{ induction.medication_hours|default:"0" }} / 10 hours</span>
+                        </div>
+                        <div class="progress">
+                            {% widthratio induction.medication_hours|default:0 10 100 as med_percent %}
+                            <div class="progress-bar bg-danger" style="width: {{ med_percent }}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> Your supervisor will update these hours during your regular check-ins.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Assessment -->
+            {% if induction.final_assessment_complete %}
+            <div class="card border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Induction Completed</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Assessment Date:</strong> {{ induction.final_assessment_date|date:"d M Y" }}</p>
+                    <p><strong>Outcome:</strong> {{ induction.final_assessment_outcome }}</p>
+                    <p><strong>Assessor:</strong> {{ induction.assessor.get_full_name|default:induction.assessor.sap }}</p>
+                    {% if induction.notes %}
+                    <p><strong>Comments:</strong></p>
+                    <p>{{ induction.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Induction In Progress</h5>
+                </div>
+                <div class="card-body">
+                    <p>Your induction is ongoing. Keep up the great work!</p>
+                    <p>Your supervisor or manager will complete your final assessment once all sections and competency hours are completed.</p>
+                    {% if induction.notes %}
+                    <p><strong>Supervisor Notes:</strong></p>
+                    <p>{{ induction.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

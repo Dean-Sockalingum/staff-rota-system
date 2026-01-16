@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Advanced Search - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .advanced-search-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 30px;
+    }
+    
+    .search-sidebar {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .search-main {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .filter-section {
+        margin-bottom: 20px;
+    }
+    
+    .filter-section h4 {
+        margin-bottom: 10px;
+        font-size: 14px;
+        text-transform: uppercase;
+        color: #666;
+    }
+    
+    .filter-section input,
+    .filter-section select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .filter-section label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    
+    .search-box {
+        margin-bottom: 20px;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 15px;
+        font-size: 16px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        width: 100%;
+        padding: 8px;
+        background: white;
+        color: #666;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .btn-secondary:hover {
+        background: #f0f0f0;
+    }
+    
+    .active-filters {
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .filter-tag {
+        background: #007bff;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .filter-tag button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        font-size: 16px;
+    }
+    
+    .result-item {
+        background: #f9f9f9;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 10px;
+    }
+    
+    .result-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .result-badge {
+        background: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .result-meta {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 8px;
+    }
+    
+    .result-details {
+        font-size: 14px;
+        color: #333;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+    }
+    
+    .search-stats {
+        margin-bottom: 20px;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="advanced-search-container">
+    <!-- Search Sidebar -->
+    <aside class="search-sidebar">
+        <h3>Filters</h3>
+        
+        <form method="get" action="{% url 'advanced_search' %}" id="filterForm">
+            <!-- Query -->
+            <div class="filter-section">
+                <label for="query">Search Query</label>
+                <input type="text" id="query" name="q" value="{{ query }}" 
+                       placeholder="Enter keywords...">
+            </div>
+            
+            <!-- Date Range -->
+            <div class="filter-section">
+                <h4>Date Range</h4>
+                <label for="start_date">Start Date</label>
+                <input type="date" id="start_date" name="start_date" 
+                       value="{{ filters.start_date }}">
+                
+                <label for="end_date">End Date</label>
+                <input type="date" id="end_date" name="end_date" 
+                       value="{{ filters.end_date }}">
+            </div>
+            
+            <!-- Role Filter -->
+            <div class="filter-section">
+                <h4>Role</h4>
+                <select id="role" name="role">
+                    <option value="">All Roles</option>
+                    {% for role in facets.roles %}
+                    <option value="{{ role.id }}" 
+                            {% if filters.role_id == role.id|stringformat:"s" %}selected{% endif %}>
+                        {{ role.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Care Home Filter -->
+            <div class="filter-section">
+                <h4>Care Home</h4>
+                <select id="care_home" name="care_home">
+                    <option value="">All Care Homes</option>
+                    {% for home in facets.care_homes %}
+                    <option value="{{ home.id }}" 
+                            {% if filters.care_home_id == home.id|stringformat:"s" %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="filter-section">
+                <h4>Status</h4>
+                <select id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if filters.status == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if filters.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <button type="button" class="btn-secondary" onclick="clearFilters()">Clear All</button>
+        </form>
+    </aside>
+    
+    <!-- Search Results -->
+    <main class="search-main">
+        <h1>Advanced Search</h1>
+        
+        <!-- Active Filters -->
+        {% if query or filters.start_date or filters.end_date or filters.role_id or filters.care_home_id or filters.status %}
+        <div class="active-filters">
+            {% if query %}
+            <span class="filter-tag">
+                Query: "{{ query }}"
+                <button onclick="removeFilter('q')">&times;</button>
+            </span>
+            {% endif %}
+            
+            {% if filters.start_date %}
+            <span class="filter-tag">
+                From: {{ filters.start_date }}
+                <button onclick="removeFilter('start_date')">&times;</button>
+            </span>
+            {% endif %}
+            
+            {% if filters.end_date %}
+            <span class="filter-tag">
+                To: {{ filters.end_date }}
+                <button onclick="removeFilter('end_date')">&times;</button>
+            </span>
+            {% endif %}
+            
+            {% if filters.role_id %}
+            <span class="filter-tag">
+                Role: {{ filters.role_id }}
+                <button onclick="removeFilter('role')">&times;</button>
+            </span>
+            {% endif %}
+            
+            {% if filters.care_home_id %}
+            <span class="filter-tag">
+                Care Home: {{ filters.care_home_id }}
+                <button onclick="removeFilter('care_home')">&times;</button>
+            </span>
+            {% endif %}
+            
+            {% if filters.status %}
+            <span class="filter-tag">
+                Status: {{ filters.status }}
+                <button onclick="removeFilter('status')">&times;</button>
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Search Stats -->
+        {% if results %}
+        <div class="search-stats">
+            {% if results.staff %}
+                {{ results.staff.total }} staff result{{ results.staff.total|pluralize }}
+            {% endif %}
+            {% if results.shifts %}
+                {{ results.shifts.total }} shift{{ results.shifts.total|pluralize }}
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Staff Results -->
+        {% if results.staff %}
+        <section>
+            <h2>Staff Results ({{ results.staff.total }})</h2>
+            {% for hit in results.staff.hits %}
+            <div class="result-item">
+                <div class="result-header">
+                    <div>
+                        <div class="result-title">{{ hit.name }}</div>
+                        <div class="result-meta">SAP: {{ hit.sap }}</div>
+                    </div>
+                    <span class="result-badge">Active</span>
+                </div>
+                <div class="result-details">
+                    <div><strong>Email:</strong> {{ hit.email }}</div>
+                    {% if hit.role %}
+                    <div><strong>Role:</strong> {{ hit.role }}</div>
+                    {% endif %}
+                    {% if hit.care_home %}
+                    <div><strong>Care Home:</strong> {{ hit.care_home }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+        
+        <!-- Shift Results -->
+        {% if results.shifts %}
+        <section>
+            <h2>Shift Results ({{ results.shifts.total }})</h2>
+            {% for hit in results.shifts.hits %}
+            <div class="result-item">
+                <div class="result-header">
+                    <div>
+                        <div class="result-title">{{ hit.shift_type }} - {{ hit.date }}</div>
+                        <div class="result-meta">{{ hit.start_time }} - {{ hit.end_time }}</div>
+                    </div>
+                </div>
+                <div class="result-details">
+                    {% if hit.assigned_to %}
+                    <div><strong>Assigned to:</strong> {{ hit.assigned_to }}</div>
+                    {% endif %}
+                    {% if hit.care_home %}
+                    <div><strong>Care Home:</strong> {{ hit.care_home }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+        
+        {% if not results or not results.staff and not results.shifts %}
+        <div class="no-results">
+            <h3>No Results Found</h3>
+            <p>Try adjusting your filters or search query</p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function removeFilter(filterName) {
+        const input = document.querySelector(`[name="${filterName}"]`);
+        if (input) {
+            input.value = '';
+            document.getElementById('filterForm').submit();
+        }
+    }
+    
+    function clearFilters() {
+        document.getElementById('filterForm').reset();
+        document.getElementById('filterForm').submit();
+    }
+</script>
+{% endblock %}

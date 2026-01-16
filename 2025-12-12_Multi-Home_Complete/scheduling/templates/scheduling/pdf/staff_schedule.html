@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <!-- Print header -->
+    <div class="print-title">{{ title }}</div>
+    <div class="print-date">Generated: {{ generated_date|date:"d/m/Y H:i" }}</div>
+    
+    <!-- Report metadata -->
+    <div class="print-info">
+        <strong>Report Type:</strong> {{ report_type }}<br>
+        <strong>Staff Member:</strong> {{ staff.first_name }} {{ staff.last_name }}<br>
+        <strong>SSSC Registration:</strong> {{ staff.sssc_registration|default:"Not registered" }}<br>
+        <strong>Primary Home:</strong> {{ staff.primary_home.name }}<br>
+        <strong>Period:</strong> {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}
+    </div>
+    
+    <!-- Summary statistics -->
+    <h2>Schedule Summary</h2>
+    
+    <table style="width: 60%">
+        <tr>
+            <th>Metric</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Total Shifts</td>
+            <td><strong>{{ total_shifts }}</strong></td>
+        </tr>
+        <tr>
+            <td>Total Hours</td>
+            <td><strong>{{ total_hours }}</strong></td>
+        </tr>
+        <tr>
+            <td>Shifts per Home</td>
+            <td>
+                {% for home_name, count in shifts_by_home.items %}
+                    {{ home_name }}: {{ count }}<br>
+                {% endfor %}
+            </td>
+        </tr>
+    </table>
+    
+    <!-- Detailed schedule -->
+    <div class="page-break-before"></div>
+    <h2>Detailed Schedule</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%">Date</th>
+                <th style="width: 12%">Day</th>
+                <th style="width: 15%">Shift Type</th>
+                <th style="width: 20%">Home</th>
+                <th style="width: 10%">Hours</th>
+                <th style="width: 28%">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shift in shifts %}
+            <tr>
+                <td>{{ shift.shift_date|date:"d/m/Y" }}</td>
+                <td>{{ shift.shift_date|date:"l" }}</td>
+                <td>{{ shift.shift_type }}</td>
+                <td>{{ shift.home.name }}</td>
+                <td>{{ shift.get_hours }}</td>
+                <td style="font-size: 9pt">{{ shift.notes|default:"—"|truncatewords:10 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center"><em>No shifts scheduled for this period</em></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Footer -->
+    <div class="print-footer">
+        <p>Glasgow HSCP - Staff Rota Management System | Confidential Document</p>
+    </div>
+</body>
+</html>

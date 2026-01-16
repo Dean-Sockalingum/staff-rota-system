@@ -1,0 +1,502 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Rota Cost Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cost-analysis-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #0066cc, #0099ff);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 20px rgba(0,102,204,0.3);
+    }
+    
+    .page-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 32px;
+    }
+    
+    .date-range-filter {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        display: flex;
+        gap: 15px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .btn-filter {
+        background: #0066cc;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-filter:hover {
+        background: #0052a3;
+        transform: translateY(-2px);
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .metric-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #0066cc;
+    }
+    
+    .metric-card.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .metric-card.danger {
+        border-left-color: #dc3545;
+    }
+    
+    .metric-card.success {
+        border-left-color: #28a745;
+    }
+    
+    .metric-label {
+        font-size: 13px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    
+    .metric-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .metric-change {
+        font-size: 13px;
+        color: #666;
+    }
+    
+    .metric-change.positive {
+        color: #28a745;
+    }
+    
+    .metric-change.negative {
+        color: #dc3545;
+    }
+    
+    .chart-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 30px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        max-height: 400px;
+        width: 100%;
+    }
+    
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .chart-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-export {
+        background: white;
+        border: 2px solid #0066cc;
+        color: #0066cc;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .btn-export:hover {
+        background: #0066cc;
+        color: white;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .data-table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .cost-breakdown {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .breakdown-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .breakdown-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 20px;
+    }
+    
+    .breakdown-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .breakdown-item:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 18px;
+        padding-top: 15px;
+        border-top: 2px solid #0066cc;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        border-left: 4px solid #0c5460;
+        padding: 15px 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cost-analysis-container">
+    <div class="page-header">
+        <h1>📊 Rota Cost Analysis</h1>
+        <p>Comprehensive cost tracking, analysis, and reporting</p>
+    </div>
+    
+    <!-- Date Range Filter -->
+    <form method="get" class="date-range-filter">
+        <div class="filter-group">
+            <label for="start_date">Start Date</label>
+            <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-group">
+            <label for="end_date">End Date</label>
+            <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-group">
+            <label for="care_home">Care Home</label>
+            <select id="care_home" name="care_home">
+                <option value="">All Homes</option>
+                {% for home in care_homes %}
+                <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                    {{ home.get_name_display }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-filter">Apply Filters</button>
+    </form>>
+    
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">Total Shifts</div>
+            <div class="metric-value">{{ total_shifts|floatformat:0 }}</div>
+            <div class="metric-change">{{ start_date|date:"M d" }} - {{ end_date|date:"M d" }}</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">Staff Cost</div>
+            <div class="metric-value">£{{ total_staff_cost|floatformat:0 }}</div>
+            <div class="metric-change">Base salaries</div>
+        </div>
+        
+        <div class="metric-card warning">
+            <div class="metric-label">Agency Cost</div>
+            <div class="metric-value">£{{ agency_cost|floatformat:0 }}</div>
+            <div class="metric-change">External staff</div>
+        </div>
+        
+        <div class="metric-card {% if variance < 0 %}success{% else %}danger{% endif %}">
+            <div class="metric-label">Budget Variance</div>
+            <div class="metric-value">£{{ variance|floatformat:0 }}</div>
+            <div class="metric-change {% if variance < 0 %}positive{% else %}negative{% endif %}">
+                {{ variance_percent|floatformat:1 }}% {% if variance < 0 %}under{% else %}over{% endif %} budget
+            </div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">Cost Per Shift</div>
+            <div class="metric-value">£{{ cost_per_shift|floatformat:2 }}</div>
+            <div class="metric-change">Average</div>
+        </div>
+        
+        <div class="metric-card success">
+            <div class="metric-label">OT System Savings</div>
+            <div class="metric-value">£{{ ot_system_savings|floatformat:0 }}</div>
+            <div class="metric-change positive">Agency costs avoided</div>
+        </div>
+    </div>
+    
+    <!-- Weekly Cost Trend Chart -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <h2 class="chart-title">Weekly Cost Trend</h2>
+            <div class="export-buttons">
+                <a href="{% url 'export_cost_analysis_pdf' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
+                    📄 PDF
+                </a>
+                <a href="{% url 'export_cost_analysis_excel' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
+                    📊 Excel
+                </a>
+                <a href="{% url 'export_cost_analysis_csv' %}?{% for key, value in request.GET.items %}{{ key }}={{ value }}&{% endfor %}" class="btn-export">
+                    📋 CSV
+                </a>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyCostChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Cost Breakdown -->
+    <div class="cost-breakdown">
+        <div class="breakdown-card">
+            <h3 class="breakdown-title">Cost by Role</h3>
+            {% for item in staff_cost_data %}
+            <div class="breakdown-item">
+                <span>{{ item.role }} ({{ item.shifts }} shifts)</span>
+                <strong>£{{ item.total_cost|floatformat:0 }}</strong>
+            </div>
+            {% endfor %}
+            <div class="breakdown-item">
+                <span>Total Staff Cost</span>
+                <strong>£{{ total_staff_cost|floatformat:0 }}</strong>
+            </div>
+        </div>
+        
+        <div class="breakdown-card">
+            <h3 class="breakdown-title">Additional Costs</h3>
+            <div class="breakdown-item">
+                <span>Agency Staff</span>
+                <strong>£{{ agency_cost|floatformat:0 }}</strong>
+            </div>
+            <div class="breakdown-item">
+                <span>Overtime Premium</span>
+                <strong>£{{ overtime_cost|floatformat:0 }}</strong>
+            </div>
+            <div class="breakdown-item">
+                <span>Total Actual Cost</span>
+                <strong>£{{ actual_cost|floatformat:0 }}</strong>
+            </div>
+        </div>
+        
+        <div class="breakdown-card">
+            <h3 class="breakdown-title">Budget Comparison</h3>
+            <div class="breakdown-item">
+                <span>Budgeted Cost</span>
+                <strong>£{{ budgeted_cost|floatformat:0 }}</strong>
+            </div>
+            <div class="breakdown-item">
+                <span>Actual Cost</span>
+                <strong>£{{ actual_cost|floatformat:0 }}</strong>
+            </div>
+            <div class="breakdown-item">
+                <span>Variance</span>
+                <strong style="color: {% if variance < 0 %}#28a745{% else %}#dc3545{% endif %};">
+                    £{{ variance|floatformat:0 }}
+                </strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cost by Home -->
+    <div class="chart-section">
+        <h2 class="chart-title">Cost by Care Home</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Care Home</th>
+                    <th>Total Shifts</th>
+                    <th>Total Cost</th>
+                    <th>Cost per Shift</th>
+                    <th>% of Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for home in home_costs %}
+                <tr>
+                    <td><strong>{{ home.name }}</strong></td>
+                    <td>{{ home.shifts }}</td>
+                    <td>£{{ home.cost|floatformat:0 }}</td>
+                    <td>£{{ home.cost_per_shift|floatformat:2 }}</td>
+                    <td>{{ home.percentage|floatformat:1 }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Overtime System Performance -->
+    <div class="chart-section">
+        <h2 class="chart-title">Overtime System Performance</h2>
+        <div class="alert-info">
+            <strong>💡 Impact:</strong> The overtime preference system has helped fill {{ ot_filled }} shifts internally, 
+            avoiding £{{ agency_cost_avoided|floatformat:0 }} in agency costs. Response rate: {{ ot_response_rate|floatformat:1 }}%
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div class="metric-card">
+                <div class="metric-label">OT Requests Sent</div>
+                <div class="metric-value" style="font-size: 28px;">{{ ot_requests }}</div>
+            </div>
+            <div class="metric-card success">
+                <div class="metric-label">Shifts Filled</div>
+                <div class="metric-value" style="font-size: 28px;">{{ ot_filled }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Response Rate</div>
+                <div class="metric-value" style="font-size: 28px;">{{ ot_response_rate|floatformat:0 }}%</div>
+            </div>
+            <div class="metric-card success">
+                <div class="metric-label">Agency Costs Avoided</div>
+                <div class="metric-value" style="font-size: 28px;">£{{ agency_cost_avoided|floatformat:0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Weekly Cost Chart
+    const weeklyData = {{ weekly_data|safe }};
+    
+    const ctx = document.getElementById('weeklyCostChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: weeklyData.map(d => d.week_start),
+            datasets: [{
+                label: 'Weekly Cost',
+                data: weeklyData.map(d => d.cost),
+                borderColor: '#0066cc',
+                backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '£' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '£' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

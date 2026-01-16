@@ -1,0 +1,210 @@
+{% extends "quality_audits/base.html" %}
+
+{% block title %}Dashboard - PDSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-speedometer2"></i> PDSA Tracker Dashboard
+            </h1>
+            <p class="lead text-muted">Monitor your quality improvement projects</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'quality_audits:project_create' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle"></i> New Project
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Projects</h6>
+                            <h2 class="mb-0">{{ total_projects }}</h2>
+                        </div>
+                        <div class="fs-1 text-primary">
+                            <i class="bi bi-folder"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Active Projects</h6>
+                            <h2 class="mb-0">{{ active_projects }}</h2>
+                        </div>
+                        <div class="fs-1 text-success">
+                            <i class="bi bi-play-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card border-start border-warning border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Active Cycles</h6>
+                            <h2 class="mb-0">{{ active_cycles }}</h2>
+                        </div>
+                        <div class="fs-1 text-warning">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card border-start border-info border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Avg Success Score</h6>
+                            <h2 class="mb-0">{{ avg_success_score|floatformat:0 }}%</h2>
+                        </div>
+                        <div class="fs-1 text-info">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Recent Projects -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Recent Projects
+                    </h5>
+                    <a href="{% url 'quality_audits:project_list' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_projects %}
+                    <div class="list-group list-group-flush">
+                        {% for project in recent_projects %}
+                        <a href="{% url 'quality_audits:project_detail' project.pk %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ project.project_name }}</h6>
+                                <small class="text-muted">{{ project.created_at|timesince }} ago</small>
+                            </div>
+                            <p class="mb-1 text-muted small">{{ project.project_aim|truncatewords:15 }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge badge-status-{{ project.status }}">
+                                    {{ project.get_status_display }}
+                                </span>
+                                {% if project.ai_aim_generated %}
+                                <span class="badge ai-badge">
+                                    <i class="bi bi-stars"></i> AI Enhanced
+                                </span>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-folder-x fs-1"></i>
+                        <p class="mt-2">No projects yet</p>
+                        <a href="{% url 'quality_audits:project_create' %}" class="btn btn-primary">
+                            Create Your First Project
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Reviews -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-check"></i> Upcoming Reviews
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_reviews %}
+                    <div class="list-group list-group-flush">
+                        {% for cycle in upcoming_reviews %}
+                        <a href="{% url 'quality_audits:cycle_detail' cycle.pk %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ cycle.project.title }} - Cycle #{{ cycle.cycle_number }}</h6>
+                                <small class="text-danger">
+                                    <i class="bi bi-calendar-event"></i> {{ cycle.act_review_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <p class="mb-1 text-muted small">{{ cycle.cycle_objective|truncatewords:12 }}</p>
+                            <small class="text-muted">
+                                In {{ cycle.act_review_date|timeuntil }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x fs-1"></i>
+                        <p class="mt-2">No upcoming reviews</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning-charge"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'quality_audits:project_create' %}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-plus-circle"></i><br>New Project
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'quality_audits:project_list' %}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="bi bi-folder"></i><br>View Projects
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'quality_audits:reports' %}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="bi bi-file-earmark-text"></i><br>Reports
+                            </a>
+                        </div>
+                        <!-- AI Helper button removed - chatbot is project-specific, available in project detail view -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Helper Modal removed - chatbot is project-specific, available in project detail view -->
+{% endblock %}

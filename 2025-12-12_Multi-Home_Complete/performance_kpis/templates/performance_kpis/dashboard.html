@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Performance Dashboard - Module 7{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .kpi-card.green { border-left-color: #28a745; }
+    .kpi-card.amber { border-left-color: #ffc107; }
+    .kpi-card.red { border-left-color: #dc3545; }
+    
+    .rag-badge {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .rag-badge.green { background-color: #28a745; color: white; }
+    .rag-badge.amber { background-color: #ffc107; color: #000; }
+    .rag-badge.red { background-color: #dc3545; color: white; }
+    
+    .stat-card {
+        border-radius: 8px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-bottom: 1.5rem;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3"><i class="fas fa-chart-line"></i> Performance Dashboard</h1>
+            <p class="text-muted">Real-time KPI monitoring and executive insights</p>
+        </div>
+    </div>
+
+    <!-- Dashboard Selector -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <label class="form-label fw-bold">Select Dashboard:</label>
+                    <select class="form-select" id="dashboardSelector" onchange="window.location.href='?dashboard='+this.value">
+                        <option value="">-- Select Dashboard --</option>
+                        {% for dash in user_dashboards %}
+                        <option value="{{ dash.id }}" {% if current_dashboard.id == dash.id %}selected{% endif %}>
+                            {{ dash.name }}
+                            {% if dash.is_public %}<i class="fas fa-globe text-primary ms-1"></i>{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'performance_kpis:kpi_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> All KPIs
+            </a>
+            <a href="{% url 'performance_kpis:balanced_scorecard' %}" class="btn btn-outline-success">
+                <i class="fas fa-th"></i> Balanced Scorecard
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <p class="stat-value">{{ total_kpis }}</p>
+                <p class="stat-label">Total Active KPIs</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <p class="stat-value">{{ green_count }}</p>
+                <p class="stat-label">🟢 Green (On Target)</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <p class="stat-value">{{ amber_count }}</p>
+                <p class="stat-label">🟡 Amber (Needs Attention)</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <p class="stat-value">{{ red_count }}</p>
+                <p class="stat-label">🔴 Red (Below Target)</p>
+            </div>
+        </div>
+    </div>
+
+    {% if current_dashboard %}
+    <!-- Dashboard KPIs -->
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">{{ current_dashboard.name }}</h4>
+            {% if current_dashboard.description %}
+            <p class="text-muted">{{ current_dashboard.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        {% for item in dashboard_kpis %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card kpi-card {% if item.latest %}{{ item.latest.rag_status|lower }}{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">{{ item.kpi.code }}</span>
+                    {% if item.latest %}
+                    <span class="rag-badge {{ item.latest.rag_status|lower }}">
+                        {{ item.latest.rag_status }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ item.kpi.name }}</h6>
+                    
+                    {% if item.latest %}
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <small class="text-muted">Current</small>
+                            <p class="h4 mb-0">
+                                {{ item.latest.actual_value }}
+                                {% if item.kpi.measurement_type == 'PERCENTAGE' %}%{% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Target</small>
+                            <p class="h4 mb-0">
+                                {% if item.latest.target_value %}
+                                    {{ item.latest.target_value }}
+                                {% elif item.kpi.target_value %}
+                                    {{ item.kpi.target_value }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                                {% if item.kpi.measurement_type == 'PERCENTAGE' %}%{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if item.latest.variance %}
+                    <div class="mt-2">
+                        <small class="text-muted">Variance:</small>
+                        <span class="{% if item.latest.variance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ item.latest.variance|floatformat:2 }}
+                            {% if item.latest.variance_percentage %}
+                                ({{ item.latest.variance_percentage|floatformat:1 }}%)
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-2">
+                        <small class="text-muted">As of: {{ item.latest.measurement_date }}</small>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No measurements recorded</p>
+                    {% endif %}
+                    
+                    <!-- Mini chart -->
+                    {% if item.measurements.count > 1 %}
+                    <div class="chart-container" style="height: 150px;">
+                        <canvas id="chart-{{ item.kpi.id }}"></canvas>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'performance_kpis:kpi_detail' item.kpi.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-chart-line"></i> Details
+                        </a>
+                        <a href="{% url 'performance_kpis:measurement_create' item.kpi.id %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-plus"></i> Record
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No KPIs configured for this dashboard.
+                <a href="{% url 'admin:performance_kpis_executivedashboard_change' current_dashboard.id %}" class="alert-link">
+                    Configure Dashboard
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- No Dashboard Selected -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> No Dashboard Selected</h5>
+                <p>Please select a dashboard from the dropdown above, or create a new one in the admin panel.</p>
+                <a href="{% url 'admin:performance_kpis_executivedashboard_add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% for item in dashboard_kpis %}
+    {% if item.measurements.count > 1 %}
+    // Chart for {{ item.kpi.code }}
+    const ctx{{ item.kpi.id }} = document.getElementById('chart-{{ item.kpi.id }}').getContext('2d');
+    new Chart(ctx{{ item.kpi.id }}, {
+        type: '{{ item.dashboard_kpi.chart_type|lower }}' === 'gauge' ? 'doughnut' : 
+              '{{ item.dashboard_kpi.chart_type|lower }}' === 'number' ? 'line' :
+              '{{ item.dashboard_kpi.chart_type|lower }}',
+        data: {
+            labels: {{ item.chart_data.labels|safe }},
+            datasets: [{
+                label: 'Actual',
+                data: {{ item.chart_data.values|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                tension: 0.4
+            }
+            {% if item.chart_data.show_target and item.chart_data.targets %}
+            , {
+                label: 'Target',
+                data: {{ item.chart_data.targets|safe }},
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                tension: 0.4
+            }
+            {% endif %}
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+    {% endfor %}
+});
+</script>
+{% endblock %}

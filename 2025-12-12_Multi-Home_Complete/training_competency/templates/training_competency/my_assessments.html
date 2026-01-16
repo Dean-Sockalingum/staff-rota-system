@@ -1,0 +1,151 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}My Assessments{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-clipboard-check"></i> My Competency Assessments
+            </h1>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ stats.total }}</h2>
+                    <p class="mb-0">Total Assessments</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ stats.competent }}</h2>
+                    <p class="mb-0">Competent</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ stats.in_progress }}</h2>
+                    <p class="mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ stats.not_yet_competent }}</h2>
+                    <p class="mb-0">Not Yet Competent</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessments List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Assessment History</h5>
+                </div>
+                <div class="card-body">
+                    {% if assessments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Competency</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Assessor</th>
+                                        <th>Level</th>
+                                        <th>Outcome</th>
+                                        <th>Next Review</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assessment in assessments %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ assessment.competency.code }}</strong><br>
+                                                <small class="text-muted">{{ assessment.competency.title }}</small>
+                                            </td>
+                                            <td>
+                                                {% if assessment.competency.competency_type == 'CLINICAL' %}
+                                                    <span class="badge bg-danger">Clinical</span>
+                                                {% elif assessment.competency.competency_type == 'TECHNICAL' %}
+                                                    <span class="badge bg-primary">Technical</span>
+                                                {% elif assessment.competency.competency_type == 'BEHAVIORAL' %}
+                                                    <span class="badge bg-success">Behavioral</span>
+                                                {% elif assessment.competency.competency_type == 'LEADERSHIP' %}
+                                                    <span class="badge bg-warning">Leadership</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ assessment.competency.get_competency_type_display }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ assessment.assessment_date|date:"d M Y" }}</td>
+                                            <td>{{ assessment.assessor.get_full_name }}</td>
+                                            <td>
+                                                {% if assessment.achieved_level == 'AWARENESS' %}
+                                                    <span class="badge bg-warning text-dark">Awareness</span>
+                                                {% elif assessment.achieved_level == 'WORKING' %}
+                                                    <span class="badge bg-info">Working</span>
+                                                {% elif assessment.achieved_level == 'PROFICIENT' %}
+                                                    <span class="badge bg-success">Proficient</span>
+                                                {% elif assessment.achieved_level == 'EXPERT' %}
+                                                    <span class="badge bg-purple text-white" style="background-color: #6f42c1;">Expert</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if assessment.outcome == 'COMPETENT' %}
+                                                    <span class="badge bg-success">Competent</span>
+                                                {% elif assessment.outcome == 'HIGHLY_COMPETENT' %}
+                                                    <span class="badge bg-success">Highly Competent</span>
+                                                {% elif assessment.outcome == 'IN_PROGRESS' %}
+                                                    <span class="badge bg-info">In Progress</span>
+                                                {% elif assessment.outcome == 'NOT_YET_COMPETENT' %}
+                                                    <span class="badge bg-warning text-dark">Not Yet Competent</span>
+                                                {% elif assessment.outcome == 'NOT_YET_STARTED' %}
+                                                    <span class="badge bg-secondary">Not Yet Started</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if assessment.next_review_date %}
+                                                    {{ assessment.next_review_date|date:"d M Y" }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle"></i> No assessments recorded yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Dashboard -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'training_competency:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

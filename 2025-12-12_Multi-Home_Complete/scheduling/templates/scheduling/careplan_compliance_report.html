@@ -1,0 +1,213 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Care Plan Review Compliance Report{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-line"></i> Care Plan Review Compliance Report</h2>
+        <p class="text-muted">Reviews completed between {{ start_date|date:"M j, Y" }} and {{ end_date|date:"M j, Y" }}</p>
+    </div>
+</div>
+
+<!-- Report Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter"></i> Report Parameters</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="unit" class="form-label">Unit (Optional)</label>
+                        <select name="unit" id="unit" class="form-select">
+                            <option value="">All Units</option>
+                            {% for unit in all_units %}
+                                <option value="{{ unit.name }}" {% if unit.name == selected_unit %}selected{% endif %}>
+                                    {{ unit.get_name_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search"></i> Generate Report
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-0">{{ total_reviews }}</h3>
+                <p class="text-muted small mb-0">Total Reviews Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h3 class="text-success mb-0">{{ on_time_reviews }}</h3>
+                <p class="text-muted small mb-0">Completed On Time</p>
+                <span class="badge bg-success">{{ on_time_percentage }}%</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h3 class="text-danger mb-0">{{ overdue_reviews }}</h3>
+                <p class="text-muted small mb-0">Completed Late</p>
+                <span class="badge bg-danger">{{ overdue_percentage }}%</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h3 class="text-warning mb-0">{{ avg_days_late }}</h3>
+                <p class="text-muted small mb-0">Avg Days Late</p>
+                <small class="text-muted">(for overdue reviews)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Status Alert -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% if on_time_percentage >= 95 %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <strong>Excellent Compliance!</strong> 
+                {{ on_time_percentage }}% of reviews completed on time. System is performing well.
+            </div>
+        {% elif on_time_percentage >= 80 %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Good Compliance</strong> 
+                {{ on_time_percentage }}% on time. Some room for improvement.
+            </div>
+        {% else %}
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle"></i> <strong>Action Required!</strong> 
+                Only {{ on_time_percentage }}% completed on time. Review processes need attention.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Detailed Review List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Review Details ({{ total_reviews }})</h5>
+            </div>
+            <div class="card-body">
+                {% if review_details %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Resident</th>
+                                    <th>Unit</th>
+                                    <th>Review Type</th>
+                                    <th>Due Date</th>
+                                    <th>Completed Date</th>
+                                    <th>Completed By</th>
+                                    <th>Status</th>
+                                    <th>Days Late</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in review_details %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.review.resident.resident_id }}</strong><br>
+                                            <small class="text-muted">{{ item.review.resident.full_name }}</small>
+                                        </td>
+                                        <td>{{ item.review.resident.unit.name }}</td>
+                                        <td>{{ item.review.get_review_type_display }}</td>
+                                        <td>{{ item.review.due_date|date:"M j, Y" }}</td>
+                                        <td>{{ item.review.completed_date|date:"M j, Y" }}</td>
+                                        <td>
+                                            {% if item.review.completed_by %}
+                                                {{ item.review.completed_by.full_name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.was_on_time %}
+                                                <span class="badge bg-success">On Time</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Late</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.days_late > 0 %}
+                                                <span class="text-danger">+{{ item.days_late }} days</span>
+                                            {% else %}
+                                                <span class="text-success">On time</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No reviews were completed during this period.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{% url 'careplan_overview' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Overview
+        </a>
+        <a href="{% url 'careplan_compliance_report' %}" class="btn btn-outline-primary">
+            <i class="fas fa-refresh"></i> Reset Filters
+        </a>
+    </div>
+</div>
+
+<!-- Print Styles -->
+<style>
+@media print {
+    .btn, .card-header, nav, .no-print {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #ddd !important;
+        page-break-inside: avoid;
+    }
+}
+</style>
+
+{% endblock %}

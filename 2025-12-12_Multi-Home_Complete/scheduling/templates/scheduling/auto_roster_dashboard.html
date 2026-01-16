@@ -1,0 +1,269 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Auto-Roster Generator - Quality Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="dashboard-header mb-4">
+        <h1><i class="fas fa-robot"></i> Auto-Roster Generator Dashboard</h1>
+        <p class="text-muted">Automated roster quality and fairness analysis</p>
+        
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Care Home:</label>
+                <select id="care_home_filter" class="form-control" onchange="updateFilters()">
+                    <option value="">All Homes</option>
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}" {% if selected_care_home and selected_care_home.id == home.id %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Start Date:</label>
+                <input type="date" id="start_date_filter" class="form-control" value="{{ start_date|date:'Y-m-d' }}" onchange="updateFilters()">
+            </div>
+            <div class="col-md-3">
+                <label>End Date:</label>
+                <input type="date" id="end_date_filter" class="form-control" value="{{ end_date|date:'Y-m-d' }}" onchange="updateFilters()">
+            </div>
+            <div class="col-md-2">
+                <label>&nbsp;</label>
+                <a href="?care_home={{ selected_care_home.id|default:'' }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=csv" class="btn btn-success btn-block">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Quality Score</div>
+                <div class="stat-value">{{ roster_data.executive_summary.quality_score }}/100</div>
+                <div class="stat-status {{ roster_data.executive_summary.status_text|lower }}">
+                    {{ roster_data.executive_summary.status_light }} {{ roster_data.executive_summary.status_text }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Fairness Score</div>
+                <div class="stat-value">{{ roster_data.executive_summary.fairness_score }}/100</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Overall Score</div>
+                <div class="stat-value">{{ roster_data.executive_summary.overall_score }}/100</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Total Shifts</div>
+                <div class="stat-value">{{ roster_data.executive_summary.total_shifts }}</div>
+                <div class="stat-subtitle">{{ roster_data.executive_summary.constraint_violations }} violations</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quality Metrics Table -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> Quality Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Score</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric, value in roster_data.quality_metrics.items %}
+                            <tr>
+                                <td>{{ metric|cut:"_"|title }}</td>
+                                <td>{{ value }}%</td>
+                                <td>
+                                    {% if value >= 95 %}
+                                        <span class="badge badge-success">Excellent</span>
+                                    {% elif value >= 85 %}
+                                        <span class="badge badge-primary">Good</span>
+                                    {% elif value >= 75 %}
+                                        <span class="badge badge-warning">Acceptable</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Needs Improvement</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-balance-scale"></i> Fairness Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric, value in roster_data.fairness_metrics.items %}
+                            <tr>
+                                <td>{{ metric|cut:"_"|title }}</td>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Violations & Recommendations -->
+    {% if roster_data.violations %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Constraint Violations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for violation in roster_data.violations %}
+                        <li class="list-group-item">
+                            <strong>{{ violation.icon }} {{ violation.type|title }}</strong>: {{ violation.description }}
+                            <br><small class="text-muted">Recommendation: {{ violation.recommendation }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="recommendations-list">
+                        {% for rec in roster_data.recommendations %}
+                        <li class="recommendation-item priority-{{ rec.priority|lower }}">
+                            <span class="rec-icon">{{ rec.icon }}</span>
+                            <div class="rec-content">
+                                <strong>{{ rec.title }}</strong>
+                                <p>{{ rec.action }}</p>
+                                <small class="text-muted">Impact: {{ rec.impact }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+}
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+}
+.stat-status {
+    margin-top: 8px;
+    font-size: 14px;
+}
+.stat-status.excellent { color: #28a745; }
+.stat-status.good { color: #17a2b8; }
+.stat-status.acceptable { color: #ffc107; }
+.stat-subtitle {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+}
+.recommendation-item {
+    display: flex;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ccc;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+.recommendation-item.priority-high {
+    border-left-color: #dc3545;
+}
+.recommendation-item.priority-medium {
+    border-left-color: #ffc107;
+}
+.recommendation-item.priority-low {
+    border-left-color: #17a2b8;
+}
+.rec-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+.rec-content {
+    flex: 1;
+}
+.rec-content strong {
+    display: block;
+    margin-bottom: 5px;
+}
+.rec-content p {
+    margin: 0 0 5px 0;
+}
+</style>
+
+<script>
+function updateFilters() {
+    const careHome = document.getElementById('care_home_filter').value;
+    const startDate = document.getElementById('start_date_filter').value;
+    const endDate = document.getElementById('end_date_filter').value;
+    
+    let url = '?';
+    if (careHome) url += `care_home=${careHome}&`;
+    if (startDate) url += `start_date=${startDate}&`;
+    if (endDate) url += `end_date=${endDate}`;
+    
+    window.location.href = url;
+}
+</script>
+{% endblock %}

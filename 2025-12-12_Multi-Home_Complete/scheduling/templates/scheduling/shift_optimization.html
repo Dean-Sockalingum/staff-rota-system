@@ -1,0 +1,367 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Shift Optimization - {{ summary.care_home }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-robot"></i> AI Shift Optimization</h2>
+            <p class="text-muted">Minimize costs while meeting forecasted demand using linear programming</p>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Optimization Controls -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Optimization Parameters</h5>
+        </div>
+        <div class="card-body">
+            <form id="optimizationForm" method="GET">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="care_home" class="form-label">Care Home</label>
+                        <select name="care_home" id="care_home" class="form-select">
+                            {% for home in care_homes %}
+                            <option value="{{ home.name }}" {% if home == selected_home %}selected{% endif %}>
+                                {{ home.get_name_display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" name="start_date" id="start_date" class="form-control" 
+                               value="{{ summary.start_date|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="days_ahead" class="form-label">Days to Optimize</label>
+                        <select name="days_ahead" id="days_ahead" class="form-select">
+                            <option value="1" {% if summary.days_ahead == 1 %}selected{% endif %}>1 day</option>
+                            <option value="7" {% if summary.days_ahead == 7 %}selected{% endif %}>1 week (7 days)</option>
+                            <option value="14" {% if summary.days_ahead == 14 %}selected{% endif %}>2 weeks (14 days)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter"></i> Update
+                        </button>
+                        <button type="button" id="runOptimization" class="btn btn-success">
+                            <i class="fas fa-play-circle"></i> Run Optimization
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Date Range</h6>
+                    <h4>{{ summary.start_date|date:'M d' }} - {{ summary.end_date|date:'M d' }}</h4>
+                    <small>{{ summary.days_ahead }} days</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Forecasts Available</h6>
+                    <h4><span class="badge bg-info">{{ summary.forecast_count }}</span></h4>
+                    <small>{{ summary.units }} units</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Existing Shifts</h6>
+                    <h4><span class="badge bg-secondary">{{ summary.existing_shifts }}</span></h4>
+                    <small>Current schedule</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Current Cost</h6>
+                    <h4>£{{ summary.current_cost|floatformat:2 }}</h4>
+                    <small>{{ summary.days_ahead }}-day total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optimization Results (hidden until run) -->
+    <div id="optimizationResults" style="display:none;">
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Optimization Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Optimized Cost</h6>
+                        <h3 id="optimizedCost">£0.00</h3>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Cost Savings</h6>
+                        <h3 id="costSavings" class="text-success">£0.00</h3>
+                        <small id="savingsPercentage" class="text-muted"></small>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Assignments</h6>
+                        <h3 id="totalAssignments">0</h3>
+                        <small class="text-muted">shifts created</small>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" id="applyOptimization" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-save"></i> Apply to Rota
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Assignment Details Table -->
+                <h6 class="mt-4">Suggested Assignments</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-hover" id="assignmentsTable">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Date</th>
+                                <th>Staff Member</th>
+                                <th>Unit</th>
+                                <th>Shift Type</th>
+                                <th>Hours</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assignmentsTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" style="display:none;" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Running optimization...</span>
+        </div>
+        <p class="mt-3 text-muted">Running optimization algorithm... This may take 10-30 seconds.</p>
+    </div>
+
+    <!-- Current Forecasts Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Demand Forecasts</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Care Home</th>
+                            <th>Unit</th>
+                            <th>Predicted Shifts</th>
+                            <th>80% CI</th>
+                            <th>Uncertainty</th>
+                            <th>MAPE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in forecasts %}
+                        <tr>
+                            <td>{{ item.forecast.forecast_date|date:'D, M d' }}</td>
+                            <td>{{ item.forecast.care_home.get_name_display }}</td>
+                            <td><span class="badge bg-secondary">{{ item.forecast.unit.get_name_display }}</span></td>
+                            <td><strong>{{ item.forecast.predicted_shifts|floatformat:1 }}</strong></td>
+                            <td class="text-muted">
+                                [{{ item.forecast.confidence_lower|floatformat:1 }}, {{ item.forecast.confidence_upper|floatformat:1 }}]
+                            </td>
+                            <td>
+                                ±{{ item.uncertainty_pct }}%
+                            </td>
+                            <td>
+                                {% if item.forecast.mape < 15 %}
+                                <span class="text-success">{{ item.forecast.mape|floatformat:1 }}%</span>
+                                {% elif item.forecast.mape < 25 %}
+                                <span class="text-info">{{ item.forecast.mape|floatformat:1 }}%</span>
+                                {% else %}
+                                <span class="text-warning">{{ item.forecast.mape|floatformat:1 }}%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No forecasts available for this period</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scottish Design Info -->
+    <div class="card mt-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="fas fa-info-circle"></i> Scottish Design: AI-Powered Optimization</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-2"><strong>Evidence-Based:</strong> Uses Prophet forecasts + linear programming (PuLP) to minimize staffing costs while meeting predicted demand.</p>
+            <p class="mb-2"><strong>Transparent:</strong> Shows cost breakdown, demand coverage, and algorithm constraints. All assignments are reviewable before applying.</p>
+            <p class="mb-0"><strong>User-Centered:</strong> OM/SM controls optimization parameters. Algorithm respects staff availability, skills, and WTD limits automatically.</p>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Optimization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const runBtn = document.getElementById('runOptimization');
+    const applyBtn = document.getElementById('applyOptimization');
+    const resultsDiv = document.getElementById('optimizationResults');
+    const loadingDiv = document.getElementById('loadingSpinner');
+    
+    let optimizationData = null;
+
+    runBtn.addEventListener('click', function() {
+        // Get form values
+        const careHome = document.getElementById('care_home').value;
+        const startDate = document.getElementById('start_date').value;
+        const daysAhead = document.getElementById('days_ahead').value;
+
+        // Show loading spinner
+        loadingDiv.style.display = 'block';
+        resultsDiv.style.display = 'none';
+
+        // AJAX request to run optimization
+        fetch('{% url "run_optimization" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                care_home: careHome,
+                start_date: startDate,
+                days_ahead: parseInt(daysAhead)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingDiv.style.display = 'none';
+
+            if (data.success) {
+                optimizationData = data;
+                displayResults(data);
+                resultsDiv.style.display = 'block';
+            } else {
+                alert('Optimization failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            loadingDiv.style.display = 'none';
+            console.error('Error:', error);
+            alert('Optimization request failed: ' + error.message);
+        });
+    });
+
+    function displayResults(data) {
+        // Update summary cards
+        document.getElementById('optimizedCost').textContent = '£' + data.total_cost.toFixed(2);
+        document.getElementById('costSavings').textContent = '£' + data.cost_savings.toFixed(2);
+        document.getElementById('savingsPercentage').textContent = 
+            '(' + data.savings_percentage.toFixed(1) + '% reduction)';
+        document.getElementById('totalAssignments').textContent = data.total_assignments;
+
+        // Populate assignments table
+        const tbody = document.getElementById('assignmentsTableBody');
+        tbody.innerHTML = '';
+
+        data.results.forEach(result => {
+            if (result.assignments) {
+                result.assignments.forEach(assignment => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${assignment.date}</td>
+                        <td>${assignment.staff_name}</td>
+                        <td><span class="badge bg-secondary">${assignment.unit}</span></td>
+                        <td>${assignment.shift_type.replace('_', ' ')}</td>
+                        <td>${assignment.hours}h</td>
+                        <td>£${assignment.cost.toFixed(2)}</td>
+                    `;
+                });
+            }
+        });
+    }
+
+    applyBtn.addEventListener('click', function() {
+        if (!optimizationData || !optimizationData.results) {
+            alert('No optimization results to apply');
+            return;
+        }
+
+        if (!confirm('Apply optimization results to rota? This will create ' + 
+                     optimizationData.total_assignments + ' new shifts.')) {
+            return;
+        }
+
+        // Collect all assignments
+        const allAssignments = [];
+        optimizationData.results.forEach(result => {
+            if (result.assignments) {
+                allAssignments.push(...result.assignments);
+            }
+        });
+
+        // Apply via AJAX
+        fetch('{% url "apply_optimization" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                assignments: allAssignments
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Success! Created ' + data.created_count + ' shifts.\n' +
+                      (data.errors.length > 0 ? 'Warnings:\n' + data.errors.join('\n') : ''));
+                
+                // Refresh page to show new shifts
+                window.location.reload();
+            } else {
+                alert('Failed to apply optimization: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to apply optimization: ' + error.message);
+        });
+    });
+});
+</script>
+{% endblock %}

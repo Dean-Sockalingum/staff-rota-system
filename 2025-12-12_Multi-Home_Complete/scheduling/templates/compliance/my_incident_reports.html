@@ -1,0 +1,185 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}My Incident Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .incident-card {
+        border-left: 4px solid #3498db;
+        margin-bottom: 15px;
+        transition: box-shadow 0.3s ease;
+    }
+    .incident-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .incident-card.severity-no-harm {
+        border-left-color: #2ecc71;
+    }
+    .incident-card.severity-low-harm {
+        border-left-color: #3498db;
+    }
+    .incident-card.severity-moderate-harm {
+        border-left-color: #f39c12;
+    }
+    .incident-card.severity-major-harm {
+        border-left-color: #c0392b;
+    }
+    .incident-card.severity-death {
+        border-left-color: #000;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    .status-open {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .status-closed {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .ci-notification {
+        background-color: #ffc107;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-clipboard-list"></i> My Incident Reports</h2>
+                <a href="{% url 'report_incident' %}" class="btn btn-danger">
+                    <i class="fas fa-plus"></i> Report New Incident
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ incidents.count }}</h3>
+                    <p class="text-muted mb-0">Total Reports</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{% for i in incidents %}{% if not i.incident_closed %}{{ forloop.counter }}{% endif %}{% endfor %}</h3>
+                    <p class="text-muted mb-0">Open</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{% for i in incidents %}{% if i.incident_closed %}{{ forloop.counter }}{% endif %}{% endfor %}</h3>
+                    <p class="text-muted mb-0">Closed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{% for i in incidents %}{% if i.severity == 'MAJOR_HARM' or i.severity == 'DEATH' %}{{ forloop.counter }}{% endif %}{% endfor %}</h3>
+                    <p class="text-muted mb-0">High Severity</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incidents List -->
+    <div class="row">
+        <div class="col-12">
+            {% if incidents %}
+            {% for incident in incidents %}
+            <div class="card incident-card severity-{{ incident.severity|lower|cut:' '|cut:'_' }}">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>
+                                <a href="{% url 'view_incident' incident.id %}" class="text-decoration-none">
+                                    {{ incident.reference_number }}
+                                </a>
+                                {% if not incident.incident_closed %}
+                                <span class="status-badge status-open">Open</span>
+                                {% else %}
+                                <span class="status-badge status-closed">Closed</span>
+                                {% endif %}
+                                {% if incident.care_inspectorate_notified %}
+                                <span class="ci-notification">CI Notified</span>
+                                {% endif %}
+                            </h5>
+                            <p class="mb-2">
+                                <strong>Type:</strong> {{ incident.get_incident_type_display }}<br>
+                                <strong>Severity:</strong> {{ incident.get_severity_display }}<br>
+                                <strong>Risk Rating:</strong> {{ incident.get_risk_rating_display }}
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-map-marker-alt"></i> {{ incident.location }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <p class="mb-1">
+                                <strong>Date:</strong> {{ incident.incident_date|date:"d M Y" }}<br>
+                                <strong>Time:</strong> {{ incident.incident_time|time:"H:i" }}
+                            </p>
+                            {% if incident.service_user_name %}
+                            <p class="mb-1">
+                                <i class="fas fa-user"></i> {{ incident.service_user_name }}
+                            </p>
+                            {% endif %}
+                            <p class="text-muted mb-0">
+                                <small>Reported: {{ incident.reported_date|date:"d M Y" }}</small>
+                            </p>
+                            {% if incident.manager_reviewed %}
+                            <p class="text-success mb-0">
+                                <small><i class="fas fa-check-circle"></i> Manager Reviewed</small>
+                            </p>
+                            {% else %}
+                            <p class="text-warning mb-0">
+                                <small><i class="fas fa-clock"></i> Pending Review</small>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <a href="{% url 'view_incident' incident.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h5>No Incident Reports</h5>
+                    <p class="text-muted">You have not reported any incidents yet.</p>
+                    <a href="{% url 'report_incident' %}" class="btn btn-danger">
+                        <i class="fas fa-plus"></i> Report Your First Incident
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

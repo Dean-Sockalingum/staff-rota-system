@@ -1,0 +1,117 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Recent Activity Feed{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-item {
+        border-left: 3px solid #007bff;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .activity-item.leave { border-left-color: #28a745; }
+    .activity-item.shift { border-left-color: #17a2b8; }
+    .activity-item.compliance { border-left-color: #ffc107; }
+    .activity-time {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    .activity-category {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-stream"></i> Recent Activity Feed</h2>
+                <div>
+                    <select id="categoryFilter" class="form-select form-select-sm d-inline-block w-auto">
+                        <option value="">All Categories</option>
+                        <option value="LEAVE">Leave Requests</option>
+                        <option value="SHIFT">Shift Changes</option>
+                        <option value="COMPLIANCE">Compliance</option>
+                        <option value="TRAINING">Training</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="activityFeed">
+                {% if activities %}
+                    {% for activity in activities %}
+                    <div class="activity-item {% if activity.category %}{{ activity.category.code|lower }}{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ activity.title }}</strong>
+                                {% if activity.category %}
+                                <span class="activity-category bg-{{ activity.category.code|lower }}">
+                                    {{ activity.category.name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <span class="activity-time">
+                                <i class="far fa-clock"></i> {{ activity.timestamp|timesince }} ago
+                            </span>
+                        </div>
+                        {% if activity.description %}
+                        <div class="mt-2">{{ activity.description }}</div>
+                        {% endif %}
+                        {% if activity.user %}
+                        <div class="mt-2 text-muted">
+                            <small><i class="fas fa-user"></i> {{ activity.user.get_full_name }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No recent activity to display.
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if has_more %}
+            <div class="text-center mt-4">
+                <button id="loadMore" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-down"></i> Load More
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', function() {
+            // Filter activities by category
+            const category = this.value.toLowerCase();
+            const items = document.querySelectorAll('.activity-item');
+            items.forEach(item => {
+                if (!category || item.classList.contains(category)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

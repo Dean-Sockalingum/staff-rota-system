@@ -1,0 +1,252 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Incident {{ incident.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .detail-section h6 {
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+    .severity-badge {
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 1.1em;
+    }
+    .print-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    @media print {
+        .no-print, .print-button { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+                <h2><i class="fas fa-file-alt"></i> Incident Report</h2>
+                <div>
+                    <a href="{% url 'my_incident_reports' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to My Reports
+                    </a>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reference & Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">{{ incident.reference_number }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Incident Date:</strong> {{ incident.incident_date|date:"d M Y" }}</p>
+                            <p><strong>Incident Time:</strong> {{ incident.incident_time|time:"H:i" }}</p>
+                            <p><strong>Location:</strong> {{ incident.location }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <p><strong>Reported By:</strong> {% if incident.reported_by %}{{ incident.reported_by.get_full_name|default:incident.reported_by.sap }}{% else %}N/A{% endif %}</p>
+                            <p><strong>Reported Date:</strong> {{ incident.reported_date|date:"d M Y" }}</p>
+                            <p>
+                                <strong>Status:</strong>
+                                {% if incident.incident_closed %}
+                                <span class="badge bg-success">Closed</span>
+                                {% else %}
+                                <span class="badge bg-warning">Open</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classification -->
+            <div class="detail-section">
+                <h6><i class="fas fa-tag"></i> Incident Classification</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Type:</strong><br>{{ incident.get_incident_type_display }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Severity:</strong><br>
+                            <span class="severity-badge 
+                                {% if incident.severity == 'NO_HARM' %}bg-success text-white
+                                {% elif incident.severity == 'LOW_HARM' %}bg-info text-white
+                                {% elif incident.severity == 'MODERATE_HARM' %}bg-warning
+                                {% elif incident.severity == 'MAJOR_HARM' %}bg-danger text-white
+                                {% elif incident.severity == 'DEATH' %}bg-dark text-white
+                                {% endif %}">
+                                {{ incident.get_severity_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Risk Rating:</strong><br>{{ incident.get_risk_rating_display }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service User -->
+            {% if incident.service_user_name %}
+            <div class="detail-section">
+                <h6><i class="fas fa-user"></i> Service User Information</h6>
+                <p><strong>Name:</strong> {{ incident.service_user_name }}</p>
+                {% if incident.service_user_dob %}
+                <p><strong>Date of Birth:</strong> {{ incident.service_user_dob|date:"d M Y" }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Description -->
+            <div class="detail-section">
+                <h6><i class="fas fa-align-left"></i> Incident Description</h6>
+                <p style="white-space: pre-wrap;">{{ incident.description }}</p>
+                
+                {% if incident.witnesses %}
+                <p><strong>Witnesses:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.witnesses }}</p>
+                {% endif %}
+                
+                {% if incident.was_witnessed %}
+                <p><span class="badge bg-info">Witnessed by Staff</span></p>
+                {% endif %}
+            </div>
+
+            <!-- Immediate Actions -->
+            <div class="detail-section">
+                <h6><i class="fas fa-ambulance"></i> Immediate Actions & Medical Response</h6>
+                {% if incident.immediate_actions %}
+                <p><strong>Actions Taken:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.immediate_actions }}</p>
+                {% endif %}
+                
+                {% if incident.injuries_sustained %}
+                <p><strong>Injuries Sustained:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.injuries_sustained }}</p>
+                {% endif %}
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        {% if incident.body_map_completed %}<p><i class="fas fa-check text-success"></i> Body map completed</p>{% endif %}
+                        {% if incident.photos_taken %}<p><i class="fas fa-check text-success"></i> Photos taken</p>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if incident.gp_contacted %}<p><i class="fas fa-check text-success"></i> GP contacted</p>{% endif %}
+                        {% if incident.ambulance_called %}<p><i class="fas fa-check text-success"></i> Ambulance called</p>{% endif %}
+                        {% if incident.hospital_attendance %}<p><i class="fas fa-check text-success"></i> Hospital attendance</p>{% endif %}
+                        {% if incident.hospital_admission %}<p><i class="fas fa-check text-success"></i> Hospital admission</p>{% endif %}
+                    </div>
+                </div>
+                
+                {% if incident.medical_notes %}
+                <p><strong>Medical Notes:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.medical_notes }}</p>
+                {% endif %}
+            </div>
+
+            <!-- External Notifications -->
+            {% if incident.care_inspectorate_notified or incident.police_notified or incident.local_authority_notified or incident.safeguarding_alert_raised %}
+            <div class="detail-section border-warning">
+                <h6><i class="fas fa-bell"></i> External Notifications</h6>
+                {% if incident.care_inspectorate_notified %}
+                <p><i class="fas fa-check text-success"></i> <strong>Care Inspectorate Notified</strong>
+                    {% if incident.care_inspectorate_ref %} - Ref: {{ incident.care_inspectorate_ref }}{% endif %}
+                </p>
+                {% endif %}
+                {% if incident.police_notified %}
+                <p><i class="fas fa-check text-success"></i> <strong>Police Notified</strong>
+                    {% if incident.police_crime_ref %} - Crime Ref: {{ incident.police_crime_ref }}{% endif %}
+                </p>
+                {% endif %}
+                {% if incident.local_authority_notified %}
+                <p><i class="fas fa-check text-success"></i> <strong>Local Authority Notified</strong></p>
+                {% endif %}
+                {% if incident.safeguarding_alert_raised %}
+                <p><i class="fas fa-check text-success"></i> <strong>Safeguarding Alert Raised</strong></p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Investigation -->
+            {% if incident.investigation_required %}
+            <div class="detail-section">
+                <h6><i class="fas fa-search"></i> Investigation</h6>
+                <p><strong>Investigation Required:</strong> Yes</p>
+                {% if incident.investigation_assigned_to %}
+                <p><strong>Assigned To:</strong> {{ incident.investigation_assigned_to.get_full_name|default:incident.investigation_assigned_to.sap }}</p>
+                {% endif %}
+                {% if incident.investigation_due_date %}
+                <p><strong>Due Date:</strong> {{ incident.investigation_due_date|date:"d M Y" }}</p>
+                {% endif %}
+                {% if incident.investigation_complete %}
+                <p><span class="badge bg-success">Investigation Complete</span></p>
+                {% if incident.investigation_findings %}
+                <p><strong>Findings:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.investigation_findings }}</p>
+                {% endif %}
+                {% if incident.lessons_learned %}
+                <p><strong>Lessons Learned:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.lessons_learned }}</p>
+                {% endif %}
+                {% if incident.preventive_actions %}
+                <p><strong>Preventive Actions:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.preventive_actions }}</p>
+                {% endif %}
+                {% else %}
+                <p><span class="badge bg-warning">Investigation Pending</span></p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Manager Review -->
+            {% if incident.manager_reviewed %}
+            <div class="detail-section border-success">
+                <h6><i class="fas fa-user-tie"></i> Manager Review</h6>
+                <p><strong>Reviewed By:</strong> {% if incident.manager %}{{ incident.manager.get_full_name|default:incident.manager.sap }}{% else %}N/A{% endif %}</p>
+                <p><strong>Review Date:</strong> {{ incident.manager_review_date|date:"d M Y" }}</p>
+                {% if incident.manager_comments %}
+                <p><strong>Comments:</strong></p>
+                <p style="white-space: pre-wrap;">{{ incident.manager_comments }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="alert alert-warning no-print">
+                <i class="fas fa-clock"></i> This incident is pending manager review.
+            </div>
+            {% endif %}
+
+            <!-- Closure -->
+            {% if incident.incident_closed %}
+            <div class="alert alert-success">
+                <strong><i class="fas fa-check-circle"></i> Incident Closed</strong><br>
+                Closed on {{ incident.closed_date|date:"d M Y" }} {% if incident.closed_by %}by {{ incident.closed_by.get_full_name|default:incident.closed_by.sap }}{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<button onclick="window.print()" class="btn btn-primary btn-lg print-button no-print">
+    <i class="fas fa-print"></i>
+</button>
+{% endblock %}

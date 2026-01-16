@@ -1,0 +1,497 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Staff Record: {{ user_obj.full_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{% url 'staff_records:profile_list' %}" class="btn btn-link"><i class="fas fa-arrow-left"></i> Back to staff records</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-xl-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <strong>{{ user_obj.full_name }}</strong>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#editProfileForm" aria-expanded="false" aria-controls="editProfileForm">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="collapse mb-3{% if profile_form.errors %} show{% endif %}" id="editProfileForm">
+                    <h6 class="border-bottom pb-2 mb-3">Edit Profile Information</h6>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Unit</label>
+                            {{ profile_form.unit }}
+                            {% for error in profile_form.unit.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            {{ profile_form.start_date }}
+                            {% for error in profile_form.start_date.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Employment Status</label>
+                            {{ profile_form.employment_status }}
+                            {% for error in profile_form.employment_status.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Emergency Contact Name</label>
+                            {{ profile_form.emergency_contact_name }}
+                            {% for error in profile_form.emergency_contact_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Emergency Contact Phone</label>
+                            {{ profile_form.emergency_contact_phone }}
+                            {% for error in profile_form.emergency_contact_phone.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" name="submit_profile" class="btn btn-success btn-sm">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                    <hr class="my-3">
+                </div>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">SAP</dt>
+                    <dd class="col-sm-7">{{ user_obj.sap }}</dd>
+
+                    <dt class="col-sm-5">Role</dt>
+                    <dd class="col-sm-7">{{ user_obj.role.get_name_display|default:'-' }}</dd>
+
+                    <dt class="col-sm-5">Unit</dt>
+                    <dd class="col-sm-7">{{ user_obj.unit.get_name_display|default:'-' }}</dd>
+
+                    <dt class="col-sm-5">Employment status</dt>
+                    <dd class="col-sm-7">{{ profile.get_employment_status_display }}</dd>
+
+                    <dt class="col-sm-5">Start date</dt>
+                    <dd class="col-sm-7">{{ profile.start_date|date:'M j, Y'|default:'-' }}</dd>
+
+                    <dt class="col-sm-5">Emergency contact</dt>
+                    <dd class="col-sm-7">{{ profile.emergency_contact_name|default:'-' }}<br><small class="text-muted">{{ profile.emergency_contact_phone|default:'' }}</small></dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-md"></i> Sickness History</span>
+                <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#logSicknessForm" aria-expanded="false" aria-controls="logSicknessForm">
+                    <i class="fas fa-plus"></i> Log sickness
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="collapse mb-3{% if sickness_form.errors %} show{% endif %}" id="logSicknessForm">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First working day of sickness</label>
+                                {{ sickness_form.first_working_day }}
+                                {% for error in sickness_form.first_working_day.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estimated return to work</label>
+                                {{ sickness_form.estimated_return_to_work }}
+                                {% for error in sickness_form.estimated_return_to_work.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Actual last working day sick</label>
+                                {{ sickness_form.actual_last_working_day }}
+                                {% for error in sickness_form.actual_last_working_day.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Reason for sickness</label>
+                                {{ sickness_form.reason }}
+                                {% for error in sickness_form.reason.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                {{ sickness_form.notes }}
+                                {% for error in sickness_form.notes.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Outcome of trigger (optional)</label>
+                                {{ sickness_form.trigger_outcome }}
+                                {% for error in sickness_form.trigger_outcome.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% if sickness_form.non_field_errors %}
+                            <div class="alert alert-danger mt-3">
+                                {% for error in sickness_form.non_field_errors %}{{ error }}<br>{% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="text-end mt-3">
+                            <button type="submit" name="submit_sickness" class="btn btn-success"><i class="fas fa-save"></i> Save sickness record</button>
+                        </div>
+                    </form>
+                </div>
+                {% if sickness_records %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>First working day</th>
+                                    <th>Est return</th>
+                                    <th>Reason</th>
+                                    <th>Actual last working day</th>
+                                    <th>Total working days sick</th>
+                                    <th>Separate sicknesses (12m)</th>
+                                    <th>% absence (12m)</th>
+                                    <th>Trigger reached</th>
+                                    <th>Trigger outcome</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in sickness_records %}
+                                    <tr>
+                                        <td>{{ record.first_working_day|date:'M j, Y' }}</td>
+                                        <td>{{ record.estimated_return_to_work|date:'M j, Y'|default:'-' }}</td>
+                                        <td>{{ record.reason|default:'-' }}</td>
+                                        <td>{{ record.actual_last_working_day|date:'M j, Y'|default:'-' }}</td>
+                                        <td>{{ record.total_working_days_sick }}</td>
+                                        <td>{{ record.separate_sickness_count_12m }}</td>
+                                        <td>{{ record.absence_percentage_12m }}%</td>
+                                        <td>{% if record.trigger_reached %}<span class="badge bg-danger">Yes</span>{% else %}<span class="badge bg-success">No</span>{% endif %}</td>
+                                        <td>{{ record.trigger_outcome|default:'-' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No sickness records logged yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-clipboard-check"></i> Supervision Records</span>
+                <a href="{% url 'create_supervision_record' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Create supervision record
+                </a>
+            </div>
+            <div class="card-body">
+                {% if supervision_records %}
+                    {% for record in supervision_records %}
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h5 class="mb-0">
+                                            {% if record.session_type == 'FORMAL' %}
+                                                <span class="badge bg-primary">Formal Supervision</span>
+                                            {% elif record.session_type == 'INFORMAL' %}
+                                                <span class="badge bg-info">Informal Supervision</span>
+                                            {% elif record.session_type == 'PROBATION' %}
+                                                <span class="badge bg-warning">Probation Review</span>
+                                            {% else %}
+                                                {{ record.get_session_type_display }}
+                                            {% endif %}
+                                            - {{ record.session_date|date:'d M Y' }}
+                                        </h5>
+                                        <small class="text-muted">
+                                            Supervisor: {{ record.supervisor.full_name }} | Duration: {{ record.duration_minutes }} minutes
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        {% if record.staff_signature_date %}
+                                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> Staff Signed {{ record.staff_signature_date|date:'d M Y' }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning"><i class="fas fa-clock"></i> Awaiting Staff Signature</span>
+                                            {% if user_obj == request.user %}
+                                                <br>
+                                                <a href="{% url 'sign_supervision_record' record.id %}" class="btn btn-sm btn-primary mt-2">
+                                                    <i class="fas fa-file-signature"></i> Sign Record
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Wellbeing Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-heart text-danger"></i> Wellbeing</h6>
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-6">Wellbeing Score:</dt>
+                                            <dd class="col-sm-6">
+                                                {% if record.wellbeing_score >= 8 %}
+                                                    <span class="badge bg-success">{{ record.wellbeing_score }}/10</span>
+                                                {% elif record.wellbeing_score >= 5 %}
+                                                    <span class="badge bg-warning">{{ record.wellbeing_score }}/10</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">{{ record.wellbeing_score }}/10</span>
+                                                {% endif %}
+                                            </dd>
+                                            <dt class="col-sm-6">Sickness Days:</dt>
+                                            <dd class="col-sm-6">{{ record.sickness_days_since_last }} days</dd>
+                                        </dl>
+                                        {% if record.wellbeing_concerns %}
+                                            <p class="mb-1"><strong>Concerns:</strong></p>
+                                            <p class="text-muted small">{{ record.wellbeing_concerns }}</p>
+                                        {% endif %}
+                                        {% if record.support_offered %}
+                                            <p class="mb-1"><strong>Support Offered:</strong></p>
+                                            <p class="text-muted small">{{ record.support_offered }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Performance Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-chart-line text-primary"></i> Performance</h6>
+                                        {% if record.performance_strengths %}
+                                            <p class="mb-1"><strong>Strengths:</strong></p>
+                                            <p class="text-muted small">{{ record.performance_strengths }}</p>
+                                        {% endif %}
+                                        {% if record.performance_development %}
+                                            <p class="mb-1"><strong>Development Areas:</strong></p>
+                                            <p class="text-muted small">{{ record.performance_development }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Training & SSSC Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-graduation-cap text-success"></i> Training & SSSC</h6>
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-7">Mandatory Training:</dt>
+                                            <dd class="col-sm-5">
+                                                {% if record.mandatory_training_current %}
+                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Current</span>
+                                                {% else %}
+                                                    <span class="text-danger"><i class="fas fa-times-circle"></i> Overdue</span>
+                                                {% endif %}
+                                            </dd>
+                                            <dt class="col-sm-7">SSSC Registration:</dt>
+                                            <dd class="col-sm-5">
+                                                {% if record.sssc_registration_current %}
+                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Current</span>
+                                                {% else %}
+                                                    <span class="text-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                                                {% endif %}
+                                            </dd>
+                                            <dt class="col-sm-7">SSSC CPD Hours:</dt>
+                                            <dd class="col-sm-5">{{ record.sssc_cpd_hours_to_date }} hours</dd>
+                                        </dl>
+                                        {% if record.training_needs_identified %}
+                                            <p class="mb-1"><strong>Training Needs:</strong></p>
+                                            <p class="text-muted small">{{ record.training_needs_identified }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Safeguarding & Incidents Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-shield-alt text-warning"></i> Safeguarding & Incidents</h6>
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-7">Safeguarding Discussed:</dt>
+                                            <dd class="col-sm-5">
+                                                {% if record.safeguarding_concerns_discussed %}
+                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
+                                                {% else %}
+                                                    <span class="text-muted"><i class="fas fa-minus-circle"></i> No</span>
+                                                {% endif %}
+                                            </dd>
+                                            <dt class="col-sm-7">Incidents Since Last:</dt>
+                                            <dd class="col-sm-5">{{ record.incidents_since_last }}</dd>
+                                        </dl>
+                                        {% if record.safeguarding_notes %}
+                                            <p class="mb-1"><strong>Safeguarding Notes:</strong></p>
+                                            <p class="text-muted small">{{ record.safeguarding_notes }}</p>
+                                        {% endif %}
+                                        {% if record.incident_learning %}
+                                            <p class="mb-1"><strong>Incident Learning:</strong></p>
+                                            <p class="text-muted small">{{ record.incident_learning }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Workload Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-briefcase text-info"></i> Workload</h6>
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-7">Workload Manageable:</dt>
+                                            <dd class="col-sm-5">
+                                                {% if record.workload_manageable %}
+                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
+                                                {% else %}
+                                                    <span class="text-warning"><i class="fas fa-exclamation-triangle"></i> No</span>
+                                                {% endif %}
+                                            </dd>
+                                        </dl>
+                                        {% if record.workload_notes %}
+                                            <p class="mb-1"><strong>Notes:</strong></p>
+                                            <p class="text-muted small">{{ record.workload_notes }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Actions Section -->
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-tasks text-primary"></i> Actions</h6>
+                                        {% if record.actions_from_previous %}
+                                            <p class="mb-1"><strong>Progress on Previous Actions:</strong></p>
+                                            <p class="text-muted small">{{ record.actions_from_previous }}</p>
+                                        {% endif %}
+                                        {% if record.new_actions %}
+                                            <p class="mb-1"><strong>New Actions:</strong></p>
+                                            <p class="text-muted small">{{ record.new_actions }}</p>
+                                        {% endif %}
+                                        {% if not record.actions_from_previous and not record.new_actions %}
+                                            <p class="text-muted small mb-0">No actions recorded</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Probation Section (if applicable) -->
+                                    {% if record.is_probationary_review %}
+                                    <div class="col-12 mb-3">
+                                        <h6 class="border-bottom pb-2"><i class="fas fa-user-clock text-warning"></i> Probationary Review</h6>
+                                        {% if record.probation_progress %}
+                                            <p class="mb-1"><strong>Progress:</strong></p>
+                                            <p class="text-muted small">{{ record.probation_progress }}</p>
+                                        {% endif %}
+                                        {% if record.probation_recommendation %}
+                                            <p class="mb-1"><strong>Recommendation:</strong></p>
+                                            <p class="text-muted small">{{ record.probation_recommendation }}</p>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Next Supervision -->
+                                    <div class="col-12">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-calendar-alt"></i> 
+                                            <strong>Next Supervision Due:</strong> 
+                                            {% if record.next_supervision_date %}
+                                                {{ record.next_supervision_date|date:'d M Y' }}
+                                                {% if record.next_supervision_date < today %}
+                                                    <span class="badge bg-danger">Overdue</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Not scheduled</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted small">
+                                Supervisor signed: {{ record.supervisor_signature_date|date:'d M Y' }}
+                                {% if record.staff_comments %}
+                                    <br><strong>Staff Comments:</strong> {{ record.staff_comments }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No supervision records yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-phone"></i> Contact Log</span>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#addContactForm" aria-expanded="false" aria-controls="addContactForm">
+            <i class="fas fa-plus"></i> Add entry
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="collapse mb-3{% if contact_form.errors %} show{% endif %}" id="addContactForm">
+            <h6 class="border-bottom pb-2 mb-3">Add Contact Log Entry</h6>
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Method</label>
+                        {{ contact_form.contact_method }}
+                        {% for error in contact_form.contact_method.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Date/Time</label>
+                        {{ contact_form.contact_datetime }}
+                        {% for error in contact_form.contact_datetime.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Summary</label>
+                        {{ contact_form.summary }}
+                        {% for error in contact_form.summary.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            {{ contact_form.follow_up_required }}
+                            <label class="form-check-label" for="{{ contact_form.follow_up_required.id_for_label }}">
+                                Follow-up Required
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-up Date</label>
+                        {{ contact_form.follow_up_date }}
+                        {% for error in contact_form.follow_up_date.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="submit" name="submit_contact" class="btn btn-success">
+                        <i class="fas fa-save"></i> Save Contact Entry
+                    </button>
+                </div>
+            </form>
+            <hr class="my-3">
+        </div>
+        {% if contact_log %}
+            <div class="timeline">
+                {% for entry in contact_log %}
+                    <div class="mb-3">
+                        <h6 class="mb-1">{{ entry.contact_datetime|date:'M j, Y H:i' }} · {{ entry.get_contact_method_display }}</h6>
+                        <p class="mb-1">{{ entry.summary }}</p>
+                        <small class="text-muted">Recorded by {{ entry.recorded_by.full_name|default:'Unknown' }}{% if entry.follow_up_required %} · follow-up due {{ entry.follow_up_date|date:'M j, Y'|default:'TBC' }}{% endif %}</small>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No contact entries recorded yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

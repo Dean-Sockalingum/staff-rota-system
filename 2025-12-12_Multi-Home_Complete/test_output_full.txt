@@ -1,0 +1,456 @@
+Found 286 test(s).
+WARNING: Orchard Grove not found. Run 'python3 manage.py initialize_care_homes' first.
+System check identified no issues (0 silenced).
+Failed login logging failed: 'NoneType' object has no attribute 'META'
+Failed login logging failed: 'NoneType' object has no attribute 'META'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 90 days:
+  Date range: 2025-01-01 to 2025-03-31
+  Mean predicted: 7.3 shifts/day
+  Range: 4.7 - 10.3
+
+Train/test split:
+  Training: 335 days (until 2023-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.94 shifts/day
+  RMSE: 1.31 shifts/day
+  MAPE: 17.2%
+  Coverage: 70.0% (target: 80%)
+
+Interpretation:
+  Average demand: 7.1 shifts/day
+  MAE as % of avg: 13.2%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 365 days (until 2023-12-31)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.63 shifts/day
+  RMSE: 0.79 shifts/day
+  MAPE: 8.9%
+  Coverage: 83.3% (target: 80%)
+
+Interpretation:
+  Average demand: 7.1 shifts/day
+  MAE as % of avg: 8.9%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 395 days (until 2024-01-30)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  1.00 shifts/day
+  RMSE: 1.20 shifts/day
+  MAPE: 14.3%
+  Coverage: 60.0% (target: 80%)
+
+Interpretation:
+  Average demand: 7.1 shifts/day
+  MAE as % of avg: 14.2%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 425 days (until 2024-02-29)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.77 shifts/day
+  RMSE: 1.00 shifts/day
+  MAPE: 10.5%
+  Coverage: 76.7% (target: 80%)
+
+Interpretation:
+  Average demand: 7.1 shifts/day
+  MAE as % of avg: 10.8%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.00 shifts/day
+  RMSE: 0.00 shifts/day
+  MAPE: 0.0%
+  Coverage: 100.0% (target: 80%)
+
+Interpretation:
+  Average demand: 5.0 shifts/day
+  MAE as % of avg: 0.0%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 30 days:
+  Date range: 2025-01-01 to 2025-01-30
+  Mean predicted: 6.6 shifts/day
+  Range: 5.5 - 7.1
+
+Train/test split:
+  Training: 51 days (until 2024-11-20)
+  Testing: 10 days (10 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (10-day holdout):
+  MAE:  8.43 shifts/day
+  RMSE: 10.52 shifts/day
+  MAPE: 99.4%
+  Coverage: 20.0% (target: 80%)
+
+Interpretation:
+  Average demand: 7.4 shifts/day
+  MAE as % of avg: 114.2%
+  ⚠ Moderate accuracy (MAPE >= 30%)
+
+Train/test split:
+  Training: 327 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  1.42 shifts/day
+  RMSE: 1.58 shifts/day
+  MAPE: 20.7%
+  Coverage: 66.7% (target: 80%)
+
+Interpretation:
+  Average demand: 7.5 shifts/day
+  MAE as % of avg: 19.0%
+  ✓ Good accuracy (MAPE < 30%)
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  1.06 shifts/day
+  RMSE: 1.40 shifts/day
+  MAPE: 16.9%
+  Coverage: 63.3% (target: 80%)
+
+Interpretation:
+  Average demand: 7.9 shifts/day
+  MAE as % of avg: 13.4%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  1.03 shifts/day
+  RMSE: 1.26 shifts/day
+  MAPE: 14.6%
+  Coverage: 76.7% (target: 80%)
+
+Interpretation:
+  Average demand: 8.0 shifts/day
+  MAE as % of avg: 12.9%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  3.01 shifts/day
+  RMSE: 3.33 shifts/day
+  MAPE: 42.0%
+  Coverage: 13.3% (target: 80%)
+
+Interpretation:
+  Average demand: 8.1 shifts/day
+  MAE as % of avg: 37.0%
+  ⚠ Moderate accuracy (MAPE >= 30%)
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.21 shifts/day
+  RMSE: 0.27 shifts/day
+  MAPE: 4.1%
+  Coverage: 70.0% (target: 80%)
+
+Interpretation:
+  Average demand: 5.0 shifts/day
+  MAE as % of avg: 4.1%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Training on full dataset: 365 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 30 days:
+  Date range: 2024-01-01 to 2024-01-30
+  Mean predicted: 6.6 shifts/day
+  Range: 6.4 - 6.8
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 30 days:
+  Date range: 2025-01-01 to 2025-01-30
+  Mean predicted: 9.0 shifts/day
+  Range: 7.4 - 10.6
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 30 days:
+  Date range: 2025-01-01 to 2025-01-30
+  Mean predicted: 9.2 shifts/day
+  Range: 7.6 - 10.6
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.49 shifts/day
+  RMSE: 0.65 shifts/day
+  MAPE: 5.7%
+  Coverage: 66.7% (target: 80%)
+
+Interpretation:
+  Average demand: 7.6 shifts/day
+  MAE as % of avg: 6.5%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+✓ Model saved to /var/folders/l_/_lyyb6h55fl89byyr9sy86wr0000gn/T/tmp581pfb2q/forecaster_HAWTHORN_HOUSE_HH_ROSE.json
+  Metadata: /var/folders/l_/_lyyb6h55fl89byyr9sy86wr0000gn/T/tmp581pfb2q/forecaster_HAWTHORN_HOUSE_HH_ROSE.json
+  Weights: /var/folders/l_/_lyyb6h55fl89byyr9sy86wr0000gn/T/tmp581pfb2q/forecaster_HAWTHORN_HOUSE_HH_ROSE.pkl
+
+Train/test split:
+  Training: 336 days (until 2024-12-01)
+  Testing: 30 days (30 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (30-day holdout):
+  MAE:  0.90 shifts/day
+  RMSE: 1.06 shifts/day
+  MAPE: 9.9%
+  Coverage: 40.0% (target: 80%)
+
+Interpretation:
+  Average demand: 7.5 shifts/day
+  MAE as % of avg: 12.0%
+  ✅ Excellent accuracy (MAPE < 20%)
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 30 days:
+  Date range: 2025-01-01 to 2025-01-30
+  Mean predicted: 9.5 shifts/day
+  Range: 9.0 - 10.8
+
+Train/test split:
+  Training: 77 days (until 2024-12-16)
+  Testing: 15 days (15 day holdout)
+
+Training Prophet model...
+✓ Model trained
+
+Validation Metrics (15-day holdout):
+  MAE:  8.37 shifts/day
+  RMSE: 11.23 shifts/day
+  MAPE: 138.1%
+  Coverage: 26.7% (target: 80%)
+
+Interpretation:
+  Average demand: 5.8 shifts/day
+  MAE as % of avg: 143.3%
+  ⚠ Moderate accuracy (MAPE >= 30%)
+
+Training on full dataset: 366 days
+
+Training Prophet model...
+✓ Model trained
+
+Forecast for next 90 days:
+  Date range: 2025-01-01 to 2025-03-31
+  Mean predicted: 4.7 shifts/day
+  Range: 3.6 - 5.3
+✓ Aggregated to daily level: 3 rows
+  - Date range: 2024-01-01 00:00:00 to 2024-01-03 00:00:00
+✓ Aggregated to daily level: 1 rows
+  - Date range: 2024-01-01 00:00:00 to 2024-01-01 00:00:00
+✓ Aggregated to daily level: 3 rows
+  - Date range: 2024-01-01 00:00:00 to 2024-01-03 00:00:00
+✓ Created Prophet dataframe: 7 observations
+  - Target: total_shifts
+  - Mean: 0.0
+  - Std: 0.0
+✓ Created Prophet dataframe: 5 observations
+  - Target: total_shifts
+  - Mean: 3.0
+  - Std: 1.6
+✓ Added temporal features
+  - Weekends: 0 (0.0%)
+  - Holidays: 1 (100.0%)
+✓ Created Prophet dataframe: 1 observations
+  - Target: total_shifts
+  - Mean: 5.0
+  - Std: nan
+✓ Added temporal features
+  - Weekends: 164 (27.6%)
+  - Holidays: 23 (3.9%)
+✓ Aggregated to daily level: 91 rows
+  - Date range: 2024-01-01 00:00:00 to 2024-03-31 00:00:00
+✓ Added lag features: [1, 7]
+✓ Added rolling statistics (7, 14 day windows)
+✓ Created Prophet dataframe: 91 observations
+  - Target: total_shifts
+  - Mean: 6.5
+  - Std: 1.2
+✓ Added lag features: [1]
+✓ Added lag features: [7]
+✓ Added lag features: [1, 7, 14]
+✓ Filled missing dates: 15 total rows (5 added)
+✓ Created Prophet dataframe: 31 observations
+  - Target: total_shifts
+  - Mean: 6.8
+  - Std: 1.3
+✓ Created Prophet dataframe: 31 observations
+  - Target: total_shifts
+  - Mean: 7.2
+  - Std: 1.6
+✓ Created Prophet dataframe: 31 observations
+  - Target: total_shifts
+  - Mean: 6.7
+  - Std: 1.5
+✓ Created Prophet dataframe: 31 observations
+  - Target: total_shifts
+  - Mean: 7.4
+  - Std: 1.3
+✓ Added rolling statistics (7 day windows)
+✓ Added rolling statistics (7 day windows)
+✓ Added rolling statistics (7 day windows)
+✓ Added temporal features
+  - Weekends: 2 (28.6%)
+  - Holidays: 2 (28.6%)
+✓ Added temporal features
+  - Weekends: 2 (28.6%)
+  - Holidays: 2 (28.6%)
+✓ Added temporal features
+  - Weekends: 2 (28.6%)
+  - Holidays: 2 (28.6%)
+✓ Added temporal features
+  - Weekends: 2 (28.6%)
+  - Holidays: 2 (28.6%)
+✓ Added temporal features
+  - Weekends: 0 (0.0%)
+  - Holidays: 0 (0.0%)
+✓ Added temporal features
+  - Weekends: 0 (0.0%)
+  - Holidays: 0 (0.0%)
+✓ Added temporal features
+  - Weekends: 2 (28.6%)
+  - Holidays: 2 (28.6%)
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Deletion logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Deletion logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Deletion logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'
+Data change logging failed: MiddlewareMixin.__init__() missing 1 required positional argument: 'get_response'

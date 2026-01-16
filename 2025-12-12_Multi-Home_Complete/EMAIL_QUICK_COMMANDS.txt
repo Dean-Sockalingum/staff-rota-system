@@ -1,0 +1,144 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║              STAFF ROTA - EMAIL QUICK COMMAND REFERENCE               ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+📧 SETUP & CONFIGURATION
+─────────────────────────────────────────────────────────────────────────
+Configure email (interactive)
+  → ./setup_email.sh
+
+View current settings
+  → ./setup_email.sh
+     Choose option 6
+
+Test configuration
+  → ./setup_email.sh
+     Choose option 5
+
+Switch to Gmail
+  → ./setup_email.sh → Option 1 → Enter credentials → source ~/.zshrc
+
+Switch to Office 365
+  → ./setup_email.sh → Option 2 → Enter credentials → source ~/.zshrc
+
+Switch to testing mode
+  → ./setup_email.sh → Option 4 → source ~/.zshrc
+
+Check if production is active
+  → echo $EMAIL_HOST
+     (Empty = Testing mode, Has value = Production mode)
+
+
+📨 SENDING EMAILS
+─────────────────────────────────────────────────────────────────────────
+Preview email (dry run - safe)
+  → ./send_leave_emails.sh test
+
+Send to specific person
+  → ./send_leave_emails.sh specific ADMIN001
+
+Send monthly reminders (5+ days)
+  → ./send_leave_emails.sh monthly
+
+Send quarterly reminders (1+ days)
+  → ./send_leave_emails.sh quarterly
+
+Send urgent year-end (all staff)
+  → ./send_leave_emails.sh urgent
+
+
+🤖 AUTOMATION
+─────────────────────────────────────────────────────────────────────────
+Install automated scheduling
+  → ./install_scheduled_tasks.sh
+
+View installed cron jobs
+  → crontab -l
+
+Remove all cron jobs (careful!)
+  → crontab -r
+
+View automation logs
+  → tail -f /var/log/rotasystem/leave_reminders.log
+
+
+🔍 TROUBLESHOOTING
+─────────────────────────────────────────────────────────────────────────
+Environment not loading
+  → source ~/.zshrc
+
+Check what's in shell config
+  → grep EMAIL ~/.zshrc
+
+Test email connection
+  → telnet smtp.gmail.com 587
+     (Press Ctrl+] then type 'quit')
+
+Django email status check
+  → python3 -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
+django.setup()
+from django.conf import settings
+print('Backend:', settings.EMAIL_BACKEND)
+print('Host:', getattr(settings, 'EMAIL_HOST', 'Not set'))
+"
+
+
+📖 DOCUMENTATION
+─────────────────────────────────────────────────────────────────────────
+PRODUCTION_EMAIL_STATUS.md    → Current status & quick start
+EMAIL_SETUP_PRODUCTION.md     → Complete setup guide
+LEAVE_EMAILS_QUICK_START.md   → Email command reference
+LEAVE_REMINDER_EMAILS.md      → Full feature documentation
+
+
+🎯 COMMON WORKFLOWS
+─────────────────────────────────────────────────────────────────────────
+FIRST TIME SETUP
+  1. ./setup_email.sh
+  2. Choose option 1 (Gmail) or 2 (Office 365)
+  3. Enter your credentials
+  4. source ~/.zshrc
+  5. ./send_leave_emails.sh test
+  6. ./send_leave_emails.sh specific ADMIN001
+
+TEST BEFORE PRODUCTION
+  1. ./send_leave_emails.sh test
+  2. Review email preview
+  3. ./send_leave_emails.sh specific ADMIN001
+  4. Check inbox
+
+GO LIVE
+  1. ./setup_email.sh → Configure provider
+  2. source ~/.zshrc
+  3. ./send_leave_emails.sh test
+  4. ./install_scheduled_tasks.sh
+  5. crontab -l (verify)
+  6. tail -f /var/log/rotasystem/leave_reminders.log (monitor)
+
+
+✅ QUICK STATUS CHECK
+─────────────────────────────────────────────────────────────────────────
+echo $EMAIL_HOST
+  → Empty = Testing mode (safe - no emails sent)
+  → Has value = Production mode (real emails)
+
+Current files:
+  setup_email.sh              → Configuration wizard
+  send_leave_emails.sh        → Email sending wrapper
+  install_scheduled_tasks.sh  → Automation installer
+  EMAIL_SETUP_PRODUCTION.md   → Setup guide
+  PRODUCTION_EMAIL_STATUS.md  → Status summary
+
+
+🔐 SECURITY CHECKLIST
+─────────────────────────────────────────────────────────────────────────
+✓ Use App Passwords for Gmail (not regular password)
+✓ Credentials in environment variables (not in code)
+✓ Test with personal email first
+✓ Never commit .zshrc to git
+✓ Monitor logs for errors
+
+
+╚═══════════════════════════════════════════════════════════════════════╝

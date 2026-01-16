@@ -1,0 +1,125 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Update Induction Progress{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <h2><i class="fas fa-edit"></i> Update Induction Progress</h2>
+            <p class="text-muted">{{ induction.staff_member.get_full_name }}</p>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+
+                <!-- Progress Overview -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5>Current Progress: {{ completion_percentage }}%</h5>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar" style="width: {{ completion_percentage }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 1 -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Week 1: Orientation & Essential Training</strong></div>
+                    <div class="card-body">
+                        <div class="form-check"><input type="checkbox" name="week1_orientation_complete" class="form-check-input" {% if induction.week1_orientation_complete %}checked{% endif %}> <label class="form-check-label">Orientation Complete</label></div>
+                        <div class="form-check"><input type="checkbox" name="week1_fire_safety_complete" class="form-check-input" {% if induction.week1_fire_safety_complete %}checked{% endif %}> <label class="form-check-label">Fire Safety</label></div>
+                        <div class="form-check"><input type="checkbox" name="week1_infection_control_complete" class="form-check-input" {% if induction.week1_infection_control_complete %}checked{% endif %}> <label class="form-check-label">Infection Control</label></div>
+                        <div class="form-check"><input type="checkbox" name="week1_moving_handling_complete" class="form-check-input" {% if induction.week1_moving_handling_complete %}checked{% endif %}> <label class="form-check-label">Moving & Handling</label></div>
+                        <div class="form-check"><input type="checkbox" name="week1_health_safety_complete" class="form-check-input" {% if induction.week1_health_safety_complete %}checked{% endif %}> <label class="form-check-label">Health & Safety</label></div>
+                    </div>
+                </div>
+
+                <!-- Weeks 2-4 -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Weeks 2-4: Core Care Skills</strong></div>
+                    <div class="card-body">
+                        <div class="form-check"><input type="checkbox" name="week2_4_safeguarding_complete" class="form-check-input" {% if induction.week2_4_safeguarding_complete %}checked{% endif %}> <label class="form-check-label">Safeguarding</label></div>
+                        <div class="form-check"><input type="checkbox" name="week2_4_person_centred_care_complete" class="form-check-input" {% if induction.week2_4_person_centred_care_complete %}checked{% endif %}> <label class="form-check-label">Person-Centred Care</label></div>
+                    </div>
+                </div>
+
+                <!-- Weeks 5-8 -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Weeks 5-8: Clinical & Medication</strong></div>
+                    <div class="card-body">
+                        <div class="form-check"><input type="checkbox" name="week5_8_medication_complete" class="form-check-input" {% if induction.week5_8_medication_complete %}checked{% endif %}> <label class="form-check-label">Medication Administration</label></div>
+                        <div class="form-check"><input type="checkbox" name="week5_8_clinical_skills_complete" class="form-check-input" {% if induction.week5_8_clinical_skills_complete %}checked{% endif %}> <label class="form-check-label">Clinical Skills</label></div>
+                    </div>
+                </div>
+
+                <!-- Weeks 9-12 -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Weeks 9-12: Professional Development</strong></div>
+                    <div class="card-body">
+                        <div class="form-check"><input type="checkbox" name="week9_12_sssc_registration_complete" class="form-check-input" {% if induction.week9_12_sssc_registration_complete %}checked{% endif %}> <label class="form-check-label">SSSC Registration</label></div>
+                        <div class="form-check"><input type="checkbox" name="week9_12_quality_improvement_complete" class="form-check-input" {% if induction.week9_12_quality_improvement_complete %}checked{% endif %}> <label class="form-check-label">Quality Improvement</label></div>
+                        <div class="form-check"><input type="checkbox" name="week9_12_supervision_support_complete" class="form-check-input" {% if induction.week9_12_supervision_support_complete %}checked{% endif %}> <label class="form-check-label">Supervision & Support</label></div>
+                    </div>
+                </div>
+
+                <!-- Competency Hours -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Competency Hours</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label>Personal Care Hours (Target: 20)</label><input type="number" name="personal_care_hours" class="form-control" value="{{ induction.personal_care_hours|default:0 }}" step="0.5" min="0" max="100"></div>
+                            <div class="col-md-6 mb-3"><label>Meal Prep Hours (Target: 10)</label><input type="number" name="meal_prep_hours" class="form-control" value="{{ induction.meal_prep_hours|default:0 }}" step="0.5" min="0" max="100"></div>
+                            <div class="col-md-6 mb-3"><label>Documentation Hours (Target: 10)</label><input type="number" name="documentation_hours" class="form-control" value="{{ induction.documentation_hours|default:0 }}" step="0.5" min="0" max="100"></div>
+                            <div class="col-md-6 mb-3"><label>Medication Hours (Target: 10)</label><input type="number" name="medication_hours" class="form-control" value="{{ induction.medication_hours|default:0 }}" step="0.5" min="0" max="100"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Final Assessment -->
+                <div class="card mb-3 border-success">
+                    <div class="card-header bg-success text-white"><strong>Final Assessment</strong></div>
+                    <div class="card-body">
+                        <div class="form-check mb-3"><input type="checkbox" name="final_assessment_complete" id="final_assessment_complete" class="form-check-input" {% if induction.final_assessment_complete %}checked{% endif %}> <label class="form-check-label">Induction Complete</label></div>
+                        <div id="assessment-fields" style="display: {% if induction.final_assessment_complete %}block{% else %}none{% endif %};">
+                            <div class="mb-3">
+                                <label>Outcome</label>
+                                <select name="final_assessment_outcome" class="form-select">
+                                    <option value="COMPETENT" {% if induction.final_assessment_outcome == 'COMPETENT' %}selected{% endif %}>Competent</option>
+                                    <option value="NOT_YET_COMPETENT" {% if induction.final_assessment_outcome == 'NOT_YET_COMPETENT' %}selected{% endif %}>Not Yet Competent</option>
+                                    <option value="EXTENDED" {% if induction.final_assessment_outcome == 'EXTENDED' %}selected{% endif %}>Extended Induction Required</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Notes</strong></div>
+                    <div class="card-body">
+                        <textarea name="notes" class="form-control" rows="3">{{ induction.notes }}</textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'induction_management' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Progress</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('final_assessment_complete').addEventListener('change', function() {
+    document.getElementById('assessment-fields').style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Swap Staff Schedules - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-exchange-alt text-warning"></i> Swap Staff Schedules</h2>
+                <a href="{% url 'bulk_operations_menu' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Exchange Shifts Between Two Staff</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="bulkSwapForm">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="care_home"><strong>Care Home:</strong> <span class="text-danger">*</span></label>
+                            <select class="form-control" id="care_home" name="care_home" required>
+                                <option value="">Select Care Home</option>
+                                {% for home in care_homes %}
+                                <option value="{{ home.id }}">{{ home.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="staff_a"><strong>First Staff Member:</strong> <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="staff_a" name="staff_a" required>
+                                        <option value="">Select care home first</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="staff_b"><strong>Second Staff Member:</strong> <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="staff_b" name="staff_b" required>
+                                        <option value="">Select care home first</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="start_date"><strong>Start Date:</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="end_date"><strong>End Date:</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><strong>Units (Optional):</strong></label>
+                            <div id="units_selection" class="border rounded p-3">
+                                <p class="text-muted">Select care home first</p>
+                            </div>
+                            <small class="form-text text-muted">Leave unselected to swap all units</small>
+                        </div>
+
+                        <div id="swap_preview" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-exchange-alt"></i> Swap Preview:</h6>
+                            <p id="preview_text"></p>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-warning btn-lg btn-block text-dark">
+                                <i class="fas fa-exchange-alt"></i> Swap Schedules
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle text-info"></i> How Swapping Works</h6>
+                    <p>This operation will exchange ALL shifts between the two selected staff members:</p>
+                    <ul>
+                        <li>All shifts assigned to Staff A will be reassigned to Staff B</li>
+                        <li>All shifts assigned to Staff B will be reassigned to Staff A</li>
+                        <li>Shift types, times, and units remain the same</li>
+                        <li>Only shifts within the specified date range are affected</li>
+                    </ul>
+                    <p class="mb-0"><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> This operation cannot be easily undone</small></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('care_home').addEventListener('change', function() {
+    const careHomeId = this.value;
+    if (careHomeId) {
+        fetch(`/scheduling/bulk/ajax/units/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const unitsDiv = document.getElementById('units_selection');
+                if (data.units.length === 0) {
+                    unitsDiv.innerHTML = '<p class="text-muted">No units found</p>';
+                    return;
+                }
+                unitsDiv.innerHTML = data.units.map(unit => `
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="units" value="${unit.id}" id="unit_${unit.id}">
+                        <label class="form-check-label" for="unit_${unit.id}">${unit.name}</label>
+                    </div>
+                `).join('');
+            });
+        
+        fetch(`/scheduling/bulk/ajax/staff/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const staffA = document.getElementById('staff_a');
+                const staffB = document.getElementById('staff_b');
+                
+                staffA.innerHTML = '<option value="">Select First Staff Member</option>';
+                staffB.innerHTML = '<option value="">Select Second Staff Member</option>';
+                
+                data.staff.forEach(staff => {
+                    staffA.innerHTML += `<option value="${staff.id}">${staff.name}</option>`;
+                    staffB.innerHTML += `<option value="${staff.id}">${staff.name}</option>`;
+                });
+            });
+    }
+});
+
+document.getElementById('bulkSwapForm').addEventListener('submit', function(e) {
+    const staffASelect = document.getElementById('staff_a');
+    const staffBSelect = document.getElementById('staff_b');
+    
+    if (staffASelect.value === staffBSelect.value) {
+        e.preventDefault();
+        alert('Please select two different staff members!');
+        return false;
+    }
+    
+    const staffAName = staffASelect.options[staffASelect.selectedIndex].text;
+    const staffBName = staffBSelect.options[staffBSelect.selectedIndex].text;
+    
+    if (!confirm(`⚠️ Swap ALL shifts between:\n\n${staffAName}\n↕️\n${staffBName}\n\nAre you sure?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,802 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .settings-header {
+        margin-bottom: 30px;
+    }
+    
+    .settings-tabs {
+        display: flex;
+        gap: 10px;
+        border-bottom: 2px solid #e0e0e0;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .tab-button {
+        padding: 12px 24px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-size: 16px;
+        color: #666;
+        transition: all 0.2s;
+    }
+    
+    .tab-button:hover {
+        color: #007bff;
+    }
+    
+    .tab-button.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        font-weight: 600;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .setting-section {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .setting-section h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 18px;
+        color: #333;
+    }
+    
+    .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .setting-item:last-child {
+        border-bottom: none;
+    }
+    
+    .setting-info {
+        flex: 1;
+    }
+    
+    .setting-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+    }
+    
+    .setting-description {
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .setting-control {
+        margin-left: 20px;
+    }
+    
+    /* Toggle Switch */
+    .toggle-switch {
+        position: relative;
+        width: 50px;
+        height: 26px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.3s;
+        border-radius: 26px;
+    }
+    
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+        background-color: #007bff;
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+    }
+    
+    /* Select & Input Styles */
+    .form-select, .form-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        min-width: 200px;
+    }
+    
+    .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+    
+    /* Theme Preview */
+    .theme-preview {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .theme-option {
+        flex: 1;
+        padding: 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+    }
+    
+    .theme-option:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+    }
+    
+    .theme-option.selected {
+        border-color: #007bff;
+        background: #f0f8ff;
+    }
+    
+    .theme-option input[type="radio"] {
+        margin-right: 8px;
+    }
+    
+    .theme-preview-box {
+        height: 60px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .theme-light .theme-preview-box {
+        background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%);
+        border: 1px solid #ddd;
+    }
+    
+    .theme-dark .theme-preview-box {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    }
+    
+    .theme-auto .theme-preview-box {
+        background: linear-gradient(90deg, #fff 0%, #fff 50%, #2c3e50 50%, #34495e 100%);
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+        justify-content: flex-end;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+    }
+    
+    .btn-outline {
+        background: white;
+        border: 1px solid #007bff;
+        color: #007bff;
+    }
+    
+    .btn-outline:hover {
+        background: #007bff;
+        color: white;
+    }
+    
+    /* Font Size Preview */
+    .font-size-preview {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 4px;
+    }
+    
+    .font-size-preview.small { font-size: 12px; }
+    .font-size-preview.medium { font-size: 14px; }
+    .font-size-preview.large { font-size: 16px; }
+    .font-size-preview.xlarge { font-size: 18px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>Settings</h1>
+        <p>Customize your experience with the Staff Rota System</p>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="settings-tabs">
+        <button class="tab-button {% if active_tab == 'appearance' %}active{% endif %}" onclick="switchTab('appearance')">
+            Appearance
+        </button>
+        <button class="tab-button {% if active_tab == 'notifications' %}active{% endif %}" onclick="switchTab('notifications')">
+            Notifications
+        </button>
+        <button class="tab-button {% if active_tab == 'regional' %}active{% endif %}" onclick="switchTab('regional')">
+            Regional
+        </button>
+        <button class="tab-button {% if active_tab == 'privacy' %}active{% endif %}" onclick="switchTab('privacy')">
+            Privacy
+        </button>
+        <button class="tab-button {% if active_tab == 'accessibility' %}active{% endif %}" onclick="switchTab('accessibility')">
+            Accessibility
+        </button>
+    </div>
+    
+    <form method="post" action="{% url 'user_settings' %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" id="active_tab" value="{{ active_tab }}">
+        
+        <!-- Appearance Tab -->
+        <div class="tab-content {% if active_tab == 'appearance' %}active{% endif %}" id="tab-appearance">
+            <div class="setting-section">
+                <h3>Theme</h3>
+                <div class="theme-preview">
+                    <label class="theme-option theme-light {% if preferences.theme == 'light' %}selected{% endif %}">
+                        <input type="radio" name="theme" value="light" {% if preferences.theme == 'light' %}checked{% endif %} onchange="previewTheme('light')">
+                        <div class="theme-preview-box"></div>
+                        <div>Light Mode</div>
+                    </label>
+                    <label class="theme-option theme-dark {% if preferences.theme == 'dark' %}selected{% endif %}">
+                        <input type="radio" name="theme" value="dark" {% if preferences.theme == 'dark' %}checked{% endif %} onchange="previewTheme('dark')">
+                        <div class="theme-preview-box"></div>
+                        <div>Dark Mode</div>
+                    </label>
+                    <label class="theme-option theme-auto {% if preferences.theme == 'auto' %}selected{% endif %}">
+                        <input type="radio" name="theme" value="auto" {% if preferences.theme == 'auto' %}checked{% endif %} onchange="previewTheme('auto')">
+                        <div class="theme-preview-box"></div>
+                        <div>Auto (System)</div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-section">
+                <h3>Layout</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Compact Mode</div>
+                        <div class="setting-description">Reduce padding and spacing for a more compact view</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="compact_mode" {% if preferences.compact_mode %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Collapse Sidebar by Default</div>
+                        <div class="setting-description">Start with sidebar collapsed on page load</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="sidebar_collapsed" {% if preferences.sidebar_collapsed %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Dashboard Layout</div>
+                        <div class="setting-description">Choose your preferred dashboard style</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="dashboard_layout" class="form-select">
+                            <option value="default" {% if preferences.dashboard_layout == 'default' %}selected{% endif %}>Default Layout</option>
+                            <option value="compact" {% if preferences.dashboard_layout == 'compact' %}selected{% endif %}>Compact Layout</option>
+                            <option value="cards" {% if preferences.dashboard_layout == 'cards' %}selected{% endif %}>Card-based Layout</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Default Calendar View</div>
+                        <div class="setting-description">Calendar view when opening the schedule</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="default_calendar_view" class="form-select">
+                            <option value="month" {% if preferences.default_calendar_view == 'month' %}selected{% endif %}>Month View</option>
+                            <option value="week" {% if preferences.default_calendar_view == 'week' %}selected{% endif %}>Week View</option>
+                            <option value="day" {% if preferences.default_calendar_view == 'day' %}selected{% endif %}>Day View</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Show Week Numbers</div>
+                        <div class="setting-description">Display ISO week numbers on calendars</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="show_calendar_week_numbers" {% if preferences.show_calendar_week_numbers %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">Save Appearance Settings</button>
+            </div>
+        </div>
+        
+        <!-- Notifications Tab -->
+        <div class="tab-content {% if active_tab == 'notifications' %}active{% endif %}" id="tab-notifications">
+            <div class="setting-section">
+                <h3>Email Notifications</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Enable Email Notifications</div>
+                        <div class="setting-description">Master switch for all email notifications</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="email_notifications" id="email_notifications" {% if preferences.email_notifications %}checked{% endif %} onchange="toggleEmailNotifications()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="email-notification-items">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Shift Assignments</div>
+                            <div class="setting-description">Notify when assigned to a new shift</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_shift_assigned" {% if preferences.notify_shift_assigned %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Shift Changes</div>
+                            <div class="setting-description">Notify when shift is changed or cancelled</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_shift_changed" {% if preferences.notify_shift_changed %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Leave Requests</div>
+                            <div class="setting-description">Notify when leave is approved or rejected</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_leave_approved" {% if preferences.notify_leave_approved %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Shift Reminders</div>
+                            <div class="setting-description">Receive reminder 24 hours before shift</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_shift_reminder" {% if preferences.notify_shift_reminder %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Training Due</div>
+                            <div class="setting-description">Notify when training is due or overdue</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_training_due" {% if preferences.notify_training_due %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">New Messages</div>
+                            <div class="setting-description">Notify when receiving new messages</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_new_message" {% if preferences.notify_new_message %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">Compliance Alerts</div>
+                            <div class="setting-description">Important compliance and safety notifications</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="notify_compliance_alert" {% if preferences.notify_compliance_alert %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-section">
+                <h3>Other Notifications</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Browser Push Notifications</div>
+                        <div class="setting-description">Real-time desktop notifications (requires permission)</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="browser_notifications" {% if preferences.browser_notifications %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">SMS Notifications</div>
+                        <div class="setting-description">Receive text message alerts (future feature)</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="sms_notifications" {% if preferences.sms_notifications %}checked{% endif %} disabled>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" name="save_notifications" value="1">
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+            </div>
+        </div>
+        
+        <!-- Regional Tab -->
+        <div class="tab-content {% if active_tab == 'regional' %}active{% endif %}" id="tab-regional">
+            <div class="setting-section">
+                <h3>Language & Location</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Language</div>
+                        <div class="setting-description">Interface language preference</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="language" class="form-select">
+                            <option value="en" {% if preferences.language == 'en' %}selected{% endif %}>English</option>
+                            <option value="gd" {% if preferences.language == 'gd' %}selected{% endif %}>Gaelic</option>
+                            <option value="pl" {% if preferences.language == 'pl' %}selected{% endif %}>Polish</option>
+                            <option value="ro" {% if preferences.language == 'ro' %}selected{% endif %}>Romanian</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Timezone</div>
+                        <div class="setting-description">Your local timezone for date/time display</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="timezone" class="form-select">
+                            {% for tz in timezones %}
+                            <option value="{{ tz }}" {% if preferences.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Date Format</div>
+                        <div class="setting-description">How dates are displayed</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="date_format" class="form-select">
+                            <option value="DD/MM/YYYY" {% if preferences.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY (31/12/2025)</option>
+                            <option value="MM/DD/YYYY" {% if preferences.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY (12/31/2025)</option>
+                            <option value="YYYY-MM-DD" {% if preferences.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (2025-12-31)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Time Format</div>
+                        <div class="setting-description">12-hour or 24-hour clock</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="time_format" class="form-select">
+                            <option value="24" {% if preferences.time_format == '24' %}selected{% endif %}>24-hour (14:30)</option>
+                            <option value="12" {% if preferences.time_format == '12' %}selected{% endif %}>12-hour (2:30 PM)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">Save Regional Settings</button>
+            </div>
+        </div>
+        
+        <!-- Privacy Tab -->
+        <div class="tab-content {% if active_tab == 'privacy' %}active{% endif %}" id="tab-privacy">
+            <div class="setting-section">
+                <h3>Profile Visibility</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Show Profile to Other Staff</div>
+                        <div class="setting-description">Allow colleagues to view your profile page</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="show_profile_to_others" {% if preferences.show_profile_to_others %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Show Phone Number</div>
+                        <div class="setting-description">Display your phone number to other staff members</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="show_phone_to_others" {% if preferences.show_phone_to_others %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" name="save_privacy" value="1">
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">Save Privacy Settings</button>
+            </div>
+        </div>
+        
+        <!-- Accessibility Tab -->
+        <div class="tab-content {% if active_tab == 'accessibility' %}active{% endif %}" id="tab-accessibility">
+            <div class="setting-section">
+                <h3>Visual Accessibility</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">High Contrast Mode</div>
+                        <div class="setting-description">Increase contrast for better visibility</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="high_contrast" {% if preferences.high_contrast %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Font Size</div>
+                        <div class="setting-description">Adjust text size for comfortable reading</div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="font_size" class="form-select" onchange="previewFontSize(this.value)">
+                            <option value="small" {% if preferences.font_size == 'small' %}selected{% endif %}>Small</option>
+                            <option value="medium" {% if preferences.font_size == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="large" {% if preferences.font_size == 'large' %}selected{% endif %}>Large</option>
+                            <option value="xlarge" {% if preferences.font_size == 'xlarge' %}selected{% endif %}>Extra Large</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="font-size-preview {{ preferences.font_size }}" id="font-preview">
+                    This is a preview of the selected font size. The quick brown fox jumps over the lazy dog.
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">Reduce Animations</div>
+                        <div class="setting-description">Minimize motion for those sensitive to movement</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="reduce_animations" {% if preferences.reduce_animations %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" name="save_accessibility" value="1">
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">Save Accessibility Settings</button>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Additional Actions -->
+    <div class="setting-section" style="margin-top: 30px;">
+        <h3>Additional Actions</h3>
+        <div class="action-buttons" style="margin-top: 0; justify-content: flex-start;">
+            <a href="{% url 'export_preferences' %}" class="btn btn-outline">Export Settings</a>
+            <form method="post" action="{% url 'reset_preferences' %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to reset all settings to defaults?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Reset to Defaults</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Remove active from all buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Show selected tab
+        document.getElementById('tab-' + tabName).classList.add('active');
+        event.target.classList.add('active');
+        
+        // Update hidden field
+        document.getElementById('active_tab').value = tabName;
+        
+        // Update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabName);
+        window.history.pushState({}, '', url);
+    }
+    
+    function previewTheme(theme) {
+        // Remove selected from all
+        document.querySelectorAll('.theme-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        
+        // Add selected to chosen
+        event.target.closest('.theme-option').classList.add('selected');
+        
+        // Apply theme preview (optional: could apply to page immediately)
+        console.log('Theme preview:', theme);
+    }
+    
+    function previewFontSize(size) {
+        const preview = document.getElementById('font-preview');
+        preview.className = 'font-size-preview ' + size;
+    }
+    
+    function toggleEmailNotifications() {
+        const master = document.getElementById('email_notifications');
+        const container = document.getElementById('email-notification-items');
+        
+        if (master.checked) {
+            container.style.opacity = '1';
+            container.style.pointerEvents = 'auto';
+        } else {
+            container.style.opacity = '0.5';
+            container.style.pointerEvents = 'none';
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleEmailNotifications();
+    });
+</script>
+{% endblock %}

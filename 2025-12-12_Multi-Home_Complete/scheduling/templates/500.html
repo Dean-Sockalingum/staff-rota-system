@@ -1,0 +1,352 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error | Staff Rota System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .error-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 60px 40px;
+            max-width: 700px;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .error-code {
+            font-size: 120px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+        
+        .error-title {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .error-message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .error-details {
+            text-align: left;
+            background: #fff5f5;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border-left: 4px solid #f5576c;
+        }
+        
+        .error-details h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .error-details p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .error-id {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .error-id strong {
+            color: #333;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(245, 87, 108, 0.3);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #f5576c;
+            border: 2px solid #f5576c;
+        }
+        
+        .btn-secondary:hover {
+            background: #fff5f5;
+            transform: translateY(-2px);
+        }
+        
+        .error-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .feedback-form {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+        
+        .feedback-form h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .feedback-form label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .feedback-form textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .feedback-form textarea:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+        
+        .feedback-form button {
+            margin-top: 15px;
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: #f8f9fa;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-item .label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .status-item .value {
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 600px) {
+            .error-code {
+                font-size: 80px;
+            }
+            
+            .error-title {
+                font-size: 24px;
+            }
+            
+            .error-message {
+                font-size: 16px;
+            }
+            
+            .error-container {
+                padding: 40px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <div class="error-code">500</div>
+        <h1 class="error-title">Internal Server Error</h1>
+        <p class="error-message">
+            Oops! Something went wrong on our end. We're sorry for the inconvenience. Our team has been automatically notified and is working to fix the issue.
+        </p>
+        
+        {% if sentry_event_id %}
+        <div class="error-id">
+            <strong>Error ID:</strong> {{ sentry_event_id }}<br>
+            <small>Please include this ID when contacting support</small>
+        </div>
+        {% endif %}
+        
+        <div class="status-info">
+            <div class="status-item">
+                <div class="label">Status</div>
+                <div class="value">Error Reported</div>
+            </div>
+            <div class="status-item">
+                <div class="label">Team Notified</div>
+                <div class="value">✓ Yes</div>
+            </div>
+        </div>
+        
+        <div class="error-details">
+            <h3>What happened?</h3>
+            <p>
+                The server encountered an unexpected condition that prevented it from fulfilling your request. This could be due to:
+            </p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>A temporary server issue</li>
+                <li>A bug in our code (we're on it!)</li>
+                <li>An unexpected data error</li>
+            </ul>
+        </div>
+        
+        <div class="feedback-form">
+            <h3>Help us fix this faster</h3>
+            <form id="error-feedback-form">
+                <label for="feedback">What were you trying to do when this error occurred?</label>
+                <textarea id="feedback" name="feedback" placeholder="E.g., I was trying to update a shift schedule for next week..."></textarea>
+                <button type="submit" class="btn btn-primary">Send Feedback</button>
+            </form>
+        </div>
+        
+        <div class="action-buttons">
+            <a href="/" class="btn btn-primary">Go to Homepage</a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">Try Again</a>
+        </div>
+        
+        <p style="margin-top: 30px; color: #888; font-size: 14px;">
+            If the problem persists, please contact support at 
+            <a href="mailto:support@staffrota.com" style="color: #f5576c;">support@staffrota.com</a>
+        </p>
+    </div>
+    
+    <script>
+        // Handle feedback form submission
+        document.getElementById('error-feedback-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const feedback = document.getElementById('feedback').value;
+            
+            if (!feedback.trim()) {
+                alert('Please provide some feedback about what happened.');
+                return;
+            }
+            
+            // Send feedback to server (could be via AJAX to a dedicated endpoint)
+            fetch('/api/error-feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    feedback: feedback,
+                    error_id: '{{ sentry_event_id }}',
+                    url: window.location.href,
+                    user_agent: navigator.userAgent
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Thank you for your feedback! This will help us fix the issue faster.');
+                document.getElementById('feedback').value = '';
+            })
+            .catch(error => {
+                console.error('Error submitting feedback:', error);
+                alert('Feedback submitted! Thank you.');
+            });
+        });
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

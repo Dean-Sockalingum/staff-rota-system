@@ -1,0 +1,270 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}My Training Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .training-card {
+        border-left: 4px solid #3498db;
+        margin-bottom: 20px;
+    }
+    .training-card.current {
+        border-left-color: #2ecc71;
+    }
+    .training-card.expiring {
+        border-left-color: #f39c12;
+    }
+    .training-card.expired {
+        border-left-color: #e74c3c;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    .status-current {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .status-expiring {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .status-expired {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .cpd-progress {
+        height: 30px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    .cpd-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2ecc71);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-graduation-cap"></i> My Training & Development</h2>
+                <a href="{% url 'submit_training_record' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Submit Training Record
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ total_training }}</h3>
+                    <p class="text-muted mb-0">Total Training</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ current_training }}</h3>
+                    <p class="text-muted mb-0">Current</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ expiring_soon }}</h3>
+                    <p class="text-muted mb-0">Expiring Soon</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ expired_training }}</h3>
+                    <p class="text-muted mb-0">Expired</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SSSC CPD Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> SSSC CPD Progress ({{ sssc_cpd_hours }} / {{ sssc_target }} hours)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="cpd-progress">
+                        {% widthratio sssc_cpd_hours sssc_target 100 as cpd_percentage %}
+                        <div class="cpd-progress-bar" style="width: {{ cpd_percentage }}%;">
+                            {% if cpd_percentage > 0 %}{{ cpd_percentage }}%{% endif %}
+                        </div>
+                    </div>
+                    <p class="text-muted mt-2 mb-0">
+                        <small>SSSC registered workers must complete minimum 35 hours CPD annually</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mandatory Training Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Mandatory Training Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if mandatory_missing %}
+                    <div class="alert alert-warning">
+                        <strong>Action Required:</strong> You have {{ mandatory_missing|length }} mandatory training course(s) not completed or expired.
+                    </div>
+                    <ul>
+                        {% for course in mandatory_missing %}
+                        <li>{{ course.name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> All mandatory training is current!
+                    </div>
+                    {% endif %}
+                    
+                    {% if mandatory_completed %}
+                    <h6 class="mt-3">Completed Mandatory Training:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Completed</th>
+                                    <th>Expires</th>
+                                    <th>Days Remaining</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in mandatory_completed %}
+                                <tr>
+                                    <td>{{ item.course.name }}</td>
+                                    <td>{{ item.record.completion_date }}</td>
+                                    <td>{{ item.record.expiry_date }}</td>
+                                    <td>
+                                        {% if item.days_until_expiry < 30 %}
+                                        <span class="text-warning">{{ item.days_until_expiry }} days</span>
+                                        {% else %}
+                                        {{ item.days_until_expiry }} days
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Training Records -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> All Training Records</h5>
+                </div>
+                <div class="card-body">
+                    {% if training_records %}
+                    {% for record in training_records %}
+                    <div class="card training-card {{ record.get_status|lower }}">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>{{ record.course.name }}
+                                        {% if record.get_status == 'CURRENT' %}
+                                        <span class="status-badge status-current">Current</span>
+                                        {% elif record.get_status == 'EXPIRING_SOON' %}
+                                        <span class="status-badge status-expiring">Expiring Soon</span>
+                                        {% elif record.get_status == 'EXPIRED' %}
+                                        <span class="status-badge status-expired">Expired</span>
+                                        {% endif %}
+                                    </h5>
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-tag"></i> {{ record.course.get_category_display }}
+                                    </p>
+                                    {% if record.training_provider %}
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-building"></i> {{ record.training_provider }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <p class="mb-1"><strong>Completed:</strong> {{ record.completion_date }}</p>
+                                    <p class="mb-1"><strong>Expires:</strong> {{ record.expiry_date }}</p>
+                                    {% if record.days_until_expiry >= 0 %}
+                                    <p class="mb-0">
+                                        <strong>Days Remaining:</strong> 
+                                        {% if record.days_until_expiry < 30 %}
+                                        <span class="text-warning">{{ record.days_until_expiry }}</span>
+                                        {% else %}
+                                        {{ record.days_until_expiry }}
+                                        {% endif %}
+                                    </p>
+                                    {% else %}
+                                    <p class="mb-0 text-danger">
+                                        <strong>Expired:</strong> {{ record.days_until_expiry|add:"-1" }} days ago
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    {% if record.certificate_number %}
+                                    <p class="mb-1">
+                                        <i class="fas fa-certificate"></i> Cert: {{ record.certificate_number }}
+                                    </p>
+                                    {% endif %}
+                                    {% if record.sssc_cpd_hours_claimed %}
+                                    <p class="mb-1">
+                                        <i class="fas fa-clock"></i> CPD: {{ record.sssc_cpd_hours_claimed }} hours
+                                    </p>
+                                    {% endif %}
+                                    {% if record.competency_assessed %}
+                                    <p class="mb-0 text-success">
+                                        <i class="fas fa-check-circle"></i> Competency: {{ record.competency_outcome }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No training records found. 
+                        <a href="{% url 'submit_training_record' %}">Submit your first training record</a>.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Acknowledgements{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-user-check me-2"></i>My Policy Acknowledgements</h2>
+        <a href="{% url 'policies_procedures:pending_acknowledgements' %}" class="btn btn-warning">
+            <i class="fas fa-signature me-1"></i>Pending Acknowledgements
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                    <h3 class="mb-0">{{ acknowledgements.count }}</h3>
+                    <p class="text-muted mb-0">Total Acknowledged</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-signature fa-3x text-info mb-2"></i>
+                    <h3 class="mb-0">{{ acknowledgements|length }}</h3>
+                    <p class="text-muted mb-0">This Year</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-3x text-warning mb-2"></i>
+                    <h3 class="mb-0">{% if acknowledgements %}{{ acknowledgements.first.acknowledged_date|date:"M Y" }}{% else %}N/A{% endif %}</h3>
+                    <p class="text-muted mb-0">Last Acknowledgement</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acknowledgements List -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Acknowledged Policies</h5>
+        </div>
+        <div class="card-body">
+            {% if acknowledgements %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Policy</th>
+                            <th>Category</th>
+                            <th>Acknowledged Date</th>
+                            <th>Method</th>
+                            <th>Signature</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ack in acknowledgements %}
+                        <tr>
+                            <td>
+                                <strong>{{ ack.policy.policy_number }}</strong><br>
+                                <small>{{ ack.policy.title }}</small>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ ack.policy.get_category_display }}</span></td>
+                            <td>{{ ack.acknowledged_date|date:"d M Y H:i" }}</td>
+                            <td>
+                                {% if ack.acknowledgement_method == 'digital' %}
+                                <span class="badge bg-primary">Digital</span>
+                                {% elif ack.acknowledgement_method == 'paper' %}
+                                <span class="badge bg-secondary">Paper</span>
+                                {% elif ack.acknowledgement_method == 'verbal' %}
+                                <span class="badge bg-info">Verbal</span>
+                                {% else %}
+                                <span class="badge bg-success">Training</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ack.signature }}</td>
+                            <td>
+                                {% if ack.is_overdue %}
+                                <span class="badge bg-danger">Overdue Re-acknowledgement</span>
+                                {% else %}
+                                <span class="badge bg-success">Current</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'policies_procedures:policy_detail' ack.policy.pk %}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-eye"></i> View Policy
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center my-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Acknowledgements Yet</h5>
+                <p class="text-muted">You haven't acknowledged any policies yet.</p>
+                <a href="{% url 'policies_procedures:pending_acknowledgements' %}" class="btn btn-primary">
+                    <i class="fas fa-signature me-1"></i>View Pending Acknowledgements
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    {% if acknowledgements %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Acknowledgement Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h6 class="text-muted">Digital</h6>
+                            <h4>{{ acknowledgements|dictsort:"acknowledgement_method"|slice:":999"|length }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-muted">Paper</h6>
+                            <h4>0</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-muted">Training</h6>
+                            <h4>0</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-muted">Verbal</h6>
+                            <h4>0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

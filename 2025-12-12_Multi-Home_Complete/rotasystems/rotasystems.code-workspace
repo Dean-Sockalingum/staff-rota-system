@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../scheduling"
+		},
+		{
+			"path": "../staff_records"
+		}
+	]
+}

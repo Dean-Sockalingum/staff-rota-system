@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <!-- Print header -->
+    <div class="print-title">{{ title }}</div>
+    <div class="print-date">Generated: {{ generated_date|date:"d/m/Y H:i" }}</div>
+    
+    <!-- Report metadata -->
+    <div class="print-info">
+        <strong>Report Type:</strong> {{ report_type }}<br>
+        <strong>Home:</strong> {{ home.name }}<br>
+        <strong>Month:</strong> {{ month }} {{ year }}<br>
+        <strong>Period:</strong> {{ first_day|date:"d/m/Y" }} - {{ last_day|date:"d/m/Y" }}
+    </div>
+    
+    <!-- Monthly statistics -->
+    <h2>Monthly Statistics</h2>
+    
+    <table style="width: 50%">
+        <tr>
+            <th>Metric</th>
+            <th>Count</th>
+        </tr>
+        <tr>
+            <td>Total Shifts</td>
+            <td><strong>{{ total_shifts }}</strong></td>
+        </tr>
+        <tr>
+            <td>Unique Staff</td>
+            <td><strong>{{ unique_staff }}</strong></td>
+        </tr>
+        <tr>
+            <td>Early Shifts</td>
+            <td>{{ shifts_by_type.Early }}</td>
+        </tr>
+        <tr>
+            <td>Late Shifts</td>
+            <td>{{ shifts_by_type.Late }}</td>
+        </tr>
+        <tr>
+            <td>Night Shifts</td>
+            <td>{{ shifts_by_type.Night }}</td>
+        </tr>
+    </table>
+    
+    <!-- Monthly shift schedule -->
+    <div class="page-break-before"></div>
+    <h2>Complete Shift Schedule</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 12%">Date</th>
+                <th style="width: 10%">Day</th>
+                <th style="width: 15%">Shift Type</th>
+                <th style="width: 25%">Staff Member</th>
+                <th style="width: 20%">Home</th>
+                <th style="width: 18%">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shift in shifts %}
+            <tr>
+                <td>{{ shift.shift_date|date:"d/m/Y" }}</td>
+                <td>{{ shift.shift_date|date:"D" }}</td>
+                <td>{{ shift.shift_type }}</td>
+                <td>{{ shift.staff.first_name }} {{ shift.staff.last_name }}</td>
+                <td>{{ shift.home.name }}</td>
+                <td style="font-size: 9pt">{{ shift.notes|default:"—"|truncatewords:8 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center"><em>No shifts scheduled for this month</em></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Footer -->
+    <div class="print-footer">
+        <p>Glasgow HSCP - Staff Rota Management System | Confidential Document</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,268 @@
+{% extends "quality_audits/base.html" %}
+
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Project - PDSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
+            <li class="breadcrumb-item active">{% if object %}Edit{% else %}Create{% endif %} Project</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-{% if object %}pencil{% else %}plus-circle{% endif %}"></i>
+                        {% if object %}Edit Project{% else %}Create New PDSA Project{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="projectForm">
+                        {% csrf_token %}
+                        
+                        {{ form.as_p }}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> {% if object %}Update{% else %}Create{% endif %} Project
+                            </button>
+                            <a href="{% if object %}{% url 'quality_audits:project_detail' object.pk %}{% else %}{% url 'quality_audits:project_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                        
+                        <!-- Basic Information -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle"></i> Basic Information
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_project_name" class="form-label">Project Name *</label>
+                            <input type="text" class="form-control {% if form.project_name.errors %}is-invalid{% endif %}" 
+                                   id="id_project_name" name="project_name" 
+                                   value="{{ form.project_name.value|default:'' }}" required>
+                            {% if form.project_name.errors %}
+                                <div class="invalid-feedback">{{ form.project_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_project_aim" class="form-label">Project Aim *</label>
+                            <textarea class="form-control {% if form.project_aim.errors %}is-invalid{% endif %}" 
+                                      id="id_project_aim" name="project_aim" rows="3" required>{{ form.project_aim.value|default:'' }}</textarea>
+                            <div class="form-text">Describe what you want to achieve</div>
+                            {% if form.project_aim.errors %}
+                                <div class="invalid-feedback">{{ form.project_aim.errors.0 }}</div>
+                            {% endif %}
+                            
+                            {% if not object %}
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="generateAimBtn">
+                                    <i class="bi bi-stars"></i> Improve with AI
+                                </button>
+                                <div id="aiAimResult" class="alert alert-info mt-2 d-none">
+                                    <strong>AI-Enhanced SMART Aim:</strong>
+                                    <p id="aiAimText" class="mb-0 mt-2"></p>
+                                    <button type="button" class="btn btn-sm btn-success mt-2" id="useAimBtn">
+                                        <i class="bi bi-check"></i> Use This Aim
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Location -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-building"></i> Location
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_care_home" class="form-label">Care Home</label>
+                                {{ form.care_home }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_department" class="form-label">Department</label>
+                                <input type="text" class="form-control" id="id_department" 
+                                       name="department" value="{{ form.department.value|default:'' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Classification -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-tag"></i> Classification
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_quality_domain" class="form-label">Quality Domain</label>
+                                <select class="form-select" id="id_quality_domain" name="quality_domain">
+                                    <option value="">Select domain...</option>
+                                    <option value="person_centred">Person-Centred Care</option>
+                                    <option value="effective">Effective Care</option>
+                                    <option value="safe">Safe Care</option>
+                                    <option value="responsive">Responsive Care</option>
+                                    <option value="well_led">Well-Led</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_project_category" class="form-label">Project Category</label>
+                                <select class="form-select" id="id_project_category" name="project_category">
+                                    <option value="">Select category...</option>
+                                    <option value="medication">Medication Safety</option>
+                                    <option value="falls">Falls Prevention</option>
+                                    <option value="nutrition">Nutrition & Hydration</option>
+                                    <option value="infection">Infection Control</option>
+                                    <option value="pressure">Pressure Care</option>
+                                    <option value="dignity">Dignity & Respect</option>
+                                    <option value="staffing">Staffing & Skills</option>
+                                    <option value="environment">Environment</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Measurement -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-graph-up"></i> Measurement
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="id_baseline_value" class="form-label">Baseline Value</label>
+                                <input type="number" step="0.01" class="form-control" 
+                                       id="id_baseline_value" name="baseline_value" 
+                                       value="{{ form.baseline_value.value|default:'' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_target_value" class="form-label">Target Value</label>
+                                <input type="number" step="0.01" class="form-control" 
+                                       id="id_target_value" name="target_value" 
+                                       value="{{ form.target_value.value|default:'' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_measurement_unit" class="form-label">Unit</label>
+                                <input type="text" class="form-control" id="id_measurement_unit" 
+                                       name="measurement_unit" value="{{ form.measurement_unit.value|default:'' }}"
+                                       placeholder="e.g., %, count, days">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_measurement_frequency" class="form-label">Measurement Frequency</label>
+                            <select class="form-select" id="id_measurement_frequency" name="measurement_frequency">
+                                <option value="">Select frequency...</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="per_cycle">Per Cycle</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Timeline -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-calendar"></i> Timeline
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="id_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="id_start_date" 
+                                       name="start_date" value="{{ form.start_date.value|default:'' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_expected_end_date" class="form-label">Expected End Date</label>
+                                <input type="date" class="form-control" id="id_expected_end_date" 
+                                       name="expected_end_date" value="{{ form.expected_end_date.value|default:'' }}">
+                            </div>
+                            {% if object %}
+                            <div class="col-md-4 mb-3">
+                                <label for="id_actual_end_date" class="form-label">Actual End Date</label>
+                                <input type="date" class="form-control" id="id_actual_end_date" 
+                                       name="actual_end_date" value="{{ form.actual_end_date.value|default:'' }}">
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if object %}
+                        <div class="mb-3">
+                            <label for="id_status" class="form-label">Status</label>
+                            <select class="form-select" id="id_status" name="status">
+                                <option value="active" {% if object.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="completed" {% if object.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="on_hold" {% if object.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                                <option value="cancelled" {% if object.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% if object %}{% url 'quality_audits:project_detail' object.pk %}{% else %}{% url 'quality_audits:project_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if object %}Update{% else %}Create{% endif %} Project
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // AI Aim Generation
+    $('#generateAimBtn').click(function() {
+        const aim = $('#id_project_aim').val();
+        if (!aim.trim()) {
+            alert('Please enter a project aim first');
+            return;
+        }
+        
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Generating...');
+        
+        $.ajax({
+            url: '{% url \"quality_audits:generate_smart_aim\" %}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ aim: aim }),
+            success: function(response) {
+                if (response.success) {
+                    $('#aiAimText').text(response.improved_aim);
+                    $('#aiAimResult').removeClass('d-none');
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                alert('Error generating AI aim');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="bi bi-stars"></i> Improve with AI');
+            }
+        });
+    });
+    
+    // Use AI Aim
+    $('#useAimBtn').click(function() {
+        const aiAim = $('#aiAimText').text();
+        $('#id_project_aim').val(aiAim);
+        $('#aiAimResult').addClass('d-none');
+    });
+});
+</script>
+{% endblock %}

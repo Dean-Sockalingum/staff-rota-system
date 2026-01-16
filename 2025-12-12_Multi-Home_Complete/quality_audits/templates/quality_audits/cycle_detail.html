@@ -1,0 +1,324 @@
+{% extends "quality_audits/base.html" %}
+
+{% block title %}Cycle #{{ cycle.cycle_number }} - PDSA Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_list' %}">Projects</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'quality_audits:project_detail' cycle.project.pk %}">{{ cycle.project.title }}</a></li>
+            <li class="breadcrumb-item active">Cycle #{{ cycle.cycle_number }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6 fw-bold">
+                <i class="bi bi-arrow-repeat"></i> PDSA Cycle #{{ cycle.cycle_number }}
+            </h1>
+            <p class="lead">{{ cycle.cycle_objective }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'quality_audits:datapoint_create' cycle.pk %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Data
+                </a>
+                <a href="{% url 'quality_audits:cycle_update' cycle.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <button type="button" class="btn btn-info" id="analyzeDataBtn">
+                    <i class="bi bi-graph-up"></i> Analyze
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- PDSA Phases -->
+        <div class="col-lg-8">
+            <!-- PLAN -->
+            <div class="card mb-3 pdsa-phase-plan">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> PLAN Phase</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Hypothesis:</dt>
+                        <dd class="col-sm-9">{{ cycle.plan_hypothesis|default:"Not set" }}</dd>
+                        
+                        <dt class="col-sm-3">Changes:</dt>
+                        <dd class="col-sm-9">{{ cycle.plan_changes|default:"Not set" }}</dd>
+                        
+                        <dt class="col-sm-3">Prediction:</dt>
+                        <dd class="col-sm-9">{{ cycle.plan_prediction|default:"Not set" }}</dd>
+                        
+                        <dt class="col-sm-3">Data Collection:</dt>
+                        <dd class="col-sm-9">{{ cycle.plan_data_collection|default:"Not set" }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- DO -->
+            <div class="card mb-3 pdsa-phase-do">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-play-circle"></i> DO Phase</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Implementation:</dt>
+                        <dd class="col-sm-9">
+                            {{ cycle.do_implementation_start|date:"M d, Y"|default:"Not started" }}
+                            {% if cycle.do_implementation_end %} - {{ cycle.do_implementation_end|date:"M d, Y" }}{% endif %}
+                            {% if cycle_duration %}
+                            <span class="badge bg-secondary">{{ cycle_duration }} days</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-3">Observations:</dt>
+                        <dd class="col-sm-9">{{ cycle.do_observations|default:"Not set"|linebreaksbr }}</dd>
+                        
+                        <dt class="col-sm-3">Challenges:</dt>
+                        <dd class="col-sm-9">{{ cycle.do_challenges|default:"None noted"|linebreaksbr }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- STUDY -->
+            <div class="card mb-3 pdsa-phase-study">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> STUDY Phase</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Data Analysis:</dt>
+                        <dd class="col-sm-9">{{ cycle.study_data_analysis|default:"Not completed"|linebreaksbr }}</dd>
+                        
+                        <dt class="col-sm-3">Findings:</dt>
+                        <dd class="col-sm-9">{{ cycle.study_findings|default:"Not recorded"|linebreaksbr }}</dd>
+                        
+                        <dt class="col-sm-3">Unexpected:</dt>
+                        <dd class="col-sm-9">{{ cycle.study_unexpected_results|default:"None"|linebreaksbr }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- ACT -->
+            <div class="card mb-3 pdsa-phase-act">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> ACT Phase</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Decision:</dt>
+                        <dd class="col-sm-9">
+                            {% if cycle.act_decision %}
+                            <span class="badge bg-secondary text-uppercase">{{ cycle.get_act_decision_display }}</span>
+                            {% else %}
+                            Not decided
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-3">Next Steps:</dt>
+                        <dd class="col-sm-9">{{ cycle.act_next_steps|default:"Not planned"|linebreaksbr }}</dd>
+                        
+                        <dt class="col-sm-3">Review Date:</dt>
+                        <dd class="col-sm-9">{{ cycle.act_review_date|date:"M d, Y"|default:"Not set" }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Data Chart -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Run Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="runChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Cycle Info -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Cycle Info</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6">Status:</dt>
+                        <dd class="col-6">
+                            <span class="badge bg-secondary">{{ cycle.get_status_display }}</span>
+                        </dd>
+                        
+                        <dt class="col-6">Created:</dt>
+                        <dd class="col-6">{{ cycle.created_at|date:"M d, Y" }}</dd>
+                        
+                        <dt class="col-6">Data Points:</dt>
+                        <dd class="col-6">{{ data_point_count }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Data Points -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-database"></i> Data Points</h5>
+                    <a href="{% url 'quality_audits:datapoint_create' cycle.pk %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> Add
+                    </a>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if data_points %}
+                    <div class="list-group list-group-flush">
+                        {% for dp in data_points %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ dp.measurement_value }}</strong> {{ cycle.project.measurement_unit }}
+                                    <br>
+                                    <small class="text-muted">{{ dp.measurement_date|date:"M d, Y" }}</small>
+                                    {% if dp.notes %}
+                                    <br>
+                                    <small class="text-muted">{{ dp.notes|truncatewords:10 }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'quality_audits:datapoint_update' dp.pk %}" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'quality_audits:datapoint_delete' dp.pk %}" 
+                                       class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-database-x"></i>
+                        <p class="mb-0 mt-2">No data points yet</p>
+                        <a href="{% url 'quality_audits:datapoint_create' cycle.pk %}" class="btn btn-sm btn-primary mt-2">
+                            Add First Data Point
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Analysis Results -->
+            <div id="analysisResults" class="d-none">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> AI Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="analysisContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load chart data
+    $.ajax({
+        url: '{% url "quality_audits:api_cycle_chart_data" cycle.pk %}',
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const data = response.data;
+                const ctx = document.getElementById('runChart').getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Measurement',
+                            data: data.values,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Baseline',
+                            data: Array(data.labels.length).fill(data.baseline),
+                            borderColor: 'rgb(255, 99, 132)',
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'Target',
+                            data: Array(data.labels.length).fill(data.target),
+                            borderColor: 'rgb(54, 162, 235)',
+                            borderDash: [5, 5],
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Measurement Over Time (' + data.measurement_unit + ')'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+    
+    // Analyze data
+    $('#analyzeDataBtn').click(function() {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Analyzing...');
+        
+        $.ajax({
+            url: '{% url "quality_audits:analyze_cycle" cycle.pk %}',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const analysis = response.analysis;
+                    let html = '<dl class="row mb-0">';
+                    html += '<dt class="col-6">Trend:</dt>';
+                    html += '<dd class="col-6">' + (analysis.trend || 'No trend') + '</dd>';
+                    html += '<dt class="col-6">P-value:</dt>';
+                    html += '<dd class="col-6">' + (analysis.p_value ? analysis.p_value.toFixed(4) : 'N/A') + '</dd>';
+                    html += '<dt class="col-6">Mean:</dt>';
+                    html += '<dd class="col-6">' + (analysis.mean ? analysis.mean.toFixed(2) : 'N/A') + '</dd>';
+                    html += '</dl>';
+                    
+                    $('#analysisContent').html(html);
+                    $('#analysisResults').removeClass('d-none');
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                alert('Error analyzing data');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="bi bi-graph-up"></i> Analyze');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

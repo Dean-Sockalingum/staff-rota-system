@@ -1,0 +1,580 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Staff Matching - Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .test-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+            margin-left: 10px;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.3);
+        }
+        
+        .results {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .match-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+        
+        .match-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .match-card.recommended {
+            border-left-color: #56ab2f;
+            background: #f0fff4;
+        }
+        
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .match-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .match-score {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .match-card.recommended .match-score {
+            color: #56ab2f;
+        }
+        
+        .match-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 3px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .score-item {
+            text-align: center;
+        }
+        
+        .score-bar {
+            height: 60px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .score-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: height 0.5s ease;
+        }
+        
+        .score-label {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .score-value {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #56ab2f;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #3498db;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee;
+            border-left: 5px solid #e74c3c;
+            padding: 15px;
+            border-radius: 5px;
+            color: #c0392b;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Smart Staff Matching System</h1>
+            <p>ML-powered staff ranking for intelligent shortage coverage (Task 1 - Phase 1)</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Distance Weight</div>
+                <div class="stat-value">30%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Overtime Weight</div>
+                <div class="stat-value">25%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Skill Weight</div>
+                <div class="stat-value">20%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Preference Weight</div>
+                <div class="stat-value">15%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Fatigue Weight</div>
+                <div class="stat-value">10%</div>
+            </div>
+        </div>
+        
+        <div class="test-panel">
+            <h2 style="margin-bottom: 20px; color: #333;">Test Smart Matching</h2>
+            
+            <div class="error" id="error-message"></div>
+            
+            <div class="form-group">
+                <label for="shift-id">Shift ID</label>
+                <input type="number" id="shift-id" placeholder="Enter shift ID to test matching">
+            </div>
+            
+            <div class="form-group">
+                <label for="limit">Number of Recommendations</label>
+                <select id="limit">
+                    <option value="5">Top 5</option>
+                    <option value="10" selected>Top 10</option>
+                    <option value="15">Top 15</option>
+                    <option value="20">Top 20</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="getRecommendations()">
+                    🔍 Get Recommendations
+                </button>
+                <button class="btn btn-success" onclick="autoSendOffers()" id="send-offers-btn" disabled>
+                    ✉️ Auto-Send Top 3 Offers
+                </button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing staff availability and calculating match scores...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <h2 style="margin-bottom: 20px; color: #333;">Matching Results</h2>
+            <div id="results-content"></div>
+        </div>
+    </div>
+    
+    <script>
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+        }
+        
+        async function getRecommendations() {
+            const shiftId = document.getElementById('shift-id').value;
+            const limit = document.getElementById('limit').value;
+            
+            if (!shiftId) {
+                showError('Please enter a shift ID');
+                return;
+            }
+            
+            showLoading(true);
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('send-offers-btn').disabled = true;
+            
+            try {
+                const response = await fetch(`/api/smart-matching/${shiftId}/?limit=${limit}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get recommendations');
+                }
+                
+                displayResults(data);
+                document.getElementById('send-offers-btn').disabled = false;
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results-content');
+            
+            let html = `
+                <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">Shift Details</h3>
+                    <p><strong>Date:</strong> ${data.shift_date}</p>
+                    <p><strong>Time:</strong> ${data.shift_time}</p>
+                    <p><strong>Unit:</strong> ${data.unit}</p>
+                    <p><strong>Required Role:</strong> ${data.required_role}</p>
+                    <p><strong>Available Staff:</strong> ${data.total_available}</p>
+                </div>
+            `;
+            
+            if (data.recommendations.length === 0) {
+                html += `<p style="text-align: center; color: #999; padding: 40px;">No staff available for this shift</p>`;
+            } else {
+                data.recommendations.forEach((match, index) => {
+                    const recommended = match.recommended ? 'recommended' : '';
+                    html += `
+                        <div class="match-card ${recommended}">
+                            <div class="match-header">
+                                <div>
+                                    <div class="match-name">#${index + 1}. ${match.staff_name}</div>
+                                    <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                                        SAP: ${match.staff_sap} | ${match.staff_role}
+                                    </div>
+                                </div>
+                                <div class="match-score">${match.total_score.toFixed(1)}</div>
+                            </div>
+                            
+                            <div class="match-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">WDT Compliant</span>
+                                    <span class="detail-value">
+                                        ${match.wdt_compliant ? 
+                                            '<span class="badge badge-success">✓ Yes</span>' : 
+                                            '<span class="badge badge-warning">⚠ No</span>'}
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Auto-Recommend</span>
+                                    <span class="detail-value">
+                                        ${match.recommended ? 
+                                            '<span class="badge badge-success">✓ Yes</span>' : 
+                                            '<span class="badge badge-info">Manual Review</span>'}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="score-breakdown">
+                                <div class="score-item">
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="height: ${match.distance_score}%"></div>
+                                    </div>
+                                    <div class="score-value">${match.distance_score.toFixed(0)}</div>
+                                    <div class="score-label">Distance</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="height: ${match.overtime_score}%"></div>
+                                    </div>
+                                    <div class="score-value">${match.overtime_score.toFixed(0)}</div>
+                                    <div class="score-label">Overtime</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="height: ${match.skill_score}%"></div>
+                                    </div>
+                                    <div class="score-value">${match.skill_score.toFixed(0)}</div>
+                                    <div class="score-label">Skill</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="height: ${match.preference_score}%"></div>
+                                    </div>
+                                    <div class="score-value">${match.preference_score.toFixed(0)}</div>
+                                    <div class="score-label">Preference</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="height: ${match.fatigue_score}%"></div>
+                                    </div>
+                                    <div class="score-value">${match.fatigue_score.toFixed(0)}</div>
+                                    <div class="score-label">Fatigue</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            resultsDiv.innerHTML = html;
+            document.getElementById('results').classList.add('show');
+        }
+        
+        async function autoSendOffers() {
+            const shiftId = document.getElementById('shift-id').value;
+            
+            if (!confirm('Send OT offers to top 3 matched staff?')) {
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`/api/smart-matching/${shiftId}/send-offers/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        auto_send_count: 3
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to send offers');
+                }
+                
+                alert(`✅ Success! Sent ${data.offers_sent} OT offers (Batch ID: ${data.batch_id})`);
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

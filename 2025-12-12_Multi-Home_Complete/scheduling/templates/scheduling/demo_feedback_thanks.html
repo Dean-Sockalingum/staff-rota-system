@@ -1,0 +1,98 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Thank You - Demo Feedback{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0" style="border-radius: 15px;">
+                <div class="card-body text-center p-5">
+                    <!-- Success Icon -->
+                    <div class="mb-4">
+                        <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="50" cy="50" r="45" fill="#28a745" opacity="0.2"/>
+                            <circle cx="50" cy="50" r="35" fill="#28a745"/>
+                            <path d="M35 50 L45 60 L70 35" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    
+                    <!-- Thank You Message -->
+                    <h1 class="display-4 mb-3">Thank You! 🎉</h1>
+                    <p class="lead text-muted mb-4">
+                        Your feedback has been successfully submitted.
+                    </p>
+                    
+                    <div class="alert alert-info bg-light border-0" role="alert">
+                        <p class="mb-0">
+                            <strong>Your input is invaluable!</strong><br>
+                            We'll carefully review your feedback to improve the system and ensure it meets your needs.
+                        </p>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-5">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-5 me-3">
+                            <i class="fas fa-home"></i> Return to Dashboard
+                        </a>
+                        <a href="{% url 'ai_assistant_page' %}" class="btn btn-outline-secondary btn-lg px-5">
+                            <i class="fas fa-robot"></i> Try AI Assistant
+                        </a>
+                    </div>
+                    
+                    <!-- Additional Info -->
+                    <div class="mt-5 pt-4 border-top">
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-info-circle"></i> 
+                            Want to suggest a feature? 
+                            <a href="{% url 'submit_feature_request' %}">Submit a feature request</a>
+                        </p>
+                        <p class="text-muted small">
+                            Questions? Contact the development team at 
+                            <a href="mailto:support@example.com">support@example.com</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .card {
+        animation: slideUp 0.5s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    svg {
+        animation: scaleIn 0.6s ease-out 0.3s both;
+    }
+    
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}

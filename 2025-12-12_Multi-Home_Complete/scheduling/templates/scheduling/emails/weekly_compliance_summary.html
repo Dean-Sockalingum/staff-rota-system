@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Compliance Summary</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 700px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 600;
+        }
+        .header .date-range {
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #28a745;
+        }
+        .metric-value.compliance-rate::after {
+            content: '%';
+            font-size: 24px;
+        }
+        .metric-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #28a745;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+        .table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .trend-up {
+            color: #dc3545;
+        }
+        .trend-down {
+            color: #28a745;
+        }
+        .trend-stable {
+            color: #6c757d;
+        }
+        .action-items {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .action-items h3 {
+            margin-top: 0;
+            color: #004085;
+            font-size: 16px;
+        }
+        .action-items ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .action-items li {
+            margin: 8px 0;
+            color: #004085;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #28a745;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background-color: #218838;
+        }
+        .button-secondary {
+            background-color: #007bff;
+        }
+        .button-secondary:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 25px;
+        }
+        .highlight-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .highlight-box .big-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: #155724;
+        }
+        .highlight-box .label {
+            font-size: 14px;
+            color: #155724;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Weekly Compliance Summary</h1>
+            <div class="date-range">{{ week_start|date:"d M" }} - {{ week_end|date:"d M Y" }}</div>
+        </div>
+        
+        <div class="content">
+            <div class="highlight-box">
+                <div class="big-number compliance-rate">{{ compliance_rate }}</div>
+                <div class="label">Overall Compliance Rate</div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ total_checks }}</div>
+                    <div class="metric-label">Total Checks</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #dc3545;">{{ total_violations }}</div>
+                    <div class="metric-label">Total Violations</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ resolved_violations }}</div>
+                    <div class="metric-label">Resolved</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #ffc107;">{{ open_violations }}</div>
+                    <div class="metric-label">Still Open</div>
+                </div>
+            </div>
+            
+            {% if violations_by_category %}
+            <div class="section">
+                <h2>Violations by Category</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Count</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category, count in violations_by_category.items %}
+                        <tr>
+                            <td>{{ category|title }}</td>
+                            <td><strong>{{ count }}</strong></td>
+                            <td>
+                                {% if count > 5 %}
+                                    <span class="trend-up">📈 High</span>
+                                {% elif count > 2 %}
+                                    <span class="trend-stable">➡️ Moderate</span>
+                                {% else %}
+                                    <span class="trend-down">📉 Low</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if top_rules %}
+            <div class="section">
+                <h2>Top Violated Rules</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Rule</th>
+                            <th>Violations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule, count in top_rules %}
+                        <tr>
+                            <td>{{ rule }}</td>
+                            <td><strong>{{ count }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if action_items %}
+            <div class="action-items">
+                <h3>💡 Recommended Actions</h3>
+                <ul>
+                    {% for item in action_items %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="button-container">
+                <a href="{{ dashboard_url }}" class="button">View Full Compliance Dashboard</a>
+                <a href="{{ violations_url }}" class="button button-secondary">Manage Violations</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Staff Rota System - Weekly Compliance Summary</strong></p>
+            <p>This automated report provides a comprehensive overview of compliance activity for the past 7 days.</p>
+            <p>For detailed analytics, visit the <a href="{{ reports_url }}">Audit Reports</a> section.</p>
+        </div>
+    </div>
+</body>
+</html>

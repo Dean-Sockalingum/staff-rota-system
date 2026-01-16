@@ -1,0 +1,184 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Bulk Operations - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-tasks"></i> Bulk Operations</h2>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Undo Last Operation -->
+            {% if request.session.bulk_operation_history %}
+            <div class="alert alert-info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Last operation can be undone</strong>
+                        <br>
+                        <small class="text-muted">
+                            {{ request.session.bulk_operation_history|last|get_item:'type'|title }} operation performed at 
+                            {{ request.session.bulk_operation_history|last|get_item:'timestamp' }}
+                        </small>
+                    </div>
+                    <form method="post" action="{% url 'undo_last_bulk_operation' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to undo the last operation?')">
+                            <i class="fas fa-undo"></i> Undo Last Operation
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Operation Cards -->
+            <div class="row">
+                
+                <!-- Bulk Assign -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Bulk Assign Shifts</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                Assign shifts to multiple staff members across multiple dates at once.
+                            </p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Select staff and date range</li>
+                                <li><i class="fas fa-check text-success"></i> Choose shift type and unit</li>
+                                <li><i class="fas fa-check text-success"></i> Create hundreds of shifts instantly</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'bulk_assign_shifts' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-arrow-right"></i> Start Bulk Assign
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Delete -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-trash-alt"></i> Bulk Delete Shifts</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                Delete multiple shifts at once by criteria (date range, unit, staff).
+                            </p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Delete by date range</li>
+                                <li><i class="fas fa-check text-success"></i> Filter by unit or staff</li>
+                                <li><i class="fas fa-check text-success"></i> Undo option available</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'bulk_delete_shifts' %}" class="btn btn-danger btn-block">
+                                <i class="fas fa-arrow-right"></i> Start Bulk Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Copy Week -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-copy"></i> Copy Week Schedule</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                Duplicate an entire week's schedule to another week.
+                            </p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Copy from previous week</li>
+                                <li><i class="fas fa-check text-success"></i> Filter by unit or staff</li>
+                                <li><i class="fas fa-check text-success"></i> Perfect for recurring schedules</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'bulk_copy_week' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-arrow-right"></i> Start Copy Week
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Swap Staff -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Swap Staff Schedules</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                Exchange all shifts between two staff members in a date range.
+                            </p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Select two staff members</li>
+                                <li><i class="fas fa-check text-success"></i> Choose date range</li>
+                                <li><i class="fas fa-check text-success"></i> All shifts swapped instantly</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'bulk_swap_staff' %}" class="btn btn-warning btn-block">
+                                <i class="fas fa-arrow-right"></i> Start Swap Schedules
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Tips -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Tips for Bulk Operations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-exclamation-triangle text-warning"></i> Best Practices</h6>
+                            <ul>
+                                <li>Always preview before confirming</li>
+                                <li>Start with small date ranges</li>
+                                <li>Check for duplicates first</li>
+                                <li>Use undo if something goes wrong</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-clock text-primary"></i> Time Savings</h6>
+                            <ul>
+                                <li>Bulk Assign: 100 shifts in seconds</li>
+                                <li>Copy Week: Entire schedule duplicated</li>
+                                <li>Bulk Delete: Clear old rotas quickly</li>
+                                <li>Swap Staff: Instant schedule exchange</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

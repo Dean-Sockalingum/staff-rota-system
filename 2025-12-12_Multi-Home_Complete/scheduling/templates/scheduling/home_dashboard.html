@@ -1,0 +1,342 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}{{ care_home.display_name }} Dashboard - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-home"></i> {{ care_home.display_name }} Dashboard</h2>
+        <p class="text-muted">Welcome back, {{ user.full_name }}. {% if user.role %}{{ user.role.get_name_display }}{% endif %}</p>
+        
+        {% if can_select_home %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="care_home" class="form-label">Select Care Home</label>
+                            <select name="care_home" id="care_home" class="form-select" onchange="window.location.href='/home/' + this.value.toLowerCase().replace('_', '-') + '/'">
+                                {% for home in all_care_homes %}
+                                    <option value="{{ home.name }}" {% if care_home.name == home.name %}selected{% endif %}>
+                                        {{ home.display_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-lock"></i> You are viewing your assigned home: <strong>{{ care_home.display_name }}</strong>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% comment %} FULL and MOST Access: Sickness Absences {% endcomment %}
+{% if permission_level == 'FULL' or permission_level == 'MOST' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-procedures"></i> Currently Off Sick <span class="badge bg-light text-danger ms-2">{{ current_sickness_absences|length }}</span></h5>
+            </div>
+            <div class="card-body overflow-auto">
+                {% if current_sickness_absences %}
+                    {% for record in current_sickness_absences %}
+                        <div class="d-flex justify-content-between align-items-start border-bottom py-2 gap-3">
+                            <div class="flex-grow-1">
+                                <strong>{{ record.profile.user.full_name }}</strong>
+                                <div class="text-muted small">First working day sick: {{ record.first_working_day|date:"M j, Y" }}</div>
+                                {% if record.reason %}<div class="small">Reason: {{ record.reason }}</div>{% endif %}
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-white text-danger d-block mb-2">{{ record.get_status_display }}</span>
+                                {% if permission_level == 'FULL' %}
+                                <a class="btn btn-sm btn-danger" href="{% url 'staff_records:profile_detail' record.profile.user.sap %}">
+                                    <i class="fas fa-folder-open"></i> View Record
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No staff currently recorded as off sick.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} FULL and MOST Access: Recent Incidents {% endcomment %}
+{% if recent_incidents and permission_level in 'FULL,MOST' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card border-warning">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Recent Incidents (Last 24 Hours) <span class="badge bg-dark ms-2">{{ recent_incidents|length }}</span></h5>
+            </div>
+            <div class="card-body">
+                {% for incident in recent_incidents %}
+                    <div class="border-bottom py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ incident.get_incident_type_display }}</strong>
+                            <span class="text-muted">{{ incident.created_at|date:"M j, g:i A" }}</span>
+                        </div>
+                        <div class="text-muted small">{{ incident.unit.get_name_display }} • Reported by {{ incident.reported_by.full_name }}</div>
+                        {% if permission_level == 'FULL' %}
+                        <div class="mt-1">
+                            <a href="#" class="btn btn-sm btn-warning">View Details</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} FULL Access: Manual Review Required {% endcomment %}
+{% if manual_review_requests and permission_level == 'FULL' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Manual Review Required <span class="badge bg-light text-danger ms-2">{{ manual_review_requests|length }}</span></h5>
+            </div>
+            <div class="card-body">
+                {% for request in manual_review_requests %}
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-2 gap-3">
+                        <div class="flex-grow-1">
+                            <strong>{{ request.user.full_name }}</strong>
+                            <div class="text-muted small">{{ request.get_leave_type_display }}: {{ request.start_date|date:"M j" }} - {{ request.end_date|date:"M j, Y" }} ({{ request.days_requested }} days)</div>
+                            {% if request.reason %}<div class="small mt-1">{{ request.reason }}</div>{% endif %}
+                        </div>
+                        <div class="text-end">
+                            <a href="{% url 'leave_approval_dashboard' %}?request_id={{ request.id }}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-clipboard-check"></i> Review
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} FULL and MOST Access: Pending Leave Requests {% endcomment %}
+{% if pending_leave_requests and permission_level in 'FULL,MOST' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="fas fa-clock"></i> Pending Leave Requests <span class="badge bg-dark ms-2">{{ pending_leave_requests|length }}</span></h5>
+            </div>
+            <div class="card-body">
+                {% for request in pending_leave_requests %}
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-2 gap-3">
+                        <div class="flex-grow-1">
+                            <strong>{{ request.user.full_name }}</strong>
+                            <div class="text-muted small">{{ request.get_leave_type_display }}: {{ request.start_date|date:"M j" }} - {{ request.end_date|date:"M j, Y" }} ({{ request.days_requested }} days)</div>
+                        </div>
+                        <div class="text-end">
+                            {% if permission_level == 'FULL' %}
+                            <a href="{% url 'leave_approval_dashboard' %}?request_id={{ request.id }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-clipboard-check"></i> Review
+                            </a>
+                            {% else %}
+                            <span class="badge bg-warning">Awaiting Approval</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} FULL Access: Staff Reallocations {% endcomment %}
+{% if pending_reallocations and permission_level == 'FULL' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Staff Reallocations Needed <span class="badge bg-light text-info ms-2">{{ pending_reallocations|length }}</span></h5>
+            </div>
+            <div class="card-body">
+                {% for realloc in pending_reallocations %}
+                    <div class="border-bottom py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ realloc.target_unit.get_name_display }} - {{ realloc.target_shift_type.name }}</strong>
+                            <span class="badge bg-info">{{ realloc.target_date|date:"M j, Y" }}</span>
+                        </div>
+                        <div class="text-muted small">{{ realloc.positions_needed }} position(s) needed</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} ALL Levels: Today's Staffing Snapshot {% endcomment %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Today's Staffing Snapshot - {{ today|date:"l, F j, Y" }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Day Shift</th>
+                                <th>Night Shift</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit_name, summary in staffing_summary.items %}
+                                <tr>
+                                    <td><strong>{{ summary.unit.get_name_display }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if summary.day_status == 'good' %}success{% else %}danger{% endif %}">
+                                            {{ summary.day_actual }}/{{ summary.day_required }}
+                                        </span>
+                                        {% if permission_level in 'FULL,MOST' %}
+                                        <span class="text-muted small">• SSCW: {{ summary.day_supernumerary }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if summary.night_status == 'good' %}success{% else %}danger{% endif %}">
+                                            {{ summary.night_actual }}/{{ summary.night_required }}
+                                        </span>
+                                        {% if permission_level in 'FULL,MOST' %}
+                                        <span class="text-muted small">• SSCWN: {{ summary.night_supernumerary }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %} FULL and MOST Access: 7-Day Staffing Alerts {% endcomment %}
+{% if staffing_alerts and permission_level in 'FULL,MOST' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Staffing Alerts (Next 7 Days) <span class="badge bg-light text-danger ms-2">{{ staffing_alerts|length }}</span></h5>
+            </div>
+            <div class="card-body">
+                {% for alert in staffing_alerts %}
+                    <div class="border-bottom py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ alert.date|date:"l, M j" }} - {{ alert.shift }} Shift</strong>
+                            <span class="badge bg-danger">-{{ alert.deficit }} staff</span>
+                        </div>
+                        <div class="text-muted small">{{ alert.actual }}/{{ alert.required }} care staff scheduled</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} ALL Levels: Upcoming Approved Leave {% endcomment %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-check"></i> Upcoming Approved Leave <span class="badge bg-light text-success ms-2">{{ upcoming_approved_leave|length }}</span></h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if upcoming_approved_leave %}
+                    {% for request in upcoming_approved_leave %}
+                        <div class="border-bottom py-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ request.user.full_name }}</strong>
+                                <span class="badge bg-success">{{ request.get_leave_type_display }}</span>
+                            </div>
+                            <div class="text-muted small">{{ request.start_date|date:"M j" }} - {{ request.end_date|date:"M j, Y" }} ({{ request.days_requested }} days)</div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No upcoming approved leave.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %} LIMITED Access: User's Own Leave Requests {% endcomment %}
+{% if permission_level == 'LIMITED' and user_leave_requests %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card widget-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> My Leave Requests</h5>
+            </div>
+            <div class="card-body">
+                {% for request in user_leave_requests %}
+                    <div class="border-bottom py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ request.get_leave_type_display }}</strong>
+                            <span class="badge bg-{% if request.status == 'APPROVED' %}success{% elif request.status == 'DENIED' %}danger{% else %}warning{% endif %}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="text-muted small">{{ request.start_date|date:"M j" }} - {{ request.end_date|date:"M j, Y" }} ({{ request.days_requested }} days)</div>
+                        {% if request.reason %}<div class="small mt-1">{{ request.reason }}</div>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %} Quick Actions {% endcomment %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'rota_view' %}?care_home={{ care_home.name }}" class="btn btn-primary">
+                        <i class="fas fa-calendar"></i> View Rota
+                    </a>
+                    <a href="{% url 'request_annual_leave' %}" class="btn btn-success">
+                        <i class="fas fa-plane"></i> Request Leave
+                    </a>
+                    {% if permission_level == 'FULL' %}
+                    <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-warning">
+                        <i class="fas fa-clipboard-check"></i> Approve Leave
+                    </a>
+                    <a href="{% url 'staff_management' %}" class="btn btn-info">
+                        <i class="fas fa-users-cog"></i> Manage Staff
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'staff_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-user"></i> My Schedule
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

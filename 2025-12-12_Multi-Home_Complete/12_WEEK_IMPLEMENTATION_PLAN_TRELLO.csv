@@ -1,0 +1,231 @@
+Card Name,Card Description,List Name,Labels,Due Date,Members,Checklist Items
+"Epic 1: Production Infrastructure Setup","Duration: Weeks 1-2
+Owner: Technical Lead
+Goal: Configure production environment (SSL, email, secrets, backups)
+
+Budget: £5,149
+Effort: 60 hours","Backlog","Critical,Technical","Week 2","Technical Lead","SSL certificate installed and A+ rating achieved|Production email sending notifications|Secrets encrypted and secured|Gunicorn + Systemd service running|Automated backups configured and tested|Load testing passed (<2s avg response, <1% errors)|Monitoring and alerting operational|Security audit passed|Documentation complete and reviewed"
+"Task 1.1: SSL/TLS Certificate Installation","Install Let's Encrypt SSL certificate for HTTPS access. Configure Nginx reverse proxy and Django security settings.
+
+**Effort:** 4 hours
+**Week:** 1
+**Resources:** SSL_SETUP_GUIDE.md
+
+**Acceptance Criteria:**","To Do (This Week)","Critical,Technical","Week 1","Technical Lead","Domain name configured and DNS pointing to server|Certbot installed and SSL certificate obtained|Nginx configured with SSL (ports 80→443 redirect)|Django settings updated (SECURE_SSL_REDIRECT=True, HSTS enabled)|HTTPS accessible at production URL|SSL Labs test: A or A+ rating|Certificate auto-renewal tested (dry-run successful)"
+"Task 1.2: Production Email Configuration","Configure SMTP email backend (Gmail or SendGrid) for system notifications.
+
+**Effort:** 2 hours
+**Week:** 1
+**Dependencies:** None","To Do (This Week)","Critical,Technical","Week 1","Technical Lead","Email service selected (Gmail SMTP or SendGrid)|Django settings.py updated (EMAIL_BACKEND, EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS)|Test email sent successfully|Leave approval notification tested|2FA code email tested|Password reset email tested|Email logs reviewed (no errors)"
+"Task 1.3: Secrets Management Implementation","Secure sensitive configuration data (.env file encryption or Vault).
+
+**Effort:** 2 hours
+**Week:** 1
+**Dependencies:** Task 1.1 (SSL), Task 1.2 (Email)","To Do (This Week)","Critical,Technical","Week 1","Technical Lead","Environment file encrypted or migrated to Vault|SECRET_KEY secured|Database credentials secured|Email password secured|API keys secured (if any)|Environment variables loaded correctly in production|Test application startup with encrypted secrets|No plaintext secrets in Git history"
+"Task 1.4: Gunicorn + Systemd Service Setup","Configure Gunicorn as production WSGI server with Systemd for auto-start.
+
+**Effort:** 3 hours
+**Week:** 1
+**Dependencies:** Task 1.1 (SSL)","To Do (This Week)","High Priority,Technical","Week 1","Technical Lead","Gunicorn installed: pip3 install gunicorn|Gunicorn config file created (workers, timeout, logging)|Systemd service file created: /etc/systemd/system/staff-rota.service|Service enabled: sudo systemctl enable staff-rota|Service started: sudo systemctl start staff-rota|Service auto-starts on reboot (tested)|Application accessible via Nginx → Gunicorn|Static files served correctly|Logs written to /var/log/gunicorn/"
+"Task 1.5: Automated Backup Configuration","Set up automated daily/weekly backups for database and media files.
+
+**Effort:** 3 hours
+**Week:** 2
+**Dependencies:** Task 1.4 (Gunicorn)","To Do (This Week)","Critical,Technical","Week 2","Technical Lead","Backup script created: /usr/local/bin/backup-staff-rota.sh|Daily database dump: SQLite → .db file with timestamp|Weekly media files backup: /media/ → archive|Cron job scheduled: daily at 2am, weekly Sunday 3am|Backup location: NVMe drive + cloud (Google Drive/S3)|Restoration tested successfully (restore to test environment)|Backup retention policy: 30 daily, 12 weekly|Alert on backup failure (email notification)|Documentation: BACKUP_PROCEDURES.md created"
+"Task 1.6: Load Testing Execution","Perform load testing with 50+ concurrent users using Apache JMeter or Locust.
+
+**Effort:** 4 hours
+**Week:** 2
+**Dependencies:** Task 1.4, Task 1.5","To Do (This Week)","High Priority,Testing","Week 2","Technical Lead","Load testing tool installed (JMeter or Locust)|Test scenarios created (dashboards, leave requests, shifts, AI queries, charts, ML)|50 concurrent users simulated|Peak load: 100 req/s for 10 minutes|Average response time < 2 seconds|95th percentile < 3 seconds|Error rate < 1%|Database connection pool stable|Server resources monitored (CPU, RAM, disk I/O)|Results documented: LOAD_TESTING_RESULTS.md"
+"Task 1.7: Monitoring & Alerting Setup","Configure Sentry for error tracking and uptime monitoring.
+
+**Effort:** 2 hours
+**Week:** 2
+**Dependencies:** Task 1.4 (Gunicorn)","To Do (This Week)","Medium Priority,Technical","Week 2","Technical Lead","Sentry account created (free tier: 5k errors/month)|Django Sentry integration: pip install sentry-sdk|settings.py configured with Sentry DSN|Test error sent to Sentry (500 error triggered)|Error alerts configured (email/Slack)|Uptime monitoring enabled (UptimeRobot or similar)|SSL certificate expiration monitoring set up|Daily health check email (optional)"
+"Task 1.8: Security Audit","Run security checks and address any vulnerabilities.
+
+**Effort:** 3 hours
+**Week:** 2
+**Dependencies:** Task 1.1 (SSL), Task 1.3 (Secrets)","To Do (This Week)","High Priority,Technical","Week 2","Technical Lead","Django security check passed: python manage.py check --deploy|No security warnings in production settings|2FA tested for all manager accounts|API authentication tested (token-based endpoints)|Data isolation verified (no cross-home leaks)|SQL injection tests passed (OWASP ZAP or manual)|CSRF protection enabled and tested|XSS protection verified|Session timeout configured (30 minutes)|Password policy enforced (8+ chars, complexity)|Audit log reviewed (no suspicious activity)"
+"Task 1.9: Production Documentation Review","Review and update all production documentation.
+
+**Effort:** 2 hours
+**Week:** 2
+**Dependencies:** All Week 1-2 tasks","To Do (This Week)","Documentation","Week 2","Technical Lead","SSL_SETUP_GUIDE.md reviewed and accurate|UAT_PLAN.md reviewed and ready|PILOT_DEPLOYMENT_PLAN.md reviewed and ready|BACKUP_PROCEDURES.md created|LOAD_TESTING_RESULTS.md created|Runbook created: PRODUCTION_RUNBOOK.md|All documentation committed to GitHub"
+"Epic 2: User Acceptance Testing (UAT)","Duration: Weeks 3-4
+Owner: Service Manager + Technical Lead
+Goal: Validate system readiness with 5-10 staff testers
+
+Budget: £3,400
+Effort: 120 hours","Backlog","Critical,Testing","Week 4","Service Manager","60+ test scenarios executed|≥95% test pass rate achieved|All Critical/High defects resolved|User satisfaction ≥4.0/5.0|UAT Final Report approved by Service Manager"
+"Task 2.1: UAT Team Recruitment & Setup","Recruit 5-10 UAT testers across all roles. Set up test accounts and schedule training.
+
+**Effort:** 4 hours
+**Week:** 3
+**Dependencies:** Epic 1 complete","To Do (This Week)","Critical,Training","Week 3","Service Manager","5-10 testers recruited (2-3 OMs, 1 SM, 1-2 Senior Carers, 1-2 CAs, 1 Admin)|Test accounts created (uat_om1, uat_sm, etc.)|2FA configured for Service Manager and Admin accounts|UAT kickoff meeting scheduled (Week 3, Day 1)|Test data verified (5 homes, 821 staff, shifts, leave)|UAT environment accessible: https://staging.yourdomain.com|UAT_PLAN.md distributed to all testers|Training session scheduled (2 hours, Week 3 Day 1)"
+"Task 2.2: UAT Week 1 Execution - Core Features","Execute test scenarios for authentication, leave, shifts, AI chatbot, dashboards.
+
+**Effort:** 15 hours
+**Week:** 3
+**Dependencies:** Task 2.1","In Progress","Critical,Testing","Week 3","All UAT Testers","≥90% of Week 1 test cases executed|All Critical priority tests passed|Defects logged in GitHub Issues (with severity, screenshots)|Daily standup held (15 mins, review progress)|Mid-week survey distributed (Day 3)|Week 1 summary report compiled"
+"Task 2.3: Bug Fixes - Round 1","Fix all Critical and High priority bugs discovered during UAT Week 1.
+
+**Effort:** 10 hours
+**Week:** 3
+**Dependencies:** Task 2.2","To Do (This Week)","Critical,Technical","Week 3","Technical Lead","All Critical bugs fixed within 4 hours|All High priority bugs fixed within 24 hours|Fixes deployed to UAT environment|Regression testing completed|Defect status updated in GitHub Issues|Code changes committed to GitHub|Release notes created for fixes"
+"Task 2.4: UAT Week 2 Execution - Advanced Features","Execute remaining test scenarios: multi-home isolation, compliance, ML, performance.
+
+**Effort:** 14 hours
+**Week:** 4
+**Dependencies:** Task 2.3","To Do (This Week)","Critical,Testing","Week 4","All UAT Testers","100% of test cases executed|All CRITICAL tests passed (data isolation, security)|≥95% of HIGH priority tests passed|≥90% of MEDIUM priority tests passed|Concurrent user test completed (6-9 testers simultaneous)|Mobile responsiveness tested (iOS + Android)|Final user feedback survey completed|Week 2 summary report compiled"
+"Task 2.5: Bug Fixes - Round 2","Fix all remaining Critical/High bugs and address Medium priority issues.
+
+**Effort:** 8 hours
+**Week:** 4
+**Dependencies:** Task 2.4","To Do (This Week)","High Priority,Technical","Week 4","Technical Lead","All Critical bugs resolved|All High priority bugs resolved|≥80% of Medium priority bugs resolved|Low priority bugs documented for post-UAT|All fixes deployed and retested|Regression testing passed|Final defect log compiled"
+"Task 2.6: UAT Final Report & GO/NO-GO Decision","Compile UAT results, analyze feedback, make GO/NO-GO decision for pilot.
+
+**Effort:** 4 hours
+**Week:** 4
+**Dependencies:** Task 2.4, Task 2.5","To Do (This Week)","Critical,Documentation","Week 4 Friday","Service Manager + Technical Lead","UAT Summary Report created (10 pages)|User satisfaction score calculated (target: ≥4.0/5.0)|All mandatory success criteria met|GO/NO-GO decision made|If GO: Pilot deployment scheduled (Week 5)|If NO-GO: Issue resolution plan created"
+"Epic 3: Pilot Deployment (Month 1)","Duration: Weeks 5-8
+Owner: Service Manager + Technical Lead
+Goal: Deploy to Hawthorn House + Meadowburn (~117 staff)
+
+Budget: £2,063
+Effort: 180 hours","Backlog","Critical","Week 8","Service Manager","2 homes operational (Hawthorn, Meadowburn)|117 staff actively using system|≥99.5% uptime achieved|User satisfaction ≥4.3/5.0|Paper rotas eliminated (100% digital)|Pilot Final Report approved"
+"Task 3.1: Pre-Pilot Preparation","Complete all pre-pilot setup: data verification, training materials, staff training.
+
+**Effort:** 20 hours
+**Week:** 4-5 transition
+**Dependencies:** UAT GO decision","To Do (This Week)","Critical,Training","Week 5","Technical Lead + OMs","Care home data verified (Hawthorn, Meadowburn complete)|All 117 pilot staff profiles imported|Historical shifts loaded (3 months for ML)|Leave balances verified with payroll|Training records imported (18 course types)|Quick start guides printed (120 copies)|Training videos recorded (5 key features, 15 mins each)|Training sessions conducted (OMs, Senior Carers, CAs)|Go-live announcement email sent|Support hotline number published"
+"Task 3.2: Pilot Go-Live (Day 1)","Launch system at pilot homes. Provide on-site support, monitor first logins.
+
+**Effort:** 10 hours
+**Week:** 5 Monday
+**Dependencies:** Task 3.1","To Do (This Week)","Critical","Week 5 Monday","Technical Lead","08:00 - System health check|08:30 - Go-live email sent to all 117 pilot staff|09:00 - On-site support at Hawthorn House|13:00 - On-site support at Meadowburn|No critical incidents|≥50% of pilot staff logged in|Day 1 Summary Report completed"
+"Task 3.3: Pilot Week 1 Daily Support","Provide extended support (8am-8pm) during first week.
+
+**Effort:** 40 hours
+**Week:** 5
+**Dependencies:** Task 3.2","In Progress","Critical","Week 5","Technical Lead","Day 2: First shifts worked from system|Day 3: First leave auto-approvals|Day 4: First manager leave approvals|Day 5: First AI chatbot queries|≥80% pilot staff logged in|≥20 leave requests submitted|≥100 shifts created/edited|<5 medium priority issues|0 critical incidents|User satisfaction ≥3.5/5.0"
+"Task 3.4: Pilot Week 2 Standard Support","Reduce to standard support. Focus on feature adoption.
+
+**Effort:** 20 hours
+**Week:** 6
+**Dependencies:** Task 3.3","To Do (This Week)","High Priority","Week 6","Technical Lead","On-site support 2 days/week (Wed, Fri)|Day 8: First executive dashboard usage|Day 9: First ML forecast generated|Day 14: Mid-pilot survey distributed|≥95% pilot staff active|≥50 leave requests total|≥300 shifts managed|≥50 AI chatbot queries|User satisfaction ≥4.0/5.0"
+"Task 3.5: Paper Rota Elimination","Full transition to digital rotas. Discontinue all paper-based processes.
+
+**Effort:** 10 hours
+**Week:** 7
+**Dependencies:** Task 3.4","To Do (This Week)","High Priority","Week 7","Operational Managers","Day 15: Last paper rota discontinued at Hawthorn|Day 16: Last paper rota discontinued at Meadowburn|100% shifts managed through system|100% digital rota adoption (0% paper)|≥80 leave requests total|≥500 shifts managed|User satisfaction ≥4.2/5.0"
+"Task 3.6: Pilot Week 3 Minimal Support","Reduce to minimal support (on-demand only).
+
+**Effort:** 10 hours
+**Week:** 7
+**Dependencies:** Task 3.5","To Do (This Week)","Medium Priority","Week 7","Technical Lead","On-site support 1 day/week (Thursday)|Day 19: First automated compliance alert|Day 21: Week 3 user survey + manager interviews|Support tickets <3/day|No critical or high priority issues|User confidence high"
+"Task 3.7: Pilot Final Week Monitoring","Monitor system stability, collect final feedback.
+
+**Effort:** 10 hours
+**Week:** 8
+**Dependencies:** Task 3.6","To Do (This Week)","High Priority","Week 8","Technical Lead","Day 22: System performance review|Day 24: Security audit (data isolation, auth logs)|Day 26: Final user survey distributed|Day 28: Pilot review meeting|Uptime ≥99.5%|User satisfaction ≥4.3/5.0|≥100 leave requests total|≥700 shifts managed"
+"Task 3.8: Pilot Final Report & GO/NO-GO","Compile pilot results, evaluate success criteria.
+
+**Effort:** 6 hours
+**Week:** 8 Friday
+**Dependencies:** Task 3.7","To Do (This Week)","Critical,Documentation","Week 8 Friday","Service Manager + Technical Lead","Pilot Summary Report created (15 pages)|All mandatory success criteria met|GO/NO-GO decision for phased rollout|If GO: Riverside deployment scheduled (Week 9)|Lessons learned documented|Updated training materials"
+"Epic 4: Phased Rollout (Homes 3-4)","Duration: Weeks 9-10
+Owner: Service Manager + OMs
+Goal: Deploy to Riverside (Week 9) and Victoria Gardens (Week 10)
+
+Effort: 80 hours","Backlog","High Priority","Week 10","Service Manager","4 homes operational|~330 staff using system (40% of total)|All homes stable with minimal support|Multi-home dashboard functional"
+"Task 4.1: Riverside Pre-Deployment Prep","Prepare Riverside for deployment. Data verification, staff training.
+
+**Effort:** 12 hours
+**Week:** 9 Mon-Wed
+**Dependencies:** Pilot GO decision","To Do (This Week)","High Priority,Training","Week 9","Riverside OMs + Technical Lead","Riverside data verified (staff profiles, shifts, leave)|Training materials updated (lessons from pilot)|Training sessions conducted (OMs, Senior Carers, CAs)|Go-live announcement sent|Quick start guides distributed|Test accounts created for OMs"
+"Task 4.2: Riverside Go-Live & Week 1 Support","Deploy to Riverside. Provide on-site support Thursday-Friday.
+
+**Effort:** 20 hours
+**Week:** 9 Thu-Fri
+**Dependencies:** Task 4.1","To Do (This Week)","Critical","Week 9 Thursday","Technical Lead + Riverside OMs","Thursday: Go-live|Friday: Full day on-site support|≥70% Riverside staff logged in by Friday|First leave requests submitted|First shifts created|No critical incidents"
+"Task 4.3: Victoria Gardens Pre-Deployment","Prepare Victoria Gardens. Leverage lessons from 3 previous homes.
+
+**Effort:** 12 hours
+**Week:** 10 Mon-Wed
+**Dependencies:** Task 4.2 (Riverside stable)","To Do (This Week)","High Priority,Training","Week 10","Victoria OMs + Technical Lead","Victoria Gardens data verified|Training materials refined (3rd iteration)|Training sessions conducted|Go-live announcement sent|Materials distributed|Test accounts created"
+"Task 4.4: Victoria Gardens Go-Live","Deploy to Victoria Gardens. 4th home deployment.
+
+**Effort:** 20 hours
+**Week:** 10 Thu-Fri
+**Dependencies:** Task 4.3","To Do (This Week)","Critical","Week 10 Thursday","Technical Lead + Victoria OMs","Thursday: Go-live|Friday: On-site support|≥80% Victoria staff logged in by Friday|First workflows completed|No critical incidents|Riverside week 2 also monitored"
+"Task 4.5: Multi-Home Monitoring Dashboard","Review executive multi-home dashboard with all 4 homes.
+
+**Effort:** 4 hours
+**Week:** 10 Friday
+**Dependencies:** 4 homes operational","To Do (This Week)","Medium Priority","Week 10 Friday","Service Manager","Executive dashboard shows all 4 homes|Comparative metrics working (staffing, leave, sickness, training, coverage)|CI Performance Dashboard peer benchmarking updated|Budget variance tracking across all homes|No data cross-contamination (isolation verified)"
+"Epic 5: Final Rollout & Full Production","Duration: Weeks 11-12
+Owner: Service Manager
+Goal: Deploy 5th home, achieve full production
+
+Effort: 60 hours","Backlog","Critical","Week 12","Service Manager","All 5 homes operational|821 staff active|System performance optimized|Compliance verified|Support model established|12-week retrospective complete"
+"Task 5.1: 5th Home Pre-Deployment Prep","Prepare final care home for deployment.
+
+**Effort:** 10 hours
+**Week:** 11 Mon-Wed
+**Dependencies:** 4 homes stable","To Do (This Week)","High Priority,Training","Week 11","5th Home OMs + Technical Lead","5th home identified|Data verified|Training conducted (streamlined, 1-day process)|Go-live scheduled for Thursday"
+"Task 5.2: 5th Home Go-Live","Final home deployment. Complete coverage of all 5 care homes.
+
+**Effort:** 16 hours
+**Week:** 11 Thu-Fri
+**Dependencies:** Task 5.1","To Do (This Week)","Critical","Week 11 Thursday","5th Home OMs + Technical Lead","Thursday: Successful go-live|Friday: On-site support|≥85% staff logged in by Friday|All workflows functional|No critical incidents across all 5 homes"
+"Task 5.3: Full Production Celebration","Announce full production achievement. Celebrate success.
+
+**Effort:** 2 hours
+**Week:** 11 Friday
+**Dependencies:** Task 5.2","To Do (This Week)","Low Priority","Week 11 Friday","Service Manager","Email announcement to all 821 staff|Executive briefing to Head of Service|Success metrics compiled|Internal newsletter article|Thank you to pilot homes and UAT testers"
+"Task 5.4: System-Wide Performance Review","Comprehensive performance review across all homes.
+
+**Effort:** 6 hours
+**Week:** 12 Mon-Tue
+**Dependencies:** All 5 homes live 1 week","To Do (This Week)","High Priority,Technical","Week 12","Technical Lead","Page load times measured (all dashboards)|Database query performance analyzed|Server resource utilization reviewed|Bottlenecks identified|Optimization plan created (if needed)|Capacity planning for growth"
+"Task 5.5: Executive Dashboard Enhancement Review","Review executive dashboards with all 5 homes data.
+
+**Effort:** 4 hours
+**Week:** 12 Wed
+**Dependencies:** All 5 homes data available","To Do (This Week)","Medium Priority","Week 12 Wednesday","Service Manager + Technical Lead","All 7 executive dashboards tested|Multi-home comparisons working|Chart.js visualizations rendering correctly|Excel exports functional|Traffic light indicators accurate|Benchmark calculations correct|Service Manager satisfied with insights"
+"Task 5.6: Compliance & Audit Trail Verification","Verify compliance monitoring and audit trail completeness.
+
+**Effort:** 4 hours
+**Week:** 12 Thu
+**Dependencies:** 2 weeks of production data","To Do (This Week)","High Priority","Week 12 Thursday","Technical Lead","Audit trail tested (leave approvals, shift changes, user actions, admin actions)|Compliance rules running (training alerts, supervision alerts, induction tracking, incidents)|Care Inspectorate data accurate|No compliance gaps identified"
+"Task 5.7: 12-Week Retrospective","Conduct comprehensive retrospective on 12-week implementation.
+
+**Effort:** 3 hours
+**Week:** 12 Friday
+**Dependencies:** Week 12 end","To Do (This Week)","Documentation","Week 12 Friday","Service Manager + Technical Lead + OMs","Retrospective meeting held (all 9 OMs, SM, Technical Lead)|What went well documented|What could be improved documented|Surprises/learnings captured|Recommendations for future projects|Success stories collected (testimonials)|Metrics compiled"
+"Task 5.8: Production Handover & Support Plan","Formalize ongoing support model. Transition to steady-state operations.
+
+**Effort:** 4 hours
+**Week:** 12 Friday
+**Dependencies:** Task 5.7","To Do (This Week)","Critical,Documentation","Week 12 Friday","Service Manager + Technical Lead","Support tiers defined (4 tiers)|Support hours: 9am-5pm Mon-Fri|Emergency contact for critical issues|Monthly review meeting scheduled (ongoing)|Quarterly user satisfaction survey scheduled|Annual system health check scheduled|Support SLA documented|Handover complete"
+"Epic 6: Glasgow HSCP Pitch Preparation","Duration: Week 13+
+Owner: Service Manager + Head of Service
+Goal: Prepare and deliver pitch to Glasgow HSCP
+
+Effort: 16 hours","Backlog","Medium Priority","Week 14+","Service Manager","Pitch deck created|Demo rehearsed|Pitch delivered to Glasgow HSCP|Next steps agreed"
+"Task 6.1: Glasgow HSCP Pitch Deck Creation","Create executive presentation for Glasgow HSCP.
+
+**Effort:** 8 hours
+**Week:** 13
+**Dependencies:** Full production achieved","To Do (This Week)","Medium Priority,Documentation","Week 13","Service Manager + Technical Lead","Pitch deck created: GLASGOW_HSCP_PITCH.md|10 sections included (Problem, Solution, AI/ML, Cost, ROI, Timeline, Risk, Support, Demo, Q&A)|PowerPoint slides created (20-30 slides)|Demo environment prepared|Case study compiled (Hawthorn testimonial)|ROI calculator spreadsheet created"
+"Task 6.2: Live Demo Rehearsal","Rehearse live demo for Glasgow HSCP presentation.
+
+**Effort:** 4 hours
+**Week:** 13
+**Dependencies:** Task 6.1","To Do (This Week)","Medium Priority,Training","Week 13","Service Manager + Technical Lead","Demo script written (7 sections, 15 mins total)|Demo data prepared (realistic scenarios)|Rehearsal completed (timed to 15 mins)|Backup plan for technical issues|Screen recording created (backup)"
+"Task 6.3: Glasgow HSCP Pitch Delivery","Deliver pitch to Glasgow HSCP stakeholders.
+
+**Effort:** 4 hours
+**Week:** 14+
+**Dependencies:** Task 6.2","To Do (This Week)","High Priority","Week 14+","Head of Service + Service Manager","Meeting scheduled with Glasgow HSCP decision-makers|Pitch deck presented (30 mins)|Live demo conducted (15 mins)|Q&A handled (15 mins)|Follow-up materials provided|Next steps agreed (pilot with HSCP homes or full rollout)"

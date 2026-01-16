@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <!-- Print header -->
+    <div class="print-title">{{ title }}</div>
+    <div class="print-date">Generated: {{ generated_date|date:"d/m/Y H:i" }}</div>
+    
+    <!-- Report metadata -->
+    <div class="print-info">
+        <strong>Report Type:</strong> {{ report_type }}<br>
+        {% if home %}<strong>Home:</strong> {{ home.name }}<br>{% endif %}
+        <strong>Period:</strong> {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}<br>
+        <strong>Total Requests:</strong> {{ total_requests }}
+    </div>
+    
+    <!-- Summary statistics -->
+    <h2>Leave Request Summary</h2>
+    
+    <table style="width: 50%">
+        <tr>
+            <th>Status</th>
+            <th>Count</th>
+        </tr>
+        <tr>
+            <td>✅ Approved</td>
+            <td><strong>{{ approved_requests.count }}</strong></td>
+        </tr>
+        <tr>
+            <td>⏳ Pending</td>
+            <td><strong>{{ pending_requests.count }}</strong></td>
+        </tr>
+        <tr>
+            <td>❌ Rejected</td>
+            <td><strong>{{ rejected_requests.count }}</strong></td>
+        </tr>
+    </table>
+    
+    <!-- Approved leave requests -->
+    {% if approved_requests %}
+    <div class="page-break-before"></div>
+    <h2>Approved Leave Requests</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%">Staff Member</th>
+                <th style="width: 15%">Start Date</th>
+                <th style="width: 15%">End Date</th>
+                <th style="width: 10%">Days</th>
+                <th style="width: 35%">Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in approved_requests %}
+            <tr>
+                <td>{{ request.staff.first_name }} {{ request.staff.last_name }}</td>
+                <td>{{ request.start_date|date:"d/m/Y" }}</td>
+                <td>{{ request.end_date|date:"d/m/Y" }}</td>
+                <td>{{ request.get_days_count }}</td>
+                <td style="font-size: 9pt">{{ request.reason|truncatewords:12 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Pending leave requests -->
+    {% if pending_requests %}
+    <div class="page-break-before"></div>
+    <h2>Pending Leave Requests</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%">Staff Member</th>
+                <th style="width: 15%">Start Date</th>
+                <th style="width: 15%">End Date</th>
+                <th style="width: 10%">Days</th>
+                <th style="width: 35%">Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in pending_requests %}
+            <tr>
+                <td>{{ request.staff.first_name }} {{ request.staff.last_name }}</td>
+                <td>{{ request.start_date|date:"d/m/Y" }}</td>
+                <td>{{ request.end_date|date:"d/m/Y" }}</td>
+                <td>{{ request.get_days_count }}</td>
+                <td style="font-size: 9pt">{{ request.reason|truncatewords:12 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Rejected leave requests -->
+    {% if rejected_requests %}
+    <div class="page-break-before"></div>
+    <h2>Rejected Leave Requests</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%">Staff Member</th>
+                <th style="width: 15%">Start Date</th>
+                <th style="width: 15%">End Date</th>
+                <th style="width: 10%">Days</th>
+                <th style="width: 35%">Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in rejected_requests %}
+            <tr>
+                <td>{{ request.staff.first_name }} {{ request.staff.last_name }}</td>
+                <td>{{ request.start_date|date:"d/m/Y" }}</td>
+                <td>{{ request.end_date|date:"d/m/Y" }}</td>
+                <td>{{ request.get_days_count }}</td>
+                <td style="font-size: 9pt">{{ request.reason|truncatewords:12 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Footer -->
+    <div class="print-footer">
+        <p>Glasgow HSCP - Staff Rota Management System | Confidential Document</p>
+    </div>
+</body>
+</html>

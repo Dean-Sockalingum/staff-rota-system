@@ -1,0 +1,232 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{{ dashboard.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-view-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .widget-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .widget {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .widget:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .widget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+    
+    .widget-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .widget-refresh {
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .widget-refresh:hover {
+        color: #667eea;
+        transform: rotate(180deg);
+    }
+    
+    .widget-body {
+        position: relative;
+        min-height: 300px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    
+    .stat-card-value {
+        font-size: 3rem;
+        font-weight: 700;
+        text-align: center;
+        margin: 2rem 0;
+    }
+    
+    .stat-card-label {
+        text-align: center;
+        color: #6b7280;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .stat-card-icon {
+        text-align: center;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    .widget-error {
+        background: #fee2e2;
+        border: 1px solid #ef4444;
+        border-radius: 8px;
+        padding: 1rem;
+        color: #991b1b;
+        text-align: center;
+    }
+    
+    .refresh-badge {
+        background: #f3f4f6;
+        color: #6b7280;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-view-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-th-large"></i> {{ dashboard.name }}</h1>
+                {% if dashboard.description %}
+                <p class="mb-0">{{ dashboard.description }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <a href="{% url 'dashboard_builder' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                {% if dashboard.created_by == request.user or request.user.is_superuser %}
+                <a href="{% url 'dashboard_edit' dashboard.id %}" class="btn btn-light">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if widget_data %}
+    <div class="widget-grid">
+        {% for item in widget_data %}
+        <div class="widget">
+            <div class="widget-header">
+                <div class="widget-title">{{ item.widget.title }}</div>
+                <div>
+                    <span class="refresh-badge me-2">
+                        {{ item.widget.get_refresh_interval_display }}
+                    </span>
+                    <i class="fas fa-sync-alt widget-refresh" onclick="refreshWidget({{ item.widget.id }})"></i>
+                </div>
+            </div>
+            
+            <div class="widget-body">
+                {% if item.data.error %}
+                <div class="widget-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>{{ item.data.error }}</div>
+                </div>
+                {% elif item.widget.chart_type == 'STAT_CARD' %}
+                <!-- Stat Card -->
+                <div class="stat-card-icon" style="color: {{ item.data.color }}">
+                    <i class="fas fa-{{ item.data.icon }}"></i>
+                </div>
+                <div class="stat-card-value" style="color: {{ item.data.color }}">
+                    {{ item.data.value }}
+                </div>
+                <div class="stat-card-label">{{ item.data.label }}</div>
+                
+                {% elif item.widget.chart_type == 'TABLE' %}
+                <!-- Data Table -->
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                {% for label in item.data.labels %}
+                                <th>{{ label }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in item.data.data %}
+                            <tr>
+                                {% for cell in row %}
+                                <td>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% else %}
+                <!-- Chart -->
+                <div class="chart-container">
+                    <canvas id="chart-{{ item.widget.id }}"></canvas>
+                </div>
+                
+                <script>
+                (function() {
+                    const ctx = document.getElementById('chart-{{ item.widget.id }}').getContext('2d');
+                    const config = {{ item.chart_config|safe }};
+                    new Chart(ctx, config);
+                })();
+                </script>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-th-large fa-4x text-muted mb-3"></i>
+        <h3>No Widgets</h3>
+        <p class="text-muted">Add widgets to this dashboard to start visualizing data</p>
+        {% if dashboard.created_by == request.user or request.user.is_superuser %}
+        <a href="{% url 'dashboard_edit' dashboard.id %}" class="btn btn-primary mt-3">
+            <i class="fas fa-plus"></i> Add Widgets
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function refreshWidget(widgetId) {
+    // Reload the page to refresh all widgets
+    window.location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Learning Pathways{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-route"></i> Learning Pathways
+            </h1>
+            <p class="lead">
+                Explore career development pathways to progress your skills and advance your career.
+            </p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Starting Role</label>
+                            <select name="from_role" class="form-select">
+                                <option value="">All Roles</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.id }}" {% if request.GET.from_role == role.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Target Role</label>
+                            <select name="to_role" class="form-select">
+                                <option value="">All Roles</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.id }}" {% if request.GET.to_role == role.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{% url 'training_competency:learning_pathways' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pathways Grid -->
+    <div class="row">
+        {% if pathways %}
+            {% for pathway in pathways %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">{{ pathway.title }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="badge bg-secondary">{{ pathway.from_role.name }}</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                    <span class="badge bg-success">{{ pathway.to_role.name }}</span>
+                                </div>
+                            </div>
+                            
+                            <p class="card-text">{{ pathway.description|truncatewords:30 }}</p>
+                            
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fas fa-clock text-primary"></i> 
+                                    <strong>Duration:</strong> {{ pathway.estimated_duration_months }} months
+                                </li>
+                                <li>
+                                    <i class="fas fa-hourglass text-info"></i> 
+                                    <strong>Learning Hours:</strong> {{ pathway.total_learning_hours|default:"TBD" }}
+                                </li>
+                                {% if pathway.prerequisites %}
+                                    <li>
+                                        <i class="fas fa-exclamation-triangle text-warning"></i> 
+                                        <strong>Prerequisites required</strong>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                            
+                            {% if pathway.owner %}
+                                <p class="text-muted small mb-3">
+                                    <i class="fas fa-user"></i> Managed by {{ pathway.owner.get_full_name }}
+                                </p>
+                            {% endif %}
+                            
+                            <a href="{% url 'training_competency:pathway_detail' pathway.pk %}" 
+                               class="btn btn-primary btn-block w-100">
+                                View Details <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No learning pathways found matching your criteria.
+                    {% if request.user.role %}
+                        <br>Try selecting "{{ request.user.role.name }}" as your starting role to see pathways available to you.
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

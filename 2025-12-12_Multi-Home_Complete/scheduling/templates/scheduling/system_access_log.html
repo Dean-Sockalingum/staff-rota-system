@@ -1,0 +1,276 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Access Logs - Audit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-panel {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-panel .form-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+    }
+    
+    .filter-panel .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .log-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .log-table table {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .log-table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .log-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .log-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .log-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .access-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .access-login { background-color: #d1ecf1; color: #0c5460; }
+    .access-logout { background-color: #e2e3e5; color: #383d41; }
+    .access-login_failed { background-color: #f8d7da; color: #721c24; }
+    .access-session_expired { background-color: #fff3cd; color: #856404; }
+    .access-password_change { background-color: #d4edda; color: #155724; }
+    .access-password_reset { background-color: #cce5ff; color: #004085; }
+    
+    .success-icon {
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .failure-icon {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .pagination {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #007bff;
+    }
+    
+    .pagination .current {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .pagination a:hover {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-key"></i> System Access Logs</h2>
+        <a href="{% url 'audit_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Audit Dashboard
+        </a>
+    </div>
+    
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+        <form method="get" id="filterForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="access_type">Access Type</label>
+                    <select name="access_type" id="access_type" class="form-control" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Types</option>
+                        {% for value, label in access_types %}
+                            <option value="{{ value }}" {% if current_filters.access_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="success">Status</label>
+                    <select name="success" id="success" class="form-control" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All</option>
+                        <option value="true" {% if current_filters.success == 'true' %}selected{% endif %}>Success</option>
+                        <option value="false" {% if current_filters.success == 'false' %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user_sap">User SAP</label>
+                    <input type="text" name="user_sap" id="user_sap" class="form-control" 
+                           placeholder="e.g. ADMIN001" value="{{ current_filters.user_sap }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="days">Time Period</label>
+                    <select name="days" id="days" class="form-control" onchange="document.getElementById('filterForm').submit()">
+                        <option value="1" {% if current_filters.days == '1' %}selected{% endif %}>Last 24 hours</option>
+                        <option value="7" {% if current_filters.days == '7' %}selected{% endif %}>Last 7 days</option>
+                        <option value="30" {% if current_filters.days == '30' %}selected{% endif %}>Last 30 days</option>
+                        <option value="90" {% if current_filters.days == '90' %}selected{% endif %}>Last 90 days</option>
+                        <option value="" {% if not current_filters.days %}selected{% endif %}>All time</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'system_access_log_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Results Summary -->
+    <div class="alert alert-info mb-3">
+        <i class="fas fa-info-circle"></i> 
+        Showing {{ page_obj.paginator.count }} access log{{ page_obj.paginator.count|pluralize }} 
+        {% if current_filters.access_type or current_filters.success or current_filters.user_sap or current_filters.days %}
+            (filtered)
+        {% endif %}
+    </div>
+    
+    <!-- Access Logs Table -->
+    <div class="log-table">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 150px;">Timestamp</th>
+                    <th style="width: 100px;">User</th>
+                    <th style="width: 140px;">Access Type</th>
+                    <th style="width: 80px;">Status</th>
+                    <th style="width: 120px;">IP Address</th>
+                    <th>User Agent</th>
+                    <th style="width: 100px;">Session</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if page_obj %}
+                    {% for log in page_obj %}
+                        <tr>
+                            <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                            <td>
+                                {% if log.user %}
+                                    <strong>{{ log.user.sap }}</strong><br>
+                                    <small class="text-muted">{{ log.user.get_full_name }}</small>
+                                {% else %}
+                                    <em class="text-muted">Anonymous</em>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="access-badge access-{{ log.access_type|lower }}">
+                                    {{ log.get_access_type_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if log.success %}
+                                    <span class="success-icon" title="Success">✓</span>
+                                {% else %}
+                                    <span class="failure-icon" title="Failed">✗</span>
+                                    {% if log.failure_reason %}
+                                        <br><small class="text-danger">{{ log.failure_reason|truncatewords:5 }}</small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ log.ip_address|default:"-" }}</code>
+                                {% if log.country or log.city %}
+                                    <br><small class="text-muted">
+                                        {{ log.city|default:"" }}{% if log.city and log.country %}, {% endif %}{{ log.country|default:"" }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ log.user_agent|default:"-"|truncatewords:10 }}</small>
+                            </td>
+                            <td>
+                                {% if log.session_key %}
+                                    <code class="small">{{ log.session_key|slice:":8" }}...</code>
+                                {% else %}
+                                    <em class="text-muted">-</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            No access logs found matching the selected filters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Previous</a>
+            {% endif %}
+            
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Last &raquo;</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

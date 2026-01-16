@@ -1,0 +1,273 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Intelligent OT Distribution{% endblock %}
+
+{% block extra_css %}
+<style>
+    .score-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9em;
+    }
+    .score-excellent { background: #10b981; color: white; }
+    .score-good { background: #3b82f6; color: white; }
+    .score-fair { background: #f59e0b; color: white; }
+    .score-poor { background: #ef4444; color: white; }
+    
+    .fairness-meter {
+        height: 30px;
+        background: linear-gradient(to right, #ef4444, #f59e0b, #10b981);
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    .fairness-indicator {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background: white;
+        border: 2px solid #1f2937;
+        transition: left 0.5s;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .leaderboard-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .leaderboard-rank {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #9ca3af;
+        min-width: 40px;
+    }
+    .leaderboard-rank.top-3 {
+        color: #f59e0b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-brain"></i> Intelligent OT Distribution Dashboard</h2>
+            <p class="text-muted">AI-powered overtime allocation for fairness and efficiency</p>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ ot_staff_count }}</div>
+                <div class="stat-label">Available for OT</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ fairness_score|floatformat:0 }}%</div>
+                <div class="stat-label">Fairness Score</div>
+                <div class="fairness-meter mt-2">
+                    <div class="fairness-indicator" style="left: {{ fairness_score }}%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_response_time|floatformat:0 }}<small>min</small></div>
+                <div class="stat-label">Avg Response Time</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_ot_shifts_30d }}</div>
+                <div class="stat-label">OT Shifts (30 days)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Top Performers Leaderboard -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Top Performers</h5>
+                    <small>Highest acceptance rate + most shifts worked</small>
+                </div>
+                <div class="card-body p-0">
+                    {% for pref in top_performers %}
+                    <div class="leaderboard-item">
+                        <div class="leaderboard-rank {% if forloop.counter <= 3 %}top-3{% endif %}">
+                            #{{ forloop.counter }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>{{ pref.staff.full_name }}</strong>
+                            <div class="text-muted small">
+                                {{ pref.staff.role.name }} • {{ pref.total_shifts_worked }} shifts
+                            </div>
+                        </div>
+                        <div>
+                            <span class="score-badge {% if pref.acceptance_rate >= 80 %}score-excellent{% elif pref.acceptance_rate >= 60 %}score-good{% elif pref.acceptance_rate >= 40 %}score-fair{% else %}score-poor{% endif %}">
+                                {{ pref.acceptance_rate|floatformat:0 }}%
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted">
+                        No OT data yet
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'ot_fairness_report' %}" class="btn btn-sm btn-outline-primary">
+                        View Full Fairness Report <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Coverage Requests -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Coverage Requests</h5>
+                    <small>Last 20 intelligent OT callouts</small>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Unit</th>
+                                <th>Contacted</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in recent_requests %}
+                            <tr>
+                                <td>{{ req.shift_date|date:"M d" }}</td>
+                                <td>{{ req.unit.name }}</td>
+                                <td>{{ req.total_contacted }}</td>
+                                <td>
+                                    {% if req.status == 'FILLED' %}
+                                        <span class="badge badge-success">Filled</span>
+                                    {% elif req.status == 'CANCELLED' %}
+                                        <span class="badge badge-secondary">Cancelled</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if req.time_to_fill_minutes %}
+                                        {{ req.time_to_fill_minutes }}min
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No coverage requests yet
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5><i class="fas fa-tools"></i> Quick Actions</h5>
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'ot_staff_rankings' %}" class="btn btn-primary">
+                            <i class="fas fa-list-ol"></i> View Live Rankings
+                        </a>
+                        <a href="{% url 'ot_fairness_report' %}" class="btn btn-info">
+                            <i class="fas fa-balance-scale"></i> Fairness Report
+                        </a>
+                        <a href="{% url 'admin:scheduling_staffovertimepreference_changelist' %}" class="btn btn-secondary">
+                            <i class="fas fa-cog"></i> Manage Preferences
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works Explainer -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> How Intelligent OT Works</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6><i class="fas fa-1"></i> Detection</h6>
+                            <p class="text-muted small">System detects uncovered shift or staffing gap</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6><i class="fas fa-2"></i> Ranking</h6>
+                            <p class="text-muted small">AI ranks all eligible staff by availability, fairness, acceptance rate</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6><i class="fas fa-3"></i> Contact</h6>
+                            <p class="text-muted small">Top 5 staff contacted automatically via SMS/app</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6><i class="fas fa-4"></i> Learn</h6>
+                            <p class="text-muted small">System learns from responses to improve future rankings</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Fairness Algorithm</h6>
+                    <p class="text-muted small mb-0">
+                        <strong>Score = </strong>
+                        40% Availability + 
+                        25% Acceptance Rate + 
+                        20% Fairness (recent OT hours) + 
+                        10% Proximity + 
+                        5% Reliability
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

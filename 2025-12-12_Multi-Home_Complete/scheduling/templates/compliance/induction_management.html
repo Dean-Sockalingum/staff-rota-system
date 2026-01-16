@@ -1,0 +1,90 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Induction Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2><i class="fas fa-user-graduate"></i> Induction Management</h2>
+    
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3>{{ total_inductions }}</h3>
+                    <p class="mb-0">Total Inductions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ in_progress }}</h3>
+                    <p class="mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ completed }}</h3>
+                    <p class="mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inductions Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">All Staff Inductions</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Start Date</th>
+                            <th>Expected Completion</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for induction in inductions %}
+                        <tr>
+                            <td>{{ induction.staff_member.get_full_name|default:induction.staff_member.sap }}</td>
+                            <td>{{ induction.start_date|date:"d M Y" }}</td>
+                            <td>{{ induction.expected_completion_date|date:"d M Y" }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    {% widthratio induction.get_completion_percentage 1 1 as completion %}
+                                    <div class="progress-bar" style="width: {{ completion }}%;">{{ completion }}%</div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if induction.final_assessment_complete %}
+                                <span class="badge bg-success">Completed</span>
+                                {% else %}
+                                <span class="badge bg-primary">In Progress</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'update_induction_progress' induction.id %}" class="btn btn-sm btn-primary">Update</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No induction records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

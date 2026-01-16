@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Edit Policy{% else %}New Policy{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>
+                        {% if object %}Edit Policy: {{ object.policy_number }}{% else %}Create New Policy{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the following errors:</strong>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- Basic Information -->
+                        <h5 class="border-bottom pb-2 mb-3">Basic Information</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.policy_number.id_for_label }}" class="form-label">Policy Number *</label>
+                                {{ form.policy_number }}
+                                <small class="form-text text-muted">{{ form.policy_number.help_text }}</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">Category *</label>
+                                {{ form.category }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">Policy Title *</label>
+                            {{ form.title }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.summary.id_for_label }}" class="form-label">Summary *</label>
+                            {{ form.summary }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.keywords.id_for_label }}" class="form-label">Keywords</label>
+                            {{ form.keywords }}
+                            <small class="form-text text-muted">{{ form.keywords.help_text }}</small>
+                        </div>
+
+                        <!-- Dates & Review Schedule -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Dates & Review Schedule</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.effective_date.id_for_label }}" class="form-label">Effective Date *</label>
+                                {{ form.effective_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.next_review_date.id_for_label }}" class="form-label">Next Review Date *</label>
+                                {{ form.next_review_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.review_frequency_months.id_for_label }}" class="form-label">Review Frequency (months) *</label>
+                                {{ form.review_frequency_months }}
+                                <small class="form-text text-muted">{{ form.review_frequency_months.help_text }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Content & Regulatory -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Content & Regulatory Framework</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.regulatory_framework.id_for_label }}" class="form-label">Regulatory Framework</label>
+                            {{ form.regulatory_framework }}
+                        </div>
+
+                        <!-- Ownership -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Ownership</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.owner.id_for_label }}" class="form-label">Policy Owner *</label>
+                                {{ form.owner }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.department.id_for_label }}" class="form-label">Department *</label>
+                                {{ form.department }}
+                            </div>
+                        </div>
+
+                        <!-- Status & Version -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Status & Version</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status *</label>
+                                {{ form.status }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.version.id_for_label }}" class="form-label">Version *</label>
+                                {{ form.version }}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-4">
+                                    {{ form.is_mandatory }}
+                                    <label class="form-check-label" for="{{ form.is_mandatory.id_for_label }}">
+                                        Mandatory Policy
+                                    </label>
+                                    <small class="form-text text-muted d-block">{{ form.is_mandatory.help_text }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Document</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.file_path.id_for_label }}" class="form-label">Policy Document (PDF, Word, etc.)</label>
+                            {{ form.file_path }}
+                            {% if object.file_path %}
+                            <div class="mt-2">
+                                <small>Current file: <a href="{{ object.file_path.url }}" target="_blank">{{ object.file_path.name }}</a></small>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% if object %}{% url 'policies_procedures:policy_detail' object.pk %}{% else %}{% url 'policies_procedures:policy_list' %}{% endif %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>{% if object %}Update{% else %}Create{% endif %} Policy
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit Risk{% else %}Register New Risk{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matrix-selector {
+        display: grid;
+        grid-template-columns: auto repeat(5, 1fr);
+        gap: 5px;
+        margin: 20px 0;
+    }
+    .matrix-cell {
+        width: 60px;
+        height: 60px;
+        border: 2px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+    .matrix-cell:hover {
+        transform: scale(1.1);
+        z-index: 10;
+    }
+    .matrix-cell.selected {
+        border: 3px solid #000;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .matrix-cell.critical { background-color: #dc3545; color: white; }
+    .matrix-cell.high { background-color: #fd7e14; color: white; }
+    .matrix-cell.medium { background-color: #ffc107; color: #212529; }
+    .matrix-cell.low { background-color: #28a745; color: white; }
+    .matrix-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-{% if is_edit %}edit{% else %}plus{% endif %}"></i>
+            {% if is_edit %}Edit Risk: {{ risk.title }}{% else %}Register New Risk{% endif %}
+        </h1>
+        <a href="{% if is_edit %}{% url 'risk_management:risk_detail' risk.pk %}{% else %}{% url 'risk_management:risk_list' %}{% endif %}" 
+           class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Cancel
+        </a>
+    </div>
+    
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Risk Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{% if is_edit %}{{ risk.title }}{% endif %}" required>
+                            <div class="invalid-feedback">Please provide a risk title.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4" required>{% if is_edit %}{{ risk.description }}{% endif %}</textarea>
+                            <div class="invalid-feedback">Please provide a description.</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Risk Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select category...</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.id }}" 
+                                            {% if is_edit and risk.category.id == cat.id %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Please select a category.</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="care_home" class="form-label">Care Home *</label>
+                                <select class="form-select" id="care_home" name="care_home" required
+                                        {% if is_edit %}disabled{% endif %}>
+                                    <option value="">Select care home...</option>
+                                    {% for home in care_homes %}
+                                    <option value="{{ home.id }}"
+                                            {% if is_edit and risk.care_home.id == home.id %}selected{% endif %}>
+                                        {{ home.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Please select a care home.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="affected_area" class="form-label">Affected Area</label>
+                            <input type="text" class="form-control" id="affected_area" name="affected_area"
+                                   value="{% if is_edit %}{{ risk.affected_area }}{% endif %}"
+                                   placeholder="e.g., Medication management, Falls prevention">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Controls -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Current Controls</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="current_controls" class="form-label">Existing Controls *</label>
+                            <textarea class="form-control" id="current_controls" name="current_controls" 
+                                      rows="4" required>{% if is_edit %}{{ risk.current_controls }}{% endif %}</textarea>
+                            <small class="form-text text-muted">
+                                Describe existing controls, policies, and procedures in place
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="control_effectiveness" class="form-label">
+                                Control Effectiveness: <span id="effectiveness-value">{% if is_edit %}{{ risk.control_effectiveness }}{% else %}3{% endif %}</span>/5
+                            </label>
+                            <input type="range" class="form-range" id="control_effectiveness" 
+                                   name="control_effectiveness" min="1" max="5" 
+                                   value="{% if is_edit %}{{ risk.control_effectiveness }}{% else %}3{% endif %}"
+                                   oninput="document.getElementById('effectiveness-value').textContent = this.value">
+                            <div class="d-flex justify-content-between">
+                                <small>1 - Ineffective</small>
+                                <small>5 - Highly Effective</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status & Review -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Status & Review Schedule</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    {% for choice in status_choices %}
+                                    <option value="{{ choice.0 }}"
+                                            {% if is_edit and risk.status == choice.0 %}selected
+                                            {% elif not is_edit and choice.0 == 'IDENTIFIED' %}selected{% endif %}>
+                                        {{ choice.1 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="review_frequency" class="form-label">Review Frequency</label>
+                                <select class="form-select" id="review_frequency" name="review_frequency">
+                                    <option value="MONTHLY" {% if is_edit and risk.review_frequency == 'MONTHLY' %}selected{% endif %}>Monthly</option>
+                                    <option value="QUARTERLY" {% if is_edit and risk.review_frequency == 'QUARTERLY' %}selected{% else %}selected{% endif %}>Quarterly</option>
+                                    <option value="BIANNUALLY" {% if is_edit and risk.review_frequency == 'BIANNUALLY' %}selected{% endif %}>Bi-annually</option>
+                                    <option value="ANNUALLY" {% if is_edit and risk.review_frequency == 'ANNUALLY' %}selected{% endif %}>Annually</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="next_review_date" class="form-label">Next Review Date *</label>
+                            <input type="date" class="form-control" id="next_review_date" name="next_review_date"
+                                   value="{% if is_edit %}{{ risk.next_review_date|date:'Y-m-d' }}{% endif %}" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Regulatory & Notes -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Additional Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="regulatory_requirement" class="form-label">Regulatory Requirement</label>
+                            <textarea class="form-control" id="regulatory_requirement" name="regulatory_requirement" 
+                                      rows="3">{% if is_edit %}{{ risk.regulatory_requirement }}{% endif %}</textarea>
+                            <small class="form-text text-muted">
+                                Reference to HIS, Care Inspectorate, or other regulatory requirements
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" 
+                                      rows="3">{% if is_edit %}{{ risk.notes }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <!-- Inherent Risk Assessment -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Inherent Risk Assessment</h5>
+                        <small class="text-muted">Risk without current controls</small>
+                    </div>
+                    <div class="card-body">
+                        <h6>Select Likelihood × Impact:</h6>
+                        <div class="matrix-selector" id="inherent-matrix">
+                            <div class="matrix-label"></div>
+                            <div class="matrix-label">1</div>
+                            <div class="matrix-label">2</div>
+                            <div class="matrix-label">3</div>
+                            <div class="matrix-label">4</div>
+                            <div class="matrix-label">5</div>
+                            
+                            {% for impact in "54321" %}
+                            <div class="matrix-label">{{ impact }}</div>
+                            {% for likelihood in "12345" %}
+                            {% with score=likelihood|add:impact|add:impact|add:impact|add:impact %}
+                            <div class="matrix-cell {% if score >= '15' %}critical{% elif score >= '10' %}high{% elif score >= '5' %}medium{% else %}low{% endif %}"
+                                 data-type="inherent"
+                                 data-likelihood="{{ likelihood }}"
+                                 data-impact="{{ impact }}"
+                                 onclick="selectRisk('inherent', {{ likelihood }}, {{ impact }})">
+                                {% widthratio likelihood 1 1 %}×{% widthratio impact 1 1 %}
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
+                            {% endfor %}
+                        </div>
+                        
+                        <input type="hidden" id="inherent_likelihood" name="inherent_likelihood" 
+                               value="{% if is_edit %}{{ risk.inherent_likelihood }}{% else %}3{% endif %}" required>
+                        <input type="hidden" id="inherent_impact" name="inherent_impact" 
+                               value="{% if is_edit %}{{ risk.inherent_impact }}{% else %}3{% endif %}" required>
+                        
+                        <div class="alert alert-info mt-3">
+                            <strong>Selected:</strong> 
+                            <span id="inherent-display">L<span id="inherent-l">{% if is_edit %}{{ risk.inherent_likelihood }}{% else %}3{% endif %}</span> × I<span id="inherent-i">{% if is_edit %}{{ risk.inherent_impact }}{% else %}3{% endif %}</span> = <span id="inherent-score">{% if is_edit %}{{ risk.inherent_score }}{% else %}9{% endif %}</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Residual Risk Assessment -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Residual Risk Assessment</h5>
+                        <small class="text-muted">Risk with current controls</small>
+                    </div>
+                    <div class="card-body">
+                        <h6>Select Likelihood × Impact:</h6>
+                        <div class="matrix-selector" id="residual-matrix">
+                            <div class="matrix-label"></div>
+                            <div class="matrix-label">1</div>
+                            <div class="matrix-label">2</div>
+                            <div class="matrix-label">3</div>
+                            <div class="matrix-label">4</div>
+                            <div class="matrix-label">5</div>
+                            
+                            {% for impact in "54321" %}
+                            <div class="matrix-label">{{ impact }}</div>
+                            {% for likelihood in "12345" %}
+                            <div class="matrix-cell {% if likelihood|add:impact >= '15' %}critical{% elif likelihood|add:impact >= '10' %}high{% elif likelihood|add:impact >= '5' %}medium{% else %}low{% endif %}"
+                                 data-type="residual"
+                                 data-likelihood="{{ likelihood }}"
+                                 data-impact="{{ impact }}"
+                                 onclick="selectRisk('residual', {{ likelihood }}, {{ impact }})">
+                                {% widthratio likelihood 1 1 %}×{% widthratio impact 1 1 %}
+                            </div>
+                            {% endfor %}
+                            {% endfor %}
+                        </div>
+                        
+                        <input type="hidden" id="residual_likelihood" name="residual_likelihood" 
+                               value="{% if is_edit %}{{ risk.residual_likelihood }}{% else %}2{% endif %}" required>
+                        <input type="hidden" id="residual_impact" name="residual_impact" 
+                               value="{% if is_edit %}{{ risk.residual_impact }}{% else %}2{% endif %}" required>
+                        
+                        <div class="alert alert-info mt-3">
+                            <strong>Selected:</strong> 
+                            <span id="residual-display">L<span id="residual-l">{% if is_edit %}{{ risk.residual_likelihood }}{% else %}2{% endif %}</span> × I<span id="residual-i">{% if is_edit %}{{ risk.residual_impact }}{% else %}2{% endif %}</span> = <span id="residual-score">{% if is_edit %}{{ risk.residual_score }}{% else %}4{% endif %}</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Target Risk (Optional) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Target Risk (Optional)</h5>
+                        <small class="text-muted">Desired risk level after mitigation</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="set_target" 
+                                   {% if is_edit and risk.target_likelihood %}checked{% endif %}
+                                   onchange="toggleTargetRisk()">
+                            <label class="form-check-label" for="set_target">
+                                Set target risk level
+                            </label>
+                        </div>
+                        
+                        <div id="target-section" style="{% if not is_edit or not risk.target_likelihood %}display:none;{% endif %}">
+                            <div class="mb-2">
+                                <label for="target_likelihood" class="form-label">Target Likelihood (1-5)</label>
+                                <input type="number" class="form-control" id="target_likelihood" 
+                                       name="target_likelihood" min="1" max="5"
+                                       value="{% if is_edit and risk.target_likelihood %}{{ risk.target_likelihood }}{% else %}1{% endif %}">
+                            </div>
+                            <div class="mb-2">
+                                <label for="target_impact" class="form-label">Target Impact (1-5)</label>
+                                <input type="number" class="form-control" id="target_impact" 
+                                       name="target_impact" min="1" max="5"
+                                       value="{% if is_edit and risk.target_impact %}{{ risk.target_impact }}{% else %}1{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> {% if is_edit %}Update Risk{% else %}Register Risk{% endif %}
+                    </button>
+                    <a href="{% if is_edit %}{% url 'risk_management:risk_detail' risk.pk %}{% else %}{% url 'risk_management:risk_list' %}{% endif %}" 
+                       class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectRisk(type, likelihood, impact) {
+    // Update hidden fields
+    document.getElementById(type + '_likelihood').value = likelihood;
+    document.getElementById(type + '_impact').value = impact;
+    
+    // Calculate score
+    const score = likelihood * impact;
+    
+    // Update display
+    document.getElementById(type + '-l').textContent = likelihood;
+    document.getElementById(type + '-i').textContent = impact;
+    document.getElementById(type + '-score').textContent = score;
+    
+    // Highlight selected cell
+    document.querySelectorAll(`[data-type="${type}"]`).forEach(cell => {
+        cell.classList.remove('selected');
+    });
+    event.target.classList.add('selected');
+}
+
+function toggleTargetRisk() {
+    const checkbox = document.getElementById('set_target');
+    const section = document.getElementById('target-section');
+    section.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+// Initialize selected cells on page load
+{% if is_edit %}
+document.addEventListener('DOMContentLoaded', function() {
+    selectInitialCell('inherent', {{ risk.inherent_likelihood }}, {{ risk.inherent_impact }});
+    selectInitialCell('residual', {{ risk.residual_likelihood }}, {{ risk.residual_impact }});
+});
+
+function selectInitialCell(type, likelihood, impact) {
+    const cell = document.querySelector(`[data-type="${type}"][data-likelihood="${likelihood}"][data-impact="${impact}"]`);
+    if (cell) {
+        cell.classList.add('selected');
+    }
+}
+{% endif %}
+
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

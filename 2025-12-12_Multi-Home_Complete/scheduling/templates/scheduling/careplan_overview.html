@@ -1,0 +1,278 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Care Plan Reviews - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-file-medical"></i> Care Plan Review Management</h2>
+        <p class="text-muted">Monitor and track care plan reviews for all {{ total_residents }} residents</p>
+        <div class="mb-3">
+            <a href="{% url 'careplan_compliance_report' %}" class="btn btn-success">
+                <i class="fas fa-chart-line"></i> Generate Compliance Report
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-success mb-0">{{ completed_count }}</h3>
+                <p class="text-muted small mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-danger mb-0">{{ overdue_count }}</h3>
+                <p class="text-muted small mb-0">Overdue</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-warning mb-0">{{ due_count }}</h3>
+                <p class="text-muted small mb-0">Due Soon</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-primary mb-0">{{ compliance_rate }}%</h3>
+                <p class="text-muted small mb-0">Compliance Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="care_home" class="form-label"><i class="fas fa-home"></i> Filter by Care Home</label>
+                        <select name="care_home" id="care_home" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- All Homes --</option>
+                            {% for home in all_care_homes %}
+                                <option value="{{ home.name }}" {% if selected_care_home == home.name %}selected{% endif %}>
+                                    {{ home.get_name_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="unit" class="form-label">Filter by Unit</label>
+                        <select name="unit" id="unit" class="form-select">
+                            <option value="">All Units</option>
+                            {% for unit in all_units %}
+                                <option value="{{ unit.name }}" {% if unit.name == selected_unit %}selected{% endif %}>
+                                    {{ unit.get_name_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Filter by Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                        <a href="{% url 'careplan_overview' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Residents Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Residents ({{ total_residents }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Room</th>
+                                <th>Resident ID</th>
+                                <th>Admission Date</th>
+                                <th>Keyworker</th>
+                                <th>Next Review Due</th>
+                                <th>Status</th>
+                                <th>Days</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in residents %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'careplan_unit_view' item.resident.unit.name %}" class="text-decoration-none">
+                                            <strong>{{ item.resident.unit.name }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ item.resident.room_number }}</td>
+                                    <td>
+                                        <strong>{{ item.resident.resident_id }}</strong><br>
+                                        <small class="text-muted">{{ item.resident.full_name }}</small>
+                                    </td>
+                                    <td>{{ item.resident.admission_date|date:"M j, Y" }}</td>
+                                    <td>
+                                        {% if item.resident.keyworker %}
+                                            {{ item.resident.keyworker.full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.review %}
+                                            {{ item.review.due_date|date:"M j, Y" }}
+                                        {% else %}
+                                            <span class="text-muted">No review scheduled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.review %}
+                                            {% if item.review.status == 'COMPLETED' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif item.review.status == 'OVERDUE' %}
+                                                <span class="badge bg-danger">Overdue</span>
+                                            {% elif item.review.status == 'DUE' %}
+                                                <span class="badge bg-warning text-dark">Due Soon</span>
+                                            {% elif item.review.status == 'UPCOMING' %}
+                                                <span class="badge bg-info">Upcoming</span>
+                                            {% elif item.review.status == 'IN_PROGRESS' %}
+                                                <span class="badge bg-primary">In Progress</span>
+                                            {% elif item.review.status == 'PENDING_APPROVAL' %}
+                                                <span class="badge bg-secondary">Pending Approval</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Review</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.review %}
+                                            {% if item.review.status == 'OVERDUE' %}
+                                                <span class="text-danger">
+                                                    {{ item.review.days_overdue }} days overdue
+                                                </span>
+                                            {% elif item.review.status == 'DUE' or item.review.status == 'UPCOMING' %}
+                                                <span class="text-muted">
+                                                    {{ item.review.days_until_due }} days
+                                                </span>
+                                            {% elif item.review.status == 'COMPLETED' %}
+                                                <span class="text-success">
+                                                    <i class="fas fa-check"></i> Done
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'careplan_unit_view' item.resident.unit.name %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View Unit
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">No residents found</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats by Unit -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Compliance by Unit</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th class="text-center">Total Residents</th>
+                                <th class="text-center">Completed</th>
+                                <th class="text-center">Overdue</th>
+                                <th class="text-center">Compliance Rate</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in unit_stats %}
+                                <tr>
+                                    <td><strong>{{ stat.unit.name }}</strong></td>
+                                    <td class="text-center">{{ stat.total }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ stat.completed }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if stat.overdue > 0 %}
+                                            <span class="badge bg-danger">{{ stat.overdue }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if stat.compliance_rate >= 80 %}
+                                            <span class="badge bg-success">{{ stat.compliance_rate }}%</span>
+                                        {% elif stat.compliance_rate >= 50 %}
+                                            <span class="badge bg-warning text-dark">{{ stat.compliance_rate }}%</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ stat.compliance_rate }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'careplan_unit_view' stat.unit.name %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-arrow-right"></i> View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No units with residents</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

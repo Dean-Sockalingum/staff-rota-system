@@ -1,0 +1,407 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Training Breakdown Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .training-table {
+        font-size: 0.9rem;
+    }
+    .training-table th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+    }
+    .status-current {
+        background-color: #28a745;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+    .status-expiring {
+        background-color: #ffc107;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+    .status-expired {
+        background-color: #dc3545;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+    .status-missing {
+        background-color: #6c757d;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+    .staff-row {
+        cursor: pointer;
+    }
+    .staff-row:hover {
+        background-color: #f8f9fa;
+    }
+    .course-cell {
+        text-align: center;
+        min-width: 120px;
+    }
+    .export-buttons {
+        gap: 10px;
+    }
+    @media print {
+        .no-print {
+            display: none;
+        }
+        .training-table {
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h2><i class="fas fa-clipboard-list me-2"></i>Training Breakdown Report</h2>
+            <p class="text-muted">Detailed course completion by staff member and care home</p>
+        </div>
+        <div class="export-buttons d-flex">
+            <button onclick="window.print()" class="btn btn-secondary">
+                <i class="fas fa-print me-1"></i>Print Report
+            </button>
+            <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-success">
+                <i class="fas fa-file-csv me-1"></i>Export CSV
+            </a>
+            <a href="?{{ request.GET.urlencode }}&export=excel" class="btn btn-primary">
+                <i class="fas fa-file-excel me-1"></i>Export Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4 no-print">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row align-items-end">
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Care Home</label>
+                        <select name="care_home" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Homes</option>
+                            {% for home in care_homes %}
+                            <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                                {{ home.get_name_display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Staff Role</label>
+                        <select name="role" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Roles</option>
+                            {% for role in staff_roles %}
+                            <option value="{{ role.name }}" {% if selected_role == role.name %}selected{% endif %}>
+                                {{ role.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Compliance Status</label>
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Status</option>
+                            <option value="compliant" {% if selected_status == 'compliant' %}selected{% endif %}>Fully Compliant</option>
+                            <option value="expiring" {% if selected_status == 'expiring' %}selected{% endif %}>Has Expiring Training</option>
+                            <option value="expired" {% if selected_status == 'expired' %}selected{% endif %}>Has Expired Training</option>
+                            <option value="missing" {% if selected_status == 'missing' %}selected{% endif %}>Missing Training</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">View Type</label>
+                        <select name="view_type" class="form-select" onchange="this.form.submit()">
+                            <option value="by_person" {% if view_type == 'by_person' %}selected{% endif %}>By Person</option>
+                            <option value="by_course" {% if view_type == 'by_course' %}selected{% endif %}>By Course</option>
+                            <option value="by_home" {% if view_type == 'by_home' %}selected{% endif %}>By Home Summary</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Show Courses</label>
+                        <select name="show_all_courses" class="form-select" onchange="this.form.submit()">
+                            <option value="yes" {% if show_all_courses == 'yes' %}selected{% endif %}>All Courses ({{ mandatory_courses.count }})</option>
+                            <option value="no" {% if show_all_courses == 'no' %}selected{% endif %}>Mandatory Only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Showing <strong>{{ mandatory_courses.count }}</strong> courses 
+                            ({% if show_all_courses == 'yes' %}all courses including optional{% else %}mandatory courses only{% endif %})
+                        </small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Staff</h6>
+                    <h3 class="mb-0">{{ total_staff }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Fully Compliant</h6>
+                    <h3 class="mb-0 text-success">{{ fully_compliant }}</h3>
+                    <small class="text-muted">{{ compliance_percentage|floatformat:1 }}%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Expiring Soon</h6>
+                    <h3 class="mb-0 text-warning">{{ has_expiring }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-danger">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Non-Compliant</h6>
+                    <h3 class="mb-0 text-danger">{{ has_expired_or_missing }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    {% if view_type == 'by_person' %}
+    <!-- BY PERSON VIEW -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Training by Person</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered training-table">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Home</th>
+                            <th>Role</th>
+                            {% for course in mandatory_courses %}
+                            <th class="course-cell">{{ course.name }}</th>
+                            {% endfor %}
+                            <th class="text-center">Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in staff_training_matrix %}
+                        <tr class="staff-row">
+                            <td><strong>{{ item.staff.full_name }}</strong></td>
+                            <td>{{ item.home_name }}</td>
+                            <td><span class="badge bg-info">{{ item.staff.role.name }}</span></td>
+                            {% for course_status in item.courses %}
+                            <td class="course-cell">
+                                {% if course_status.status == 'CURRENT' %}
+                                    <span class="status-current" title="Expires: {{ course_status.expiry_date }}">
+                                        ✓ Valid
+                                    </span>
+                                    <br><small class="text-muted">{{ course_status.expiry_date }}</small>
+                                {% elif course_status.status == 'EXPIRING_SOON' %}
+                                    <span class="status-expiring" title="Expires: {{ course_status.expiry_date }}">
+                                        ⚠ Expiring
+                                    </span>
+                                    <br><small class="text-muted">{{ course_status.expiry_date }}</small>
+                                {% elif course_status.status == 'EXPIRED' %}
+                                    <span class="status-expired" title="Expired: {{ course_status.expiry_date }}">
+                                        ✗ Expired
+                                    </span>
+                                    <br><small class="text-muted">{{ course_status.expiry_date }}</small>
+                                {% else %}
+                                    <span class="status-missing">
+                                        — Missing
+                                    </span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td class="text-center">
+                                <strong>{{ item.compliant_count }}/{{ item.total_courses }}</strong>
+                                <br>
+                                <small class="{% if item.compliance_pct >= 100 %}text-success{% elif item.compliance_pct >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ item.compliance_pct|floatformat:0 }}%
+                                </small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ mandatory_courses.count|add:4 }}" class="text-center text-muted">
+                                No staff found matching the current filters
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% elif view_type == 'by_course' %}
+    <!-- BY COURSE VIEW -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Training by Course</h5>
+        </div>
+        <div class="card-body">
+            {% for course_data in courses_breakdown %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ course_data.course.name }}</h6>
+                        <div>
+                            <span class="badge bg-success">{{ course_data.compliant }} Compliant</span>
+                            <span class="badge bg-warning text-dark">{{ course_data.expiring }} Expiring</span>
+                            <span class="badge bg-danger">{{ course_data.expired }} Expired</span>
+                            <span class="badge bg-secondary">{{ course_data.missing }} Missing</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Staff Member</th>
+                                    <th>Home</th>
+                                    <th>Completion Date</th>
+                                    <th>Expiry Date</th>
+                                    <th>Status</th>
+                                    <th>Days Until Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in course_data.staff_records %}
+                                <tr>
+                                    <td>{{ record.staff.full_name }}</td>
+                                    <td>{{ record.home }}</td>
+                                    <td>{{ record.completion_date|default:"—" }}</td>
+                                    <td>{{ record.expiry_date|default:"—" }}</td>
+                                    <td>
+                                        {% if record.status == 'CURRENT' %}
+                                            <span class="status-current">Current</span>
+                                        {% elif record.status == 'EXPIRING_SOON' %}
+                                            <span class="status-expiring">Expiring Soon</span>
+                                        {% elif record.status == 'EXPIRED' %}
+                                            <span class="status-expired">Expired</span>
+                                        {% else %}
+                                            <span class="status-missing">Missing</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.days_until_expiry|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- BY HOME SUMMARY VIEW -->
+    {% for home_data in home_summary %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-building me-2"></i>{{ home_data.home_name }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded">
+                        <h6 class="text-muted mb-2">Total Staff</h6>
+                        <h4 class="mb-0">{{ home_data.total_staff }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded border-success">
+                        <h6 class="text-muted mb-2">Compliant</h6>
+                        <h4 class="mb-0 text-success">{{ home_data.compliant_staff }}</h4>
+                        <small class="text-muted">{{ home_data.compliance_percentage|floatformat:1 }}%</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded border-warning">
+                        <h6 class="text-muted mb-2">Expiring</h6>
+                        <h4 class="mb-0 text-warning">{{ home_data.expiring_staff }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded border-danger">
+                        <h6 class="text-muted mb-2">Non-Compliant</h6>
+                        <h4 class="mb-0 text-danger">{{ home_data.non_compliant_staff }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="mt-4 mb-3">Course Breakdown</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th class="text-center">Compliant</th>
+                            <th class="text-center">Expiring</th>
+                            <th class="text-center">Expired</th>
+                            <th class="text-center">Missing</th>
+                            <th class="text-center">Compliance %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in home_data.course_breakdown %}
+                        <tr>
+                            <td>{{ course.course_name }}</td>
+                            <td class="text-center"><span class="badge bg-success">{{ course.compliant }}</span></td>
+                            <td class="text-center"><span class="badge bg-warning text-dark">{{ course.expiring }}</span></td>
+                            <td class="text-center"><span class="badge bg-danger">{{ course.expired }}</span></td>
+                            <td class="text-center"><span class="badge bg-secondary">{{ course.missing }}</span></td>
+                            <td class="text-center">
+                                <strong class="{% if course.percentage >= 90 %}text-success{% elif course.percentage >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ course.percentage|floatformat:1 }}%
+                                </strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on select change is handled inline
+    // Additional interactions can be added here
+</script>
+{% endblock %}

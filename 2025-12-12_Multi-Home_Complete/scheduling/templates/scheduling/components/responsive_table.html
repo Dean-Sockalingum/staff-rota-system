@@ -1,0 +1,84 @@
+{% comment %}
+Mobile-Responsive Table Component
+Usage: {% include 'scheduling/components/responsive_table.html' with items=data headers=headers %}
+
+Parameters:
+- items: List of dictionaries with row data
+- headers: List of column headers
+- card_title_field: Field name to use as card title (default: first field)
+- show_actions: Boolean to show action buttons (default: true)
+{% endcomment %}
+
+<!-- Desktop/Tablet: Traditional Table -->
+<div class="d-none d-md-block mobile-card-table">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-light">
+                <tr>
+                    {% for header in headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                    {% if show_actions|default:True %}
+                    <th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    {% for header in headers %}
+                    <td>{{ item|get_item:header }}</td>
+                    {% endfor %}
+                    {% if show_actions|default:True %}
+                    <td>
+                        {% block table_actions %}
+                        <!-- Override this block for custom actions -->
+                        {% endblock %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ headers|length|add:1 }}" class="text-center text-muted">
+                        No data available
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Mobile: Card Layout -->
+<div class="d-md-none mobile-card-view">
+    {% for item in items %}
+    <div class="table-card">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="mb-0 fw-bold">
+                {{ item|get_item:card_title_field|default:item|first }}
+            </h6>
+            {% if show_actions|default:True %}
+            <div class="btn-group btn-group-sm">
+                {% block card_actions %}
+                <!-- Override this block for custom actions -->
+                {% endblock %}
+            </div>
+            {% endif %}
+        </div>
+        
+        {% for header in headers %}
+        {% if forloop.counter > 1 or not card_title_field %}
+        <div class="card-row">
+            <span class="card-label">{{ header }}:</span>
+            <span class="card-value">{{ item|get_item:header }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-4">
+        <i class="fas fa-inbox fa-2x mb-2"></i>
+        <p>No data available</p>
+    </div>
+    {% endfor %}
+</div>

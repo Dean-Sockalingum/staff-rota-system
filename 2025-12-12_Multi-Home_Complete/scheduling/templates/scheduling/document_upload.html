@@ -1,0 +1,305 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Upload Document{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-form {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+    
+    .form-group input[type="text"],
+    .form-group textarea,
+    .form-group select,
+    .form-group input[type="file"] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+    
+    .form-group input[type="file"] {
+        padding: 0.5rem;
+    }
+    
+    .form-group small {
+        display: block;
+        margin-top: 0.25rem;
+        color: #666;
+        font-size: 0.875rem;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+    
+    .file-preview {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+        display: none;
+    }
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .file-icon {
+        font-size: 2rem;
+        color: #007bff;
+    }
+    
+    .allowed-users-container {
+        display: none;
+        margin-top: 1rem;
+    }
+    
+    .user-checkbox {
+        display: block;
+        margin: 0.5rem 0;
+    }
+    
+    .user-checkbox input {
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-upload"></i> Upload Document</h2>
+        <a href="{% url 'document_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Documents
+        </a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="upload-form">
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="file">
+                    <i class="fas fa-file"></i> File *
+                </label>
+                <input type="file" name="file" id="file" required>
+                <small>Maximum file size: 100MB. Allowed formats: PDF, Word, Excel, PowerPoint, Images, Archives</small>
+                <div class="file-preview" id="filePreview">
+                    <div class="file-info">
+                        <i class="fas fa-file file-icon" id="fileIcon"></i>
+                        <div>
+                            <strong id="fileName"></strong>
+                            <div id="fileSize"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="title">
+                    <i class="fas fa-heading"></i> Title *
+                </label>
+                <input type="text" name="title" id="title" required placeholder="Enter document title">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">
+                    <i class="fas fa-align-left"></i> Description
+                </label>
+                <textarea name="description" id="description" placeholder="Enter document description (optional)"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="category">
+                    <i class="fas fa-folder"></i> Category
+                </label>
+                <select name="category" id="category">
+                    <option value="">-- No Category --</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}">
+                            {% if cat.parent %}{{ cat.get_full_path }}{% else %}{{ cat.name }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tags">
+                    <i class="fas fa-tags"></i> Tags
+                </label>
+                <input type="text" name="tags" id="tags" placeholder="Enter tags separated by commas (e.g., policy, training, compliance)">
+                <small>Separate multiple tags with commas</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="access_level">
+                    <i class="fas fa-lock"></i> Access Level *
+                </label>
+                <select name="access_level" id="access_level" required>
+                    <option value="staff">Staff - All authenticated staff can view</option>
+                    <option value="managers">Managers - Only managers can view</option>
+                    <option value="private">Private - Only specified users can view</option>
+                    <option value="confidential">Confidential - Restricted access with specific permissions</option>
+                    <option value="public">Public - All users can view</option>
+                </select>
+            </div>
+            
+            <div class="allowed-users-container" id="allowedUsersContainer">
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-users"></i> Allowed Users
+                    </label>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 4px;">
+                        {% for user in users %}
+                            <label class="user-checkbox">
+                                <input type="checkbox" name="allowed_users" value="{{ user.id }}">
+                                {{ user.get_full_name }} ({{ user.sap }})
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload Document
+                </button>
+                <a href="{% url 'document_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file');
+    const titleInput = document.getElementById('title');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileIcon = document.getElementById('fileIcon');
+    const accessLevel = document.getElementById('access_level');
+    const allowedUsersContainer = document.getElementById('allowedUsersContainer');
+    
+    // File input change handler
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            const ext = file.name.split('.').pop().toLowerCase();
+            
+            // Show preview
+            filePreview.style.display = 'block';
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            
+            // Update icon based on extension
+            let iconClass = 'fa-file';
+            if (['pdf'].includes(ext)) iconClass = 'fa-file-pdf';
+            else if (['doc', 'docx'].includes(ext)) iconClass = 'fa-file-word';
+            else if (['xls', 'xlsx'].includes(ext)) iconClass = 'fa-file-excel';
+            else if (['ppt', 'pptx'].includes(ext)) iconClass = 'fa-file-powerpoint';
+            else if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) iconClass = 'fa-file-image';
+            else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) iconClass = 'fa-file-archive';
+            else if (['txt', 'csv'].includes(ext)) iconClass = 'fa-file-alt';
+            
+            fileIcon.className = 'fas ' + iconClass + ' file-icon';
+            
+            // Auto-fill title if empty
+            if (!titleInput.value) {
+                titleInput.value = file.name.substring(0, file.name.lastIndexOf('.'));
+            }
+        } else {
+            filePreview.style.display = 'none';
+        }
+    });
+    
+    // Access level change handler
+    accessLevel.addEventListener('change', function() {
+        if (this.value === 'private' || this.value === 'confidential') {
+            allowedUsersContainer.style.display = 'block';
+        } else {
+            allowedUsersContainer.style.display = 'none';
+        }
+    });
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}

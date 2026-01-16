@@ -1,0 +1,158 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Rota Tour{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/onboarding.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="tour-overlay" id="tourOverlay">
+        <div class="tour-content">
+            <div class="tour-header">
+                <h2><i class="fas fa-calendar-alt"></i> Rota Management Tour</h2>
+                <button class="btn-skip" onclick="skipTour()">Skip Tour</button>
+            </div>
+            
+            <div class="tour-step active" id="step-1">
+                <div class="tour-step-content">
+                    <h3>Weekly Rota View</h3>
+                    <p>The rota view shows your weekly schedule at a glance.</p>
+                    {% if is_management %}
+                    <p>As a manager, you can view and edit shifts for all staff across different units.</p>
+                    {% else %}
+                    <p>You can see your assigned shifts, request changes, and swap with colleagues.</p>
+                    {% endif %}
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-2">
+                <div class="tour-step-content">
+                    <h3>Viewing Options</h3>
+                    <p>Customize your rota view:</p>
+                    <ul class="feature-list">
+                        {% if is_management %}
+                        <li><i class="fas fa-home"></i> Filter by unit or home</li>
+                        <li><i class="fas fa-users"></i> Filter by role or team</li>
+                        <li><i class="fas fa-calendar-week"></i> Navigate between weeks</li>
+                        <li><i class="fas fa-print"></i> Print or export schedules</li>
+                        {% else %}
+                        <li><i class="fas fa-calendar-week"></i> Navigate between weeks</li>
+                        <li><i class="fas fa-eye"></i> View detailed shift information</li>
+                        <li><i class="fas fa-download"></i> Export your personal schedule</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            {% if is_management %}
+            <div class="tour-step" id="step-3">
+                <div class="tour-step-content">
+                    <h3>Creating & Editing Shifts</h3>
+                    <p>Manage your team's schedule:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-plus-circle"></i> Click any empty slot to create a shift</li>
+                        <li><i class="fas fa-edit"></i> Click existing shifts to edit or reassign</li>
+                        <li><i class="fas fa-copy"></i> Copy patterns to save time</li>
+                        <li><i class="fas fa-magic"></i> Use AI to auto-fill unfilled shifts</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-4">
+                <div class="tour-step-content">
+                    <h3>Compliance Indicators</h3>
+                    <p>Visual indicators help ensure regulatory compliance:</p>
+                    <ul class="feature-list">
+                        <li><span class="badge bg-success">Green</span> - Fully compliant</li>
+                        <li><span class="badge bg-warning">Amber</span> - Approaching limits</li>
+                        <li><span class="badge bg-danger">Red</span> - Compliance issue</li>
+                        <li><i class="fas fa-exclamation-triangle text-warning"></i> Hover for details</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-success" onclick="completeTour()">Got It! <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+            {% else %}
+            <div class="tour-step" id="step-3">
+                <div class="tour-step-content">
+                    <h3>Shift Actions</h3>
+                    <p>What you can do with your shifts:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-exchange-alt"></i> Request shift swaps with colleagues</li>
+                        <li><i class="fas fa-comment"></i> Add notes or updates to shifts</li>
+                        <li><i class="fas fa-bell"></i> Get notifications for changes</li>
+                        <li><i class="fas fa-download"></i> Export to your calendar</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-success" onclick="completeTour()">Got It! <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = {% if is_management %}4{% else %}3{% endif %};
+
+function showStep(stepNumber) {
+    document.querySelectorAll('.tour-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.getElementById('step-' + stepNumber).classList.add('active');
+    currentStep = stepNumber;
+}
+
+function nextStep() {
+    if (currentStep < totalSteps) {
+        showStep(currentStep + 1);
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        showStep(currentStep - 1);
+    }
+}
+
+function skipTour() {
+    if (confirm('Are you sure you want to skip this tour?')) {
+        window.location.href = "{{ next_url }}";
+    }
+}
+
+function completeTour() {
+    fetch('{% url "onboarding_mark_step_complete" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            step: 'rota_tour'
+        })
+    }).then(response => {
+        window.location.href = "{{ next_url }}";
+    });
+}
+</script>
+{% endblock %}

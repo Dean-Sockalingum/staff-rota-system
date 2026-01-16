@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-clipboard-list me-2"></i>{{ page_title }}</h2>
+                    <p class="text-muted">Capture satisfaction feedback from residents, families, staff, and professionals</p>
+                </div>
+                <a href="{% url 'experience_feedback:survey_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to List
+                </a>
+            </div>
+
+            <!-- Survey Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="surveyForm">
+                        {% csrf_token %}
+                        
+                        <!-- Survey Metadata -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3 pb-2 border-bottom">Survey Information</h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.survey_type.id_for_label }}" class="form-label fw-semibold">
+                                    Survey Type <span class="text-danger">*</span>
+                                </label>
+                                {{ form.survey_type }}
+                                {% if form.survey_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.survey_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.care_home.id_for_label }}" class="form-label fw-semibold">
+                                    Care Home <span class="text-danger">*</span>
+                                </label>
+                                {{ form.care_home }}
+                                {% if form.care_home.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.care_home.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.resident.id_for_label }}" class="form-label fw-semibold">
+                                    Resident (if applicable)
+                                </label>
+                                {{ form.resident }}
+                                {% if form.resident.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.resident.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.respondent_name.id_for_label }}" class="form-label fw-semibold">
+                                    Respondent Name
+                                </label>
+                                {{ form.respondent_name }}
+                                <small class="form-text text-muted">Leave blank for anonymous feedback</small>
+                                {% if form.respondent_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.respondent_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.relationship_to_resident.id_for_label }}" class="form-label fw-semibold">
+                                    Relationship to Resident
+                                </label>
+                                {{ form.relationship_to_resident }}
+                                {% if form.relationship_to_resident.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.relationship_to_resident.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    {{ form.is_anonymous }}
+                                    <label class="form-check-label" for="{{ form.is_anonymous.id_for_label }}">
+                                        Submit as anonymous feedback
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rating Questions -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3 pb-2 border-bottom">Satisfaction Ratings</h5>
+                                <p class="text-muted mb-4">Please rate each aspect on a scale of 1 (Very Dissatisfied) to 5 (Very Satisfied)</p>
+                            </div>
+                            
+                            {% for field in form %}
+                                {% if 'satisfaction' in field.name or 'quality' in field.name or 'staff' in field.name or 'communication' in field.name or 'environment' in field.name or 'meals' in field.name or 'activities' in field.name or 'dignity' in field.name or 'safety' in field.name %}
+                                <div class="col-12 mb-4">
+                                    <label class="form-label fw-semibold">{{ field.label }}</label>
+                                    <div class="rating-scale d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small">Very Dissatisfied</span>
+                                        {{ field }}
+                                        <span class="text-muted small">Very Satisfied</span>
+                                    </div>
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">{{ field.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- Net Promoter Score -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3 pb-2 border-bottom">Net Promoter Score</h5>
+                            </div>
+                            
+                            <div class="col-12 mb-4">
+                                <label class="form-label fw-semibold">{{ form.likelihood_recommend.label }}</label>
+                                <p class="text-muted small">0 = Not at all likely, 10 = Extremely likely</p>
+                                <div class="rating-scale d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Not Likely</span>
+                                    {{ form.likelihood_recommend }}
+                                    <span class="text-muted small">Very Likely</span>
+                                </div>
+                                {% if form.likelihood_recommend.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.likelihood_recommend.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Qualitative Feedback -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3 pb-2 border-bottom">Your Feedback</h5>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.what_works_well.id_for_label }}" class="form-label fw-semibold">
+                                    {{ form.what_works_well.label }}
+                                </label>
+                                {{ form.what_works_well }}
+                                {% if form.what_works_well.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.what_works_well.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.areas_for_improvement.id_for_label }}" class="form-label fw-semibold">
+                                    {{ form.areas_for_improvement.label }}
+                                </label>
+                                {{ form.areas_for_improvement }}
+                                {% if form.areas_for_improvement.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.areas_for_improvement.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.additional_comments.id_for_label }}" class="form-label fw-semibold">
+                                    {{ form.additional_comments.label }}
+                                </label>
+                                {{ form.additional_comments }}
+                                {% if form.additional_comments.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.additional_comments.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'experience_feedback:survey_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Survey
+                            </button>
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .rating-scale .form-check {
+        display: inline-block;
+        margin: 0 8px;
+    }
+    
+    .rating-scale input[type="radio"] {
+        cursor: pointer;
+        width: 20px;
+        height: 20px;
+    }
+    
+    .rating-scale label {
+        margin-left: 3px;
+        cursor: pointer;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .rating-scale input[type="radio"]:checked + label {
+        color: #0d6efd;
+    }
+</style>
+{% endblock %}

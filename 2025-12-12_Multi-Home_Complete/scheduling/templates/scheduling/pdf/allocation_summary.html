@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <!-- Print header -->
+    <div class="print-title">{{ title }}</div>
+    <div class="print-date">Generated: {{ generated_date|date:"d/m/Y H:i" }}</div>
+    
+    <!-- Report metadata -->
+    <div class="print-info">
+        <strong>Report Type:</strong> {{ report_type }}<br>
+        <strong>Home:</strong> {{ home.name }}<br>
+        <strong>Week:</strong> {{ week_start|date:"d/m/Y" }} - {{ week_end|date:"d/m/Y" }}
+    </div>
+    
+    <!-- Allocation table -->
+    <h2>Staffing Levels by Day</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%">Date</th>
+                <th style="width: 15%">Day</th>
+                <th style="width: 15%">Early Shift</th>
+                <th style="width: 15%">Late Shift</th>
+                <th style="width: 15%">Night Shift</th>
+                <th style="width: 20%">Total Staff</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day_data in allocation_data %}
+            <tr>
+                <td><strong>{{ day_data.date|date:"d/m/Y" }}</strong></td>
+                <td>{{ day_data.date|date:"l" }}</td>
+                <td style="text-align: center">{{ day_data.early_count }}</td>
+                <td style="text-align: center">{{ day_data.late_count }}</td>
+                <td style="text-align: center">{{ day_data.night_count }}</td>
+                <td style="text-align: center"><strong>{{ day_data.total_count }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="font-weight: bold; background: #f0f0f0">
+                <td colspan="2">Weekly Totals</td>
+                <td style="text-align: center">{{ allocation_data|sum_by:'early_count' }}</td>
+                <td style="text-align: center">{{ allocation_data|sum_by:'late_count' }}</td>
+                <td style="text-align: center">{{ allocation_data|sum_by:'night_count' }}</td>
+                <td style="text-align: center">{{ allocation_data|sum_by:'total_count' }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <!-- Staffing recommendations -->
+    <div class="print-info" style="margin-top: 2em">
+        <h3>Staffing Analysis</h3>
+        <p><strong>Average Daily Staff:</strong> {{ allocation_data|avg_by:'total_count'|floatformat:1 }}</p>
+        <p><strong>Peak Staffing Day:</strong> {{ allocation_data|max_by:'total_count'|get:'date'|date:"l, d/m/Y" }}</p>
+        <p><strong>Minimum Staffing Day:</strong> {{ allocation_data|min_by:'total_count'|get:'date'|date:"l, d/m/Y" }}</p>
+    </div>
+    
+    <!-- Footer -->
+    <div class="print-footer">
+        <p>Glasgow HSCP - Staff Rota Management System | Confidential Document</p>
+    </div>
+</body>
+</html>

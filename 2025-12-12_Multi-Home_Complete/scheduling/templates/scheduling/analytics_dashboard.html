@@ -1,0 +1,609 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Analytics Dashboard - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .kpi-title {
+        font-size: 14px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+    }
+    
+    .kpi-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .kpi-subtitle {
+        font-size: 12px;
+        color: #999;
+    }
+    
+    .kpi-trend {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: 10px;
+    }
+    
+    .trend-up {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .trend-down {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        min-height: 350px;
+    }
+    
+    .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .status-good { background-color: #28a745; }
+    .status-warning { background-color: #ffc107; }
+    .status-danger { background-color: #dc3545; }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <h1 class="mb-2">
+            <i class="fas fa-chart-line"></i> Analytics Dashboard
+        </h1>
+        <p class="mb-0">
+            Real-time insights and KPI tracking
+            {% if selected_unit %}
+                for {{ selected_unit.name }}
+            {% elif selected_care_home %}
+                for {{ selected_care_home.name }}
+            {% else %}
+                across all care homes
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filters -->
+    <div class="filter-bar">
+        <form method="get" id="filterForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="care_home">Care Home</label>
+                    <select class="form-control" name="care_home" id="care_home">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                            <option value="{{ home.id }}" {% if selected_care_home.id == home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="unit">Unit</label>
+                    <select class="form-control" name="unit" id="unit">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_unit.id == unit.id %}selected{% endif %}>
+                                {{ unit.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="date_range">Date Range</label>
+                    <select class="form-control" name="date_range" id="date_range">
+                        <option value="today" {% if selected_date_range == 'today' %}selected{% endif %}>Today</option>
+                        <option value="week" {% if selected_date_range == 'week' %}selected{% endif %}>This Week</option>
+                        <option value="month" {% if selected_date_range == 'month' %}selected{% endif %}>This Month</option>
+                        <option value="quarter" {% if selected_date_range == 'quarter' %}selected{% endif %}>This Quarter</option>
+                        <option value="year" {% if selected_date_range == 'year' %}selected{% endif %}>This Year</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Date Range Display -->
+    <div class="alert alert-info">
+        <i class="fas fa-calendar-alt"></i>
+        <strong>Showing data for:</strong> {{ dashboard_data.date_range.start }} to {{ dashboard_data.date_range.end }}
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="row">
+        <!-- Occupancy Rate -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span class="status-indicator status-{% if dashboard_data.occupancy.occupancy_rate >= 85 %}good{% elif dashboard_data.occupancy.occupancy_rate >= 70 %}warning{% else %}danger{% endif %}"></span>
+                    Occupancy Rate
+                </div>
+                <div class="kpi-value">{{ dashboard_data.occupancy.occupancy_rate }}%</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.occupancy.occupied_beds }} of {{ dashboard_data.occupancy.total_beds }} beds occupied
+                </div>
+            </div>
+        </div>
+        
+        <!-- Staffing Fill Rate -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span class="status-indicator status-{% if dashboard_data.staffing.fill_rate >= 95 %}good{% elif dashboard_data.staffing.fill_rate >= 85 %}warning{% else %}danger{% endif %}"></span>
+                    Staffing Fill Rate
+                </div>
+                <div class="kpi-value">{{ dashboard_data.staffing.fill_rate }}%</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.staffing.scheduled_shifts }} of {{ dashboard_data.staffing.required_shifts }} shifts filled
+                </div>
+                {% if dashboard_data.staffing.vacancies > 0 %}
+                <div class="kpi-trend trend-down">
+                    <i class="fas fa-exclamation-triangle"></i> {{ dashboard_data.staffing.vacancies }} vacancies
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Compliance Rate -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span class="status-indicator status-{% if dashboard_data.compliance.compliance_rate >= 95 %}good{% elif dashboard_data.compliance.compliance_rate >= 85 %}warning{% else %}danger{% endif %}"></span>
+                    Compliance Rate
+                </div>
+                <div class="kpi-value">{{ dashboard_data.compliance.compliance_rate }}%</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.compliance.total_staff }} staff members tracked
+                </div>
+                {% if dashboard_data.compliance.violations > 0 %}
+                <div class="kpi-trend trend-down">
+                    <i class="fas fa-exclamation-circle"></i> {{ dashboard_data.compliance.violations }} violations
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Overtime -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">Overtime Hours</div>
+                <div class="kpi-value">{{ dashboard_data.overtime.total_overtime_hours }}</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.overtime.percentage_overtime }}% of total shifts
+                </div>
+                <div class="kpi-trend trend-down">
+                    <i class="fas fa-pound-sign"></i> £{{ dashboard_data.overtime.estimated_overtime_cost }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Costs -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Staffing Costs</div>
+                <div class="kpi-value">£{{ dashboard_data.costs.estimated_total_cost }}</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.costs.total_shifts }} shifts
+                </div>
+                <div class="kpi-trend">
+                    Avg: £{{ dashboard_data.costs.cost_per_shift }}/shift
+                </div>
+            </div>
+        </div>
+        
+        <!-- Leave Requests -->
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-title">Leave Requests</div>
+                <div class="kpi-value">{{ dashboard_data.leave.total_requests }}</div>
+                <div class="kpi-subtitle">
+                    {{ dashboard_data.leave.approved }} approved, {{ dashboard_data.leave.pending }} pending
+                </div>
+                <div class="kpi-trend trend-up">
+                    {{ dashboard_data.leave.approval_rate }}% approval rate
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row mt-4">
+        <!-- Staffing Trend -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-users"></i> Staffing Fill Rate Trend (12 Weeks)
+                </div>
+                <canvas id="staffingTrendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Cost Trend -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-pound-sign"></i> Staffing Costs Trend (12 Weeks)
+                </div>
+                <canvas id="costsTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Occupancy Trend -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-bed"></i> Occupancy Rate Trend (12 Weeks)
+                </div>
+                <canvas id="occupancyTrendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Compliance Trend -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-check-circle"></i> Compliance Rate Trend (12 Weeks)
+                </div>
+                <canvas id="complianceTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Shift Distribution by Type -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i> Shift Distribution by Type
+                </div>
+                <canvas id="shiftTypeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Shift Distribution by Day -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-calendar-week"></i> Shift Distribution by Day of Week
+                </div>
+                <canvas id="shiftDayChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <a href="{% url 'analytics_detailed_report' %}{% if selected_care_home %}?care_home={{ selected_care_home.id }}{% endif %}{% if selected_unit %}&unit={{ selected_unit.id }}{% endif %}" 
+                       class="btn btn-primary mr-2">
+                        <i class="fas fa-file-alt"></i> View Detailed Report
+                    </a>
+                    <a href="{% url 'analytics_export_data' %}?date_range={{ selected_date_range }}{% if selected_care_home %}&care_home={{ selected_care_home.id }}{% endif %}" 
+                       class="btn btn-success mr-2">
+                        <i class="fas fa-download"></i> Export Data (JSON)
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Chart.js configuration
+Chart.defaults.font.family = "'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif";
+Chart.defaults.color = '#666';
+
+// Staffing Trend Chart
+const staffingCtx = document.getElementById('staffingTrendChart').getContext('2d');
+new Chart(staffingCtx, {
+    type: 'line',
+    data: {
+        labels: {{ staffing_trend|safe }}.map(d => d.period),
+        datasets: [{
+            label: 'Fill Rate (%)',
+            data: {{ staffing_trend|safe }}.map(d => d.value),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Costs Trend Chart
+const costsCtx = document.getElementById('costsTrendChart').getContext('2d');
+new Chart(costsCtx, {
+    type: 'line',
+    data: {
+        labels: {{ costs_trend|safe }}.map(d => d.period),
+        datasets: [{
+            label: 'Total Cost (£)',
+            data: {{ costs_trend|safe }}.map(d => d.value),
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '£' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Occupancy Trend Chart
+const occupancyCtx = document.getElementById('occupancyTrendChart').getContext('2d');
+new Chart(occupancyCtx, {
+    type: 'line',
+    data: {
+        labels: {{ occupancy_trend|safe }}.map(d => d.period),
+        datasets: [{
+            label: 'Occupancy Rate (%)',
+            data: {{ occupancy_trend|safe }}.map(d => d.value),
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Compliance Trend Chart
+const complianceCtx = document.getElementById('complianceTrendChart').getContext('2d');
+new Chart(complianceCtx, {
+    type: 'line',
+    data: {
+        labels: {{ compliance_trend|safe }}.map(d => d.period),
+        datasets: [{
+            label: 'Compliance Rate (%)',
+            data: {{ compliance_trend|safe }}.map(d => d.value),
+            borderColor: 'rgb(153, 102, 255)',
+            backgroundColor: 'rgba(153, 102, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Shift Type Distribution Chart
+const shiftTypeCtx = document.getElementById('shiftTypeChart').getContext('2d');
+const shiftTypeData = {{ dashboard_data.distribution.by_type|safe }};
+new Chart(shiftTypeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: shiftTypeData.map(d => d.name),
+        datasets: [{
+            data: shiftTypeData.map(d => d.count),
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// Shift Day Distribution Chart
+const shiftDayCtx = document.getElementById('shiftDayChart').getContext('2d');
+const shiftDayData = {{ dashboard_data.distribution.by_day_of_week|safe }};
+new Chart(shiftDayCtx, {
+    type: 'bar',
+    data: {
+        labels: shiftDayData.map(d => d.day),
+        datasets: [{
+            label: 'Number of Shifts',
+            data: shiftDayData.map(d => d.count),
+            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+            borderColor: 'rgb(54, 162, 235)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Auto-submit form when filters change
+document.getElementById('care_home').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('unit').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('date_range').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Request OT Coverage - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-clock"></i> 
+                        Request Overtime Coverage - Intelligent Matching
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Shift Details -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-calendar-day"></i> Shift Needing Coverage</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Date:</strong><br>
+                                {{ shift.date|date:"l, d M Y" }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Shift Type:</strong><br>
+                                {{ shift.shift_type.name }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Unit:</strong><br>
+                                {{ shift.unit.get_name_display }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Role:</strong><br>
+                                {{ shift.role.get_name_display|default:"Any" }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI-Ranked Candidates -->
+                    <h5 class="mt-4"><i class="fas fa-robot"></i> AI-Ranked Candidates (Top 10)</h5>
+                    <p class="text-muted">Staff ranked by availability, acceptance rate, fairness, proximity, and reliability</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Staff Member</th>
+                                    <th>Role</th>
+                                    <th>Score</th>
+                                    <th>Availability</th>
+                                    <th>Acceptance Rate</th>
+                                    <th>Recent OT</th>
+                                    <th>Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in ranked_candidates %}
+                                <tr class="{% if forloop.counter <= 5 %}table-success{% endif %}">
+                                    <td>
+                                        <strong>#{{ forloop.counter }}</strong>
+                                        {% if forloop.counter <= 5 %}
+                                            <span class="badge bg-success">Will Contact</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ candidate.staff.full_name }}</strong><br>
+                                        <small class="text-muted">SAP: {{ candidate.staff.sap }}</small>
+                                    </td>
+                                    <td>{{ candidate.staff.role.get_name_display }}</td>
+                                    <td>
+                                        <div class="progress" style="width: 80px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ candidate.total_score }}%">
+                                                {{ candidate.total_score|floatformat:0 }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {{ candidate.breakdown.availability|floatformat:0 }}/100
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {{ candidate.breakdown.acceptance_rate|floatformat:0 }}%
+                                    </td>
+                                    <td>
+                                        <small>
+                                            Fairness: {{ candidate.breakdown.fairness|floatformat:0 }}/100
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-phone"></i> {{ candidate.phone|default:"N/A" }}<br>
+                                            via {{ candidate.contact_method }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        No available staff found matching the criteria for this shift.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Send Request Form -->
+                    {% if ranked_candidates %}
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5><i class="fas fa-paper-plane"></i> Send Automated Alerts</h5>
+                                <p>The system will contact staff in priority order and track responses automatically.</p>
+                                
+                                <div class="mb-3">
+                                    <label for="top_n" class="form-label"><strong>Number of staff to contact:</strong></label>
+                                    <select class="form-select" id="top_n" name="top_n" style="width: 200px;">
+                                        <option value="3">Top 3 candidates</option>
+                                        <option value="5" selected>Top 5 candidates</option>
+                                        <option value="10">Top 10 candidates</option>
+                                    </select>
+                                    <small class="text-muted">Staff will be contacted in ranked order via their preferred method</small>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'view_rota' %}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-robot"></i> Send Intelligent OT Request
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>No candidates available.</strong>
+                        Consider:
+                        <ul class="mb-0 mt-2">
+                            <li>Adding more staff to the OT preferences system</li>
+                            <li>Expanding care home coverage preferences</li>
+                            <li>Contacting agency partners</li>
+                        </ul>
+                    </div>
+                    <a href="{% url 'view_rota' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Rota
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Scoring Breakdown Info -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> How Staff Are Ranked</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6><span class="badge bg-primary">40%</span> Availability</h6>
+                            <small>Shift type match, day match, willing to work at this home</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><span class="badge bg-success">25%</span> Acceptance Rate</h6>
+                            <small>Historical response rate to OT requests</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><span class="badge bg-info">20%</span> Fairness</h6>
+                            <small>Recent OT distribution - prioritizes those with less OT</small>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <h6><span class="badge bg-warning">10%</span> Proximity</h6>
+                            <small>Geographic distance to care home (future feature)</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><span class="badge bg-secondary">5%</span> Reliability</h6>
+                            <small>Attendance record, low sickness rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

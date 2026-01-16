@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ analysis.name }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .metric-card h3 {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+        margin: 0;
+    }
+    
+    .metric-card p {
+        margin: 0.5rem 0 0 0;
+        color: #666;
+    }
+    
+    .chart-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'cost_analytics_dashboard' %}" class="btn btn-secondary mb-3">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <h1><i class="fas fa-calculator"></i> {{ analysis.name }}</h1>
+            <p class="text-muted">{{ analysis.description }}</p>
+            <p><strong>Period:</strong> {{ analysis.start_date }} to {{ analysis.end_date }}</p>
+        </div>
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h3>£{{ analysis.total_cost|floatformat:2 }}</h3>
+                <p>Total Cost</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h3>£{{ analysis.cost_per_shift|floatformat:2 }}</h3>
+                <p>Cost per Shift</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h3>{{ analysis.agency_percentage|floatformat:1 }}%</h3>
+                <p>Agency Usage</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h3>{{ analysis.cost_efficiency_score|floatformat:0 }}</h3>
+                <p>Efficiency Score</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Cost Breakdown by Category</h3>
+                <canvas id="costBreakdownChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Daily Cost Trend</h3>
+                <canvas id="dailyCostChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Breakdown -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Cost Details</h3>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Permanent Staff Cost:</strong></td>
+                            <td class="text-end">£{{ analysis.permanent_staff_cost|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Agency Staff Cost:</strong></td>
+                            <td class="text-end">£{{ analysis.agency_staff_cost|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Overtime Cost:</strong></td>
+                            <td class="text-end">£{{ analysis.overtime_cost|floatformat:2 }}</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>Total Cost:</strong></td>
+                            <td class="text-end"><strong>£{{ analysis.total_cost|floatformat:2 }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h4 class="mt-4 mb-3">Shift Breakdown</h4>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td><strong>Permanent Shifts:</strong></td>
+                            <td class="text-end">{{ analysis.permanent_shifts }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Agency Shifts:</strong></td>
+                            <td class="text-end">{{ analysis.agency_shifts }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Overtime Shifts:</strong></td>
+                            <td class="text-end">{{ analysis.overtime_shifts }}</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>Total Shifts:</strong></td>
+                            <td class="text-end"><strong>{{ analysis.total_shifts }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="mb-3">Cost per Shift Comparison</h3>
+                <canvas id="costPerShiftChart"></canvas>
+                
+                {% if analysis.potential_savings > 0 %}
+                <div class="alert alert-success mt-4">
+                    <h5><i class="fas fa-piggy-bank"></i> Potential Savings</h5>
+                    <p class="mb-0"><strong>£{{ analysis.potential_savings|floatformat:2 }}</strong> per month by reducing agency usage</p>
+                </div>
+                {% endif %}
+                
+                <div class="mt-4">
+                    <h4 class="mb-3">Recommendations</h4>
+                    <div class="alert alert-info">
+                        {{ analysis.savings_recommendations|linebreaks }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Cost Breakdown Pie Chart
+const breakdownCtx = document.getElementById('costBreakdownChart').getContext('2d');
+new Chart(breakdownCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ cost_breakdown_labels|safe }},
+        datasets: [{
+            data: {{ cost_breakdown_data|safe }},
+            backgroundColor: [
+                '#667eea',
+                '#764ba2',
+                '#f093fb',
+                '#f5576c',
+                '#4facfe',
+            ],
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': £' + context.parsed.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Daily Cost Line Chart
+const dailyCtx = document.getElementById('dailyCostChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: {{ daily_labels|safe }},
+        datasets: [{
+            label: 'Daily Cost',
+            data: {{ daily_data|safe }},
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Cost: £' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '£' + value.toFixed(0);
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Cost per Shift Bar Chart
+const perShiftCtx = document.getElementById('costPerShiftChart').getContext('2d');
+new Chart(perShiftCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Permanent', 'Agency', 'Average'],
+        datasets: [{
+            label: 'Cost per Shift',
+            data: [
+                {{ analysis.permanent_cost_per_shift|default:0 }},
+                {{ analysis.agency_cost_per_shift|default:0 }},
+                {{ analysis.cost_per_shift|default:0 }}
+            ],
+            backgroundColor: [
+                '#667eea',
+                '#f5576c',
+                '#764ba2',
+            ],
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Cost: £' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '£' + value.toFixed(0);
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

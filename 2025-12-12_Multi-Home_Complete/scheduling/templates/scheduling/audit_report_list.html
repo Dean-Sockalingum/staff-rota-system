@@ -1,0 +1,147 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Audit Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .report-type-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .status-completed { background-color: #d4edda; color: #155724; }
+    .status-pending { background-color: #fff3cd; color: #856404; }
+    .status-failed { background-color: #f8d7da; color: #721c24; }
+    
+    .pagination {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #007bff;
+    }
+    
+    .pagination .current {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-alt"></i> Audit Reports</h2>
+        <div>
+            <a href="{% url 'generate_audit_report' %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Generate New Report
+            </a>
+            <a href="{% url 'audit_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    {% if page_obj %}
+        {% for report in page_obj %}
+            <div class="report-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5>
+                            <i class="fas fa-chart-bar text-primary"></i>
+                            {{ report.title }}
+                        </h5>
+                        <p class="text-muted mb-2">{{ report.description|default:"No description provided" }}</p>
+                        
+                        <div class="mb-2">
+                            <span class="report-type-badge">{{ report.get_report_type_display }}</span>
+                            <span class="status-badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span>
+                        </div>
+                        
+                        <div class="small text-muted">
+                            <i class="fas fa-calendar"></i> Generated: {{ report.generated_at|date:"Y-m-d H:i" }}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-user"></i> By: {{ report.generated_by.get_full_name }}
+                            {% if report.period_start and report.period_end %}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-clock"></i> Period: {{ report.period_start|date:"Y-m-d" }} to {{ report.period_end|date:"Y-m-d" }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="ml-3">
+                        <a href="{% url 'audit_report_detail' report.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        {% if report.file %}
+                            <a href="{{ report.file.url }}" class="btn btn-sm btn-success" download>
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                {% endif %}
+                
+                <span class="current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No audit reports have been generated yet.
+            <a href="{% url 'generate_audit_report' %}" class="alert-link">Generate your first report</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

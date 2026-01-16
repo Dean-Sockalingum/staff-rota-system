@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Risk Management Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-bar"></i> Risk Management Reports</h1>
+        <div>
+            <a href="{% url 'risk_management:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="{% url 'risk_management:export_csv' %}" class="btn btn-success">
+                <i class="fas fa-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ total_risks }}</h3>
+                    <p class="text-muted mb-0">Total Risks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ open_risks }}</h3>
+                    <p class="text-muted mb-0">Open Risks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ overdue_reviews }}</h3>
+                    <p class="text-muted mb-0">Overdue Reviews</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ review_compliance_pct|floatformat:1 }}%</h3>
+                    <p class="text-muted mb-0">Review Compliance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Priority Breakdown -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Distribution by Priority</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="priorityChart" height="200"></canvas>
+                    
+                    <table class="table table-sm mt-3">
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-danger">Critical</span></td>
+                                <td>{{ priority_breakdown.CRITICAL }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" style="width: {% widthratio priority_breakdown.CRITICAL total_risks 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning">High</span></td>
+                                <td>{{ priority_breakdown.HIGH }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-warning" style="width: {% widthratio priority_breakdown.HIGH total_risks 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info">Medium</span></td>
+                                <td>{{ priority_breakdown.MEDIUM }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" style="width: {% widthratio priority_breakdown.MEDIUM total_risks 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">Low</span></td>
+                                <td>{{ priority_breakdown.LOW }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: {% widthratio priority_breakdown.LOW total_risks 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Categories</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" height="200"></canvas>
+                    
+                    <table class="table table-sm mt-3">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in category_breakdown %}
+                            <tr>
+                                <td>{{ cat.category__name }}</td>
+                                <td>{{ cat.count }}</td>
+                                <td>{% widthratio cat.count total_risks 100 %}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mitigation Effectiveness -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Mitigation Effectiveness</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <h3 class="text-primary">{{ avg_effectiveness|floatformat:2 }}</h3>
+                            <p class="text-muted">Average Effectiveness Rating (out of 5)</p>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {% widthratio avg_effectiveness 5 100 %}%;"
+                                     aria-valuenow="{{ avg_effectiveness }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="5">
+                                    {% widthratio avg_effectiveness 5 100 %}%
+                                </div>
+                            </div>
+                            <p class="text-muted mt-2">
+                                Based on completed mitigations with effectiveness ratings
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Insights -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Key Insights & Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        {% if priority_breakdown.CRITICAL > 0 %}
+                        <li class="mb-2">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            <strong>Critical Risks:</strong> {{ priority_breakdown.CRITICAL }} critical risk(s) require immediate attention
+                        </li>
+                        {% endif %}
+                        
+                        {% if overdue_reviews > 0 %}
+                        <li class="mb-2">
+                            <i class="fas fa-clock text-warning"></i>
+                            <strong>Overdue Reviews:</strong> {{ overdue_reviews }} risk(s) have overdue reviews
+                        </li>
+                        {% endif %}
+                        
+                        {% if review_compliance_pct < 80 %}
+                        <li class="mb-2">
+                            <i class="fas fa-clipboard-check text-warning"></i>
+                            <strong>Review Compliance:</strong> Compliance at {{ review_compliance_pct|floatformat:1 }}% - aim for 95%+
+                        </li>
+                        {% endif %}
+                        
+                        {% if avg_effectiveness < 3 %}
+                        <li class="mb-2">
+                            <i class="fas fa-shield-alt text-warning"></i>
+                            <strong>Mitigation Effectiveness:</strong> Average effectiveness below target - review control measures
+                        </li>
+                        {% endif %}
+                        
+                        {% if priority_breakdown.CRITICAL == 0 and priority_breakdown.HIGH == 0 %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <strong>Good Risk Profile:</strong> No critical or high risks currently identified
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Priority Chart
+const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+new Chart(priorityCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [{
+            data: [
+                {{ priority_breakdown.CRITICAL }},
+                {{ priority_breakdown.HIGH }},
+                {{ priority_breakdown.MEDIUM }},
+                {{ priority_breakdown.LOW }}
+            ],
+            backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#28a745']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Category Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for cat in category_breakdown %}'{{ cat.category__name }}',{% endfor %}],
+        datasets: [{
+            label: 'Number of Risks',
+            data: [{% for cat in category_breakdown %}{{ cat.count }},{% endfor %}],
+            backgroundColor: '#007bff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

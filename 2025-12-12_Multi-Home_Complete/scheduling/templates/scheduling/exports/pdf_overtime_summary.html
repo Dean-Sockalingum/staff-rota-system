@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Overtime Summary Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #1F2937;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28pt;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header .meta {
+            font-size: 10pt;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: #F9FAFB;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #F59E0B;
+        }
+        
+        .summary-card h3 {
+            font-size: 10pt;
+            color: #6B7280;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .summary-card .value {
+            font-size: 24pt;
+            font-weight: 700;
+            color: #1F2937;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        thead {
+            background: #F59E0B;
+            color: white;
+        }
+        
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10pt;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #FFFBEB;
+        }
+        
+        .totals-row {
+            background: #FEF3C7 !important;
+            font-weight: 700;
+            border-top: 2px solid #F59E0B;
+        }
+        
+        .right-align {
+            text-align: right;
+        }
+        
+        .center-align {
+            text-align: center;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E5E7EB;
+            font-size: 9pt;
+            color: #6B7280;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">
+            Generated: {{ generated_date }}<br>
+            Period: {{ period }}
+        </div>
+    </div>
+    
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h3>Total Hours</h3>
+            <div class="value">{{ total_hours|floatformat:1 }}</div>
+        </div>
+        <div class="summary-card">
+            <h3>Total Cost</h3>
+            <div class="value">£{{ total_cost|floatformat:2 }}</div>
+        </div>
+        <div class="summary-card">
+            <h3>Staff Count</h3>
+            <div class="value">{{ overtime_data|length }}</div>
+        </div>
+    </div>
+    
+    <h2 style="margin-bottom: 15px; color: #1F2937;">Overtime Details</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Staff Name</th>
+                <th>SAP</th>
+                <th>Care Home</th>
+                <th class="center-align">Hours</th>
+                <th class="right-align">Rate (£/hr)</th>
+                <th class="right-align">Cost (£)</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ot in overtime_data %}
+            <tr>
+                <td>{{ ot.staff_name }}</td>
+                <td>{{ ot.sap }}</td>
+                <td>{{ ot.care_home }}</td>
+                <td class="center-align">{{ ot.hours|floatformat:1 }}</td>
+                <td class="right-align">{{ ot.rate|floatformat:2 }}</td>
+                <td class="right-align">{{ ot.cost|floatformat:2 }}</td>
+                <td>{{ ot.reason|default:"Standard overtime" }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="totals-row">
+                <td colspan="3">TOTAL</td>
+                <td class="center-align">{{ total_hours|floatformat:1 }}</td>
+                <td></td>
+                <td class="right-align">£{{ total_cost|floatformat:2 }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="background: #F9FAFB; padding: 20px; border-left: 4px solid #0066FF;">
+        <h3 style="color: #0066FF; margin-bottom: 10px;">Analysis</h3>
+        <p style="font-size: 10pt;">
+            Average overtime per staff member: <strong>{{ total_hours|floatformat:1 }}</strong> hours / {{ overtime_data|length }} = 
+            <strong>{{ total_hours|floatformat:1 }}</strong> hours<br>
+            Average cost per hour: £<strong>{{ total_cost|floatformat:2 }}</strong>
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>Glasgow City HSCP - Staff Rota System</p>
+        <p>Confidential - For Management Use Only</p>
+    </div>
+</body>
+</html>

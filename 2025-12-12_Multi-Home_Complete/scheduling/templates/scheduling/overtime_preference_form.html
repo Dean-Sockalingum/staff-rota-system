@@ -1,0 +1,203 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}{% if is_new %}Add{% else %}Edit{% endif %} Overtime Preference - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-clock"></i> 
+                        {% if is_new %}Add New{% else %}Edit{% endif %} Overtime Preference
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Staff Selection (only for new) -->
+                        {% if is_new %}
+                        <div class="mb-4">
+                            <label for="staff_id" class="form-label"><strong>Staff Member *</strong></label>
+                            <select class="form-select" id="staff_id" name="staff_id" required>
+                                <option value="">-- Select Staff Member --</option>
+                                {% for staff in available_staff %}
+                                <option value="{{ staff.sap }}">{{ staff.full_name }} ({{ staff.sap }}) - {{ staff.role.get_name_display|default:"No Role" }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Only staff without existing preferences are shown</small>
+                        </div>
+                        {% else %}
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Staff Member</strong></label>
+                            <div class="alert alert-info">
+                                <i class="fas fa-user"></i> {{ preference.staff.full_name }} (SAP: {{ preference.staff.sap }})
+                            </div>
+                            <input type="hidden" name="staff_id" value="{{ preference.staff.sap }}">
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Availability Status -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Overtime Availability</strong></label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="available_for_overtime" name="available_for_overtime" {% if preference.available_for_overtime or is_new %}checked{% endif %}>
+                                <label class="form-check-label" for="available_for_overtime">
+                                    <strong>Available for overtime shifts</strong>
+                                </label>
+                            </div>
+                            <small class="text-muted">When enabled, this staff member can be contacted for overtime coverage</small>
+                        </div>
+                        
+                        <!-- Willing to Work At -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Willing to Work At (Care Homes)</strong></label>
+                            <div class="row">
+                                {% for home in care_homes %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="home_{{ home.name }}" name="willing_to_work_at" value="{{ home.name }}" 
+                                        {% if home.name in selected_homes %}checked{% endif %}>
+                                        <label class="form-check-label" for="home_{{ home.name }}">
+                                            {{ home.get_name_display }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">Select which care homes this staff member is willing to work at</small>
+                        </div>
+                        
+                        <!-- Shift Type Preferences -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Shift Type Preferences</strong></label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="available_early_shifts" name="available_early_shifts" {% if preference.available_early_shifts or is_new %}checked{% endif %}>
+                                        <label class="form-check-label" for="available_early_shifts">
+                                            <i class="fas fa-sun text-warning"></i> Day Shifts
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="available_night_shifts" name="available_night_shifts" {% if preference.available_night_shifts or is_new %}checked{% endif %}>
+                                        <label class="form-check-label" for="available_night_shifts">
+                                            <i class="fas fa-moon text-primary"></i> Night Shifts
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Day Preferences -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Day Preferences</strong></label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="available_weekdays" name="available_weekdays" {% if preference.available_weekdays or is_new %}checked{% endif %}>
+                                        <label class="form-check-label" for="available_weekdays">
+                                            <i class="fas fa-calendar-week"></i> Weekdays (Mon-Fri)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="available_weekends" name="available_weekends" {% if preference.available_weekends or is_new %}checked{% endif %}>
+                                        <label class="form-check-label" for="available_weekends">
+                                            <i class="fas fa-calendar-alt"></i> Weekends (Sat-Sun)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Contact Information</strong></label>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone_number" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ preference.phone_number }}" placeholder="e.g., 07700 900000">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="preferred_contact_method" class="form-label">Preferred Contact Method</label>
+                                    <select class="form-select" id="preferred_contact_method" name="preferred_contact_method">
+                                        {% for value, label in contact_methods %}
+                                        <option value="{{ value }}" {% if preference.preferred_contact_method == value %}selected{% elif is_new and value == 'PHONE' %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Constraints -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Constraints</strong></label>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="max_hours_per_week" class="form-label">Max Hours Per Week (Optional)</label>
+                                    <input type="number" class="form-control" id="max_hours_per_week" name="max_hours_per_week" value="{{ preference.max_hours_per_week|default:'' }}" min="0" max="168" placeholder="e.g., 48">
+                                    <small class="text-muted">Leave blank for no limit</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="min_notice_hours" class="form-label">Minimum Notice Required (Hours)</label>
+                                    <input type="number" class="form-control" id="min_notice_hours" name="min_notice_hours" value="{{ preference.min_notice_hours|default:'24' }}" min="0" max="168">
+                                    <small class="text-muted">How much advance notice needed</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label"><strong>Additional Notes</strong></label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Any special requirements, restrictions, or preferences...">{{ preference.notes }}</textarea>
+                        </div>
+                        
+                        <!-- Performance Stats (Edit only) -->
+                        {% if not is_new and preference %}
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Performance Statistics</strong></label>
+                            <div class="alert alert-secondary">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <strong>Acceptance Rate:</strong><br>
+                                        {{ preference.acceptance_rate|floatformat:1 }}%
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Shifts Worked:</strong><br>
+                                        {{ preference.total_shifts_worked }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Requests Sent:</strong><br>
+                                        {{ preference.total_requests_sent }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Last Contacted:</strong><br>
+                                        {{ preference.last_contacted|date:"d/m/Y"|default:"Never" }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'overtime_preferences_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Preference
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

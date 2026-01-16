@@ -1,0 +1,66 @@
+{% extends "scheduling/email/base.html" %}
+
+{% block title %}Shift Swap Confirmed{% endblock %}
+
+{% block header %}🔄 Shift Swap Confirmed{% endblock %}
+
+{% block content %}
+<h2>Hello {{ staff_member.first_name }},</h2>
+
+<p>Your shift swap has been <strong class="highlight">confirmed</strong> and processed.</p>
+
+<h3>Original Shift (Given Away):</h3>
+<div class="warning-box">
+    <table class="shift-details">
+        <tr>
+            <th>Date</th>
+            <td>{{ original_shift.date|date:"l, d F Y" }}</td>
+        </tr>
+        <tr>
+            <th>Time</th>
+            <td>{{ original_shift.start_time|time:"H:i" }} - {{ original_shift.end_time|time:"H:i" }}</td>
+        </tr>
+        <tr>
+            <th>Unit</th>
+            <td>{{ original_shift.unit.name }}</td>
+        </tr>
+        <tr>
+            <th>Now Assigned To</th>
+            <td>{{ swap_with.get_full_name }}</td>
+        </tr>
+    </table>
+</div>
+
+{% if new_shift %}
+<h3>New Shift (Received):</h3>
+<div class="info-box">
+    <table class="shift-details">
+        <tr>
+            <th>Date</th>
+            <td>{{ new_shift.date|date:"l, d F Y" }}</td>
+        </tr>
+        <tr>
+            <th>Time</th>
+            <td>{{ new_shift.start_time|time:"H:i" }} - {{ new_shift.end_time|time:"H:i" }}</td>
+        </tr>
+        <tr>
+            <th>Unit</th>
+            <td>{{ new_shift.unit.name }}</td>
+        </tr>
+        <tr>
+            <th>Previously Assigned To</th>
+            <td>{{ swap_with.get_full_name }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+<p>The rota has been updated to reflect these changes. Please check your updated schedule.</p>
+
+<a href="{{ login_url }}" class="button">View My Schedule</a>
+
+<p>Thank you for your flexibility!</p>
+
+<p>Best regards,<br>
+<strong>Staff Rota System</strong></p>
+{% endblock %}

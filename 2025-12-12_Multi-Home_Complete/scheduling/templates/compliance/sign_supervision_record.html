@@ -1,0 +1,119 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Sign Supervision Record{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h2><i class="fas fa-file-signature"></i> Sign Supervision Record</h2>
+            <p class="text-muted">Review and sign your supervision record from {{ supervision.session_date|date:'d M Y' }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Supervision Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Session Date:</dt>
+                        <dd class="col-sm-8">{{ supervision.session_date|date:'d M Y' }}</dd>
+
+                        <dt class="col-sm-4">Session Type:</dt>
+                        <dd class="col-sm-8">{{ supervision.get_session_type_display }}</dd>
+
+                        <dt class="col-sm-4">Supervisor:</dt>
+                        <dd class="col-sm-8">{{ supervision.supervisor.full_name }}</dd>
+
+                        <dt class="col-sm-4">Duration:</dt>
+                        <dd class="col-sm-8">{{ supervision.duration_minutes }} minutes</dd>
+                    </dl>
+
+                    <hr>
+
+                    <h6 class="text-primary"><i class="fas fa-heart"></i> Wellbeing</h6>
+                    <p><strong>Wellbeing Score:</strong> {{ supervision.wellbeing_score }}/10</p>
+                    {% if supervision.wellbeing_concerns %}
+                        <p><strong>Concerns Discussed:</strong><br>{{ supervision.wellbeing_concerns }}</p>
+                    {% endif %}
+                    {% if supervision.support_offered %}
+                        <p><strong>Support Offered:</strong><br>{{ supervision.support_offered }}</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <h6 class="text-primary"><i class="fas fa-chart-line"></i> Performance</h6>
+                    {% if supervision.performance_strengths %}
+                        <p><strong>Strengths:</strong><br>{{ supervision.performance_strengths }}</p>
+                    {% endif %}
+                    {% if supervision.performance_development %}
+                        <p><strong>Development Areas:</strong><br>{{ supervision.performance_development }}</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <h6 class="text-primary"><i class="fas fa-tasks"></i> Actions</h6>
+                    {% if supervision.actions_from_previous %}
+                        <p><strong>Progress on Previous Actions:</strong><br>{{ supervision.actions_from_previous }}</p>
+                    {% endif %}
+                    {% if supervision.new_actions %}
+                        <p><strong>New Actions:</strong><br>{{ supervision.new_actions }}</p>
+                    {% endif %}
+
+                    {% if supervision.next_supervision_date %}
+                        <hr>
+                        <p><strong>Next Supervision Due:</strong> {{ supervision.next_supervision_date|date:'d M Y' }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Sign Record</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="staff_comments" class="form-label">Your Comments (Optional)</label>
+                            <textarea 
+                                name="staff_comments" 
+                                id="staff_comments" 
+                                class="form-control" 
+                                rows="4"
+                                placeholder="Add any comments about this supervision session..."
+                            ></textarea>
+                            <small class="form-text text-muted">
+                                You can add your own comments or feedback about the supervision session here.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>By signing this record, you confirm that:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>You have reviewed the content of this supervision record</li>
+                                <li>The information recorded is accurate</li>
+                                <li>You understand the actions and next steps discussed</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'my_supervision_records' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-file-signature"></i> Sign Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

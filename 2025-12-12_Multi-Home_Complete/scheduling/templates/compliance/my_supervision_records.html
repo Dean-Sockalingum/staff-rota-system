@@ -1,0 +1,147 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}My Supervision Records{% endblock %}
+
+{% block extra_css %}
+<style>
+    .supervision-card {
+        border-left: 4px solid #3498db;
+        margin-bottom: 15px;
+    }
+    .supervision-card.recent {
+        border-left-color: #2ecc71;
+    }
+    .supervision-card.overdue {
+        border-left-color: #e74c3c;
+    }
+    .wellbeing-score {
+        font-size: 2em;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-user-check"></i> My Supervision Records</h2>
+            <p class="text-muted">Track your professional development and supervision sessions</p>
+        </div>
+    </div>
+
+    <!-- Status Alert -->
+    {% if overdue %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Supervision Overdue:</strong> 
+        It's been more than 6 weeks since your last supervision. Please contact your supervisor to arrange a session.
+    </div>
+    {% elif next_supervision %}
+    <div class="alert alert-info">
+        <i class="fas fa-calendar-check"></i> <strong>Next Supervision:</strong> {{ next_supervision|date:"d M Y" }}
+    </div>
+    {% endif %}
+
+    <!-- Supervision Records -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Supervision History</h5>
+                </div>
+                <div class="card-body">
+                    {% if supervision_records %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Supervisor</th>
+                                    <th>Wellbeing Score</th>
+                                    <th>Key Areas Discussed</th>
+                                    <th>Next Session</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in supervision_records %}
+                                <tr>
+                                    <td>{{ record.session_date|date:"d M Y" }}</td>
+                                    <td>{{ record.supervisor.full_name|default:record.supervisor.sap }}</td>
+                                    <td>
+                                        <span class="wellbeing-score {% if record.wellbeing_score >= 7 %}text-success{% elif record.wellbeing_score >= 4 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ record.wellbeing_score }}/10
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {% if record.performance_strengths %}<span class="badge bg-success">Performance</span>{% endif %}
+                                            {% if record.training_needs_identified %}<span class="badge bg-info">Training</span>{% endif %}
+                                            {% if record.safeguarding_concerns_discussed %}<span class="badge bg-warning">Safeguarding</span>{% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if record.next_supervision_date %}
+                                        {{ record.next_supervision_date|date:"d M Y" }}
+                                        {% else %}
+                                        <span class="text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not record.staff_signature_date %}
+                                            <a href="{% url 'sign_supervision_record' record.id %}" class="btn btn-sm btn-success me-1">
+                                                <i class="fas fa-file-signature"></i> Sign
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-success me-1"><i class="fas fa-check"></i> Signed</span>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#supervision-{{ record.id }}">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr id="supervision-{{ record.id }}" class="collapse">
+                                    <td colspan="6">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6>Strengths & Achievements</h6>
+                                                <p>{{ record.performance_strengths|default:"Not recorded" }}</p>
+                                                
+                                                <h6>Development Areas</h6>
+                                                <p>{{ record.areas_for_development|default:"Not recorded" }}</p>
+                                                
+                                                <h6>Training Needs</h6>
+                                                <p>{{ record.training_needs_identified|default:"None identified" }}</p>
+                                                
+                                                <h6>Actions Agreed</h6>
+                                                <p>{{ record.actions_agreed|default:"No actions" }}</p>
+                                                
+                                                {% if record.probationary_review %}
+                                                <div class="alert alert-info">
+                                                    <strong>Probationary Review:</strong> {{ record.probationary_outcome }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-user-check fa-3x text-muted mb-3"></i>
+                        <h5>No Supervision Records</h5>
+                        <p class="text-muted">You don't have any supervision sessions recorded yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
