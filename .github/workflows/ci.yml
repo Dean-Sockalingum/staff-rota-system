@@ -75,6 +75,7 @@ jobs:
           --exclude=*/migrations/*,*/static/*,*/staticfiles/*
     
     - name: Run migrations
+      working-directory: 2025-12-12_Multi-Home_Complete
       env:
         DB_ENGINE: django.db.backends.postgresql
         DB_NAME: test_db
@@ -88,6 +89,7 @@ jobs:
         python manage.py migrate --noinput
     
     - name: Run tests with coverage
+      working-directory: 2025-12-12_Multi-Home_Complete
       env:
         DB_ENGINE: django.db.backends.postgresql
         DB_NAME: test_db
@@ -105,12 +107,13 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        file: ./coverage.xml
+        file: ./2025-12-12_Multi-Home_Complete/coverage.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
     
     - name: Check migrations
+      working-directory: 2025-12-12_Multi-Home_Complete
       env:
         DB_ENGINE: django.db.backends.postgresql
         DB_NAME: test_db
