@@ -1,0 +1,218 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ competency.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'training_competency:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'training_competency:competency_list' %}">Competencies</a></li>
+                    <li class="breadcrumb-item active">{{ competency.code }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">{{ competency.code }}: {{ competency.title }}</h3>
+                        {% if competency.competency_type == 'CLINICAL' %}
+                            <span class="badge bg-danger fs-6">Clinical</span>
+                        {% elif competency.competency_type == 'TECHNICAL' %}
+                            <span class="badge bg-info fs-6">Technical</span>
+                        {% elif competency.competency_type == 'BEHAVIORAL' %}
+                            <span class="badge bg-success fs-6">Behavioral</span>
+                        {% elif competency.competency_type == 'LEADERSHIP' %}
+                            <span class="badge bg-warning text-dark fs-6">Leadership</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5>Description</h5>
+                    <p>{{ competency.description }}</p>
+
+                    {% if competency.assessment_criteria %}
+                        <h5 class="mt-4">Assessment Criteria</h5>
+                        <div class="alert alert-info">
+                            {{ competency.assessment_criteria|linebreaks }}
+                        </div>
+                    {% endif %}
+
+                    {% if competency.evidence_required %}
+                        <h5 class="mt-4">Evidence Required</h5>
+                        <div class="alert alert-warning">
+                            {{ competency.evidence_required|linebreaks }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User's Assessment Status -->
+    {% if user_assessment %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-check"></i> Your Current Assessment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Assessment Date:</strong> {{ user_assessment.assessment_date|date:"d M Y" }}</p>
+                                <p><strong>Assessor:</strong> {{ user_assessment.assessor.get_full_name }}</p>
+                                <p>
+                                    <strong>Achieved Level:</strong> 
+                                    <span class="badge bg-info">{{ user_assessment.get_achieved_level_display }}</span>
+                                </p>
+                                <p>
+                                    <strong>Outcome:</strong> 
+                                    <span class="badge bg-success">{{ user_assessment.get_outcome_display }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if user_assessment.next_review_date %}
+                                    <p><strong>Next Review:</strong> {{ user_assessment.next_review_date|date:"d M Y" }}</p>
+                                {% endif %}
+                                {% if user_assessment.expiry_date %}
+                                    <p><strong>Expires:</strong> {{ user_assessment.expiry_date|date:"d M Y" }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> You have not been assessed for this competency yet.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Competency Levels -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Competency Levels</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for level_code, level_name in competency_levels %}
+                            <div class="col-md-3 mb-3">
+                                <div class="card h-100 {% if user_assessment.achieved_level == level_code %}border-success{% endif %}">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">
+                                            {% if level_code == 'AWARENESS' %}
+                                                <span class="badge bg-warning text-dark">{{ level_name }}</span>
+                                            {% elif level_code == 'WORKING' %}
+                                                <span class="badge bg-info">{{ level_name }}</span>
+                                            {% elif level_code == 'PROFICIENT' %}
+                                                <span class="badge bg-success">{{ level_name }}</span>
+                                            {% elif level_code == 'EXPERT' %}
+                                                <span class="badge bg-purple text-white" style="background-color: #6f42c1;">{{ level_name }}</span>
+                                            {% endif %}
+                                        </h5>
+                                        {% if user_assessment.achieved_level == level_code %}
+                                            <p class="text-success"><i class="fas fa-check-circle"></i> Your Current Level</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required for Roles -->
+    {% if role_requirements %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Required for Roles</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Role</th>
+                                        <th>Required Level</th>
+                                        <th>Mandatory</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for requirement in role_requirements %}
+                                        <tr>
+                                            <td>{{ requirement.role.name }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ requirement.get_required_level_display }}</span>
+                                            </td>
+                                            <td>
+                                                {% if requirement.is_mandatory %}
+                                                    <span class="badge bg-danger">Mandatory</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Recommended</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Linked Training Courses -->
+    {% if training_courses %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-book"></i> Linked Training Courses</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for course in training_courses %}
+                                <div class="list-group-item">
+                                    <h6>{{ course.name }}</h6>
+                                    {% if course.description %}
+                                        <p class="mb-0 text-muted">{{ course.description|truncatewords:20 }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'training_competency:competency_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

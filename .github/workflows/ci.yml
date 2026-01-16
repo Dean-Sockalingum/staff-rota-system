@@ -70,7 +70,12 @@ jobs:
     
     - name: Run migrations
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
         REDIS_URL: redis://localhost:6379/0
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
@@ -78,7 +83,12 @@ jobs:
     
     - name: Run tests with coverage
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
         REDIS_URL: redis://localhost:6379/0
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
@@ -96,7 +106,12 @@ jobs:
     
     - name: Check migrations
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
         DJANGO_SETTINGS_MODULE: rotasystems.settings
       run: |
         python manage.py makemigrations --check --dry-run --noinput
