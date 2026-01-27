@@ -1,0 +1,171 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-edit"></i> {{ page_title }}</h2>
+            <p class="text-muted">Complaint: <strong>{{ complaint.complaint_reference }}</strong></p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Complaint
+            </a>
+        </div>
+    </div>
+
+    <!-- Current Status Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h6><i class="fas fa-info-circle"></i> Current Status</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Status:</strong><br>
+                    <span class="badge badge-secondary">{{ complaint.get_status_display }}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Date Received:</strong><br>
+                    {{ complaint.date_received|date:"d M Y" }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Days Open:</strong><br>
+                    {{ complaint.days_since_received }} days
+                </div>
+                <div class="col-md-3">
+                    <strong>Target Resolution:</strong><br>
+                    {{ complaint.target_resolution_date|date:"d M Y" }}
+                    {% if complaint.is_overdue %}
+                    <span class="badge badge-danger ml-2">OVERDUE</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Form -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-clipboard-check"></i> Update Investigation Status</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Status -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.status.id_for_label }}">Complaint Status</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Complainant Satisfied -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.complainant_satisfied.id_for_label }}">Complainant Satisfied?</label>
+                        {{ form.complainant_satisfied }}
+                        {% if form.complainant_satisfied.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complainant_satisfied.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Date Acknowledged -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.date_acknowledged.id_for_label }}">Date Acknowledged</label>
+                        {{ form.date_acknowledged }}
+                        <small class="form-text text-muted">Should be within 3 working days</small>
+                        {% if form.date_acknowledged.errors %}
+                        <div class="invalid-feedback d-block">{{ form.date_acknowledged.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actual Resolution Date -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.actual_resolution_date.id_for_label }}">Actual Resolution Date</label>
+                        {{ form.actual_resolution_date }}
+                        {% if form.actual_resolution_date.errors %}
+                        <div class="invalid-feedback d-block">{{ form.actual_resolution_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Investigation Notes -->
+                <div class="mb-3">
+                    <label for="{{ form.investigation_notes.id_for_label }}">Investigation Notes</label>
+                    {{ form.investigation_notes }}
+                    <small class="form-text text-muted">Document investigation findings and actions taken</small>
+                    {% if form.investigation_notes.errors %}
+                    <div class="invalid-feedback d-block">{{ form.investigation_notes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Root Cause -->
+                <div class="mb-3">
+                    <label for="{{ form.root_cause.id_for_label }}">Root Cause Analysis</label>
+                    {{ form.root_cause }}
+                    <small class="form-text text-muted">What was the underlying cause of this complaint?</small>
+                    {% if form.root_cause.errors %}
+                    <div class="invalid-feedback d-block">{{ form.root_cause.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Lessons Learned -->
+                <div class="mb-3">
+                    <label for="{{ form.lessons_learned.id_for_label }}">Lessons Learned</label>
+                    {{ form.lessons_learned }}
+                    <small class="form-text text-muted">What improvements will be made to prevent recurrence?</small>
+                    {% if form.lessons_learned.errors %}
+                    <div class="invalid-feedback d-block">{{ form.lessons_learned.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Resolution Details -->
+                <div class="mb-3">
+                    <label for="{{ form.resolution_details.id_for_label }}">Resolution Details</label>
+                    {{ form.resolution_details }}
+                    <small class="form-text text-muted">How was the complaint resolved?</small>
+                    {% if form.resolution_details.errors %}
+                    <div class="invalid-feedback d-block">{{ form.resolution_details.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Update Notes -->
+                <div class="mb-3">
+                    <label for="{{ form.update_notes.id_for_label }}">Update Notes</label>
+                    {{ form.update_notes }}
+                    <small class="form-text text-muted">Optional notes about this status update</small>
+                    {% if form.update_notes.errors %}
+                    <div class="invalid-feedback d-block">{{ form.update_notes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Update Status
+                    </button>
+                    <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

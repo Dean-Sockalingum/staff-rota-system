@@ -1,0 +1,173 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Offline - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <!-- Offline Icon -->
+                    <div class="mb-4">
+                        <i class="fas fa-wifi-slash" style="font-size: 80px; color: var(--warning-color);"></i>
+                    </div>
+                    
+                    <!-- Heading -->
+                    <h1 class="h2 mb-3">You're Offline</h1>
+                    
+                    <!-- Message -->
+                    <p class="text-muted mb-4">
+                        Unable to connect to the server. Please check your internet connection.
+                    </p>
+                    
+                    <!-- Cached Content Info -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Good news!</strong> Your previously viewed rotas and data are still available offline.
+                    </div>
+                    
+                    <!-- Available Features -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">What You Can Do Offline:</h5>
+                        <ul class="list-unstyled text-start">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                View cached rotas and schedules
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Review staff information
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Check leave balances
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-info-circle text-warning me-2"></i>
+                                Leave requests will be sent when you're back online
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button onclick="location.reload()" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Try Again
+                        </button>
+                        
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>
+                            Go to Home
+                        </a>
+                    </div>
+                    
+                    <!-- Connection Status -->
+                    <div class="mt-4 pt-4 border-top">
+                        <small class="text-muted">
+                            <i class="fas fa-circle text-danger me-1"></i>
+                            Connection status: <strong id="connection-status">Offline</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips Section -->
+            <div class="mt-4 text-start">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Tips for Better Offline Experience</strong>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li class="mb-2">Install the app on your home screen for faster offline access</li>
+                            <li class="mb-2">Visit pages while online to cache them for offline viewing</li>
+                            <li class="mb-2">Your submitted forms will automatically sync when connection is restored</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Monitor connection status
+    function updateConnectionStatus() {
+        const statusEl = document.getElementById('connection-status');
+        if (navigator.onLine) {
+            statusEl.innerHTML = '<i class="fas fa-circle text-success me-1"></i>Online';
+            statusEl.parentElement.innerHTML = statusEl.outerHTML.replace('text-danger', 'text-success');
+            
+            // Show success message and offer reload
+            setTimeout(() => {
+                if (confirm('You\'re back online! Reload the page to continue?')) {
+                    location.reload();
+                }
+            }, 500);
+        } else {
+            statusEl.innerHTML = '<i class="fas fa-circle text-danger me-1"></i>Offline';
+        }
+    }
+    
+    // Listen for connection changes
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+    
+    // Check initial status
+    updateConnectionStatus();
+    
+    // Periodic connection check
+    setInterval(() => {
+        fetch('/static/manifest.json', { method: 'HEAD', cache: 'no-cache' })
+            .then(() => {
+                if (!navigator.onLine) {
+                    navigator.onLine = true;
+                    updateConnectionStatus();
+                }
+            })
+            .catch(() => {
+                if (navigator.onLine) {
+                    navigator.onLine = false;
+                    updateConnectionStatus();
+                }
+            });
+    }, 5000);
+</script>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 16px;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        border-radius: 16px 16px 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+    
+    .fa-wifi-slash {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+        border-radius: 8px;
+    }
+    
+    .list-unstyled li {
+        padding: 0.5rem 0;
+    }
+</style>
+{% endblock %}

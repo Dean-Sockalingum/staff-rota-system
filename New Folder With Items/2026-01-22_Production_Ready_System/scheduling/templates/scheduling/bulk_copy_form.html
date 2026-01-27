@@ -1,0 +1,148 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Copy Week Schedule - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-copy text-success"></i> Copy Week Schedule</h2>
+                <a href="{% url 'bulk_operations_menu' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Duplicate Weekly Schedule</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="bulkCopyForm">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="care_home"><strong>Care Home:</strong> <span class="text-danger">*</span></label>
+                            <select class="form-control" id="care_home" name="care_home" required>
+                                <option value="">Select Care Home</option>
+                                {% for home in care_homes %}
+                                <option value="{{ home.id }}">{{ home.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="source_week"><strong>Source Week (Monday):</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="source_week" name="source_week" required>
+                                    <small class="form-text text-muted">Week to copy FROM</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="target_week"><strong>Target Week (Monday):</strong> <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="target_week" name="target_week" required>
+                                    <small class="form-text text-muted">Week to copy TO</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><strong>Units (Optional):</strong></label>
+                            <div id="units_selection" class="border rounded p-3">
+                                <p class="text-muted">Select care home first</p>
+                            </div>
+                            <small class="form-text text-muted">Leave unselected to copy all units</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><strong>Staff (Optional):</strong></label>
+                            <div id="staff_selection" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted">Leave unselected to copy for all staff</p>
+                            </div>
+                            <small class="form-text text-muted">Leave unselected to copy for all staff</small>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success btn-lg btn-block">
+                                <i class="fas fa-copy"></i> Copy Week
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle text-info"></i> How it works</h6>
+                    <p>This will copy all shifts from the source week to the target week, maintaining the same:</p>
+                    <ul>
+                        <li>Staff assignments</li>
+                        <li>Shift types and times</li>
+                        <li>Units and care homes</li>
+                    </ul>
+                    <p class="mb-0"><small class="text-muted">Duplicate shifts will be automatically skipped</small></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('care_home').addEventListener('change', function() {
+    const careHomeId = this.value;
+    if (careHomeId) {
+        fetch(`/scheduling/bulk/ajax/units/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const unitsDiv = document.getElementById('units_selection');
+                if (data.units.length === 0) {
+                    unitsDiv.innerHTML = '<p class="text-muted">No units found</p>';
+                    return;
+                }
+                unitsDiv.innerHTML = data.units.map(unit => `
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="units" value="${unit.id}" id="unit_${unit.id}">
+                        <label class="form-check-label" for="unit_${unit.id}">${unit.name}</label>
+                    </div>
+                `).join('');
+            });
+        
+        fetch(`/scheduling/bulk/ajax/staff/?care_home_id=${careHomeId}`)
+            .then(response => response.json())
+            .then(data => {
+                const staffDiv = document.getElementById('staff_selection');
+                if (data.staff.length === 0) {
+                    staffDiv.innerHTML = '<p class="text-muted">No staff found</p>';
+                    return;
+                }
+                staffDiv.innerHTML = data.staff.map(staff => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="staff" value="${staff.id}" id="staff_${staff.id}">
+                        <label class="form-check-label" for="staff_${staff.id}">${staff.name}</label>
+                    </div>
+                `).join('');
+            });
+    }
+});
+
+document.getElementById('bulkCopyForm').addEventListener('submit', function(e) {
+    const sourceWeek = document.getElementById('source_week').value;
+    const targetWeek = document.getElementById('target_week').value;
+    
+    if (sourceWeek === targetWeek) {
+        e.preventDefault();
+        alert('Source and target weeks must be different!');
+        return false;
+    }
+    
+    if (!confirm(`Copy all shifts from week of ${sourceWeek} to week of ${targetWeek}?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

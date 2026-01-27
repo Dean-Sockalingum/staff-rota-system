@@ -1,0 +1,640 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Duty of Candour - {{ doc.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .doc-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .section-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        color: #1f2937;
+    }
+
+    .severity-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .severity-critical { background: #fee2e2; color: #991b1b; }
+    .severity-major { background: #fed7aa; color: #9a3412; }
+    .severity-moderate { background: #fef3c7; color: #854d0e; }
+    .severity-minor { background: #cffafe; color: #155e75; }
+    .severity-no-harm { background: #d1fae5; color: #065f46; }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .status-completed { background: #d1fae5; color: #065f46; }
+    .status-in-progress { background: #dbeafe; color: #1e40af; }
+    .status-pending { background: #fef3c7; color: #854d0e; }
+
+    .timeline-item {
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border-left: 4px solid #10b981;
+        margin-bottom: 1rem;
+    }
+
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .timeline-date {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .btn-secondary-custom:hover {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-success-custom {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-success-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+
+    .btn-warning-custom {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #9ca3af;
+    }
+
+    .progress-mini {
+        height: 8px;
+        border-radius: 4px;
+        background: #e5e7eb;
+        margin-top: 0.5rem;
+    }
+
+    .progress-mini-bar {
+        height: 100%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="doc-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-shield-check"></i> Duty of Candour Record
+                </h1>
+                <h3 class="mb-0">{{ doc.reference_number }}</h3>
+            </div>
+            <div class="text-end">
+                <div class="mb-2">
+                    <span class="severity-badge severity-{{ doc.harm_level|lower|cut:' ' }}">
+                        {{ doc.get_harm_level_display }}
+                    </span>
+                </div>
+                <div class="text-white-50">
+                    Created: {{ doc.created_at|date:"d M Y" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content Column -->
+        <div class="col-lg-8">
+            <!-- Incident Information -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-exclamation-triangle"></i> Linked Incident
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Incident Reference</div>
+                        <div class="info-value">
+                            <strong>{{ doc.incident.reference_number }}</strong>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Incident Date</div>
+                        <div class="info-value">{{ doc.incident.incident_date|date:"d M Y" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Incident Type</div>
+                        <div class="info-value">{{ doc.incident.get_incident_type_display }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Location</div>
+                        <div class="info-value">{{ doc.incident.care_home.name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Severity</div>
+                        <div class="info-value">
+                            <span class="severity-badge severity-{{ doc.incident.severity|lower }}">
+                                {{ doc.incident.get_severity_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Resident</div>
+                        <div class="info-value">{{ doc.incident.resident.full_name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Harm Assessment -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-heart-pulse"></i> Harm Assessment
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Harm Level</div>
+                    <div class="info-value">
+                        <span class="severity-badge severity-{{ doc.harm_level|lower|cut:' ' }}">
+                            {{ doc.get_harm_level_display }}
+                        </span>
+                    </div>
+                </div>
+                {% if doc.harm_assessment %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <strong>Assessment Details:</strong>
+                    <p class="mb-0 mt-2">{{ doc.harm_assessment }}</p>
+                </div>
+                {% endif %}
+                {% if doc.assessment_completed_date %}
+                <div class="mt-3">
+                    <small class="text-muted">
+                        Assessed by {{ doc.assessment_completed_by }} on {{ doc.assessment_completed_date|date:"d M Y" }}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Family Contact & Notifications -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-people"></i> Family Contact & Notifications
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Contact Name</div>
+                        <div class="info-value">{{ doc.family_contact_name|default:"Not recorded" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Relationship</div>
+                        <div class="info-value">{{ doc.family_relationship|default:"Not recorded" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Phone</div>
+                        <div class="info-value">{{ doc.family_contact_phone|default:"Not recorded" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">{{ doc.family_contact_email|default:"Not recorded" }}</div>
+                    </div>
+                </div>
+
+                {% if doc.family_notified_date %}
+                <div class="timeline-item mt-3">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Family Notified
+                        </span>
+                        <span class="timeline-date">{{ doc.family_notified_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        Notified by {{ doc.notification_completed_by }}
+                        {% if doc.notification_method %} via {{ doc.notification_method }}{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doc.apology_given_date %}
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Apology Given
+                        </span>
+                        <span class="timeline-date">{{ doc.apology_given_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        By {{ doc.apology_given_by }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Investigation -->
+            {% if doc.investigation_complete_date or doc.linked_rca %}
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-search"></i> Investigation
+                </div>
+                
+                {% if doc.linked_rca %}
+                <div class="info-item mb-3" style="border-left-color: #3b82f6;">
+                    <div class="info-label">Linked Root Cause Analysis</div>
+                    <div class="info-value">
+                        <a href="{% url 'incident_safety:rca_detail' doc.linked_rca.pk %}" class="text-primary">
+                            <i class="bi bi-diagram-3"></i> {{ doc.linked_rca.reference_number }}
+                        </a>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Status: {{ doc.linked_rca.get_status_display }}</small>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doc.investigation_complete_date %}
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Investigation Complete
+                        </span>
+                        <span class="timeline-date">{{ doc.investigation_complete_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        Led by {{ doc.investigation_led_by }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Feedback & Actions -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-chat-square-text"></i> Feedback & Actions
+                </div>
+
+                {% if doc.family_feedback_date %}
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Feedback Shared
+                        </span>
+                        <span class="timeline-date">{{ doc.family_feedback_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        By {{ doc.feedback_shared_by }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doc.action_plan_date %}
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Action Plan Created
+                        </span>
+                        <span class="timeline-date">{{ doc.action_plan_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        Documented by {{ doc.actions_documented_by }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doc.final_review_date %}
+                <div class="timeline-item">
+                    <div class="timeline-header">
+                        <span class="timeline-title">
+                            <i class="bi bi-check-circle text-success"></i> Final Review Complete
+                        </span>
+                        <span class="timeline-date">{{ doc.final_review_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="text-muted">
+                        Reviewed by {{ doc.final_review_by }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Communications -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-chat-left-text"></i> Communication History
+                </div>
+                {% if doc.communications.exists %}
+                    {% for comm in doc.communications.all %}
+                    <div class="timeline-item">
+                        <div class="timeline-header">
+                            <span class="timeline-title">
+                                <i class="bi bi-{{ comm.communication_type|lower }}"></i>
+                                {{ comm.get_communication_type_display }}
+                            </span>
+                            <span class="timeline-date">{{ comm.communication_date|date:"d M Y" }}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Summary:</strong> {{ comm.summary }}
+                        </div>
+                        {% if comm.attendees %}
+                        <div class="mt-1">
+                            <small class="text-muted">Attendees: {{ comm.attendees }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2">No communications recorded yet</p>
+                </div>
+                {% endif %}
+                <div class="mt-3">
+                    <button type="button" class="btn btn-success-custom" data-bs-toggle="modal" data-bs-target="#addCommunicationModal">
+                        <i class="bi bi-plus-circle"></i> Add Communication
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Column -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'incident_safety:doc_workflow' doc.pk %}" class="btn btn-primary-custom">
+                        <i class="bi bi-diagram-3"></i> View Workflow
+                    </a>
+                    <a href="{% url 'incident_safety:doc_update' doc.pk %}" class="btn btn-warning-custom">
+                        <i class="bi bi-pencil"></i> Edit Record
+                    </a>
+                    <button type="button" class="btn btn-success-custom" data-bs-toggle="modal" data-bs-target="#addCommunicationModal">
+                        <i class="bi bi-chat-left-text"></i> Add Communication
+                    </button>
+                    {% if doc.linked_rca %}
+                    <a href="{% url 'incident_safety:rca_detail' doc.linked_rca.pk %}" class="btn btn-primary-custom">
+                        <i class="bi bi-search"></i> View RCA
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Care Inspectorate -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-building"></i> Care Inspectorate
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Notification Status</div>
+                    <div class="info-value">
+                        {% if doc.care_inspectorate_notified %}
+                            <span class="status-badge status-completed">
+                                <i class="bi bi-check-circle"></i> Notified
+                            </span>
+                        {% elif doc.requires_ci_notification %}
+                            <span class="status-badge status-pending">
+                                <i class="bi bi-clock"></i> Required
+                            </span>
+                        {% else %}
+                            <span class="status-badge" style="background: #e5e7eb; color: #6b7280;">
+                                <i class="bi bi-dash-circle"></i> Not Required
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if doc.care_inspectorate_notified %}
+                <div class="info-item mt-3">
+                    <div class="info-label">Notification Date</div>
+                    <div class="info-value">{{ doc.ci_notification_date|date:"d M Y" }}</div>
+                </div>
+                <div class="info-item mt-3">
+                    <div class="info-label">Reference Number</div>
+                    <div class="info-value">{{ doc.ci_reference_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Workflow Progress -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-bar-chart"></i> Workflow Progress
+                </div>
+                <div class="text-center mb-3">
+                    <div style="font-size: 3rem; font-weight: bold; color: #667eea;">
+                        {{ completion_percent|default:0 }}%
+                    </div>
+                    <div class="text-muted">Complete</div>
+                </div>
+                <div class="progress-mini">
+                    <div class="progress-mini-bar" style="width: {{ completion_percent|default:0 }}%;"></div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        {% with total_stages=7 %}
+                        {{ completed_stages|default:0 }} of {{ total_stages }} stages completed
+                        {% endwith %}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Record Information -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-info-circle"></i> Record Information
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Created</div>
+                    <div class="info-value">{{ doc.created_at|date:"d M Y H:i" }}</div>
+                </div>
+                <div class="info-item mt-2">
+                    <div class="info-label">Last Updated</div>
+                    <div class="info-value">{{ doc.updated_at|date:"d M Y H:i" }}</div>
+                </div>
+                <div class="info-item mt-2">
+                    <div class="info-label">Created By</div>
+                    <div class="info-value">{{ doc.created_by.get_full_name }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'incident_safety:doc_list' %}" class="btn btn-secondary-custom">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+        <a href="{% url 'incident_safety:doc_update' doc.pk %}" class="btn btn-warning-custom">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{% url 'incident_safety:doc_delete' doc.pk %}" class="btn btn-danger-custom">
+            <i class="bi bi-trash"></i> Delete
+        </a>
+    </div>
+</div>
+
+<!-- Add Communication Modal -->
+<div class="modal fade" id="addCommunicationModal" tabindex="-1" aria-labelledby="addCommunicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'incident_safety:doc_add_communication' doc.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCommunicationModalLabel">Add Communication Entry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="communicationType" class="form-label">Communication Type</label>
+                        <select class="form-select" id="communicationType" name="type" required>
+                            <option value="">Select type...</option>
+                            <option value="INITIAL_NOTIFICATION">Initial Notification</option>
+                            <option value="APOLOGY">Apology</option>
+                            <option value="UPDATE">Update</option>
+                            <option value="FINDINGS">Findings Shared</option>
+                            <option value="FOLLOW_UP">Follow-up</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="communicationMethod" class="form-label">Method</label>
+                        <select class="form-select" id="communicationMethod" name="method" required>
+                            <option value="">Select method...</option>
+                            <option value="PHONE">Phone Call</option>
+                            <option value="EMAIL">Email</option>
+                            <option value="IN_PERSON">In-Person Meeting</option>
+                            <option value="LETTER">Written Letter</option>
+                            <option value="VIDEO">Video Call</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="communicationSummary" class="form-label">Summary</label>
+                        <textarea class="form-control" id="communicationSummary" name="summary" rows="4" required 
+                                  placeholder="Describe what was discussed, key points covered, and family response..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Log Communication
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

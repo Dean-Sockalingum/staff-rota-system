@@ -1,0 +1,60 @@
+{% extends "scheduling/email/base.html" %}
+
+{% block title %}Your Weekly Schedule - Week of {{ week_start|date:"d F Y" }}{% endblock %}
+
+{% block header %}📅 Your Weekly Schedule{% endblock %}
+
+{% block content %}
+<h2>Hello {{ staff_member.first_name }},</h2>
+
+<p>Here is your schedule for the week of <strong>{{ week_start|date:"d F Y" }}</strong>:</p>
+
+{% if shifts %}
+<table class="shift-details">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Shift</th>
+            <th>Time</th>
+            <th>Unit</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for shift in shifts %}
+        <tr>
+            <td>{{ shift.date|date:"d/m/Y" }}</td>
+            <td>{{ shift.date|date:"l" }}</td>
+            <td>{{ shift.shift_type.name }}</td>
+            <td>{{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}</td>
+            <td>{{ shift.unit.name }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="info-box">
+    <p><strong>Total Shifts This Week:</strong> {{ shifts|length }}</p>
+    <p><strong>Total Hours:</strong> {{ total_hours }} hours</p>
+</div>
+{% else %}
+<div class="info-box">
+    <p>You have no shifts scheduled for this week.</p>
+    <p>Enjoy your time off, or contact your manager if you're available to work.</p>
+</div>
+{% endif %}
+
+<a href="{{ login_url }}" class="button">View Full Schedule</a>
+
+<p><strong>Important Reminders:</strong></p>
+<ul>
+    <li>Check your schedule regularly for any updates</li>
+    <li>Contact your manager as soon as possible if you cannot attend a shift</li>
+    <li>Use the staff rota system to request leave or shift swaps</li>
+</ul>
+
+<p>Thank you for your commitment to quality care.</p>
+
+<p>Best regards,<br>
+<strong>{{ care_home.name }} Management Team</strong></p>
+{% endblock %}

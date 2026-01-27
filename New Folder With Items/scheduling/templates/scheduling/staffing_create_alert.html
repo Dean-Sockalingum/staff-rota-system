@@ -1,0 +1,206 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Create Staffing Alert - Staff Rota Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Create Staffing Shortage Alert
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" id="alertForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="shift_date" class="form-label">
+                                <i class="fas fa-calendar"></i> Shift Date *
+                            </label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="shift_date" 
+                                   name="shift_date" 
+                                   value="{{ default_date }}"
+                                   required>
+                            <small class="form-text text-muted">
+                                Select the date that needs additional staff
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="unit" class="form-label">
+                                <i class="fas fa-hospital"></i> Unit *
+                            </label>
+                            <select class="form-select" id="unit" name="unit" required>
+                                <option value="">-- Select Unit --</option>
+                                {% for unit in units %}
+                                <option value="{{ unit.id }}">{{ unit.get_name_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="shift_type" class="form-label">
+                                <i class="fas fa-clock"></i> Shift Type *
+                            </label>
+                            <select class="form-select" id="shift_type" name="shift_type" required>
+                                <option value="">-- Select Shift Type --</option>
+                                {% for shift_type in shift_types %}
+                                <option value="{{ shift_type.id }}">{{ shift_type.get_name_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="required_staff" class="form-label">
+                                <i class="fas fa-users"></i> Required Staff *
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="required_staff" 
+                                   name="required_staff" 
+                                   value="17"
+                                   min="1"
+                                   max="50"
+                                   required>
+                            <small class="form-text text-muted">
+                                Minimum number of staff needed (default: 17)
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="message" class="form-label">
+                                <i class="fas fa-comment"></i> Message (Optional)
+                            </label>
+                            <textarea class="form-control" 
+                                      id="message" 
+                                      name="message" 
+                                      rows="3"
+                                      placeholder="Add a custom message to include in notifications..."></textarea>
+                            <small class="form-text text-muted">
+                                This message will be included in email and SMS notifications
+                            </small>
+                        </div>
+
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-info-circle"></i> How it works:
+                                </h6>
+                                <ol class="mb-0 small">
+                                    <li>System will calculate the current staffing shortage</li>
+                                    <li>Alert will be created and expire in 12 hours</li>
+                                    <li>Run <code>python manage.py send_staffing_alerts</code> to notify available staff</li>
+                                    <li>Staff will receive email/SMS with one-click accept/decline links</li>
+                                    <li>Accepted responses automatically create shifts</li>
+                                    <li>Monitor responses on the <a href="{% url 'staffing_dashboard' %}">Staffing Dashboard</a></li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'staffing_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-bell"></i> Create Alert
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Email/SMS Preview:</h6>
+                    <div class="bg-light p-3 rounded border" id="preview">
+                        <p class="mb-2"><strong>Subject:</strong> 🚨 URGENT: Staff Needed - <span id="preview_date">--</span></p>
+                        <hr>
+                        <p>Hello [Staff Name],</p>
+                        <p>We urgently need additional staff for:</p>
+                        <ul>
+                            <li><strong>Date:</strong> <span id="preview_date2">--</span></li>
+                            <li><strong>Unit:</strong> <span id="preview_unit">--</span></li>
+                            <li><strong>Shift:</strong> <span id="preview_shift">--</span></li>
+                            <li><strong>Positions Available:</strong> [Calculated]</li>
+                        </ul>
+                        <p id="preview_message" class="text-muted fst-italic"></p>
+                        <div class="mt-3">
+                            <button class="btn btn-success btn-sm" disabled>✅ Accept Shift (one-click)</button>
+                            <button class="btn btn-secondary btn-sm ms-2" disabled>❌ Decline</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Live preview
+document.getElementById('shift_date').addEventListener('change', updatePreview);
+document.getElementById('unit').addEventListener('change', updatePreview);
+document.getElementById('shift_type').addEventListener('change', updatePreview);
+document.getElementById('message').addEventListener('input', updatePreview);
+
+function updatePreview() {
+    const date = document.getElementById('shift_date').value;
+    const unitSelect = document.getElementById('unit');
+    const shiftSelect = document.getElementById('shift_type');
+    const message = document.getElementById('message').value;
+    
+    const unitText = unitSelect.options[unitSelect.selectedIndex]?.text || '--';
+    const shiftText = shiftSelect.options[shiftSelect.selectedIndex]?.text || '--';
+    
+    document.getElementById('preview_date').textContent = date || '--';
+    document.getElementById('preview_date2').textContent = date || '--';
+    document.getElementById('preview_unit').textContent = unitText;
+    document.getElementById('preview_shift').textContent = shiftText;
+    
+    if (message) {
+        document.getElementById('preview_message').textContent = message;
+        document.getElementById('preview_message').classList.remove('text-muted');
+    } else {
+        document.getElementById('preview_message').textContent = 'We need additional staff. Can you help?';
+        document.getElementById('preview_message').classList.add('text-muted');
+    }
+}
+
+// Initialize preview
+updatePreview();
+
+// Form validation
+document.getElementById('alertForm').addEventListener('submit', function(e) {
+    const date = new Date(document.getElementById('shift_date').value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) {
+        e.preventDefault();
+        alert('Cannot create alert for past dates');
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border-left: 4px solid #dee2e6;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .notification-item:hover {
+        background: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .notification-item.unread {
+        background: #e7f3ff;
+        border-left-color: #007bff;
+    }
+    .notification-item.unread strong {
+        font-weight: 700;
+    }
+    .notification-item.urgent {
+        border-left-color: #dc3545;
+    }
+    .notification-item.high {
+        border-left-color: #fd7e14;
+    }
+    .notification-priority {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    .priority-urgent {
+        background: #dc3545;
+        color: white;
+    }
+    .priority-high {
+        background: #fd7e14;
+        color: white;
+    }
+    .notification-time {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    .notification-type-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        background: #e9ecef;
+        color: #495057;
+        margin-left: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-bell"></i> Notifications</h2>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" id="markAllRead">
+                        <i class="fas fa-check-double"></i> Mark All Read
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="filterToggle">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </div>
+
+            <div id="filterPanel" class="card mb-3" style="display: none;">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label>Status</label>
+                            <select id="statusFilter" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                <option value="unread">Unread Only</option>
+                                <option value="read">Read Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Type</label>
+                            <select id="typeFilter" class="form-select form-select-sm">
+                                <option value="">All Types</option>
+                                <option value="SHIFT_ASSIGNED">Shift Assigned</option>
+                                <option value="LEAVE_APPROVED">Leave Approved</option>
+                                <option value="LEAVE_REJECTED">Leave Rejected</option>
+                                <option value="SWAP_REQUEST">Swap Request</option>
+                                <option value="MESSAGE_RECEIVED">Message</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Priority</label>
+                            <select id="priorityFilter" class="form-select form-select-sm">
+                                <option value="">All Priorities</option>
+                                <option value="URGENT">Urgent</option>
+                                <option value="HIGH">High</option>
+                                <option value="NORMAL">Normal</option>
+                                <option value="LOW">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="notificationsList">
+                {% if notifications %}
+                    {% for notification in notifications %}
+                    <div class="notification-item {% if not notification.is_read %}unread{% endif %} {% if notification.priority == 'URGENT' %}urgent{% elif notification.priority == 'HIGH' %}high{% endif %}"
+                         data-notification-id="{{ notification.id }}"
+                         data-status="{% if notification.is_read %}read{% else %}unread{% endif %}"
+                         data-type="{{ notification.notification_type }}"
+                         data-priority="{{ notification.priority }}"
+                         {% if notification.action_url %}onclick="window.location.href='{{ notification.action_url }}'"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="mb-1">
+                                    {% if not notification.is_read %}
+                                    <i class="fas fa-circle text-primary" style="font-size: 0.5rem;"></i>
+                                    {% endif %}
+                                    <strong>{{ notification.title }}</strong>
+                                    <span class="notification-type-badge">
+                                        {{ notification.get_notification_type_display }}
+                                    </span>
+                                    {% if notification.priority == 'URGENT' or notification.priority == 'HIGH' %}
+                                    <span class="notification-priority priority-{{ notification.priority|lower }}">
+                                        {{ notification.priority }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted">{{ notification.message }}</div>
+                            </div>
+                            <div class="text-end ms-3">
+                                <div class="notification-time">
+                                    <i class="far fa-clock"></i> {{ notification.created_at|timesince }} ago
+                                </div>
+                                {% if notification.is_read %}
+                                <small class="text-success"><i class="fas fa-check"></i> Read</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if has_more %}
+                    <div class="text-center mt-4">
+                        <button id="loadMore" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-down"></i> Load More
+                        </button>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No notifications to display.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterPanel = document.getElementById('filterPanel');
+    if (filterToggle && filterPanel) {
+        filterToggle.addEventListener('click', function() {
+            filterPanel.style.display = filterPanel.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+
+    // Mark all as read
+    const markAllReadBtn = document.getElementById('markAllRead');
+    if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', function() {
+            // AJAX call to mark all as read
+            fetch('{% url "mark_all_notifications_read" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      location.reload();
+                  }
+              });
+        });
+    }
+
+    // Filter functionality
+    function applyFilters() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const typeFilter = document.getElementById('typeFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+
+        const items = document.querySelectorAll('.notification-item');
+        items.forEach(item => {
+            let show = true;
+
+            if (statusFilter && item.dataset.status !== statusFilter) {
+                show = false;
+            }
+            if (typeFilter && item.dataset.type !== typeFilter) {
+                show = false;
+            }
+            if (priorityFilter && item.dataset.priority !== priorityFilter) {
+                show = false;
+            }
+
+            item.style.display = show ? 'block' : 'none';
+        });
+    }
+
+    ['statusFilter', 'typeFilter', 'priorityFilter'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', applyFilters);
+        }
+    });
+});
+</script>
+{% endblock %}

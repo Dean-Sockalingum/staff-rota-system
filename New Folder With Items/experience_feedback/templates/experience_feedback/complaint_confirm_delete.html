@@ -1,0 +1,84 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-trash-alt text-danger"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Complaint
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-exclamation-circle"></i> Warning</h5>
+                <p>You are about to delete the following complaint. This action <strong>cannot be undone</strong>.</p>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6>Complaint Details:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>Reference:</strong> {{ complaint.complaint_reference }}</li>
+                        <li><strong>Care Home:</strong> {{ complaint.care_home.name }}</li>
+                        <li><strong>Date Received:</strong> {{ complaint.date_received|date:"d M Y" }}</li>
+                        <li><strong>Complainant:</strong> {{ complaint.complainant_name }}</li>
+                        <li><strong>Category:</strong> {{ complaint.get_complaint_category_display }}</li>
+                        <li><strong>Severity:</strong> 
+                            <span class="badge {% if complaint.severity == 'CRITICAL' %}badge-danger{% elif complaint.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ complaint.get_severity_display }}
+                            </span>
+                        </li>
+                        <li><strong>Status:</strong> <span class="badge badge-secondary">{{ complaint.get_status_display }}</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if complaint.investigation_stages.exists %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle"></i> This complaint has <strong>{{ complaint.investigation_stages.count }}</strong> investigation stage(s) that will also be deleted.
+            </div>
+            {% endif %}
+
+            {% if complaint.stakeholders.exists %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle"></i> This complaint has <strong>{{ complaint.stakeholders.count }}</strong> stakeholder(s) that will also be deleted.
+            </div>
+            {% endif %}
+
+            <div class="alert alert-info">
+                <h6><i class="fas fa-lightbulb"></i> Alternative Actions</h6>
+                <p class="mb-0">Instead of deleting, consider:</p>
+                <ul class="mb-0">
+                    <li>Marking the complaint as <strong>CLOSED</strong> to maintain audit trail</li>
+                    <li>Archiving the complaint for historical records</li>
+                    <li>Contacting your manager if you need to permanently remove this complaint</li>
+                </ul>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="fas fa-trash-alt"></i> Yes, Delete This Complaint
+                    </button>
+                    <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancel - Keep Complaint
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

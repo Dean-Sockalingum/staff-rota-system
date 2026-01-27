@@ -1,0 +1,222 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Overtime & Agency Usage Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-chart-line"></i> Overtime & Agency Usage Report</h2>
+            <p class="text-muted">Comprehensive analysis of overtime and agency staffing usage across all homes</p>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Select Date Range</h5>
+        </div>
+        <div class="card-body">
+            <form id="reportForm" class="row g-3">
+                <div class="col-md-4">
+                    <label for="startDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="endDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="homeFilter" class="form-label">Filter by Home (Optional)</label>
+                    <select class="form-select" id="homeFilter" name="home_filter">
+                        <option value="">All Homes</option>
+                        {% for home in care_homes %}
+                        <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>{{ home.get_name_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Generate Report
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if report_data %}
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total OT Hours</h6>
+                    <h3 class="text-warning">{{ report_data.grand_totals.total_ot_hours|floatformat:1 }}</h3>
+                    <small>{{ report_data.grand_totals.total_ot_shifts }} shifts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Agency Hours</h6>
+                    <h3 class="text-danger">{{ report_data.grand_totals.total_agency_hours|floatformat:1 }}</h3>
+                    <small>{{ report_data.grand_totals.total_agency_shifts }} shifts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total OT Cost</h6>
+                    <h3 class="text-info">£{{ report_data.grand_totals.total_ot_cost|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Agency Cost</h6>
+                    <h3 class="text-success">£{{ report_data.grand_totals.total_agency_cost|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown by Home -->
+    {% for home_data in report_data.by_home %}
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-home"></i> {{ home_data.home_name }}
+                <span class="badge bg-light text-dark float-end">
+                    {{ home_data.total_hours|floatformat:1 }} hours | £{{ home_data.total_cost|floatformat:2 }}
+                </span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Overtime Section -->
+                {% if home_data.overtime_by_role %}
+                <div class="col-md-6 mb-3">
+                    <h6 class="border-bottom pb-2"><i class="fas fa-clock text-warning"></i> Overtime Usage</h6>
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th class="text-center">Shifts</th>
+                                <th class="text-center">Hours</th>
+                                <th class="text-end">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role, data in home_data.overtime_by_role.items %}
+                            <tr>
+                                <td><strong>{{ role }}</strong></td>
+                                <td class="text-center">{{ data.count }}</td>
+                                <td class="text-center">{{ data.hours|floatformat:1 }}</td>
+                                <td class="text-end">£{{ data.cost|floatformat:2 }}</td>
+                            </tr>
+                            {% if data.reasons %}
+                            <tr>
+                                <td colspan="4" class="text-muted small ps-4">
+                                    <i class="fas fa-info-circle"></i> Reasons: {{ data.reasons|join:", " }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            <tr class="table-active fw-bold">
+                                <td>TOTAL OT</td>
+                                <td class="text-center">{{ home_data.ot_total_shifts }}</td>
+                                <td class="text-center">{{ home_data.ot_total_hours|floatformat:1 }}</td>
+                                <td class="text-end">£{{ home_data.ot_total_cost|floatformat:2 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Agency Section -->
+                {% if home_data.agency_by_role %}
+                <div class="col-md-6 mb-3">
+                    <h6 class="border-bottom pb-2"><i class="fas fa-building text-danger"></i> Agency Usage</h6>
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th class="text-center">Shifts</th>
+                                <th class="text-center">Hours</th>
+                                <th class="text-end">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role, data in home_data.agency_by_role.items %}
+                            <tr>
+                                <td><strong>{{ role }}</strong></td>
+                                <td class="text-center">{{ data.count }}</td>
+                                <td class="text-center">{{ data.hours|floatformat:1 }}</td>
+                                <td class="text-end">£{{ data.cost|floatformat:2 }}</td>
+                            </tr>
+                            {% if data.reasons %}
+                            <tr>
+                                <td colspan="4" class="text-muted small ps-4">
+                                    <i class="fas fa-info-circle"></i> Reasons: {{ data.reasons|join:", " }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            <tr class="table-active fw-bold">
+                                <td>TOTAL AGENCY</td>
+                                <td class="text-center">{{ home_data.agency_total_shifts }}</td>
+                                <td class="text-center">{{ home_data.agency_total_hours|floatformat:1 }}</td>
+                                <td class="text-end">£{{ home_data.agency_total_cost|floatformat:2 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if not home_data.overtime_by_role and not home_data.agency_by_role %}
+                <div class="col-12">
+                    <p class="text-muted text-center py-4">
+                        <i class="fas fa-check-circle text-success"></i> No overtime or agency usage for this home in the selected period
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Select a date range and click "Generate Report" to view overtime and agency usage data.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams(formData);
+    window.location.href = '{% url "ot_agency_report" %}?' + params.toString();
+});
+
+function exportToCSV() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const homeFilter = document.getElementById('homeFilter').value;
+    
+    let url = '{% url "ot_agency_report_csv" %}?start_date=' + startDate + '&end_date=' + endDate;
+    if (homeFilter) {
+        url += '&home_filter=' + homeFilter;
+    }
+    
+    window.location.href = url;
+}
+</script>
+{% endblock %}

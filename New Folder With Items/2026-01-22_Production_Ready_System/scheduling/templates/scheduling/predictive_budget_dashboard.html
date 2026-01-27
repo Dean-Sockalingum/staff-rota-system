@@ -1,0 +1,356 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Predictive Budget Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="dashboard-header mb-4">
+        <h1><i class="fas fa-crystal-ball"></i> Predictive Budget & Scenario Analysis</h1>
+        <p class="text-muted">Forecast accuracy, scenario modeling, and ROI analytics</p>
+        
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Care Home:</label>
+                <select id="care_home_filter" class="form-control" onchange="updateFilters()">
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}" {% if selected_care_home and selected_care_home.id == home.id %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 offset-md-6">
+                <label>&nbsp;</label>
+                <a href="?care_home={{ selected_care_home.id }}&export=csv" class="btn btn-success btn-block">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forecast Accuracy Display -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="forecast-accuracy-card">
+                <div class="accuracy-header">
+                    <h3>Forecast Accuracy</h3>
+                </div>
+                <div class="accuracy-display">
+                    <div class="accuracy-score {{ budget_data.executive_summary.status_text|lower|cut:' ' }}">
+                        {{ budget_data.executive_summary.forecast_accuracy }}%
+                    </div>
+                    <div class="accuracy-status">
+                        {{ budget_data.executive_summary.status_light }} {{ budget_data.executive_summary.status_text }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="projection-card">
+                <div class="projection-label">Next Quarter Projection</div>
+                <div class="projection-value">£{{ budget_data.executive_summary.next_quarter_projection|floatformat:2 }}</div>
+                <div class="projection-variance">
+                    Variance: £{{ budget_data.executive_summary.variance_from_budget|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scenario Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-sliders-h"></i> Scenario Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for scenario_name, scenario in budget_data.scenario_analysis.items %}
+                        <div class="col-md-4">
+                            <div class="scenario-card scenario-{{ scenario_name|lower }}">
+                                <div class="scenario-header">
+                                    {% if scenario_name == 'best_case' %}
+                                        <i class="fas fa-star text-success"></i> Best Case
+                                    {% elif scenario_name == 'expected' %}
+                                        <i class="fas fa-chart-line text-primary"></i> Expected
+                                    {% else %}
+                                        <i class="fas fa-exclamation-triangle text-danger"></i> Worst Case
+                                    {% endif %}
+                                </div>
+                                <div class="scenario-total">
+                                    £{{ scenario.total_cost|floatformat:2 }}
+                                </div>
+                                <div class="scenario-breakdown">
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Regular:</span>
+                                        <span class="breakdown-value">£{{ scenario.regular|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Overtime:</span>
+                                        <span class="breakdown-value">£{{ scenario.overtime|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Agency:</span>
+                                        <span class="breakdown-value">£{{ scenario.agency|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Projections -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar-alt"></i> Quarterly Projections</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Quarter</th>
+                                <th>Forecast</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Q1</td>
+                                <td>£{{ budget_data.cost_projections.q1_forecast|floatformat:2 }}</td>
+                                <td><i class="fas fa-minus text-secondary"></i> Baseline</td>
+                            </tr>
+                            <tr>
+                                <td>Q2</td>
+                                <td>£{{ budget_data.cost_projections.q2_forecast|floatformat:2 }}</td>
+                                <td><i class="fas fa-arrow-up text-warning"></i> +2%</td>
+                            </tr>
+                            <tr>
+                                <td>Q3</td>
+                                <td>£{{ budget_data.cost_projections.q3_forecast|floatformat:2 }}</td>
+                                <td><i class="fas fa-arrow-up text-warning"></i> +1%</td>
+                            </tr>
+                            <tr>
+                                <td>Q4</td>
+                                <td>£{{ budget_data.cost_projections.q4_forecast|floatformat:2 }}</td>
+                                <td><i class="fas fa-arrow-down text-success"></i> -2%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROI Metrics -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-piggy-bank"></i> ROI Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="roi-metric">
+                        <div class="roi-label">Cost Avoidance</div>
+                        <div class="roi-value text-success">£{{ budget_data.roi_metrics.cost_avoidance|floatformat:0 }}</div>
+                    </div>
+                    <div class="roi-metric">
+                        <div class="roi-label">Efficiency Gains</div>
+                        <div class="roi-value text-primary">£{{ budget_data.roi_metrics.efficiency_gains|floatformat:0 }}</div>
+                    </div>
+                    <div class="roi-metric">
+                        <div class="roi-label">Total ROI</div>
+                        <div class="roi-value text-success"><strong>£{{ budget_data.roi_metrics.total_roi|floatformat:0 }}</strong></div>
+                    </div>
+                    <div class="roi-metric">
+                        <div class="roi-label">ROI Percentage</div>
+                        <div class="roi-percentage">{{ budget_data.roi_metrics.roi_percentage }}%</div>
+                    </div>
+                    <div class="roi-metric">
+                        <div class="roi-label">Payback Period</div>
+                        <div class="roi-value">{{ budget_data.roi_metrics.payback_period_days }} days</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-lightbulb"></i> Strategic Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="recommendations-list">
+                        {% for rec in budget_data.recommendations %}
+                        <li class="recommendation-item priority-{{ rec.priority|lower }}">
+                            <span class="rec-icon">{{ rec.icon }}</span>
+                            <div class="rec-content">
+                                <strong>{{ rec.title }}</strong>
+                                <p>{{ rec.action }}</p>
+                                <small class="text-muted">Impact: {{ rec.impact }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.forecast-accuracy-card {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border-radius: 12px;
+    padding: 30px;
+    color: white;
+    text-align: center;
+}
+.accuracy-header h3 {
+    color: white;
+    margin-bottom: 15px;
+}
+.accuracy-score {
+    font-size: 64px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.accuracy-status {
+    font-size: 20px;
+}
+.projection-card {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.projection-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+.projection-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+.projection-variance {
+    font-size: 14px;
+    color: #666;
+}
+.scenario-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+.scenario-card.scenario-best_case {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+.scenario-card.scenario-expected {
+    border-color: #17a2b8;
+    background: #f0f9ff;
+}
+.scenario-card.scenario-worst_case {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+.scenario-header {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+.scenario-total {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.scenario-breakdown {
+    font-size: 14px;
+}
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+.breakdown-item:last-child {
+    border-bottom: none;
+}
+.roi-metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+.roi-metric:last-child {
+    border-bottom: none;
+}
+.roi-label {
+    font-size: 14px;
+    color: #666;
+}
+.roi-value {
+    font-size: 20px;
+    font-weight: bold;
+}
+.roi-percentage {
+    font-size: 24px;
+    font-weight: bold;
+    color: #28a745;
+}
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+}
+.recommendation-item {
+    display: flex;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ccc;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+.recommendation-item.priority-high {
+    border-left-color: #dc3545;
+}
+.recommendation-item.priority-medium {
+    border-left-color: #ffc107;
+}
+.rec-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+.rec-content {
+    flex: 1;
+}
+.rec-content strong {
+    display: block;
+    margin-bottom: 5px;
+}
+.rec-content p {
+    margin: 0 0 5px 0;
+}
+</style>
+
+<script>
+function updateFilters() {
+    const careHome = document.getElementById('care_home_filter').value;
+    window.location.href = `?care_home=${careHome}`;
+}
+</script>
+{% endblock %}

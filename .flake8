@@ -1,0 +1,44 @@
+[flake8]
+# Flake8 configuration for CI/CD linting
+# Exclude backup and archive directories from linting
+
+exclude =
+    # Backup directories (old code versions) - use wildcards to match paths with spaces
+    */2025-12-12_Multi-Home_Complete/*,
+    */2026-01-22_Production_Ready_System/*,
+    */working-drive-full-code-and-docs/*,
+    
+    # Standard Python exclusions
+    __pycache__,
+    *.pyc,
+    .git,
+    .env,
+    venv/,
+    env/,
+    migrations/,
+    
+    # Build and cache directories
+    build/,
+    dist/,
+    *.egg-info/,
+    .tox/,
+    .coverage,
+    htmlcov/,
+    .pytest_cache/,
+    .mypy_cache/,
+    node_modules/
+
+# Error codes to check (strict mode)
+select = E9,F63,F7,F82
+
+# Show source code for errors
+show-source = True
+
+# Count errors
+count = True
+
+# Display statistics
+statistics = True
+
+# Maximum line length
+max-line-length = 120

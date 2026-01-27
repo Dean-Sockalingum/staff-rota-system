@@ -1,0 +1,221 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Add New Staff - Rota System{% endblock %}
+
+{% block page_title %}Add New Staff Member{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 30px;
+    }
+    
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin: -30px -30px 30px -30px;
+        padding: 20px 30px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102,126,234,.25);
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'staff_management' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Staff Management
+            </a>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <div class="form-header">
+            <h3 class="mb-0"><i class="fas fa-user-plus"></i> Add New Staff Member</h3>
+            <p class="mb-0 opacity-75">Enter the details for the new staff member</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="sap" class="form-label">SAP Number <span class="required">*</span></label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="sap" 
+                               name="sap" 
+                               required 
+                               placeholder="e.g., SCW001"
+                               pattern="[A-Z]{3}[0-9]{3}"
+                               maxlength="6">
+                        <div class="help-text">3 letters followed by 3 numbers (e.g., SCW001, MGR001)</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="role" class="form-label">Role <span class="required">*</span></label>
+                        <select class="form-control" id="role" name="role" required>
+                            <option value="">Select a role...</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="first_name" class="form-label">First Name <span class="required">*</span></label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="first_name" 
+                               name="first_name" 
+                               required 
+                               placeholder="Enter first name">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="last_name" class="form-label">Last Name <span class="required">*</span></label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="last_name" 
+                               name="last_name" 
+                               required 
+                               placeholder="Enter last name">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" 
+                       class="form-control" 
+                       id="email" 
+                       name="email" 
+                       placeholder="Enter email address">
+                <div class="help-text">Optional - used for notifications and password recovery</div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone_number" class="form-label">Phone Number</label>
+                <input type="tel" 
+                       class="form-control" 
+                       id="phone_number" 
+                       name="phone_number" 
+                       placeholder="Enter phone number">
+                <div class="help-text">Optional - for emergency contact</div>
+            </div>
+
+            <div class="form-group">
+                <label for="annual_leave_allowance" class="form-label">Annual Leave Allowance</label>
+                <div class="input-group">
+                    <input type="number" 
+                           class="form-control" 
+                           id="annual_leave_allowance" 
+                           name="annual_leave_allowance" 
+                           value="28" 
+                           min="0" 
+                           max="50">
+                    <span class="input-group-text">days</span>
+                </div>
+                <div class="help-text">Default is 28 days per year</div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Note:</strong> The new staff member will be created with a temporary password of <code>temp123</code>. 
+                They should change this on their first login.
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'staff_management' %}" class="btn btn-outline-secondary me-md-2">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Staff Member
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-format SAP number as user types
+    document.getElementById('sap').addEventListener('input', function() {
+        let value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (value.length > 6) {
+            value = value.substring(0, 6);
+        }
+        this.value = value;
+    });
+
+    // Generate suggested SAP number based on role and name
+    document.getElementById('role').addEventListener('change', function() {
+        const roleText = this.options[this.selectedIndex].text;
+        const firstName = document.getElementById('first_name').value;
+        const lastName = document.getElementById('last_name').value;
+        
+        if (roleText && firstName && lastName && !document.getElementById('sap').value) {
+            let prefix = 'STF'; // Default
+            
+            if (roleText.toLowerCase().includes('manager')) {
+                prefix = 'MGR';
+            } else if (roleText.toLowerCase().includes('senior')) {
+                prefix = 'SNR';
+            } else if (roleText.toLowerCase().includes('care')) {
+                prefix = 'SCW';
+            }
+            
+            // Generate random 3-digit number
+            const randomNum = Math.floor(Math.random() * 900) + 100;
+            document.getElementById('sap').value = prefix + randomNum;
+        }
+    });
+
+    // Update SAP suggestion when name changes
+    document.getElementById('first_name').addEventListener('blur', updateSAPSuggestion);
+    document.getElementById('last_name').addEventListener('blur', updateSAPSuggestion);
+
+    function updateSAPSuggestion() {
+        const role = document.getElementById('role');
+        if (role.value && !document.getElementById('sap').value) {
+            role.dispatchEvent(new Event('change'));
+        }
+    }
+</script>
+{% endblock %}

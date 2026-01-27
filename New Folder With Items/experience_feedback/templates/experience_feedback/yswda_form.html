@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if action == 'create' %}Create New{% else %}Edit{% endif %} You Said, We Did Action{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'experience_feedback:yswda_dashboard' %}">You Said, We Did</a></li>
+                    <li class="breadcrumb-item active">{% if action == 'create' %}Create New Action{% else %}Edit Action{% endif %}</li>
+                </ol>
+            </nav>
+            <h1 class="h2">
+                <i class="bi bi-{% if action == 'create' %}plus-circle{% else %}pencil{% endif %}"></i>
+                {% if action == 'create' %}Create New Action{% else %}Edit Action{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading">Please correct the errors below:</h5>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Care Home -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.care_home.id_for_label }}" class="form-label">
+                                    Care Home <span class="text-danger">*</span>
+                                </label>
+                                {{ form.care_home }}
+                                {% if form.care_home.help_text %}
+                                <small class="form-text text-muted">{{ form.care_home.help_text }}</small>
+                                {% endif %}
+                            </div>
+
+                            <!-- Feedback Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.feedback_date.id_for_label }}" class="form-label">
+                                    Feedback Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.feedback_date }}
+                                {% if form.feedback_date.help_text %}
+                                <small class="form-text text-muted">{{ form.feedback_date.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- You Said -->
+                        <div class="mb-3">
+                            <label for="{{ form.you_said.id_for_label }}" class="form-label">
+                                You Said (The Feedback) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.you_said }}
+                            {% if form.you_said.help_text %}
+                            <small class="form-text text-muted">{{ form.you_said.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <!-- We Did -->
+                        <div class="mb-3">
+                            <label for="{{ form.we_did.id_for_label }}" class="form-label">
+                                We Did (Our Response/Action) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.we_did }}
+                            {% if form.we_did.help_text %}
+                            <small class="form-text text-muted">{{ form.we_did.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <!-- Category -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    Category <span class="text-danger">*</span>
+                                </label>
+                                {{ form.category }}
+                            </div>
+
+                            <!-- Sentiment -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.sentiment.id_for_label }}" class="form-label">
+                                    Sentiment <span class="text-danger">*</span>
+                                </label>
+                                {{ form.sentiment }}
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    Status <span class="text-danger">*</span>
+                                </label>
+                                {{ form.status }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Source Type -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.source_type.id_for_label }}" class="form-label">
+                                    Source Type
+                                </label>
+                                {{ form.source_type }}
+                            </div>
+
+                            <!-- Person Raised -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.person_raised.id_for_label }}" class="form-label">
+                                    Person Who Raised Feedback
+                                </label>
+                                {{ form.person_raised }}
+                            </div>
+                        </div>
+
+                        <!-- Action Taken By -->
+                        <div class="mb-3">
+                            <label for="{{ form.action_taken_by.id_for_label }}" class="form-label">
+                                Action Taken By
+                            </label>
+                            {{ form.action_taken_by }}
+                        </div>
+
+                        <div class="row">
+                            <!-- Action Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.action_date.id_for_label }}" class="form-label">
+                                    Action Date
+                                </label>
+                                {{ form.action_date }}
+                            </div>
+
+                            <!-- Completion Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.completion_date.id_for_label }}" class="form-label">
+                                    Completion Date
+                                </label>
+                                {{ form.completion_date }}
+                            </div>
+                        </div>
+
+                        <!-- Communication Details -->
+                        <div class="mb-3">
+                            <label for="{{ form.communication_details.id_for_label }}" class="form-label">
+                                Communication Details
+                            </label>
+                            {{ form.communication_details }}
+                            <small class="form-text text-muted">How was the feedback communicated back to the person?</small>
+                        </div>
+
+                        <div class="row">
+                            <!-- Communicated Back -->
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.communicated_back }}
+                                    <label class="form-check-label" for="{{ form.communicated_back.id_for_label }}">
+                                        Communicated Back to Person
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Display on Board -->
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.display_on_board }}
+                                    <label class="form-check-label" for="{{ form.display_on_board.id_for_label }}">
+                                        Display on Public Notice Board
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Display Start Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.display_start_date.id_for_label }}" class="form-label">
+                                    Display Start Date
+                                </label>
+                                {{ form.display_start_date }}
+                            </div>
+
+                            <!-- Display End Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.display_end_date.id_for_label }}" class="form-label">
+                                    Display End Date
+                                </label>
+                                {{ form.display_end_date }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Save Action
+                                </button>
+                                <a href="{% url 'experience_feedback:yswda_dashboard' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                            </div>
+                            {% if action == 'update' and yswda %}
+                            <a href="{% url 'experience_feedback:yswda_delete' yswda.pk %}" class="btn btn-outline-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> Tips</h5>
+                    <ul class="small">
+                        <li><strong>You Said:</strong> Summarize the feedback or comment received from residents, families, or staff.</li>
+                        <li><strong>We Did:</strong> Describe the action taken in response to the feedback.</li>
+                        <li><strong>Display on Board:</strong> Enable this to show the action on the public notice board for residents and families to see.</li>
+                        <li><strong>Communication:</strong> Always communicate back to the person who raised the feedback to close the loop.</li>
+                        <li><strong>Categories:</strong> Choose the most relevant category to help with analysis and reporting.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-lightbulb"></i> Best Practices</h5>
+                    <ul class="small">
+                        <li>Be specific about the action taken</li>
+                        <li>Include measurable outcomes where possible</li>
+                        <li>Update status as actions progress</li>
+                        <li>Set realistic display dates (typically 1-3 months)</li>
+                        <li>Always follow up with the person who raised feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

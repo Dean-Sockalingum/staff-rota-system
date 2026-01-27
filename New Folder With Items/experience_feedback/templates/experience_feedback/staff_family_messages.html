@@ -1,0 +1,133 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Family Messages - Staff{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-users"></i> Family Messages</h2>
+            <p class="text-muted">Manage messages from family members</p>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ total_messages }}</h3>
+                    <p class="mb-0">Total Messages</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{ unanswered }}</h3>
+                    <p class="mb-0">Awaiting Response</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{ urgent }}</h3>
+                    <p class="mb-0">Urgent Messages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">All Messages</option>
+                        <option value="unanswered" {% if status_filter == 'unanswered' %}selected{% endif %}>Awaiting Response</option>
+                        <option value="answered" {% if status_filter == 'answered' %}selected{% endif %}>Responded</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="priority" class="form-select">
+                        <option value="">All Priorities</option>
+                        <option value="URGENT" {% if priority_filter == 'URGENT' %}selected{% endif %}>Urgent</option>
+                        <option value="HIGH" {% if priority_filter == 'HIGH' %}selected{% endif %}>High</option>
+                        <option value="MEDIUM" {% if priority_filter == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                        <option value="LOW" {% if priority_filter == 'LOW' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if messages %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>From</th>
+                                <th>Resident</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Sent</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for msg in messages %}
+                                <tr {% if not msg.staff_responded and msg.priority == 'URGENT' %}class="table-danger"{% endif %}>
+                                    <td>{{ msg.subject }}</td>
+                                    <td>{{ msg.family_member.get_full_name }}</td>
+                                    <td>{{ msg.resident.first_name }} {{ msg.resident.last_name }}</td>
+                                    <td><span class="badge bg-secondary">{{ msg.get_category_display }}</span></td>
+                                    <td>
+                                        <span class="badge {% if msg.priority == 'URGENT' %}bg-danger{% elif msg.priority == 'HIGH' %}bg-warning{% else %}bg-info{% endif %}">
+                                            {{ msg.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ msg.sent_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% if msg.staff_responded %}
+                                            <span class="badge bg-success">Responded</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending ({{ msg.days_since_sent }}d)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'experience_feedback:staff_message_respond' msg.id %}" 
+                                           class="btn btn-sm btn-primary">
+                                            {% if msg.staff_responded %}
+                                                <i class="fas fa-eye"></i> View
+                                            {% else %}
+                                                <i class="fas fa-reply"></i> Respond
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No messages found.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

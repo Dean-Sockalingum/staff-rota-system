@@ -1,0 +1,949 @@
+"""
+Celery periodic tasks for automated workflow monitoring
+
+These tasks run at regular intervals to monitor deadlines and trigger
+automated actions (OT offer expiry, agency auto-approval, etc.)
+
+Author: Dean Sockalingum
+Created: 2025-01-18
+"""
+
+from celery import shared_task
+from django.utils import timezone
+from django.db.models import Q
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger('scheduling.workflow')
+
+
+# ==================== OT Offer Deadline Monitoring ====================
+
+@shared_task
+def monitor_ot_offer_deadlines():
+    """
+    Check for expired OT offers every minute
+    
+    Runs: Every 1 minute via Celery Beat
+    Purpose: Expire pending OT offers past their 1-hour deadline
+    """
+    from scheduling.models import OvertimeOffer, OvertimeOfferBatch
+    
+    now = timezone.now()
+    
+    # Find all pending offers past their deadline
+    expired_offers = OvertimeOffer.objects.filter(
+        status='PENDING',
+        batch__response_deadline__lt=now
+    )
+    
+    expired_count = 0
+    
+    for offer in expired_offers:
+        logger.info(f"⏰ Expiring OT offer #{offer.id} for {offer.staff_member.full_name}")
+        offer.status = 'EXPIRED'
+        offer.save()
+        expired_count += 1
+    
+    if expired_count > 0:
+        logger.info(f"✅ Expired {expired_count} OT offers")
+        
+        # Check if any batches are now fully expired and need escalation
+        _check_batch_escalation()
+    
+    return {
+        'task': 'monitor_ot_offer_deadlines',
+        'expired_offers': expired_count,
+        'timestamp': now.isoformat()
+    }
+
+
+def _check_batch_escalation():
+    """Check if any OT batches need escalation after full expiry"""
+    from scheduling.models import OvertimeOfferBatch, StaffingCoverRequest
+    from scheduling.workflow_orchestrator import handle_timeout
+    
+    # Find batches where all offers are expired/declined
+    batches = OvertimeOfferBatch.objects.filter(
+        cover_request__status__in=['OT_OFFERED', 'REALLOCATION_OFFERED']
+    )
+    
+    for batch in batches:
+        pending_count = batch.offers.filter(status='PENDING').count()
+        
+        if pending_count == 0:  # All offers processed
+            logger.info(f"🔄 All OT offers processed for batch #{batch.id}, checking escalation")
+            
+            # Check if any reallocation requests are still pending
+            cover_request = batch.cover_request
+            pending_reallocations = cover_request.reallocation_requests.filter(
+                status='PENDING'
+            ).count()
+            
+            if pending_reallocations == 0:
+                # Both Priority 1 and 2 have failed, escalate
+                logger.warning(f"⚠️  Priority 1 & 2 failed, escalating CoverRequest #{cover_request.id}")
+                handle_timeout(cover_request)
+
+
+# ==================== Agency Approval Monitoring ====================
+
+@shared_task
+def monitor_agency_approval_deadlines():
+    """
+    Check for expired agency approval requests every minute
+    
+    Runs: Every 1 minute via Celery Beat
+    Purpose: Auto-approve agency requests after 15-minute deadline
+    """
+    from scheduling.models import AgencyRequest
+    from scheduling.workflow_orchestrator import auto_approve_agency_timeout
+    from rotasystems.settings import STAFFING_WORKFLOW
+    
+    # Only run if auto-approve is enabled
+    if not STAFFING_WORKFLOW.get('AUTO_APPROVE_AGENCY_TIMEOUT', False):
+        return {
+            'task': 'monitor_agency_approval_deadlines',
+            'auto_approve_disabled': True
+        }
+    
+    now = timezone.now()
+    
+    # Find all pending agency requests past their deadline
+    expired_requests = AgencyRequest.objects.filter(
+        approval_status='PENDING_APPROVAL',
+        approval_deadline__lt=now
+    )
+    
+    auto_approved_count = 0
+    
+    for request in expired_requests:
+        logger.info(f"🤖 Auto-approving agency request #{request.id} after timeout")
+        auto_approve_agency_timeout(request)
+        auto_approved_count += 1
+    
+    if auto_approved_count > 0:
+        logger.warning(f"⚠️  Auto-approved {auto_approved_count} agency requests due to timeout")
+    
+    return {
+        'task': 'monitor_agency_approval_deadlines',
+        'auto_approved': auto_approved_count,
+        'timestamp': now.isoformat()
+    }
+
+
+# ==================== Reallocation Request Monitoring ====================
+
+@shared_task
+def monitor_reallocation_deadlines():
+    """
+    Check for expired reallocation requests every minute
+    
+    Runs: Every 1 minute via Celery Beat
+    Purpose: Expire pending reallocation requests past their deadline
+    """
+    from scheduling.models import ReallocationRequest
+    
+    now = timezone.now()
+    
+    # Find all pending reallocation requests past their deadline
+    expired_requests = ReallocationRequest.objects.filter(
+        status='PENDING',
+        response_deadline__lt=now
+    )
+    
+    expired_count = 0
+    
+    for request in expired_requests:
+        logger.info(f"⏰ Expiring reallocation request #{request.id} for {request.staff_member.full_name}")
+        request.status = 'EXPIRED'
+        request.save()
+        expired_count += 1
+    
+    if expired_count > 0:
+        logger.info(f"✅ Expired {expired_count} reallocation requests")
+    
+    return {
+        'task': 'monitor_reallocation_deadlines',
+        'expired_requests': expired_count,
+        'timestamp': now.isoformat()
+    }
+
+
+# ==================== Post-Shift Admin Reminders ====================
+
+@shared_task
+def send_post_shift_admin_reminders():
+    """
+    Send reminders for post-shift administration
+    
+    Runs: Daily at 09:00 via Celery Beat
+    Purpose: Remind staff to complete post-shift admin forms
+    """
+    from scheduling.models import PostShiftAdministration, Shift
+    from scheduling.notifications import notify_post_shift_admin_required
+    from datetime import date, timedelta
+    
+    # Find shifts from yesterday that need post-shift admin
+    yesterday = date.today() - timedelta(days=1)
+    
+    # Find shifts that were covered by workflow but don't have post-shift admin
+    yesterday_shifts = Shift.objects.filter(
+        date=yesterday,
+        shift_classification__in=['OVERTIME', 'AGENCY']
+    ).exclude(
+        postshiftadministration__isnull=False  # Exclude if already created
+    )
+    
+    reminder_count = 0
+    
+    for shift in yesterday_shifts:
+        # Send reminder notification
+        logger.info(f"📨 Sending post-shift admin reminder for shift on {shift.date}")
+        notify_post_shift_admin_required(shift)
+        reminder_count += 1
+    
+    # Also find incomplete post-shift admin records
+    incomplete_admin = PostShiftAdministration.objects.filter(
+        status__in=['PENDING_REVIEW', 'PARTIALLY_COMPLETED'],
+        shift__date__lt=date.today()
+    )
+    
+    for admin in incomplete_admin:
+        logger.warning(f"⚠️  Incomplete post-shift admin #{admin.id} for shift on {admin.shift.date}")
+    
+    return {
+        'task': 'send_post_shift_admin_reminders',
+        'reminders_sent': reminder_count,
+        'incomplete_records': incomplete_admin.count(),
+        'timestamp': timezone.now().isoformat()
+    }
+
+
+# ==================== Workflow Health Monitoring ====================
+
+@shared_task
+def monitor_workflow_health():
+    """
+    Monitor overall workflow health and send alerts
+    
+    Runs: Every 5 minutes via Celery Beat
+    Purpose: Detect stuck workflows and send alerts to admins
+    """
+    from scheduling.models import StaffingCoverRequest
+    from scheduling.notifications import notify_workflow_alert
+    from datetime import timedelta
+    
+    now = timezone.now()
+    issues = []
+    
+    # Find cover requests stuck in pending state for > 2 hours
+    stuck_requests = StaffingCoverRequest.objects.filter(
+        status__in=['PENDING', 'REALLOCATION_OFFERED', 'OT_OFFERED'],
+        created_at__lt=now - timedelta(hours=2)
+    )
+    
+    if stuck_requests.exists():
+        issues.append(f"{stuck_requests.count()} cover requests stuck for > 2 hours")
+        for request in stuck_requests:
+            logger.error(f"❌ STUCK WORKFLOW: CoverRequest #{request.id} created {request.created_at}")
+    
+    # Find agency requests pending approval for > 30 minutes
+    from scheduling.models import AgencyRequest
+    stuck_agency = AgencyRequest.objects.filter(
+        approval_status='PENDING_APPROVAL',
+        requested_at__lt=now - timedelta(minutes=30)
+    )
+    
+    if stuck_agency.exists():
+        issues.append(f"{stuck_agency.count()} agency requests pending > 30 min")
+        for request in stuck_agency:
+            logger.error(f"❌ STUCK AGENCY: AgencyRequest #{request.id} pending {request.requested_at}")
+    
+    # Find unresolved cover requests for shifts happening today
+    from datetime import date
+    today = date.today()
+    
+    today_unresolved = StaffingCoverRequest.objects.filter(
+        absence__shift__date=today,
+        status__in=['PENDING', 'REALLOCATION_OFFERED', 'OT_OFFERED', 'AGENCY_REQUESTED']
+    )
+    
+    if today_unresolved.exists():
+        issues.append(f"URGENT: {today_unresolved.count()} unresolved requests for TODAY")
+        for request in today_unresolved:
+            logger.critical(f"🚨 URGENT: CoverRequest #{request.id} for shift TODAY at {request.absence.shift.start_time}")
+    
+    # Send alert if issues detected
+    if issues:
+        logger.warning(f"⚠️  Workflow health check: {len(issues)} issues detected")
+        # In production, this would send email/SMS to admins
+        # notify_workflow_alert(issues)
+    
+    return {
+        'task': 'monitor_workflow_health',
+        'issues_detected': len(issues),
+        'issues': issues,
+        'timestamp': now.isoformat()
+    }
+
+
+# ==================== Long-Term Absence Review ====================
+
+@shared_task
+def review_long_term_absences():
+    """
+    Daily review of long-term absences and cover plans
+    
+    Runs: Daily at 08:00 via Celery Beat
+    Purpose: Update long-term cover plans and send status reports
+    """
+    from scheduling.models import StaffingCoverRequest, LongTermCoverPlan
+    from datetime import date, timedelta
+    
+    # Find active long-term cover plans
+    active_plans = LongTermCoverPlan.objects.filter(
+        cover_request__status='RESOLVED',
+        cover_request__absence__end_date__gte=date.today()
+    )
+    
+    for plan in active_plans:
+        logger.info(f"📋 Reviewing long-term plan #{plan.id} for {plan.cover_request.absence.staff_member.full_name}")
+        
+        # Calculate actual costs to date
+        resolved_requests = plan.cover_request.absence.staffingcoverrequest_set.filter(
+            status='RESOLVED'
+        )
+        
+        actual_cost = sum(r.total_cost for r in resolved_requests if r.total_cost)
+        
+        # Compare to estimated
+        if plan.estimated_total_cost and actual_cost > plan.estimated_total_cost * Decimal('1.2'):
+            logger.warning(f"⚠️  Long-term plan #{plan.id} 20% over budget: £{actual_cost} vs £{plan.estimated_total_cost}")
+    
+    return {
+        'task': 'review_long_term_absences',
+        'active_plans': active_plans.count(),
+        'timestamp': timezone.now().isoformat()
+    }
+
+
+# ==================== WTD Compliance Monitoring ====================
+
+@shared_task
+def monitor_wdt_compliance():
+    """
+    Monitor staff approaching WTD limits
+    
+    Runs: Weekly on Sundays at 20:00 via Celery Beat
+    Purpose: Flag staff approaching 48hr/week or rest period violations
+    """
+    from scheduling.wdt_compliance import calculate_weekly_hours, calculate_rolling_average_hours
+    from scheduling.models import User
+    from datetime import date, timedelta
+    
+    today = date.today()
+    warnings = []
+    
+    # Check all active staff
+    active_staff = User.objects.filter(
+        is_active=True,
+        userprofile__role__in=['RN', 'HCA', 'SC', 'AC', 'CA']
+    )
+    
+    for staff in active_staff:
+        # Check current week hours
+        weekly_hours = calculate_weekly_hours(staff, today, weeks=1)
+        
+        if weekly_hours > Decimal('45'):  # Approaching 48hr limit
+            warnings.append(f"{staff.full_name}: {weekly_hours}hrs this week (approaching limit)")
+            logger.warning(f"⚠️  {staff.full_name} has {weekly_hours} hours this week")
+        
+        # Check 17-week rolling average
+        rolling_avg = calculate_rolling_average_hours(staff, weeks=17)
+        
+        if rolling_avg > Decimal('46'):  # Approaching 48hr average
+            warnings.append(f"{staff.full_name}: {rolling_avg}hrs rolling average (approaching limit)")
+            logger.warning(f"⚠️  {staff.full_name} has {rolling_avg} hours rolling average")
+    
+    if warnings:
+        logger.info(f"📊 WTD Compliance: {len(warnings)} staff approaching limits")
+    
+    return {
+        'task': 'monitor_wdt_compliance',
+        'warnings': len(warnings),
+        'details': warnings,
+        'timestamp': timezone.now().isoformat()
+    }
+
+
+# ==================== Workflow Statistics Generation ====================
+
+@shared_task
+def generate_weekly_workflow_report():
+    """
+    Generate comprehensive weekly workflow statistics
+    
+    Runs: Weekly on Mondays at 09:00 via Celery Beat
+    Purpose: Create executive summary report for management
+    """
+    from scheduling.workflow_orchestrator import get_workflow_summary
+    from datetime import date, timedelta
+    
+    # Last 7 days
+    end_date = date.today()
+    start_date = end_date - timedelta(days=7)
+    
+    summary = get_workflow_summary(start_date, end_date)
+    
+    logger.info("=" * 80)
+    logger.info(f"📊 WEEKLY WORKFLOW REPORT: {start_date} to {end_date}")
+    logger.info("=" * 80)
+    logger.info(f"Absences: {summary['absences']['total']} total, {summary['absences']['long_term']} long-term")
+    logger.info(f"Cover Requests: {summary['cover_requests']['total']} total, {summary['cover_requests']['resolved']} resolved ({summary['cover_requests']['resolution_rate']}%)")
+    logger.info(f"Resolution: {summary['resolution_methods']['by_reallocation']} reallocation, {summary['resolution_methods']['by_overtime']} OT, {summary['resolution_methods']['by_agency']} agency")
+    logger.info(f"Costs: £{summary['costs']['total']:.2f} total (Reallocation: £{summary['costs']['reallocation']:.2f}, OT: £{summary['costs']['overtime']:.2f}, Agency: £{summary['costs']['agency']:.2f})")
+    logger.info(f"Performance: {summary['performance']['average_resolution_hours']:.1f}hrs avg resolution, {summary['performance']['reallocation_success_rate']:.1f}% zero-cost resolution")
+    logger.info(f"Savings: £{summary['savings']['total_saved']:.2f} - {summary['savings']['description']}")
+    logger.info("=" * 80)
+    
+    # In production, this would send email to management
+    # send_management_report(summary)
+    
+    return {
+        'task': 'generate_weekly_workflow_report',
+        'summary': summary,
+        'timestamp': timezone.now().isoformat()
+    }
+
+
+# ==================== TASK 21: Email Notification Tasks ====================
+
+@shared_task
+def send_shift_reminders():
+    """
+    Send reminder emails for shifts starting in 24 hours
+    Scheduled to run every hour via Celery Beat
+    """
+    from scheduling.models import Shift
+    from scheduling.email_notifications import send_shift_reminder_email
+    
+    logger.info("Starting shift reminder task")
+    
+    # Get tomorrow's date (24 hours from now)
+    tomorrow = timezone.now() + timedelta(hours=24)
+    tomorrow_date = tomorrow.date()
+    
+    # Get all shifts for tomorrow
+    shifts = Shift.objects.filter(
+        date=tomorrow_date
+    ).select_related('staff', 'shift_type', 'unit', 'care_home')
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for shift in shifts:
+        if shift.staff and shift.staff.email:
+            try:
+                if send_shift_reminder_email(shift):
+                    sent_count += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                logger.error(f"Error sending reminder for shift {shift.id}: {str(e)}")
+                failed_count += 1
+    
+    logger.info(f"Shift reminder task complete: {sent_count} sent, {failed_count} failed")
+    return f"Sent {sent_count} reminders, {failed_count} failed"
+
+
+@shared_task
+def send_weekly_rotas():
+    """
+    Send weekly schedule emails to all staff
+    Scheduled to run every Sunday at 18:00 via Celery Beat
+    """
+    from scheduling.models import Shift, User
+    from scheduling.email_notifications import send_weekly_rota_email
+    
+    logger.info("Starting weekly rota email task")
+    
+    # Get next Monday
+    today = timezone.now().date()
+    days_until_monday = (7 - today.weekday()) % 7
+    if days_until_monday == 0:
+        days_until_monday = 7
+    
+    week_start = today + timedelta(days=days_until_monday)
+    week_end = week_start + timedelta(days=6)
+    
+    # Get all active staff with email
+    staff_members = User.objects.filter(
+        is_active=True,
+        email__isnull=False
+    ).exclude(email='')
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for staff in staff_members:
+        # Get their shifts for the week
+        shifts = Shift.objects.filter(
+            staff=staff,
+            date__range=[week_start, week_end]
+        ).select_related('shift_type', 'unit', 'care_home').order_by('date', 'start_time')
+        
+        try:
+            if send_weekly_rota_email(staff, week_start, shifts):
+                sent_count += 1
+            else:
+                failed_count += 1
+        except Exception as e:
+            logger.error(f"Error sending weekly rota to {staff.email}: {str(e)}")
+            failed_count += 1
+    
+    logger.info(f"Weekly rota task complete: {sent_count} sent, {failed_count} failed")
+    return f"Sent {sent_count} weekly rotas, {failed_count} failed"
+
+
+# ==================== TASK 22: SMS Notification Tasks ====================
+
+@shared_task
+def monitor_late_clockins():
+    """
+    Monitor for late clock-ins and send SMS reminders
+    Scheduled to run every 15 minutes via Celery Beat
+    """
+    from scheduling.models import Shift
+    from scheduling.sms_notifications import send_late_clockin_alert
+    
+    logger.info("Starting late clock-in monitoring")
+    
+    now = timezone.now()
+    current_time = now.time()
+    today = now.date()
+    
+    # Find shifts that started 15+ minutes ago with no clock-in
+    grace_period = timedelta(minutes=15)
+    cutoff_time = (now - grace_period).time()
+    
+    # Get shifts that should have started
+    late_shifts = Shift.objects.filter(
+        date=today,
+        start_time__lte=cutoff_time,
+        # Add clock_in tracking field check here when implemented
+        # clock_in_time__isnull=True
+    ).select_related('staff', 'unit', 'care_home')
+    
+    sent_count = 0
+    
+    for shift in late_shifts:
+        if shift.staff and shift.staff.sms_notifications_enabled:
+            try:
+                if send_late_clockin_alert(shift.staff, shift):
+                    sent_count += 1
+            except Exception as e:
+                logger.error(f"Error sending late clock-in SMS for shift {shift.id}: {str(e)}")
+    
+    logger.info(f"Late clock-in monitoring complete: {sent_count} SMS sent")
+    return f"Sent {sent_count} late clock-in reminders"
+
+
+@shared_task
+def send_emergency_coverage_sms():
+    """
+    Send SMS alerts for unfilled emergency shifts
+    Scheduled to run every 30 minutes via Celery Beat
+    """
+    from scheduling.models import Shift, User
+    from scheduling.sms_notifications import send_emergency_coverage_alert
+    
+    logger.info("Starting emergency coverage SMS alerts")
+    
+    now = timezone.now()
+    tomorrow = now.date() + timedelta(days=1)
+    
+    # Find unfilled shifts in next 24 hours
+    # (This is a simplified example - adjust query based on your vacancy tracking)
+    urgent_shifts = Shift.objects.filter(
+        date__range=[now.date(), tomorrow],
+        staff__isnull=True  # Unfilled shifts
+    ).select_related('shift_type', 'unit', 'care_home')
+    
+    sent_count = 0
+    
+    for shift in urgent_shifts[:10]:  # Limit to 10 most urgent
+        # Find qualified staff with SMS enabled
+        qualified_staff = User.objects.filter(
+            is_active=True,
+            role=shift.shift_type.required_role if shift.shift_type else None,
+            sms_notifications_enabled=True,
+            phone_number__isnull=False
+        ).exclude(phone_number='')[:5]  # Top 5 candidates
+        
+        for staff in qualified_staff:
+            try:
+                if send_emergency_coverage_alert(staff, shift):
+                    sent_count += 1
+            except Exception as e:
+                logger.error(f"Error sending emergency SMS for shift {shift.id}: {str(e)}")
+    
+    logger.info(f"Emergency coverage SMS complete: {sent_count} SMS sent")
+    return f"Sent {sent_count} emergency coverage alerts"
+
+
+# ==================== EMAIL NOTIFICATION TASKS (Task 47) ====================
+
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from datetime import timedelta
+
+
+class EmailNotificationService:
+    """Service for managing email notifications"""
+    
+    @staticmethod
+    def get_email_from():
+        """Get the FROM email address"""
+        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@staffrota.com')
+    
+    @staticmethod
+    def get_admin_emails():
+        """Get list of admin email addresses"""
+        admins = getattr(settings, 'ADMINS', [])
+        return [admin[1] for admin in admins] if admins else []
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_email_notification(self, subject, message, recipient_list, html_message=None):
+    """
+    Generic task to send email notifications with retry logic
+    
+    Args:
+        subject: Email subject
+        message: Plain text message
+        recipient_list: List of recipient emails
+        html_message: Optional HTML version
+    
+    Returns:
+        int: Number of emails sent
+    """
+    try:
+        if html_message:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=EmailNotificationService.get_email_from(),
+                to=recipient_list
+            )
+            msg.attach_alternative(html_message, "text/html")
+            result = msg.send()
+        else:
+            result = send_mail(
+                subject=subject,
+                message=message,
+                from_email=EmailNotificationService.get_email_from(),
+                recipient_list=recipient_list,
+                fail_silently=False
+            )
+        
+        logger.info(f"📧 Email sent: '{subject}' to {len(recipient_list)} recipients")
+        return result
+    
+    except Exception as exc:
+        logger.error(f"❌ Email send failed: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries * 60)
+
+
+@shared_task
+def send_shift_assignment_email(shift_id):
+    """Send email when staff assigned to shift"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home', 'shift_type').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        subject = f"Shift Assignment: {shift.date.strftime('%d %b %Y')}"
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+You have been assigned to a shift:
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+Shift Type: {shift.shift_type.name}
+
+Please confirm your availability or contact your manager if you have any concerns.
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_leave_approval_email(leave_request_id, approved):
+    """Send email when leave request is approved/rejected"""
+    from scheduling.models import LeaveRequest
+    
+    try:
+        leave_request = LeaveRequest.objects.select_related('staff__user', 'approved_by').get(id=leave_request_id)
+        
+        if not leave_request.staff.user or not leave_request.staff.user.email:
+            return 0
+        
+        status = "Approved" if approved else "Rejected"
+        subject = f"Leave Request {status}: {leave_request.start_date.strftime('%d %b')} - {leave_request.end_date.strftime('%d %b')}"
+        
+        message = f"""
+Dear {leave_request.staff.user.get_full_name()},
+
+Your leave request has been {status.lower()}.
+
+Start Date: {leave_request.start_date.strftime('%A, %d %B %Y')}
+End Date: {leave_request.end_date.strftime('%A, %d %B %Y')}
+Reason: {leave_request.reason}
+{f"Approved by: {leave_request.approved_by.get_full_name()}" if leave_request.approved_by else ""}
+
+{f"Please check the system for more details." if not approved else "Enjoy your time off!"}
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[leave_request.staff.user.email]
+        )
+    
+    except LeaveRequest.DoesNotExist:
+        logger.error(f"Leave request {leave_request_id} not found")
+        return 0
+
+
+@shared_task
+def send_schedule_change_email(shift_id, change_type):
+    """Send email when schedule is changed"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        subject = f"Schedule Change: {change_type.title()} - {shift.date.strftime('%d %b %Y')}"
+        
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+Your shift schedule has been {change_type.lower()}:
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+
+Please check the system for updated details.
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_shift_reminder_email(shift_id, hours_before=24):
+    """Send reminder email before shift starts"""
+    from scheduling.models import Shift
+    
+    try:
+        shift = Shift.objects.select_related('staff__user', 'home', 'shift_type').get(id=shift_id)
+        
+        if not shift.staff or not shift.staff.user or not shift.staff.user.email:
+            return 0
+        
+        if shift.date < timezone.now().date():
+            return 0
+        
+        subject = f"Shift Reminder: Tomorrow at {shift.start_time.strftime('%H:%M')}"
+        
+        message = f"""
+Dear {shift.staff.user.get_full_name()},
+
+Reminder: You have a shift tomorrow!
+
+Care Home: {shift.home.name}
+Date: {shift.date.strftime('%A, %d %B %Y')}
+Time: {shift.start_time.strftime('%H:%M')} - {shift.end_time.strftime('%H:%M')}
+Shift Type: {shift.shift_type.name}
+
+See you tomorrow!
+
+Best regards,
+Staff Rota System
+"""
+        
+        return send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[shift.staff.user.email]
+        )
+    
+    except Shift.DoesNotExist:
+        logger.error(f"Shift {shift_id} not found")
+        return 0
+
+
+@shared_task
+def send_daily_shift_reminders():
+    """
+    Daily task to send shift reminders for tomorrow's shifts
+    Scheduled to run at 18:00 daily via Celery Beat
+    """
+    from scheduling.models import Shift
+    
+    tomorrow = timezone.now().date() + timedelta(days=1)
+    
+    shifts = Shift.objects.filter(
+        date=tomorrow,
+        staff__isnull=False,
+        staff__user__isnull=False,
+        staff__user__email__isnull=False
+    ).select_related('staff__user')
+    
+    count = 0
+    for shift in shifts:
+        send_shift_reminder_email.delay(shift.id, hours_before=24)
+        count += 1
+    
+    logger.info(f"📧 Queued {count} shift reminder emails for {tomorrow}")
+    return count
+
+
+@shared_task
+def send_weekly_schedule_summary():
+    """
+    Send weekly schedule summary to all staff
+    Scheduled to run every Sunday at 18:00
+    """
+    from scheduling.models import Shift, Staff
+    
+    today = timezone.now().date()
+    next_monday = today + timedelta(days=(7 - today.weekday()))
+    next_sunday = next_monday + timedelta(days=6)
+    
+    staff_members = Staff.objects.filter(
+        is_active=True,
+        user__isnull=False,
+        user__email__isnull=False
+    ).select_related('user')
+    
+    count = 0
+    for staff in staff_members:
+        shifts = Shift.objects.filter(
+            staff=staff,
+            date__range=[next_monday, next_sunday]
+        ).select_related('home', 'shift_type').order_by('date', 'start_time')
+        
+        if not shifts.exists():
+            continue
+        
+        subject = f"Your Schedule: {next_monday.strftime('%d %b')} - {next_sunday.strftime('%d %b')}"
+        
+        shifts_text = "\n".join([
+            f"  - {s.date.strftime('%a %d %b')}: {s.start_time.strftime('%H:%M')}-{s.end_time.strftime('%H:%M')} at {s.home.name}"
+            for s in shifts
+        ])
+        
+        message = f"""
+Dear {staff.user.get_full_name()},
+
+Your schedule for next week ({next_monday.strftime('%d %b')} - {next_sunday.strftime('%d %b')}):
+
+{shifts_text}
+
+Total Shifts: {shifts.count()}
+
+Have a great week!
+
+Best regards,
+Staff Rota System
+"""
+        
+        send_email_notification.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[staff.user.email]
+        )
+        count += 1
+    
+    logger.info(f"📧 Queued {count} weekly schedule summary emails")
+    return count
+
+
+@shared_task
+def send_urgent_alert_email(subject, message, recipient_emails=None):
+    """Send urgent alert to managers/admins"""
+    if recipient_emails is None:
+        recipient_emails = EmailNotificationService.get_admin_emails()
+    
+    if not recipient_emails:
+        logger.warning("No admin emails configured")
+        return 0
+    
+    subject = f"[URGENT] {subject}"
+    
+    return send_email_notification.delay(
+        subject=subject,
+        message=message,
+        recipient_list=recipient_emails
+    )
+
+
+@shared_task
+def send_bulk_notification_batch(subject, message, recipient_list, batch_size=50):
+    """Send bulk emails in batches"""
+    total = len(recipient_list)
+    sent = 0
+    
+    for i in range(0, total, batch_size):
+        batch = recipient_list[i:i + batch_size]
+        
+        try:
+            send_email_notification.delay(
+                subject=subject,
+                message=message,
+                recipient_list=batch
+            )
+            sent += len(batch)
+        except Exception as e:
+            logger.error(f"Error queuing batch: {e}")
+    
+    logger.info(f"📧 Queued {sent}/{total} emails in batches")
+    return sent
+

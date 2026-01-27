@@ -1,0 +1,213 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-users"></i> {{ page_title }}</h2>
+            <p class="text-muted">Complaint: <strong>{{ complaint.complaint_reference }}</strong></p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Complaint
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-user-plus"></i> Add Stakeholder</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Stakeholder Type -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stakeholder_type.id_for_label }}">Stakeholder Type</label>
+                        {{ form.stakeholder_type }}
+                        {% if form.stakeholder_type.errors %}
+                        <div class="invalid-feedback d-block">{{ form.stakeholder_type.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Name -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.name.id_for_label }}">Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Role/Title -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.role_title.id_for_label }}">Role/Title</label>
+                        {{ form.role_title }}
+                        {% if form.role_title.errors %}
+                        <div class="invalid-feedback d-block">{{ form.role_title.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contact Details -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.contact_details.id_for_label }}">Contact Details</label>
+                        {{ form.contact_details }}
+                        <small class="form-text text-muted">Phone, email, or address</small>
+                        {% if form.contact_details.errors %}
+                        <div class="invalid-feedback d-block">{{ form.contact_details.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Involvement Description -->
+                <div class="mb-3">
+                    <label for="{{ form.involvement_description.id_for_label }}">Involvement Description</label>
+                    {{ form.involvement_description }}
+                    <small class="form-text text-muted">How is this person involved in the complaint?</small>
+                    {% if form.involvement_description.errors %}
+                    <div class="invalid-feedback d-block">{{ form.involvement_description.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-file-signature"></i> Statement Information</h6>
+
+                <div class="row">
+                    <!-- Date Contacted -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.date_contacted.id_for_label }}">Date Contacted</label>
+                        {{ form.date_contacted }}
+                        {% if form.date_contacted.errors %}
+                        <div class="invalid-feedback d-block">{{ form.date_contacted.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Statement Received -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.statement_received.id_for_label }}">Statement Received?</label>
+                        <div class="form-check mt-2">
+                            {{ form.statement_received }}
+                            <label class="form-check-label" for="{{ form.statement_received.id_for_label }}">
+                                Yes, statement has been received
+                            </label>
+                        </div>
+                        {% if form.statement_received.errors %}
+                        <div class="invalid-feedback d-block">{{ form.statement_received.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Statement Date -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.statement_date.id_for_label }}">Statement Date</label>
+                        {{ form.statement_date }}
+                        {% if form.statement_date.errors %}
+                        <div class="invalid-feedback d-block">{{ form.statement_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Statement Notes -->
+                <div class="mb-3">
+                    <label for="{{ form.statement_notes.id_for_label }}">Statement Notes</label>
+                    {{ form.statement_notes }}
+                    <small class="form-text text-muted">Summary of statement or interview notes</small>
+                    {% if form.statement_notes.errors %}
+                    <div class="invalid-feedback d-block">{{ form.statement_notes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-bell"></i> Update Requirements</h6>
+
+                <div class="row">
+                    <!-- Requires Update -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.requires_update.id_for_label }}">Requires Progress Updates?</label>
+                        <div class="form-check mt-2">
+                            {{ form.requires_update }}
+                            <label class="form-check-label" for="{{ form.requires_update.id_for_label }}">
+                                This stakeholder should receive regular updates
+                            </label>
+                        </div>
+                        {% if form.requires_update.errors %}
+                        <div class="invalid-feedback d-block">{{ form.requires_update.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Update Frequency -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.update_frequency.id_for_label }}">Update Frequency</label>
+                        {{ form.update_frequency }}
+                        {% if form.update_frequency.errors %}
+                        <div class="invalid-feedback d-block">{{ form.update_frequency.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Last Updated -->
+                <div class="mb-3">
+                    <label for="{{ form.last_updated.id_for_label }}">Last Update Sent</label>
+                    {{ form.last_updated }}
+                    {% if form.last_updated.errors %}
+                    <div class="invalid-feedback d-block">{{ form.last_updated.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Add Stakeholder
+                    </button>
+                    <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stakeholder Types Reference -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h6><i class="fas fa-info-circle"></i> Stakeholder Types</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <ul>
+                        <li><strong>Complainant</strong> - Person who raised the complaint</li>
+                        <li><strong>Resident</strong> - Resident affected by the issue</li>
+                        <li><strong>Family Member</strong> - Family members involved</li>
+                        <li><strong>Staff Witness</strong> - Staff who witnessed the incident</li>
+                        <li><strong>Care Manager</strong> - Care home manager</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul>
+                        <li><strong>Senior Management</strong> - Senior leadership</li>
+                        <li><strong>External Professional</strong> - GP, social worker, etc.</li>
+                        <li><strong>Care Inspectorate</strong> - Regulatory body</li>
+                        <li><strong>Local Authority</strong> - Council representatives</li>
+                        <li><strong>Police</strong> - If criminal matter</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-exclamation-triangle"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Complaint Details -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-info-circle"></i> Complaint Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Reference:</strong> {{ complaint.complaint_reference }}</p>
+                    <p><strong>Care Home:</strong> {{ complaint.care_home.name }}</p>
+                    <p><strong>Date Received:</strong> {{ complaint.date_received|date:"d M Y" }}</p>
+                    <p><strong>Category:</strong> {{ complaint.get_complaint_category_display }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Severity:</strong>
+                        <span class="badge {% if complaint.severity == 'CRITICAL' %}badge-danger{% elif complaint.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                            {{ complaint.get_severity_display }}
+                        </span>
+                    </p>
+                    <p><strong>Status:</strong> <span class="badge badge-secondary">{{ complaint.get_status_display }}</span></p>
+                    <p><strong>Days Open:</strong> {{ days_open }} days
+                        {% if is_overdue %}
+                        <span class="badge badge-danger">OVERDUE</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Acknowledgement:</strong>
+                        {% if ack_within_target %}
+                        <span class="text-success"><i class="fas fa-check"></i> Within 3 days</span>
+                        {% elif complaint.date_acknowledged %}
+                        <span class="text-warning"><i class="fas fa-exclamation"></i> Late</span>
+                        {% else %}
+                        <span class="text-danger"><i class="fas fa-times"></i> Not yet acknowledged</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Complainant Information</h6>
+                    <p><strong>Name:</strong> {{ complaint.complainant_name }}</p>
+                    <p><strong>Relationship:</strong> {{ complaint.complainant_relationship }}</p>
+                    {% if complaint.resident %}
+                    <p><strong>Resident:</strong> {{ complaint.resident.full_name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Complaint Description</h6>
+                    <p>{{ complaint.complaint_description }}</p>
+                    {% if complaint.desired_outcome %}
+                    <h6 class="mt-3">Desired Outcome</h6>
+                    <p>{{ complaint.desired_outcome }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if complaint.investigation_notes %}
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Investigation Findings</h6>
+                    <p>{{ complaint.investigation_notes }}</p>
+                    {% if complaint.root_cause %}
+                    <h6 class="mt-3">Root Cause</h6>
+                    <p>{{ complaint.root_cause }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if complaint.resolution_details %}
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Resolution</h6>
+                    <p>{{ complaint.resolution_details }}</p>
+                    <p><strong>Complainant Satisfied:</strong>
+                        {% if complaint.complainant_satisfied %}
+                        <span class="text-success">Yes</span>
+                        {% elif complaint.complainant_satisfied == False %}
+                        <span class="text-danger">No</span>
+                        {% else %}
+                        <span class="text-muted">Not recorded</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

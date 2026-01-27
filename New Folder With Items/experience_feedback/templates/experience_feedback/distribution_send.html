@@ -1,0 +1,151 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Send Survey - {{ distribution.recipient_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-paper-plane"></i> Send Survey</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Distribution Info -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h5 class="mb-3">Distribution Details</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-2"><strong>Recipient:</strong> {{ distribution.recipient_name }}</p>
+                                <p class="mb-2"><strong>Type:</strong> {{ distribution.get_recipient_type_display }}</p>
+                                <p class="mb-0"><strong>Resident:</strong> {{ distribution.resident.full_name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2"><strong>Survey:</strong> {{ distribution.get_survey_type_display }}</p>
+                                <p class="mb-2"><strong>Care Home:</strong> {{ distribution.care_home.name }}</p>
+                                {% if distribution.schedule %}
+                                <p class="mb-0"><strong>Schedule:</strong> {{ distribution.schedule.name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribution Options -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <h5 class="mb-3">Select Distribution Method</h5>
+
+                        <div class="row">
+                            <!-- Email Option -->
+                            {% if distribution.recipient_email %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-envelope text-primary"></i> Send via Email</h6>
+                                        <p class="text-muted small mb-2">{{ distribution.recipient_email }}</p>
+                                        <button type="submit" name="channel" value="EMAIL" class="btn btn-primary w-100">
+                                            <i class="fas fa-paper-plane"></i> Send Email
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body text-muted">
+                                        <h6><i class="fas fa-envelope"></i> Email</h6>
+                                        <p class="small">No email address on file</p>
+                                        <button type="button" class="btn btn-secondary w-100" disabled>
+                                            Email Not Available
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- SMS Option -->
+                            {% if distribution.recipient_phone %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-success">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-sms text-success"></i> Send via SMS</h6>
+                                        <p class="text-muted small mb-2">{{ distribution.recipient_phone }}</p>
+                                        <button type="submit" name="channel" value="SMS" class="btn btn-success w-100">
+                                            <i class="fas fa-paper-plane"></i> Send SMS
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body text-muted">
+                                        <h6><i class="fas fa-sms"></i> SMS</h6>
+                                        <p class="small">No phone number on file</p>
+                                        <button type="button" class="btn btn-secondary w-100" disabled>
+                                            SMS Not Available
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    <!-- Survey Link -->
+                    <div class="alert alert-info mt-4">
+                        <h6><i class="fas fa-link"></i> Survey Link</h6>
+                        <p class="mb-2">You can also share this link directly:</p>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="surveyLink" 
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'experience_feedback:public_survey_token' distribution.survey_token %}" 
+                                   readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyLink()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- QR Code -->
+                    {% if distribution.qr_code_generated %}
+                    <div class="text-center mt-4">
+                        <h6><i class="fas fa-qrcode"></i> QR Code</h6>
+                        <img src="{% url 'experience_feedback:survey_qr_code' distribution.survey_token %}" 
+                             alt="Survey QR Code" class="img-fluid" style="max-width: 300px;">
+                        <p class="text-muted small mt-2">Scan to access survey</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'experience_feedback:distribution_dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </a>
+                        <a href="{% url 'experience_feedback:public_survey_token' distribution.survey_token %}" 
+                           class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-eye"></i> Preview Survey
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyLink() {
+    const linkInput = document.getElementById('surveyLink');
+    linkInput.select();
+    document.execCommand('copy');
+    
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+    }, 2000);
+}
+</script>
+{% endblock %}

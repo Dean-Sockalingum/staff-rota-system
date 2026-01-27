@@ -1,0 +1,112 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Survey Distribution Schedules{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-alt text-primary"></i> Survey Distribution Schedules</h2>
+            <p class="text-muted mb-0">Manage automated survey distribution</p>
+        </div>
+        <div>
+            <a href="{% url 'experience_feedback:distribution_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="{% url 'experience_feedback:schedule_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Schedule
+            </a>
+        </div>
+    </div>
+
+    {% if schedules %}
+    <div class="row">
+        {% for schedule in schedules %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 {% if not schedule.is_active %}border-secondary{% else %}border-primary{% endif %}">
+                <div class="card-header {% if schedule.is_active %}bg-primary text-white{% else %}bg-secondary text-white{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="mb-0">{{ schedule.name }}</h5>
+                        {% if schedule.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-dark">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <i class="fas fa-home text-muted"></i> 
+                        <strong>{{ schedule.care_home.name }}</strong>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-clipboard-list text-muted"></i> 
+                        {{ schedule.get_survey_type_display }}
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-bolt text-muted"></i> 
+                        {{ schedule.get_trigger_type_display }}
+                        {% if schedule.trigger_type == 'ADMISSION' %}
+                        ({{ schedule.days_after_admission }} days)
+                        {% elif schedule.trigger_type == 'SCHEDULED' %}
+                        ({{ schedule.get_schedule_frequency_display }})
+                        {% endif %}
+                    </p>
+
+                    <hr>
+
+                    <div class="mb-2">
+                        <small class="text-muted d-block mb-1">Distribution Channels:</small>
+                        {% if schedule.send_email %}
+                        <span class="badge bg-primary me-1"><i class="fas fa-envelope"></i> Email</span>
+                        {% endif %}
+                        {% if schedule.send_sms %}
+                        <span class="badge bg-success me-1"><i class="fas fa-sms"></i> SMS</span>
+                        {% endif %}
+                        {% if schedule.print_qr_code %}
+                        <span class="badge bg-secondary"><i class="fas fa-qrcode"></i> QR Code</span>
+                        {% endif %}
+                    </div>
+
+                    {% if schedule.enable_reminders %}
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-bell"></i> Reminders: {{ schedule.reminder_days }} days, max {{ schedule.max_reminders }}
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    <small class="text-muted d-block">
+                        <i class="fas fa-clock"></i> Created {{ schedule.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'experience_feedback:schedule_edit' schedule.pk %}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'experience_feedback:schedule_delete' schedule.pk %}" 
+                           class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-calendar-plus fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No Distribution Schedules</h4>
+        <p class="text-muted">Create your first automated survey distribution schedule</p>
+        <a href="{% url 'experience_feedback:schedule_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Schedule
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

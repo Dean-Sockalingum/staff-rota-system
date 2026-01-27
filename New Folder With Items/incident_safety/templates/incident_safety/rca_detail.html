@@ -1,0 +1,634 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}RCA {{ rca.reference_number }} - Root Cause Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    }
+    
+    .badge-rca-status {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .badge-in-progress { background-color: #3b82f6; }
+    .badge-completed { background-color: #10b981; }
+    .badge-approved { background-color: #8b5cf6; }
+    
+    .quick-links-panel {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #667eea;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .quick-links-panel h5 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .tool-link-btn {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-align: left;
+        border: none;
+    }
+    
+    .tool-link-btn i {
+        margin-right: 0.75rem;
+        font-size: 1.2rem;
+    }
+    
+    .tool-link-fishbone {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .tool-link-fishbone:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .tool-link-five-whys {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    
+    .tool-link-five-whys:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        color: white;
+    }
+    
+    .tool-link-learning {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .tool-link-learning:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        color: white;
+    }
+    
+    .section-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .section-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .section-card h4 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-card h4 i {
+        margin-right: 0.75rem;
+        font-size: 1.3rem;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: #667eea;
+        color: white;
+    }
+    
+    .accordion-button:not(.collapsed)::after {
+        filter: brightness(0) invert(1);
+    }
+    
+    .accordion-button {
+        font-weight: 600;
+    }
+    
+    .team-member {
+        display: inline-block;
+        margin-right: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .team-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .action-plan-row {
+        border-left: 4px solid #10b981;
+        padding-left: 1rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .action-plan-row:last-child {
+        border-bottom: none;
+    }
+    
+    .action-plan-row.overdue {
+        border-left-color: #ef4444;
+    }
+    
+    .action-plan-row.completed {
+        border-left-color: #10b981;
+        opacity: 0.7;
+    }
+    
+    .approval-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .approval-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .approval-approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .timeline-event {
+        padding-left: 2rem;
+        position: relative;
+        padding-bottom: 1rem;
+        border-left: 2px solid #e5e7eb;
+    }
+    
+    .timeline-event:last-child {
+        border-left: none;
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: -6px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #667eea;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        font-size: 1rem;
+        color: #1f2937;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="gradient-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2><i class="bi bi-search"></i> {{ rca.reference_number }}</h2>
+                        <p class="mb-2">Root Cause Analysis for Incident {{ rca.incident.reference_number }}</p>
+                        <div class="mt-3">
+                            <span class="badge badge-rca-status badge-{{ rca.status|lower }}">
+                                {{ rca.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links Panel -->
+            <div class="quick-links-panel">
+                <h5><i class="bi bi-tools"></i> Analysis Tools</h5>
+                <a href="{% url 'incident_safety:rca_fishbone' rca.pk %}" class="tool-link-btn tool-link-fishbone">
+                    <i class="bi bi-diagram-3"></i>
+                    View Fishbone Diagram
+                    <small class="d-block mt-1" style="opacity: 0.9;">Interactive root cause visualization</small>
+                </a>
+                <a href="{% url 'incident_safety:rca_five_whys' rca.pk %}" class="tool-link-btn tool-link-five-whys">
+                    <i class="bi bi-list-ol"></i>
+                    View 5 Whys Analysis
+                    <small class="d-block mt-1" style="opacity: 0.9;">Progressive causal investigation</small>
+                </a>
+                <a href="{% url 'incident_safety:learning_repository' %}?rca={{ rca.pk }}" class="tool-link-btn tool-link-learning">
+                    <i class="bi bi-book"></i>
+                    View in Learning Repository
+                    <small class="d-block mt-1" style="opacity: 0.9;">See lessons learned from this analysis</small>
+                </a>
+                {% if rca.status == 'APPROVED' and rca.root_cause %}
+                <a href="{% url 'quality_audits:qia_create' %}?source_type=INCIDENT&source_ref={{ rca.incident.reference_number }}&from_rca={{ rca.pk }}" class="tool-link-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                    <i class="bi bi-clipboard-check"></i>
+                    Create Quality Improvement Action
+                    <small class="d-block mt-1" style="opacity: 0.9;">Convert findings into corrective/preventive actions</small>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Investigation Details -->
+            <div class="section-card">
+                <h4><i class="bi bi-clipboard-data"></i> Investigation Details</h4>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Incident</div>
+                        <div class="info-value">
+                            {{ rca.incident.reference_number }}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Lead Investigator</div>
+                        <div class="info-value">{{ rca.lead_investigator.get_full_name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Investigation Date</div>
+                        <div class="info-value">{{ rca.investigation_date|date:"d M Y" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Target Completion</div>
+                        <div class="info-value">
+                            {{ rca.target_completion_date|date:"d M Y" }}
+                            {% if rca.is_overdue and rca.status != 'APPROVED' %}
+                                <i class="bi bi-exclamation-triangle text-danger ms-1" title="Overdue"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3">Investigation Team</h5>
+                <div>
+                    {% for member in rca.team_members.all %}
+                        <div class="team-member">
+                            <span class="team-avatar">{{ member.first_name.0 }}{{ member.last_name.0 }}</span>
+                            <span>{{ member.get_full_name }}</span>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">No team members assigned</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Root Cause Statement -->
+            {% if rca.root_cause_statement %}
+            <div class="section-card">
+                <h4><i class="bi bi-exclamation-diamond"></i> Root Cause Statement</h4>
+                <div class="alert alert-info">
+                    {{ rca.root_cause_statement }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 5 Whys Summary (Accordion) -->
+            <div class="section-card">
+                <h4><i class="bi bi-list-ol"></i> 5 Whys Analysis</h4>
+                <div class="accordion" id="fiveWhysAccordion">
+                    {% if rca.why_1 %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#why1">
+                                    <strong>Why 1:</strong>&nbsp;{{ rca.why_1|truncatewords:10 }}
+                                </button>
+                            </h2>
+                            <div id="why1" class="accordion-collapse collapse show" data-bs-parent="#fiveWhysAccordion">
+                                <div class="accordion-body">{{ rca.why_1 }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.why_2 %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#why2">
+                                    <strong>Why 2:</strong>&nbsp;{{ rca.why_2|truncatewords:10 }}
+                                </button>
+                            </h2>
+                            <div id="why2" class="accordion-collapse collapse" data-bs-parent="#fiveWhysAccordion">
+                                <div class="accordion-body">{{ rca.why_2 }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.why_3 %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#why3">
+                                    <strong>Why 3:</strong>&nbsp;{{ rca.why_3|truncatewords:10 }}
+                                </button>
+                            </h2>
+                            <div id="why3" class="accordion-collapse collapse" data-bs-parent="#fiveWhysAccordion">
+                                <div class="accordion-body">{{ rca.why_3 }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.why_4 %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#why4">
+                                    <strong>Why 4:</strong>&nbsp;{{ rca.why_4|truncatewords:10 }}
+                                </button>
+                            </h2>
+                            <div id="why4" class="accordion-collapse collapse" data-bs-parent="#fiveWhysAccordion">
+                                <div class="accordion-body">{{ rca.why_4 }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.why_5 %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#why5">
+                                    <strong>Why 5 (Root Cause):</strong>&nbsp;{{ rca.why_5|truncatewords:10 }}
+                                </button>
+                            </h2>
+                            <div id="why5" class="accordion-collapse collapse" data-bs-parent="#fiveWhysAccordion">
+                                <div class="accordion-body">{{ rca.why_5 }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not rca.why_1 %}
+                        <p class="text-muted">5 Whys analysis not yet completed</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fishbone Categories Summary (Accordion) -->
+            <div class="section-card">
+                <h4><i class="bi bi-diagram-3"></i> Fishbone Categories</h4>
+                <div class="accordion" id="fishboneAccordion">
+                    {% if rca.fishbone_people %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#people">
+                                    <strong>👥 People:</strong>&nbsp;{{ rca.fishbone_people|truncatewords:8 }}
+                                </button>
+                            </h2>
+                            <div id="people" class="accordion-collapse collapse" data-bs-parent="#fishboneAccordion">
+                                <div class="accordion-body">{{ rca.fishbone_people }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.fishbone_environment %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#environment">
+                                    <strong>🏢 Environment:</strong>&nbsp;{{ rca.fishbone_environment|truncatewords:8 }}
+                                </button>
+                            </h2>
+                            <div id="environment" class="accordion-collapse collapse" data-bs-parent="#fishboneAccordion">
+                                <div class="accordion-body">{{ rca.fishbone_environment }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.fishbone_processes %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#processes">
+                                    <strong>⚙️ Processes:</strong>&nbsp;{{ rca.fishbone_processes|truncatewords:8 }}
+                                </button>
+                            </h2>
+                            <div id="processes" class="accordion-collapse collapse" data-bs-parent="#fishboneAccordion">
+                                <div class="accordion-body">{{ rca.fishbone_processes }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.fishbone_organization %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#organization">
+                                    <strong>🏛️ Organization:</strong>&nbsp;{{ rca.fishbone_organization|truncatewords:8 }}
+                                </button>
+                            </h2>
+                            <div id="organization" class="accordion-collapse collapse" data-bs-parent="#fishboneAccordion">
+                                <div class="accordion-body">{{ rca.fishbone_organization }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if rca.fishbone_external %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#external">
+                                    <strong>🌐 External:</strong>&nbsp;{{ rca.fishbone_external|truncatewords:8 }}
+                                </button>
+                            </h2>
+                            <div id="external" class="accordion-collapse collapse" data-bs-parent="#fishboneAccordion">
+                                <div class="accordion-body">{{ rca.fishbone_external }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not rca.fishbone_people and not rca.fishbone_environment %}
+                        <p class="text-muted">Fishbone analysis not yet completed</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Linked Health and Safety Action Plans -->
+            <div class="section-card">
+                <h4><i class="bi bi-clipboard-check"></i> Linked Health and Safety Action Plans</h4>
+                {% if rca.safety_action_plans.exists %}
+                    {% for plan in rca.safety_action_plans.all %}
+                        <div class="action-plan-row {% if plan.is_overdue %}overdue{% elif plan.status == 'CLOSED' %}completed{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <a href="{% url 'incident_safety:action_plan_detail' plan.pk %}" class="fw-bold">
+                                        {{ plan.reference_number }}
+                                    </a>
+                                    <div class="small text-muted">{{ plan.action_description|truncatewords:15 }}</div>
+                                    <div class="mt-1">
+                                        <span class="badge bg-{{ plan.priority|lower }}">{{ plan.get_priority_display }}</span>
+                                        <span class="badge bg-secondary">{{ plan.get_status_display }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small text-muted">Target: {{ plan.target_completion_date|date:"d M Y" }}</div>
+                                    <div class="small">
+                                        <strong>{{ plan.percent_complete }}%</strong> complete
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No action plans linked to this RCA yet.</p>
+                    <a href="{% url 'incident_safety:action_plan_create' %}?rca={{ rca.pk }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create Action Plan
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Lessons Learned -->
+            {% if rca.lessons_learned %}
+            <div class="section-card">
+                <h4><i class="bi bi-lightbulb"></i> Lessons Learned</h4>
+                <div class="alert alert-success">
+                    {{ rca.lessons_learned }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recommendations -->
+            {% if rca.recommendations %}
+            <div class="section-card">
+                <h4><i class="bi bi-arrow-right-circle"></i> Recommendations</h4>
+                <div class="alert alert-warning">
+                    {{ rca.recommendations }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 mb-4 flex-wrap">
+                <a href="{% url 'incident_safety:rca_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to RCA List
+                </a>
+                {% if rca.status != 'APPROVED' %}
+                    <a href="{% url 'incident_safety:rca_update' rca.pk %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Edit RCA
+                    </a>
+                {% endif %}
+                {% if rca.status == 'APPROVED' and rca.root_cause %}
+                    <a href="{% url 'quality_audits:qia_create' %}?source_type=INCIDENT&source_ref={{ rca.incident.reference_number }}&from_rca={{ rca.pk }}" class="btn btn-warning">
+                        <i class="bi bi-clipboard-check"></i> Create QIA
+                    </a>
+                {% endif %}
+                <a href="{% url 'incident_safety:rca_delete' rca.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Approval Status -->
+            <div class="section-card">
+                <h5><i class="bi bi-check-circle"></i> Approval Status</h5>
+                {% if rca.status == 'APPROVED' %}
+                    <div class="approval-status approval-approved">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Approved
+                    </div>
+                    {% if rca.approved_by %}
+                        <div class="small text-muted">
+                            By {{ rca.approved_by.get_full_name }}<br>
+                            On {{ rca.approval_date|date:"d M Y" }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="approval-status approval-pending">
+                        <i class="bi bi-clock-fill me-2"></i>
+                        Pending Approval
+                    </div>
+                    <div class="small text-muted mt-2">
+                        RCA must be reviewed and approved by Quality Manager
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Key Dates -->
+            <div class="section-card">
+                <h5><i class="bi bi-calendar-event"></i> Key Dates</h5>
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Investigation Started</div>
+                    <div class="fw-bold">{{ rca.investigation_date|date:"d M Y" }}</div>
+                </div>
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Target Completion</div>
+                    <div class="fw-bold">{{ rca.target_completion_date|date:"d M Y" }}</div>
+                </div>
+                {% if rca.actual_completion_date %}
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Actual Completion</div>
+                    <div class="fw-bold">{{ rca.actual_completion_date|date:"d M Y" }}</div>
+                </div>
+                {% endif %}
+                {% if rca.approval_date %}
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Approved</div>
+                    <div class="fw-bold">{{ rca.approval_date|date:"d M Y" }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Audit Trail -->
+            <div class="section-card">
+                <h5><i class="bi bi-clock-history"></i> Audit Trail</h5>
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Created</div>
+                    <div class="small">{{ rca.created_at|date:"d M Y H:i" }}</div>
+                </div>
+                <div class="timeline-event">
+                    <div class="timeline-dot"></div>
+                    <div class="small text-muted">Last Updated</div>
+                    <div class="small">{{ rca.updated_at|date:"d M Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

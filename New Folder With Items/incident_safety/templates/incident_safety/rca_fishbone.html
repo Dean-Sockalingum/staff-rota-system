@@ -1,0 +1,442 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Fishbone Diagram - RCA {{ rca.incident.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fishbone-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 30px;
+        margin: 20px 0;
+        min-height: 600px;
+        overflow-x: auto; /* Enable horizontal scrolling for wide fishbone */
+    }
+    
+    .fishbone-category {
+        background: white;
+        border-left: 4px solid;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .fishbone-category:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .fishbone-category h4 {
+        margin: 0 0 15px 0;
+        font-weight: 600;
+    }
+    
+    .fishbone-factor {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin: 8px 0;
+        border-left: 3px solid #ddd;
+    }
+    
+    .root-cause-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-top: 30px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .incident-badge {
+        background: #dc3545;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .fishbone-svg {
+        min-width: 1200px; /* Force minimum width for all categories */
+        height: 500px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        display: block;
+    }
+    
+    .category-people { border-left-color: #3b82f6; }
+    .category-environment { border-left-color: #10b981; }
+    .category-processes { border-left-color: #f59e0b; }
+    .category-organization { border-left-color: #8b5cf6; }
+    .category-external { border-left-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ fishbone_data|json_script:"fishbone-data" }}
+
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <i class="bi bi-diagram-3"></i> Fishbone (Ishikawa) Diagram
+                    </h1>
+                    <div class="incident-badge">
+                        Incident: {{ rca.incident.reference_number }}
+                    </div>
+                </div>
+                <div>
+                    <a href="{% url 'incident_safety:rca_detail' rca.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to RCA
+                    </a>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <i class="bi bi-printer"></i> Print
+                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-share"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exportAsPNG(); return false;"><i class="bi bi-image"></i> Export as PNG</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportAsSVG(); return false;"><i class="bi bi-filetype-svg"></i> Export as SVG</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportAsPDF(); return false;"><i class="bi bi-file-pdf"></i> Export as PDF</a></li>
+                        </ul>
+                    </div>
+                    <a href="{% url 'incident_safety:rca_five_whys' rca.pk %}" class="btn btn-success">
+                        <i class="bi bi-list-ol"></i> View 5 Whys
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SVG Fishbone Diagram -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i> Visual Fishbone Analysis
+                    </h5>
+                </div>
+                <div class="card-body" style="overflow-x: auto;">
+                    <svg class="fishbone-svg" id="fishboneSVG" width="1200" height="500">
+                        <!-- Will be generated by JavaScript -->
+                    </svg>
+                    <p class="text-muted text-center">
+                        Interactive fishbone diagram showing contributing factors across 5 categories
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Category Details -->
+    <div class="row">
+        <div class="col-md-6">
+            <!-- People Factors -->
+            <div class="fishbone-category category-people">
+                <h4 style="color: #3b82f6;">
+                    <i class="bi bi-people"></i> People Factors
+                </h4>
+                <p class="text-muted mb-3">Staff training, competence, workload, communication</p>
+                {% if rca.factor_people %}
+                    {% for line in rca.factor_people.splitlines %}
+                        {% if line.strip %}
+                            <div class="fishbone-factor">{{ line }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted"><em>No people factors identified</em></p>
+                {% endif %}
+            </div>
+            
+            <!-- Process Factors -->
+            <div class="fishbone-category category-processes">
+                <h4 style="color: #f59e0b;">
+                    <i class="bi bi-gear"></i> Process Factors
+                </h4>
+                <p class="text-muted mb-3">Procedures, protocols, workflows, documentation</p>
+                {% if rca.factor_processes %}
+                    {% for line in rca.factor_processes.splitlines %}
+                        {% if line.strip %}
+                            <div class="fishbone-factor">{{ line }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted"><em>No process factors identified</em></p>
+                {% endif %}
+            </div>
+            
+            <!-- External Factors -->
+            <div class="fishbone-category category-external">
+                <h4 style="color: #ef4444;">
+                    <i class="bi bi-globe"></i> External Factors
+                </h4>
+                <p class="text-muted mb-3">Regulations, suppliers, weather, external events</p>
+                {% if rca.factor_external %}
+                    {% for line in rca.factor_external.splitlines %}
+                        {% if line.strip %}
+                            <div class="fishbone-factor">{{ line }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted"><em>No external factors identified</em></p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <!-- Environment Factors -->
+            <div class="fishbone-category category-environment">
+                <h4 style="color: #10b981;">
+                    <i class="bi bi-building"></i> Environment Factors
+                </h4>
+                <p class="text-muted mb-3">Physical environment, equipment, facilities</p>
+                {% if rca.factor_environment %}
+                    {% for line in rca.factor_environment.splitlines %}
+                        {% if line.strip %}
+                            <div class="fishbone-factor">{{ line }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted"><em>No environment factors identified</em></p>
+                {% endif %}
+            </div>
+            
+            <!-- Organizational Factors -->
+            <div class="fishbone-category category-organization">
+                <h4 style="color: #8b5cf6;">
+                    <i class="bi bi-building-gear"></i> Organizational Factors
+                </h4>
+                <p class="text-muted mb-3">Management, policies, culture, resources</p>
+                {% if rca.factor_organization %}
+                    {% for line in rca.factor_organization.splitlines %}
+                        {% if line.strip %}
+                            <div class="fishbone-factor">{{ line }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted"><em>No organizational factors identified</em></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Root Cause -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="root-cause-box">
+                <div class="mb-2">
+                    <i class="bi bi-bullseye"></i> ROOT CAUSE
+                </div>
+                {{ rca.root_cause_summary|default:"Root cause to be determined through analysis" }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions Panel -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> Lessons Learned & Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Lessons Learned</h6>
+                            <p>{{ rca.lessons_learned|default:"To be documented" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">Recommendations</h6>
+                            <p>{{ rca.recommendations|default:"To be documented" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Simple SVG fishbone diagram generation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get data from JSON script tag
+        const fishboneDataElement = document.getElementById('fishbone-data');
+        
+        if (!fishboneDataElement) {
+            console.error('fishbone-data element not found!');
+            return;
+        }
+        
+        const fishboneData = JSON.parse(fishboneDataElement.textContent);
+        console.log('Fishbone data:', fishboneData);
+        const categories = fishboneData.categories;
+        console.log('Categories:', categories);
+        
+        const svg = document.getElementById('fishboneSVG');
+        if (!svg) {
+            console.error('fishboneSVG element not found!');
+            return;
+        }
+        
+        const width = 1200; // Fixed width to show all 5 categories
+        const height = 500;
+        
+        console.log('SVG dimensions:', width, height);
+        
+        // Create SVG namespace
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        // Main spine (horizontal line)
+        const spine = document.createElementNS(svgNS, 'line');
+        spine.setAttribute('x1', 50);
+        spine.setAttribute('y1', height / 2);
+        spine.setAttribute('x2', width - 200);
+        spine.setAttribute('y2', height / 2);
+        spine.setAttribute('stroke', '#333');
+        spine.setAttribute('stroke-width', '3');
+        svg.appendChild(spine);
+        
+        // Head (problem/incident)
+        const head = document.createElementNS(svgNS, 'circle');
+        head.setAttribute('cx', width - 150);
+        head.setAttribute('cy', height / 2);
+        head.setAttribute('r', 40);
+        head.setAttribute('fill', '#dc3545');
+        head.setAttribute('stroke', '#fff');
+        head.setAttribute('stroke-width', '3');
+        svg.appendChild(head);
+        
+        const headText = document.createElementNS(svgNS, 'text');
+        headText.setAttribute('x', width - 150);
+        headText.setAttribute('y', height / 2 + 5);
+        headText.setAttribute('text-anchor', 'middle');
+        headText.setAttribute('fill', 'white');
+        headText.setAttribute('font-weight', 'bold');
+        headText.textContent = 'Incident';
+        svg.appendChild(headText);
+        
+        // Categories (bones) - now using properly parsed JSON data
+        // Calculate dynamic spacing to fit all categories
+        const spineLength = width - 250; // Leave room for head
+        const spacing = spineLength / (categories.length + 1);
+        const yPositions = [100, 350, 100, 350, 225]; // Alternating top/bottom for visual appeal
+        
+        console.log('About to loop through categories...');
+        categories.forEach((category, index) => {
+            console.log(`Drawing category ${index}:`, category.name);
+            const x = 80 + (spacing * (index + 1));
+            const y = yPositions[index];
+            const centerY = height / 2;
+            
+            // Bone line
+            const bone = document.createElementNS(svgNS, 'line');
+            bone.setAttribute('x1', x);
+            bone.setAttribute('y1', centerY);
+            bone.setAttribute('x2', x);
+            bone.setAttribute('y2', y);
+            bone.setAttribute('stroke', category.color);
+            bone.setAttribute('stroke-width', '2');
+            bone.setAttribute('stroke-dasharray', '5,5');
+            svg.appendChild(bone);
+            
+            // Category label - positioned further from the bone
+            const labelOffset = (y < centerY) ? -35 : 35; // Position above/below based on position
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', x);
+            label.setAttribute('y', y + labelOffset);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('fill', category.color);
+            label.setAttribute('font-weight', 'bold');
+            label.setAttribute('font-size', '14');
+            label.textContent = category.name;
+            svg.appendChild(label);
+            
+            // Factors count
+            if (category.factors && category.factors.length > 0) {
+                const countCircle = document.createElementNS(svgNS, 'circle');
+                countCircle.setAttribute('cx', x);
+                countCircle.setAttribute('cy', y);
+                countCircle.setAttribute('r', 15);
+                countCircle.setAttribute('fill', category.color);
+                svg.appendChild(countCircle);
+                
+                const countText = document.createElementNS(svgNS, 'text');
+                countText.setAttribute('x', x);
+                countText.setAttribute('y', y + 5);
+                countText.setAttribute('text-anchor', 'middle');
+                countText.setAttribute('fill', 'white');
+                countText.setAttribute('font-size', '12');
+                countText.textContent = category.factors.filter(f => f.trim()).length;
+                svg.appendChild(countText);
+            }
+        });
+        console.log('Finished drawing all categories');
+    });
+    
+    // Export functions
+    function exportAsPNG() {
+        const svg = document.getElementById('fishboneSVG');
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 500;
+        const ctx = canvas.getContext('2d');
+        
+        const data = new XMLSerializer().serializeToString(svg);
+        const img = new Image();
+        const blob = new Blob([data], {type: 'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        
+        img.onload = function() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+            
+            canvas.toBlob(function(blob) {
+                const link = document.createElement('a');
+                link.download = 'fishbone_{{ rca.incident.reference_number }}.png';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+            });
+        };
+        img.src = url;
+    }
+    
+    function exportAsSVG() {
+        const svg = document.getElementById('fishboneSVG');
+        const data = new XMLSerializer().serializeToString(svg);
+        const blob = new Blob([data], {type: 'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.download = 'fishbone_{{ rca.incident.reference_number }}.svg';
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    function exportAsPDF() {
+        // Simple PDF export using print to PDF
+        window.print();
+    }
+</script>
+{% endblock %}

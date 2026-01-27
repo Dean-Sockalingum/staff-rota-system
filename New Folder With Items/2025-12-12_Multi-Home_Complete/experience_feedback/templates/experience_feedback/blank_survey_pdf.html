@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blank Survey - {{ survey_type_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+        }
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .section-title {
+            background: #f0f2f5;
+            padding: 10px 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .field {
+            margin-bottom: 20px;
+        }
+        .field-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .field-input {
+            border-bottom: 1px solid #ccc;
+            min-height: 30px;
+            width: 100%;
+        }
+        .rating-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        .rating-option {
+            text-align: center;
+            flex: 1;
+        }
+        .rating-box {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #667eea;
+            margin: 0 auto 5px;
+        }
+        .rating-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .nps-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        .nps-option {
+            text-align: center;
+            flex: 1;
+        }
+        .nps-box {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #667eea;
+            margin: 0 auto 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .textarea {
+            border: 1px solid #ccc;
+            width: 100%;
+            min-height: 80px;
+            margin-top: 5px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Header -->
+    <div class="header">
+        <h1>Satisfaction Survey</h1>
+        <h3>{{ survey_type_name }}</h3>
+        <p>Your feedback helps us improve our care and services</p>
+    </div>
+    
+    <!-- Respondent Information -->
+    <div class="section">
+        <div class="section-title">About You (Optional)</div>
+        
+        <div class="field">
+            <div class="field-label">Your Name:</div>
+            <div class="field-input"></div>
+        </div>
+        
+        <div class="field">
+            <div class="field-label">Your Relationship to Resident:</div>
+            <div class="field-input"></div>
+        </div>
+        
+        <div class="field">
+            <div class="field-label">Date:</div>
+            <div class="field-input"></div>
+        </div>
+        
+        <div class="field">
+            <span class="checkbox"></span>
+            <label>I prefer to submit this feedback anonymously</label>
+        </div>
+    </div>
+    
+    <!-- Rating Questions -->
+    <div class="section">
+        <div class="section-title">Your Experience</div>
+        <p style="margin-top: 0; color: #666; font-size: 14px;">Please rate each aspect from 1 (Very Dissatisfied) to 5 (Very Satisfied)</p>
+        
+        <!-- Overall Satisfaction -->
+        <div class="field">
+            <div class="field-label">1. Overall Satisfaction</div>
+            <div class="rating-scale">
+                <span class="rating-label">Very Dissatisfied</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Very Satisfied</span>
+            </div>
+        </div>
+        
+        <!-- Quality of Care -->
+        <div class="field">
+            <div class="field-label">2. Quality of Care</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Staff Attitude -->
+        <div class="field">
+            <div class="field-label">3. Staff Friendliness & Professionalism</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Communication -->
+        <div class="field">
+            <div class="field-label">4. Communication</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Environment -->
+        <div class="field">
+            <div class="field-label">5. Cleanliness & Environment</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Meals -->
+        <div class="field">
+            <div class="field-label">6. Meals & Nutrition</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Activities -->
+        <div class="field">
+            <div class="field-label">7. Activities & Engagement</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Dignity -->
+        <div class="field">
+            <div class="field-label">8. Dignity & Respect</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+        
+        <!-- Safety -->
+        <div class="field">
+            <div class="field-label">9. Safety & Security</div>
+            <div class="rating-scale">
+                <span class="rating-label">Poor</span>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">1</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">2</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">3</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">4</div></div>
+                <div class="rating-option"><div class="rating-box"></div><div class="rating-label">5</div></div>
+                <span class="rating-label">Excellent</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Net Promoter Score -->
+    <div class="section">
+        <div class="section-title">Would You Recommend Us?</div>
+        <div class="field">
+            <div class="field-label">How likely are you to recommend our services to others?</div>
+            <p style="color: #666; font-size: 14px; margin: 5px 0;">0 = Not at all likely | 10 = Extremely likely</p>
+            <div class="nps-scale">
+                <div class="nps-option"><div class="nps-box">0</div></div>
+                <div class="nps-option"><div class="nps-box">1</div></div>
+                <div class="nps-option"><div class="nps-box">2</div></div>
+                <div class="nps-option"><div class="nps-box">3</div></div>
+                <div class="nps-option"><div class="nps-box">4</div></div>
+                <div class="nps-option"><div class="nps-box">5</div></div>
+                <div class="nps-option"><div class="nps-box">6</div></div>
+                <div class="nps-option"><div class="nps-box">7</div></div>
+                <div class="nps-option"><div class="nps-box">8</div></div>
+                <div class="nps-option"><div class="nps-box">9</div></div>
+                <div class="nps-option"><div class="nps-box">10</div></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Qualitative Feedback -->
+    <div class="section">
+        <div class="section-title">Your Feedback</div>
+        
+        <div class="field">
+            <div class="field-label">What works well?</div>
+            <div class="textarea"></div>
+        </div>
+        
+        <div class="field">
+            <div class="field-label">What could we improve?</div>
+            <div class="textarea"></div>
+        </div>
+        
+        <div class="field">
+            <div class="field-label">Additional comments:</div>
+            <div class="textarea"></div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <p><strong>Thank you for your valuable feedback!</strong></p>
+        <p>Your responses are confidential and help us continuously improve our care and services.</p>
+        <p>Please return this completed form to the care home manager or drop it in the feedback box.</p>
+    </div>
+    
+</body>
+</html>

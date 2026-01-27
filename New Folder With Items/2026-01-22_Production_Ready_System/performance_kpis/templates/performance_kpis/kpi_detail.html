@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ kpi.name }} - Module 7{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 400px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">{{ kpi.code }} - {{ kpi.name }}</h1>
+            <p class="text-muted">{{ kpi.description }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header"><h5>Trend Chart</h5></div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="kpiTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><h5>Statistics</h5></div>
+                <div class="card-body">
+                    <p><strong>Average:</strong> {{ stats.avg_value|floatformat:2 }}</p>
+                    <p><strong>Max:</strong> {{ stats.max_value|floatformat:2 }}</p>
+                    <p><strong>Min:</strong> {{ stats.min_value|floatformat:2 }}</p>
+                    <p><strong>Green:</strong> {{ stats.green_count }}</p>
+                    <p><strong>Amber:</strong> {{ stats.amber_count }}</p>
+                    <p><strong>Red:</strong> {{ stats.red_count }}</p>
+                </div>
+            </div>
+            <a href="{% url 'performance_kpis:measurement_create' kpi.id %}" class="btn btn-success btn-block w-100">
+                <i class="fas fa-plus"></i> Record Measurement
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('kpiTrendChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_data.labels|safe }},
+        datasets: [{
+            label: 'Actual Value',
+            data: {{ chart_data.values|safe }},
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }, {
+            label: 'Target',
+            data: {{ chart_data.targets|safe }},
+            borderColor: 'rgb(255, 99, 132)',
+            borderDash: [5, 5]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+</script>
+{% endblock %}

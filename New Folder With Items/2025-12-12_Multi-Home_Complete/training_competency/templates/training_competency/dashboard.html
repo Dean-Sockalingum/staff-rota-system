@@ -1,0 +1,267 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Training & Competency Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .competency-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s;
+    }
+    .competency-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .progress-bar-custom {
+        height: 25px;
+        font-size: 14px;
+        line-height: 25px;
+    }
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .pathway-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+    }
+    .outcome-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-graduation-cap"></i> Training & Competency Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary text-white">
+                <div class="stat-number">{{ total_required }}</div>
+                <div>Required Competencies</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success text-white">
+                <div class="stat-number">{{ completed_competencies }}</div>
+                <div>Completed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-info text-white">
+                <div class="stat-number">{{ learning_plans.count }}</div>
+                <div>Active Learning Plans</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-warning text-white">
+                <div class="stat-number">{{ completion_percentage }}%</div>
+                <div>Overall Completion</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Competency Completion Progress</h5>
+                    <div class="progress progress-bar-custom">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ completion_percentage }}%"
+                             aria-valuenow="{{ completion_percentage }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ completion_percentage }}% Complete
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Assessments -->
+        <div class="col-md-6">
+            <div class="card competency-card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Recent Assessments</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_assessments %}
+                        <div class="list-group list-group-flush">
+                            {% for assessment in recent_assessments %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ assessment.competency.title }}</h6>
+                                            <small class="text-muted">
+                                                Assessed by {{ assessment.assessor.get_full_name }}
+                                                on {{ assessment.assessment_date|date:"d M Y" }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            {% if assessment.outcome == 'COMPETENT' %}
+                                                <span class="outcome-badge bg-success text-white">Competent</span>
+                                            {% elif assessment.outcome == 'HIGHLY_COMPETENT' %}
+                                                <span class="outcome-badge bg-success text-white">Highly Competent</span>
+                                            {% elif assessment.outcome == 'IN_PROGRESS' %}
+                                                <span class="outcome-badge bg-info text-white">In Progress</span>
+                                            {% elif assessment.outcome == 'NOT_YET_COMPETENT' %}
+                                                <span class="outcome-badge bg-warning text-dark">Not Yet Competent</span>
+                                            {% else %}
+                                                <span class="outcome-badge bg-secondary text-white">{{ assessment.get_outcome_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'training_competency:my_assessments' %}" class="btn btn-primary">
+                                View All Assessments
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No assessments recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Plans -->
+        <div class="col-md-6">
+            <div class="card competency-card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-route"></i> My Learning Plans</h5>
+                </div>
+                <div class="card-body">
+                    {% if learning_plans %}
+                        <div class="list-group list-group-flush">
+                            {% for plan in learning_plans %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">{{ plan.pathway.title }}</h6>
+                                        {% if plan.status == 'IN_PROGRESS' %}
+                                            <span class="pathway-badge bg-primary text-white">In Progress</span>
+                                        {% elif plan.status == 'COMPLETED' %}
+                                            <span class="pathway-badge bg-success text-white">Completed</span>
+                                        {% elif plan.status == 'PLANNED' %}
+                                            <span class="pathway-badge bg-secondary text-white">Planned</span>
+                                        {% else %}
+                                            <span class="pathway-badge bg-warning text-dark">{{ plan.get_status_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block mb-2">
+                                        {{ plan.pathway.from_role.name }} → {{ plan.pathway.to_role.name }}
+                                    </small>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ plan.percent_complete }}%"
+                                             aria-valuenow="{{ plan.percent_complete }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ plan.percent_complete }}%
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'training_competency:my_learning_plans' %}" class="btn btn-info">
+                                View All Plans
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-3">No active learning plans.</p>
+                        <div class="text-center">
+                            <a href="{% url 'training_competency:learning_pathways' %}" class="btn btn-info">
+                                Browse Learning Pathways
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Pathways -->
+    {% if available_pathways %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card competency-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-map-marked-alt"></i> Available Career Pathways</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for pathway in available_pathways %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ pathway.title }}</h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                {{ pathway.from_role.name }} → {{ pathway.to_role.name }}
+                                            </small>
+                                        </p>
+                                        <p class="card-text">
+                                            <i class="fas fa-clock"></i> {{ pathway.estimated_duration_months }} months
+                                        </p>
+                                        <a href="{% url 'training_competency:pathway_detail' pathway.pk %}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Links</h5>
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'training_competency:competency_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> Browse Competencies
+                        </a>
+                        <a href="{% url 'training_competency:skills_matrix' %}" class="btn btn-outline-info">
+                            <i class="fas fa-table"></i> Skills Matrix
+                        </a>
+                        <a href="{% url 'training_competency:training_requirements' %}" class="btn btn-outline-warning">
+                            <i class="fas fa-book-open"></i> Training Requirements
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

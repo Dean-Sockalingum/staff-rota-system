@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Rota System - Head of Service Dashboard Walkthrough</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            overflow-x: hidden;
+        }
+
+        .walkthrough-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 1000;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066cc, #0099ff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0066cc, #0099ff);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 102, 204, 0.3);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 24px;
+        }
+
+        .step.active {
+            background: #e6f2ff;
+            border-radius: 8px;
+        }
+
+        .step.completed {
+            background: #d4edda;
+            border-radius: 8px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            border-radius: 50%;
+            background: #ccc;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .step.active .step-number {
+            background: #0066cc;
+            animation: pulse 2s infinite;
+        }
+
+        .step.completed .step-number {
+            background: #28a745;
+        }
+
+        .step.completed .step-number::before {
+            content: '✓';
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .dashboard-view {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 30px;
+            min-height: 600px;
+            display: none;
+        }
+
+        .dashboard-view.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .dashboard-title {
+            font-size: 28px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            background: #0066cc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border-color: #0066cc;
+        }
+
+        .metric-card.highlight {
+            animation: highlight 2s infinite;
+        }
+
+        @keyframes highlight {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 102, 204, 0); }
+            50% { box-shadow: 0 0 20px 5px rgba(0, 102, 204, 0.4); }
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .metric-change {
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .metric-change.positive {
+            background: #d4edda;
+            color: #28a745;
+        }
+
+        .metric-change.negative {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+
+        .metric-change.neutral {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .homes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .home-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .home-card:hover {
+            border-color: #0066cc;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .home-card.excellent {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #ffffff, #f0fff4);
+        }
+
+        .home-card.good {
+            border-color: #0066cc;
+            background: linear-gradient(135deg, #ffffff, #f0f8ff);
+        }
+
+        .home-card.adequate {
+            border-color: #ffc107;
+            background: linear-gradient(135deg, #ffffff, #fffbf0);
+        }
+
+        .home-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rating-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .rating-excellent {
+            background: #28a745;
+            color: white;
+        }
+
+        .rating-good {
+            background: #0066cc;
+            color: white;
+        }
+
+        .rating-adequate {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .home-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            font-size: 13px;
+        }
+
+        .stat-label {
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert-box.critical {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .alert-box.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .alert-icon {
+            font-size: 24px;
+        }
+
+        .ci-report-card {
+            background: white;
+            border: 2px solid #0066cc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .ci-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ci-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+
+        .ci-date {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .themes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .theme-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+        }
+
+        .theme-item.rating-5 { border-left-color: #28a745; }
+        .theme-item.rating-4 { border-left-color: #0066cc; }
+        .theme-item.rating-3 { border-left-color: #ffc107; }
+
+        .theme-name {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .theme-rating {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .improvement-actions {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .action-item {
+            background: white;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-item.critical {
+            border-left-color: #dc3545;
+        }
+
+        .action-item.high {
+            border-left-color: #ffc107;
+        }
+
+        .action-content {
+            flex: 1;
+        }
+
+        .action-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .action-details {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .action-progress {
+            width: 100px;
+            text-align: right;
+        }
+
+        .progress-circle {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: conic-gradient(#28a745 0deg, #28a745 270deg, #e0e0e0 270deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .narration-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .narration-box strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid,
+            .homes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step-indicator {
+                flex-direction: column;
+            }
+
+            .step:not(:last-child)::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -10px;
+                transform: translateX(50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="walkthrough-container">
+        <div class="header">
+            <h1>🎯 Head of Service Dashboard</h1>
+            <p>Interactive Walkthrough - Strategic Oversight & Workforce Planning</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-title">Executive Overview</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-title">Home Performance</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-title">CI Integration</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-title">Workforce Planning</div>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-title">Improvement Plans</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Executive Overview -->
+        <div class="dashboard-view active" id="step1">
+            <div class="narration-box">
+                <strong>Welcome to your Executive Dashboard</strong>
+                You're the Head of Service overseeing 5 care homes with 500+ staff. This dashboard gives you complete strategic visibility in seconds. <strong>NEW:</strong> Access all 7 Executive Dashboards with one click from the collapsible navigation section. Let's explore what you see when you login each Monday morning.
+            </div>
+
+            <div class="alert-box" style="background: #e6f2ff; border-left: 4px solid #0066cc;">
+                <div class="alert-icon">🎯</div>
+                <div>
+                    <strong>Executive Dashboards Navigation:</strong> Scroll down to access CI Performance Dashboard, Budget Dashboard, Staff Retention Dashboard, Training Dashboard, Early Warning Dashboard, Rota Health Dashboard, and Proactive Suggestions Dashboard - all with one-click access.
+                </div>
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">📊</div>
+                    <span>Portfolio Overview - All 5 Homes</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">📥 Export Board Report</button>
+                    <button class="btn btn-secondary">⚙️ Settings</button>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card highlight">
+                    <div class="metric-label">Total Staff</div>
+                    <div class="metric-value">523</div>
+                    <div class="metric-change positive">↑ 12 vs last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Training Compliance</div>
+                    <div class="metric-value">94.8%</div>
+                    <div class="metric-change negative">↓ 2.1% (Target: 95%)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Agency Usage</div>
+                    <div class="metric-value">£48,230</div>
+                    <div class="metric-change positive">↓ 18% vs last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Budget Status</div>
+                    <div class="metric-value">98.2%</div>
+                    <div class="metric-change positive">Within budget</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">WTD Violations</div>
+                    <div class="metric-value">0</div>
+                    <div class="metric-change positive">✓ Perfect compliance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Avg CI Rating</div>
+                    <div class="metric-value">4.6</div>
+                    <div class="metric-change positive">Very Good</div>
+                </div>
+            </div>
+
+            <div class="alert-box critical">
+                <div class="alert-icon">⚠️</div>
+                <div>
+                    <strong>Action Required:</strong> Hawthorn House training compliance at 87.2% - 8 staff need refresher courses
+                </div>
+            </div>
+
+            <div class="alert-box">
+                <div class="alert-icon">💡</div>
+                <div>
+                    <strong>Opportunity:</strong> Riverside has 3 RN vacancies - consider internal promotions from HCA pool
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" disabled>← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Home Performance →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Home Performance -->
+        <div class="dashboard-view" id="step2">
+            <div class="narration-box">
+                <strong>Individual Home Performance</strong>
+                See how each of your 5 homes is performing at a glance. Notice Victoria Gardens is your top performer (all ratings 5 - Excellent) while Hawthorn House needs attention.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">🏥</div>
+                    <span>5 Home Performance Comparison</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">📊 Compare Homes</button>
+                </div>
+            </div>
+
+            <div class="homes-grid">
+                <div class="home-card excellent">
+                    <div class="home-name">
+                        Victoria Gardens
+                        <span class="rating-badge rating-excellent">5 - Excellent</span>
+                    </div>
+                    <div class="home-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Staff</span>
+                            <span class="stat-value" style="color: #28a745;">124</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Budget</span>
+                            <span class="stat-value" style="color: #28a745;">96%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance</span>
+                            <span class="stat-value" style="color: #28a745;">98.1%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Complaints</span>
+                            <span class="stat-value" style="color: #28a745;">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-card good">
+                    <div class="home-name">
+                        Orchard Grove
+                        <span class="rating-badge rating-good">4 - Good</span>
+                    </div>
+                    <div class="home-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Staff</span>
+                            <span class="stat-value">98</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Budget</span>
+                            <span class="stat-value" style="color: #28a745;">97%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance</span>
+                            <span class="stat-value">96.4%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Complaints</span>
+                            <span class="stat-value">1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-card good">
+                    <div class="home-name">
+                        Riverside
+                        <span class="rating-badge rating-good">4 - Good</span>
+                    </div>
+                    <div class="home-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Staff</span>
+                            <span class="stat-value">112</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Budget</span>
+                            <span class="stat-value" style="color: #dc3545;">102%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance</span>
+                            <span class="stat-value">95.8%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Complaints</span>
+                            <span class="stat-value">2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-card good">
+                    <div class="home-name">
+                        Meadowburn
+                        <span class="rating-badge rating-good">4 - Good</span>
+                    </div>
+                    <div class="home-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Staff</span>
+                            <span class="stat-value">105</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Budget</span>
+                            <span class="stat-value" style="color: #28a745;">99%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance</span>
+                            <span class="stat-value">94.2%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Complaints</span>
+                            <span class="stat-value">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-card adequate">
+                    <div class="home-name">
+                        Hawthorn House
+                        <span class="rating-badge rating-adequate">3 - Adequate</span>
+                    </div>
+                    <div class="home-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Staff</span>
+                            <span class="stat-value">84</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Budget</span>
+                            <span class="stat-value" style="color: #dc3545;">108%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance</span>
+                            <span class="stat-value" style="color: #dc3545;">87.2%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Complaints</span>
+                            <span class="stat-value" style="color: #dc3545;">5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box critical">
+                <div class="alert-icon">🎯</div>
+                <div>
+                    <strong>Priority Action:</strong> Hawthorn House showing multiple red flags - care planning rated 3 (Adequate), budget 8% over, compliance below target. Service Improvement Plan active.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: CI Integration →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Care Inspectorate Integration -->
+        <div class="dashboard-view" id="step3">
+            <div class="narration-box">
+                <strong>CI Performance Dashboard with Actual Inspection Data</strong>
+                Access comprehensive Care Inspectorate performance data through the Executive Dashboards navigation. View peer benchmarking across all 5 homes with actual inspection data including CS numbers, all 4 theme ratings (Care & Support, Environment, Staffing, Management & Leadership), inspection dates, and 6-month operational metrics trends. <strong>NEW:</strong> Standard 1-6 rating scale with color-coded badges for instant visual comparison.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">✅</div>
+                    <span>CI Performance Dashboard - Peer Benchmarking</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">📊 View Full Peer Benchmarking Table</button>
+                    <button class="btn btn-success">📈 View 6-Month Operational Metrics</button>
+                </div>
+            </div>
+
+            <div class="alert-box" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                <div class="alert-icon">📋</div>
+                <div>
+                    <strong>Peer Benchmarking Table:</strong> 9-column responsive table showing Rank, Care Home, CS Number, CI Rating (1-6 scale), all 4 theme ratings, and Last Inspection date. Color-coded badges (Green=Excellent/Very Good, Blue=Good, Yellow=Adequate, Orange=Weak, Red=Unsatisfactory).
+                </div>
+            </div>
+
+            <div class="ci-report-card">
+                <div class="ci-header">
+                    <div class="ci-title">🥇 Victoria Gardens - Latest Inspection</div>
+                    <div class="ci-date">Inspected: July 10, 2025 | <strong>CS Number: CS2018371437</strong></div>
+                </div>
+                <div class="themes-grid">
+                    <div class="theme-item rating-5">
+                        <div class="theme-name">Care & Support</div>
+                        <div class="theme-rating">5 - Very Good</div>
+                    </div>
+                    <div class="theme-item rating-5">
+                        <div class="theme-name">Environment</div>
+                        <div class="theme-rating">5 - Very Good</div>
+                    </div>
+                    <div class="theme-item rating-5">
+                        <div class="theme-name">Staffing</div>
+                        <div class="theme-rating">5 - Very Good</div>
+                    </div>
+                    <div class="theme-item rating-5">
+                        <div class="theme-name">Management & Leadership</div>
+                        <div class="theme-rating">5 - Very Good</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px;">
+                    <strong style="color: #28a745;">Overall CI Rating: 5 (Very Good)</strong> | Rank: #1 of 5 homes | <em>Overall rating = minimum of all 4 theme ratings (official CI methodology)</em>
+                </div>
+            </div>
+
+            <div class="ci-report-card">
+                <div class="ci-header">
+                    <div class="ci-title">Hawthorn House - Latest Inspection</div>
+                    <div class="ci-date">Inspected: October 28, 2024 | <strong>CS Number: CS2003001025</strong></div>
+                </div>
+                <div class="themes-grid">
+                    <div class="theme-item rating-4">
+                        <div class="theme-name">Care & Support</div>
+                        <div class="theme-rating">4 - Good</div>
+                    </div>
+                    <div class="theme-item rating-4">
+                        <div class="theme-name">Environment</div>
+                        <div class="theme-rating">4 - Good</div>
+                    </div>
+                    <div class="theme-item rating-4">
+                        <div class="theme-name">Staffing</div>
+                        <div class="theme-rating">4 - Good</div>
+                    </div>
+                    <div class="theme-item rating-4">
+                        <div class="theme-name">Management & Leadership</div>
+                        <div class="theme-rating">4 - Good</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px;">
+                    <strong style="color: #28a745;">Overall CI Rating: 4 (Good)</strong> | Rank: #2-4 of 5 homes
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 15px; color: #0066cc;">📈 6-Month Operational Metrics Trend (Victoria Gardens)</h3>
+                <div class="alert-box" style="background: #e6f2ff; border-left: 4px solid #0066cc;">
+                    <div class="alert-icon">📊</div>
+                    <div>
+                        <strong>Actionable Monthly Metrics:</strong> Replaced meaningless 6-month CI score trends (inspections are annual) with operational KPIs tracked monthly to help you improve performance between inspections.
+                    </div>
+                </div>
+                <div class="metrics-grid" style="margin-top: 20px;">
+                    <div class="metric-card">
+                        <div class="metric-label">Training Compliance</div>
+                        <div class="metric-value">97.2%</div>
+                        <div class="metric-change positive">↑ 2.4% | Target: ≥95%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Supervision Completion</div>
+                        <div class="metric-value">93.8%</div>
+                        <div class="metric-change positive">↑ 3.1% | Target: ≥90%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Incident Frequency</div>
+                        <div class="metric-value">1.2/month</div>
+                        <div class="metric-change positive">↓ 0.6 | Target: ≤2.0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Turnover Rate</div>
+                        <div class="metric-value">11.5%</div>
+                        <div class="metric-change positive">↓ 2.3% | Target: ≤15%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Staffing Level</div>
+                        <div class="metric-value">103.2%</div>
+                        <div class="metric-change positive">↑ 1.8% | Target: ≥100%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Care Plan Reviews</div>
+                        <div class="metric-value">96.5%</div>
+                        <div class="metric-change positive">↑ 1.2% | Target: ≥95%</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>Note:</strong> All 6 metrics trending positively over past 6 months. Color-coded badges show performance vs targets: <span style="color: #28a745;">✓ Green = Meeting/Exceeding</span>, <span style="color: #ffc107;">⚠️ Yellow = Within 5%</span>, <span style="color: #dc3545;">✗ Red = Below target</span>
+                </div>
+            </div>
+
+            <div class="alert-box success">
+                <div class="alert-icon">🤖</div>
+                <div>
+                    <strong>AI Analysis Complete:</strong> ML system has generated 12 improvement actions from CI requirements. All actions assigned to Service Managers with target dates.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Workforce Planning →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Workforce Planning -->
+        <div class="dashboard-view" id="step4">
+            <div class="narration-box">
+                <strong>4-Week Workforce Planning</strong>
+                See staffing levels 4 weeks ahead across all homes. Smart alerts flag issues like the Orchard Grove RN shortage in Week 3 - you can reallocate from Riverside before it becomes a crisis.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">👥</div>
+                    <span>Workforce Planning & Budget Control</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">📊 Run What-If Scenario</button>
+                </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 20px;">4-Week Staffing Forecast (All Homes)</h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #28a745;">
+                        <strong style="color: #28a745;">Week 1</strong>
+                        <div style="font-size: 24px; margin: 10px 0;">523</div>
+                        <div style="font-size: 13px; color: #28a745;">✓ Fully staffed</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #28a745;">
+                        <strong style="color: #28a745;">Week 2</strong>
+                        <div style="font-size: 24px; margin: 10px 0;">519</div>
+                        <div style="font-size: 13px; color: #28a745;">✓ Within target</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #ffc107;">
+                        <strong style="color: #856404;">Week 3</strong>
+                        <div style="font-size: 24px; margin: 10px 0;">512</div>
+                        <div style="font-size: 13px; color: #856404;">⚠️ 2 RN short (Orchard)</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #28a745;">
+                        <strong style="color: #28a745;">Week 4</strong>
+                        <div style="font-size: 24px; margin: 10px 0;">525</div>
+                        <div style="font-size: 13px; color: #28a745;">✓ Above baseline</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box">
+                <div class="alert-icon">💡</div>
+                <div>
+                    <strong>Smart Recommendation:</strong> Week 3 gap solved - Riverside has 2 RN overstaffed that week. System suggests cross-cover allocation. Saves £600 agency cost.
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">Budget Performance (Month-to-Date)</h3>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Payroll</div>
+                    <div class="metric-value">£384,240</div>
+                    <div class="metric-change positive">98.2% of budget</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Agency Spend</div>
+                    <div class="metric-value">£48,230</div>
+                    <div class="metric-change positive">↓ 18% vs last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Overtime</div>
+                    <div class="metric-value">£12,450</div>
+                    <div class="metric-change neutral">Within tolerance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cost Per Shift</div>
+                    <div class="metric-value">£142.30</div>
+                    <div class="metric-change positive">↓ £8 vs target</div>
+                </div>
+            </div>
+
+            <div class="alert-box critical">
+                <div class="alert-icon">📊</div>
+                <div>
+                    <strong>Budget Alert:</strong> Hawthorn House 8% over budget due to agency usage. Service Manager requested intervention plan. Meeting scheduled Tuesday 10 AM.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Improvement Plans →</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Service Improvement Plans -->
+        <div class="dashboard-view" id="step5">
+            <div class="narration-box">
+                <strong>ML-Powered Service Improvement Planning</strong>
+                The system analyzes 12 months of operational data + CI findings to auto-generate improvement plans. Every action is prioritized, assigned, and tracked. You see organizational progress across all homes.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">📈</div>
+                    <span>Organizational Improvement Plan 2025</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-success">🤖 Regenerate with Latest Data</button>
+                    <button class="btn btn-primary">📥 Export for Board</button>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Actions</div>
+                    <div class="metric-value">47</div>
+                    <div class="metric-change neutral">Across 5 homes</div>
+                </div>
+                <div class="metric-card highlight">
+                    <div class="metric-label">Completed</div>
+                    <div class="metric-value">38</div>
+                    <div class="metric-change positive">80.9% completion rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">In Progress</div>
+                    <div class="metric-value">7</div>
+                    <div class="metric-change neutral">On track</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Overdue</div>
+                    <div class="metric-value">2</div>
+                    <div class="metric-change negative">Needs attention</div>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">Priority Actions (Critical & High)</h3>
+            <div class="improvement-actions">
+                <div class="action-item critical">
+                    <div class="action-content">
+                        <div class="action-title">🔴 Care Plan Documentation - Hawthorn House</div>
+                        <div class="action-details">CI Requirement | Owner: SM (Hawthorn) | Due: Jan 15, 2026 | Source: CI Inspection March 2025</div>
+                    </div>
+                    <div class="action-progress">
+                        <div class="progress-circle" style="background: conic-gradient(#28a745 0deg, #28a745 252deg, #e0e0e0 252deg);">
+                            70%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-item critical">
+                    <div class="action-content">
+                        <div class="action-title">🔴 Medication Management Training - 3 Homes</div>
+                        <div class="action-details">CI Recommendation | Owner: HOS | Due: Feb 1, 2026 | Source: Pattern analysis across homes</div>
+                    </div>
+                    <div class="action-progress">
+                        <div class="progress-circle" style="background: conic-gradient(#28a745 0deg, #28a745 162deg, #e0e0e0 162deg);">
+                            45%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-item high">
+                    <div class="action-content">
+                        <div class="action-title">🟡 Reduce Agency Usage at Riverside</div>
+                        <div class="action-details">Budget Target | Owner: HOS + SM (Riverside) | Due: Jan 31, 2026 | Target: 20% reduction</div>
+                    </div>
+                    <div class="action-progress">
+                        <div class="progress-circle" style="background: conic-gradient(#28a745 0deg, #28a745 306deg, #e0e0e0 306deg);">
+                            85%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-item high">
+                    <div class="action-content">
+                        <div class="action-title">🟡 Training Compliance - All Homes to 95%+</div>
+                        <div class="action-details">Compliance Gap | Owner: SM (All) | Due: Dec 31, 2025 | Current: 94.8%</div>
+                    </div>
+                    <div class="action-progress">
+                        <div class="progress-circle" style="background: conic-gradient(#28a745 0deg, #28a745 324deg, #e0e0e0 324deg);">
+                            90%
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box success">
+                <div class="alert-icon">🏆</div>
+                <div>
+                    <strong>Best Practice Identified:</strong> Victoria Gardens' zero complaints model shared with other homes. Induction program adopted organization-wide.
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">📊 What You Just Saved:</h3>
+            <div style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700)); color: white; padding: 30px; border-radius: 12px; font-size: 18px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <div style="opacity: 0.9; margin-bottom: 10px;">Before This System:</div>
+                        <ul style="margin-left: 20px; line-height: 1.8;">
+                            <li>40-45 hours/month manual reporting</li>
+                            <li>8 hours/year gathering CI reports</li>
+                            <li>4 hours/month improvement tracking</li>
+                            <li>8 hours/month budget compilation</li>
+                            <li>6 hours/month staffing analysis</li>
+                        </ul>
+                        <div style="font-size: 24px; font-weight: bold; margin-top: 20px;">480-540 hours/year</div>
+                    </div>
+                    <div>
+                        <div style="opacity: 0.9; margin-bottom: 10px;">With This System:</div>
+                        <ul style="margin-left: 20px; line-height: 1.8;">
+                            <li>1 hour/month dashboard review ✓</li>
+                            <li>Automated (0 hours) ✓</li>
+                            <li>30 mins/month quick checks ✓</li>
+                            <li>1 hour/month real-time view ✓</li>
+                            <li>45 mins/month forecasts ✓</li>
+                        </ul>
+                        <div style="font-size: 24px; font-weight: bold; margin-top: 20px; color: #90EE90;">36-48 hours/year</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 30px; padding-top: 30px; border-top: 2px solid rgba(255,255,255,0.3);">
+                    <div style="font-size: 36px; font-weight: bold;">420-540 hours saved/year</div>
+                    <div style="font-size: 28px; margin-top: 10px;">= £21,000-£27,000 value</div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-success" onclick="restartWalkthrough()">🔄 Restart Walkthrough</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showStep(stepNum) {
+            // Hide all views
+            document.querySelectorAll('.dashboard-view').forEach(view => {
+                view.classList.remove('active');
+            });
+
+            // Show current view
+            document.getElementById('step' + stepNum).classList.add('active');
+
+            // Update step indicators
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                const stepNumber = index + 1;
+                
+                if (stepNumber < stepNum) {
+                    step.classList.add('completed');
+                } else if (stepNumber === stepNum) {
+                    step.classList.add('active');
+                }
+            });
+
+            // Update progress bar
+            currentStep = stepNum;
+            updateProgress();
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function restartWalkthrough() {
+            showStep(1);
+        }
+
+        // Allow clicking on step indicators
+        document.querySelectorAll('.step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepNum = parseInt(this.dataset.step);
+                showStep(stepNum);
+            });
+        });
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>

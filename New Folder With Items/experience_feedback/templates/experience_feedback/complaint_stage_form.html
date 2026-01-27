@@ -1,0 +1,170 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-tasks"></i> {{ page_title }}</h2>
+            <p class="text-muted">Complaint: <strong>{{ complaint.complaint_reference }}</strong></p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Complaint
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-plus-circle"></i> Add Investigation Stage</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Stage Name -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.stage_name.id_for_label }}">Investigation Stage</label>
+                        {{ form.stage_name }}
+                        {% if form.stage_name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.stage_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Status -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.status.id_for_label }}">Status</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Assigned To -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.assigned_to.id_for_label }}">Assigned To</label>
+                        {{ form.assigned_to }}
+                        {% if form.assigned_to.errors %}
+                        <div class="invalid-feedback d-block">{{ form.assigned_to.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Sequence Order -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.sequence_order.id_for_label }}">Sequence Order</label>
+                        {{ form.sequence_order }}
+                        <small class="form-text text-muted">Position in the investigation workflow</small>
+                        {% if form.sequence_order.errors %}
+                        <div class="invalid-feedback d-block">{{ form.sequence_order.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Start Date -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.start_date.id_for_label }}">Start Date</label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                        <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Target Completion -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.target_completion.id_for_label }}">Target Completion</label>
+                        {{ form.target_completion }}
+                        {% if form.target_completion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.target_completion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actual Completion -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.actual_completion.id_for_label }}">Actual Completion</label>
+                        {{ form.actual_completion }}
+                        {% if form.actual_completion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.actual_completion.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Findings -->
+                <div class="mb-3">
+                    <label for="{{ form.findings.id_for_label }}">Findings</label>
+                    {{ form.findings }}
+                    <small class="form-text text-muted">What was discovered during this stage?</small>
+                    {% if form.findings.errors %}
+                    <div class="invalid-feedback d-block">{{ form.findings.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Evidence Collected -->
+                <div class="mb-3">
+                    <label for="{{ form.evidence_collected.id_for_label }}">Evidence Collected</label>
+                    {{ form.evidence_collected }}
+                    <small class="form-text text-muted">Document evidence gathered (interviews, records, photos, etc.)</small>
+                    {% if form.evidence_collected.errors %}
+                    <div class="invalid-feedback d-block">{{ form.evidence_collected.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Actions Required -->
+                <div class="mb-3">
+                    <label for="{{ form.actions_required.id_for_label }}">Actions Required</label>
+                    {{ form.actions_required }}
+                    <small class="form-text text-muted">What actions are needed as a result of this stage?</small>
+                    {% if form.actions_required.errors %}
+                    <div class="invalid-feedback d-block">{{ form.actions_required.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Add Investigation Stage
+                    </button>
+                    <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Investigation Stages Reference -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h6><i class="fas fa-info-circle"></i> Standard Investigation Stages</h6>
+        </div>
+        <div class="card-body">
+            <ol>
+                <li><strong>Initial Review & Triage</strong> - Log complaint and assess severity</li>
+                <li><strong>Evidence Gathering</strong> - Collect relevant documentation</li>
+                <li><strong>Staff Interviews</strong> - Interview involved staff members</li>
+                <li><strong>Resident/Family Interview</strong> - Interview complainant and resident</li>
+                <li><strong>Documentation Review</strong> - Review care plans, records, policies</li>
+                <li><strong>Root Cause Analysis</strong> - Identify underlying causes</li>
+                <li><strong>Action Plan Development</strong> - Create improvement plan</li>
+                <li><strong>Action Implementation</strong> - Implement corrective actions</li>
+                <li><strong>Follow-up & Verification</strong> - Verify effectiveness of actions</li>
+                <li><strong>Closure & Feedback</strong> - Close complaint and provide feedback</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}

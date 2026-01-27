@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Policy List{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-alt me-2"></i>Policy List</h2>
+        <a href="{% url 'policies_procedures:policy_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New Policy
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="Policy number, title, keywords..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="category" id="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if request.GET.category == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'policies_procedures:policy_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-redo me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Policy List -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Policies ({{ policies.count }})</h5>
+        </div>
+        <div class="card-body">
+            {% if policies %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Policy Number</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Version</th>
+                            <th>Effective Date</th>
+                            <th>Next Review</th>
+                            <th>Mandatory</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for policy in policies %}
+                        <tr>
+                            <td><strong>{{ policy.policy_number }}</strong></td>
+                            <td>
+                                <a href="{% url 'policies_procedures:policy_detail' policy.pk %}">
+                                    {{ policy.title }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ policy.get_category_display }}</span></td>
+                            <td>
+                                {% if policy.status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                                {% elif policy.status == 'draft' %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% elif policy.status == 'under_review' %}
+                                <span class="badge bg-warning">Under Review</span>
+                                {% elif policy.status == 'archived' %}
+                                <span class="badge bg-dark">Archived</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ policy.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ policy.version }}</td>
+                            <td>{{ policy.effective_date|date:"d M Y" }}</td>
+                            <td>
+                                {% if policy.is_overdue_review %}
+                                <span class="text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {{ policy.next_review_date|date:"d M Y" }}
+                                </span>
+                                {% else %}
+                                {{ policy.next_review_date|date:"d M Y" }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if policy.is_mandatory %}
+                                <span class="badge bg-danger">Mandatory</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Optional</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'policies_procedures:policy_detail' policy.pk %}" 
+                                       class="btn btn-outline-info" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'policies_procedures:policy_update' policy.pk %}" 
+                                       class="btn btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'policies_procedures:policy_delete' policy.pk %}" 
+                                       class="btn btn-outline-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center my-5">
+                <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                <p class="text-muted">No policies found. Create your first policy to get started.</p>
+                <a href="{% url 'policies_procedures:policy_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create Policy
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

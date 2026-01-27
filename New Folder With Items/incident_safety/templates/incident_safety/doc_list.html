@@ -1,0 +1,175 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Duty of Candour Records{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-heart-pulse"></i> Duty of Candour Records</h1>
+            <p class="text-muted">Transparency & Communication with Families</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'incident_safety:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <select name="current_stage" class="form-select">
+                        <option value="">All Stages</option>
+                        <option value="ASSESSMENT" {% if request.GET.current_stage == 'ASSESSMENT' %}selected{% endif %}>Assessment</option>
+                        <option value="NOTIFICATION" {% if request.GET.current_stage == 'NOTIFICATION' %}selected{% endif %}>Notification</option>
+                        <option value="APOLOGY" {% if request.GET.current_stage == 'APOLOGY' %}selected{% endif %}>Apology</option>
+                        <option value="INVESTIGATION" {% if request.GET.current_stage == 'INVESTIGATION' %}selected{% endif %}>Investigation</option>
+                        <option value="FEEDBACK" {% if request.GET.current_stage == 'FEEDBACK' %}selected{% endif %}>Feedback</option>
+                        <option value="REVIEW" {% if request.GET.current_stage == 'REVIEW' %}selected{% endif %}>Review</option>
+                        <option value="COMPLETE" {% if request.GET.current_stage == 'COMPLETE' %}selected{% endif %}>Complete</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="harm_level" class="form-select">
+                        <option value="">All Harm Levels</option>
+                        <option value="DEATH" {% if request.GET.harm_level == 'DEATH' %}selected{% endif %}>Death</option>
+                        <option value="SEVERE" {% if request.GET.harm_level == 'SEVERE' %}selected{% endif %}>Severe Harm</option>
+                        <option value="MODERATE" {% if request.GET.harm_level == 'MODERATE' %}selected{% endif %}>Moderate Harm</option>
+                        <option value="LOW" {% if request.GET.harm_level == 'LOW' %}selected{% endif %}>Low Harm</option>
+                        <option value="NONE" {% if request.GET.harm_level == 'NONE' %}selected{% endif %}>No Harm</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="non_compliant" value="true" 
+                               {% if request.GET.non_compliant == 'true' %}checked{% endif %}>
+                        <label class="form-check-label">
+                            Non-Compliant Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DoC Records List -->
+    <div class="card">
+        <div class="card-body">
+            {% if doc_records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Incident</th>
+                                <th>Harm Level</th>
+                                <th>Family Contact</th>
+                                <th>Current Stage</th>
+                                <th>Compliance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in doc_records %}
+                            <tr>
+                                <td>
+                                    <strong>{{ doc.incident.description|truncatewords:8 }}</strong><br>
+                                    <small class="text-muted">{{ doc.incident.incident_date }}</small>
+                                </td>
+                                <td>
+                                    {% if doc.harm_level == 'DEATH' %}
+                                        <span class="badge bg-danger">{{ doc.get_harm_level_display }}</span>
+                                    {% elif doc.harm_level == 'SEVERE' %}
+                                        <span class="badge bg-warning">{{ doc.get_harm_level_display }}</span>
+                                    {% elif doc.harm_level == 'MODERATE' %}
+                                        <span class="badge bg-info">{{ doc.get_harm_level_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ doc.get_harm_level_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc.family_contact_name %}
+                                        {{ doc.family_contact_name }}<br>
+                                        <small class="text-muted">{{ doc.family_contact_relationship }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ doc.get_current_stage_display }}</span>
+                                </td>
+                                <td>
+                                    {% if doc.duty_of_candour_applies %}
+                                        {% with compliance=doc.get_compliance_status %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if compliance.completion_percentage == 100 %}bg-success{% elif compliance.completion_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ compliance.completion_percentage }}%"
+                                                 aria-valuenow="{{ compliance.completion_percentage }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ compliance.completion_percentage|floatformat:0 }}%
+                                            </div>
+                                        </div>
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'incident_safety:doc_detail' doc.pk %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <nav>
+                    <ul class="pagination justify-content-center mt-4">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.current_stage %}&current_stage={{ request.GET.current_stage }}{% endif %}{% if request.GET.harm_level %}&harm_level={{ request.GET.harm_level }}{% endif %}{% if request.GET.non_compliant %}&non_compliant={{ request.GET.non_compliant }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.current_stage %}&current_stage={{ request.GET.current_stage }}{% endif %}{% if request.GET.harm_level %}&harm_level={{ request.GET.harm_level }}{% endif %}{% if request.GET.non_compliant %}&non_compliant={{ request.GET.non_compliant }}{% endif %}">Previous</a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.current_stage %}&current_stage={{ request.GET.current_stage }}{% endif %}{% if request.GET.harm_level %}&harm_level={{ request.GET.harm_level }}{% endif %}{% if request.GET.non_compliant %}&non_compliant={{ request.GET.non_compliant }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.current_stage %}&current_stage={{ request.GET.current_stage }}{% endif %}{% if request.GET.harm_level %}&harm_level={{ request.GET.harm_level }}{% endif %}{% if request.GET.non_compliant %}&non_compliant={{ request.GET.non_compliant }}{% endif %}">Last</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <p class="text-muted mt-3">No Duty of Candour records found.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

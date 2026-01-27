@@ -1,0 +1,453 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Trend Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section h4 {
+        color: #10b981;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .form-section h4 i {
+        margin-right: 0.75rem;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left: 4px solid #10b981;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-box i {
+        color: #10b981;
+        margin-right: 0.5rem;
+    }
+    
+    .required-note {
+        background: #fef3c7;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-label .required {
+        color: #ef4444;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
+    }
+    
+    .chart-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .chart-type-card {
+        background: #f8f9fa;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .chart-type-card:hover {
+        border-color: #10b981;
+        background: #d1fae5;
+        transform: translateY(-3px);
+    }
+    
+    .chart-type-card.selected {
+        border-color: #10b981;
+        background: #d1fae5;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    
+    .chart-type-card i {
+        font-size: 2rem;
+        color: #10b981;
+        margin-bottom: 0.5rem;
+    }
+    
+    .chart-type-card .chart-name {
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .btn-create-analysis {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .btn-create-analysis:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="gradient-header">
+                <h2>
+                    <i class="bi bi-graph-up-arrow"></i>
+                    {% if form.instance.pk %}
+                        Edit Trend Analysis
+                    {% else %}
+                        Create Trend Analysis
+                    {% endif %}
+                </h2>
+                <p class="mb-0">Analyze incident patterns and trends to identify improvement opportunities</p>
+            </div>
+
+            <!-- Info Box -->
+            <div class="info-box">
+                <i class="bi bi-info-circle-fill"></i>
+                <strong>About Trend Analysis:</strong>
+                Create custom trend analyses by selecting date ranges, care homes, incident types, and severity levels.
+                The system will generate interactive charts and identify key patterns to support quality improvement initiatives.
+            </div>
+
+            <div class="required-note">
+                <i class="bi bi-asterisk"></i>
+                Fields marked with <span class="text-danger">*</span> are required
+            </div>
+
+            <!-- Error Messages -->
+            {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Please correct the errors below before submitting.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <form method="post" id="trendForm">
+                {% csrf_token %}
+
+                <!-- Section 1: Basic Information -->
+                <div class="form-section">
+                    <h4><i class="bi bi-file-text"></i> Basic Information</h4>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            Analysis Title <span class="required">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">{{ form.title.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Brief, descriptive title for this analysis (e.g., "Q1 2026 Falls Analysis")</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Optional description of the purpose and scope of this analysis</small>
+                    </div>
+                </div>
+
+                <!-- Section 2: Date Range -->
+                <div class="form-section">
+                    <h4><i class="bi bi-calendar-range"></i> Date Range</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                                Start Date <span class="required">*</span>
+                            </label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                                <div class="text-danger small">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Beginning of analysis period</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                                End Date <span class="required">*</span>
+                            </label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                                <div class="text-danger small">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">End of analysis period</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb-fill me-2"></i>
+                        <strong>Quick Selections:</strong>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="setLastMonth()">Last Month</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setLastQuarter()">Last Quarter</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setLastYear()">Last Year</button>
+                    </div>
+                </div>
+
+                <!-- Section 3: Filters -->
+                <div class="form-section">
+                    <h4><i class="bi bi-funnel"></i> Filters</h4>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.care_homes.id_for_label }}" class="form-label">
+                            Care Homes
+                        </label>
+                        {{ form.care_homes }}
+                        {% if form.care_homes.errors %}
+                            <div class="text-danger small">{{ form.care_homes.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Leave blank to include all care homes. Hold Ctrl (Windows) or Cmd (Mac) to select multiple
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.incident_types.id_for_label }}" class="form-label">
+                            Incident Types
+                        </label>
+                        {{ form.incident_types }}
+                        {% if form.incident_types.errors %}
+                            <div class="text-danger small">{{ form.incident_types.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Leave blank to include all incident types</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.severity_levels.id_for_label }}" class="form-label">
+                            Severity Levels
+                        </label>
+                        {{ form.severity_levels }}
+                        {% if form.severity_levels.errors %}
+                            <div class="text-danger small">{{ form.severity_levels.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Leave blank to include all severity levels</small>
+                    </div>
+                </div>
+
+                <!-- Section 4: Chart Types -->
+                <div class="form-section">
+                    <h4><i class="bi bi-bar-chart"></i> Chart Types</h4>
+                    
+                    <p class="text-muted">Select which chart types to include in this analysis:</p>
+                    
+                    <div class="chart-type-selector">
+                        <div class="chart-type-card" data-chart="line">
+                            <i class="bi bi-graph-up"></i>
+                            <div class="chart-name">Trend Line</div>
+                            <small class="text-muted">Over time</small>
+                        </div>
+                        
+                        <div class="chart-type-card" data-chart="bar">
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <div class="chart-name">Bar Chart</div>
+                            <small class="text-muted">Comparisons</small>
+                        </div>
+                        
+                        <div class="chart-type-card" data-chart="pie">
+                            <i class="bi bi-pie-chart-fill"></i>
+                            <div class="chart-name">Pie Chart</div>
+                            <small class="text-muted">Proportions</small>
+                        </div>
+                        
+                        <div class="chart-type-card" data-chart="heatmap">
+                            <i class="bi bi-grid-3x3-gap-fill"></i>
+                            <div class="chart-name">Heatmap</div>
+                            <small class="text-muted">Patterns</small>
+                        </div>
+                        
+                        <div class="chart-type-card" data-chart="scatter">
+                            <i class="bi bi-circle"></i>
+                            <div class="chart-name">Scatter Plot</div>
+                            <small class="text-muted">Relationships</small>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="chart_types" id="chartTypesInput" value="">
+                </div>
+
+                <!-- Section 5: Analysis Notes -->
+                <div class="form-section">
+                    <h4><i class="bi bi-clipboard-check"></i> Analysis Notes</h4>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.key_findings.id_for_label }}" class="form-label">
+                            Key Findings
+                        </label>
+                        {{ form.key_findings }}
+                        {% if form.key_findings.errors %}
+                            <div class="text-danger small">{{ form.key_findings.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Document key patterns, trends, or insights discovered in this analysis
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.recommendations.id_for_label }}" class="form-label">
+                            Recommendations
+                        </label>
+                        {{ form.recommendations }}
+                        {% if form.recommendations.errors %}
+                            <div class="text-danger small">{{ form.recommendations.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Recommendations for quality improvement based on the analysis
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 justify-content-between mb-4">
+                    <a href="{% url 'incident_safety:trend_analysis_dashboard' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-create-analysis">
+                        <i class="bi bi-check-circle"></i> 
+                        {% if form.instance.pk %}Update Analysis{% else %}Create Analysis{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('trendForm');
+    
+    // Add Bootstrap classes to Django widgets
+    const inputs = form.querySelectorAll('input[type="text"], input[type="date"], textarea, select');
+    inputs.forEach(input => {
+        if (input.tagName === 'SELECT') {
+            input.classList.add('form-select');
+        } else {
+            input.classList.add('form-control');
+        }
+    });
+    
+    // Multi-select styling
+    const multiSelects = form.querySelectorAll('select[multiple]');
+    multiSelects.forEach(select => {
+        select.style.minHeight = '120px';
+    });
+    
+    // Chart type selection
+    const chartCards = document.querySelectorAll('.chart-type-card');
+    const chartTypesInput = document.getElementById('chartTypesInput');
+    const selectedCharts = new Set();
+    
+    // Default selections
+    selectedCharts.add('line');
+    selectedCharts.add('bar');
+    updateChartSelection();
+    
+    chartCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const chartType = this.dataset.chart;
+            
+            if (selectedCharts.has(chartType)) {
+                selectedCharts.delete(chartType);
+                this.classList.remove('selected');
+            } else {
+                selectedCharts.add(chartType);
+                this.classList.add('selected');
+            }
+            
+            updateChartSelection();
+        });
+    });
+    
+    function updateChartSelection() {
+        chartTypesInput.value = Array.from(selectedCharts).join(',');
+        
+        // Update visual selection
+        chartCards.forEach(card => {
+            if (selectedCharts.has(card.dataset.chart)) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+});
+
+// Date range quick selection functions
+function setLastMonth() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    document.getElementById('{{ form.start_date.id_for_label }}').value = formatDate(startDate);
+    document.getElementById('{{ form.end_date.id_for_label }}').value = formatDate(endDate);
+}
+
+function setLastQuarter() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 3);
+    
+    document.getElementById('{{ form.start_date.id_for_label }}').value = formatDate(startDate);
+    document.getElementById('{{ form.end_date.id_for_label }}').value = formatDate(endDate);
+}
+
+function setLastYear() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    
+    document.getElementById('{{ form.start_date.id_for_label }}').value = formatDate(startDate);
+    document.getElementById('{{ form.end_date.id_for_label }}').value = formatDate(endDate);
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+</script>
+{% endblock %}

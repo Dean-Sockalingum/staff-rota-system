@@ -1,0 +1,265 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Calendar Subscription - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-calendar-plus"></i> Calendar Subscription</h2>
+                <a href="{% url 'my_schedule' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Schedule
+                </a>
+            </div>
+
+            <!-- Instructions Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Subscribe to Your Shift Calendar</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">
+                        Subscribe to your personal shift calendar to automatically sync your shifts to your phone, tablet, and computer.
+                    </p>
+                    <p>
+                        Your shifts will update automatically when the rota changes - no need to re-import!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feed URL Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-link"></i> Your Personal Calendar Feed</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Keep this URL private!</strong> Anyone with this link can view your shift schedule.
+                    </div>
+
+                    <div class="form-group">
+                        <label><strong>Subscription URL (Webcal):</strong></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="webcal-url" value="{{ webcal_url }}" readonly>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('webcal-url')">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Use this URL to subscribe in most calendar apps</small>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label><strong>Standard URL (HTTP):</strong></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="http-url" value="{{ feed_url }}" readonly>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('http-url')">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Use this if webcal doesn't work</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Instructions -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> How to Subscribe</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="setupAccordion">
+                        
+                        <!-- Google Calendar -->
+                        <div class="card">
+                            <div class="card-header" id="headingGoogle">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseGoogle">
+                                        <i class="fab fa-google"></i> Google Calendar (Android, Web)
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseGoogle" class="collapse show" data-parent="#setupAccordion">
+                                <div class="card-body">
+                                    <ol>
+                                        <li>Open <a href="https://calendar.google.com" target="_blank">Google Calendar</a></li>
+                                        <li>Click the <strong>+</strong> button next to "Other calendars"</li>
+                                        <li>Select <strong>"From URL"</strong></li>
+                                        <li>Copy and paste your <strong>HTTP URL</strong> (not webcal)</li>
+                                        <li>Click <strong>"Add calendar"</strong></li>
+                                        <li>Your shifts will appear in Google Calendar and sync to your Android phone</li>
+                                    </ol>
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-clock"></i> Updates every few hours automatically
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Apple Calendar -->
+                        <div class="card">
+                            <div class="card-header" id="headingApple">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseApple">
+                                        <i class="fab fa-apple"></i> Apple Calendar (iPhone, iPad, Mac)
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseApple" class="collapse" data-parent="#setupAccordion">
+                                <div class="card-body">
+                                    <h6>On iPhone/iPad:</h6>
+                                    <ol>
+                                        <li>Open <strong>Settings</strong></li>
+                                        <li>Scroll down to <strong>Calendar</strong></li>
+                                        <li>Tap <strong>Accounts</strong> → <strong>Add Account</strong></li>
+                                        <li>Tap <strong>Other</strong> → <strong>Add Subscribed Calendar</strong></li>
+                                        <li>Paste your <strong>Webcal URL</strong></li>
+                                        <li>Tap <strong>Next</strong> and <strong>Save</strong></li>
+                                    </ol>
+                                    <h6 class="mt-3">On Mac:</h6>
+                                    <ol>
+                                        <li>Open <strong>Calendar</strong> app</li>
+                                        <li>Go to <strong>File</strong> → <strong>New Calendar Subscription</strong></li>
+                                        <li>Paste your <strong>Webcal URL</strong></li>
+                                        <li>Click <strong>Subscribe</strong></li>
+                                        <li>Choose update frequency (recommended: Every hour)</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Outlook -->
+                        <div class="card">
+                            <div class="card-header" id="headingOutlook">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOutlook">
+                                        <i class="fab fa-microsoft"></i> Outlook / Office 365
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseOutlook" class="collapse" data-parent="#setupAccordion">
+                                <div class="card-body">
+                                    <h6>Outlook.com (Web):</h6>
+                                    <ol>
+                                        <li>Go to <a href="https://outlook.live.com/calendar" target="_blank">Outlook Calendar</a></li>
+                                        <li>Click <strong>"Add calendar"</strong></li>
+                                        <li>Select <strong>"Subscribe from web"</strong></li>
+                                        <li>Paste your <strong>HTTP URL</strong></li>
+                                        <li>Enter a calendar name (e.g., "Work Shifts")</li>
+                                        <li>Click <strong>"Import"</strong></li>
+                                    </ol>
+                                    <h6 class="mt-3">Outlook Desktop:</h6>
+                                    <ol>
+                                        <li>Open <strong>Outlook</strong></li>
+                                        <li>Go to <strong>File</strong> → <strong>Account Settings</strong> → <strong>Internet Calendars</strong></li>
+                                        <li>Click <strong>"New"</strong></li>
+                                        <li>Paste your <strong>Webcal URL</strong></li>
+                                        <li>Click <strong>OK</strong></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Benefits of Calendar Sync</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> <strong>Auto-updates</strong> - Changes sync automatically</li>
+                                <li><i class="fas fa-check text-success"></i> <strong>Phone reminders</strong> - Get notifications before shifts</li>
+                                <li><i class="fas fa-check text-success"></i> <strong>Cross-device</strong> - View on phone, tablet, computer</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> <strong>Work-life balance</strong> - See work alongside personal events</li>
+                                <li><i class="fas fa-check text-success"></i> <strong>Family sharing</strong> - Share with spouse/family</li>
+                                <li><i class="fas fa-check text-success"></i> <strong>No manual entry</strong> - Stop copying shifts by hand</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Frequently Asked Questions</h5>
+                </div>
+                <div class="card-body">
+                    <h6>How often does the calendar update?</h6>
+                    <p>Your calendar app checks for updates periodically (usually every few hours). The exact frequency depends on your calendar app's settings.</p>
+
+                    <h6>Can I share this with my family?</h6>
+                    <p>Yes, but be careful - anyone with the URL can view your shifts. Only share with people you trust.</p>
+
+                    <h6>Will past shifts appear?</h6>
+                    <p>No, the feed only includes future shifts (next 8 weeks by default).</p>
+
+                    <h6>What if I change phones?</h6>
+                    <p>Just subscribe to the calendar on your new device using the same URL. Your shifts will sync automatically.</p>
+
+                    <h6>Can I unsubscribe?</h6>
+                    <p>Yes, simply remove the subscribed calendar from your calendar app.</p>
+                </div>
+            </div>
+
+            <!-- Alternative Download Option -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-download"></i> One-Time Download</h5>
+                </div>
+                <div class="card-body">
+                    <p>Prefer to download shifts once instead of subscribing? You can download a one-time .ics file:</p>
+                    <a href="{% url 'export_my_shifts_ical' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-alt"></i> Download Shifts (.ics)
+                    </a>
+                    <a href="{% url 'export_leave_ical' %}" class="btn btn-outline-success">
+                        <i class="fas fa-umbrella-beach"></i> Download Leave (.ics)
+                    </a>
+                    <p class="text-muted mt-2 mb-0">
+                        <small><i class="fas fa-info-circle"></i> One-time downloads won't update automatically when the rota changes</small>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(elementId) {
+    var copyText = document.getElementById(elementId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand("copy");
+    
+    // Show feedback
+    var button = event.target.closest('button');
+    var originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    button.classList.add('btn-success');
+    button.classList.remove('btn-outline-secondary');
+    
+    setTimeout(function() {
+        button.innerHTML = originalHtml;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+    }, 2000);
+}
+</script>
+{% endblock %}

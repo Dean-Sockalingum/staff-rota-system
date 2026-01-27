@@ -1,0 +1,228 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Data Change Log - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .log-table {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .action-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .action-badge.CREATE { background: #d4edda; color: #155724; }
+    .action-badge.UPDATE { background: #fff3cd; color: #856404; }
+    .action-badge.DELETE { background: #f8d7da; color: #721c24; }
+    .action-badge.APPROVE { background: #d1ecf1; color: #0c5460; }
+    .action-badge.DENY { background: #f8d7da; color: #721c24; }
+    .action-badge.CANCEL { background: #e2e3e5; color: #383d41; }
+    .value-diff {
+        font-family: monospace;
+        font-size: 12px;
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .value-diff.old { border-left: 3px solid #dc3545; }
+    .value-diff.new { border-left: 3px solid #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Data Change Log</h2>
+            <p class="text-muted">Complete audit trail of all data modifications</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-panel">
+        <form method="get" class="form-row">
+            <div class="col-md-2">
+                <label for="action">Action</label>
+                <select name="action" id="action" class="form-control">
+                    <option value="">All Actions</option>
+                    {% for action in actions %}
+                    <option value="{{ action }}" {% if current_filters.action == action %}selected{% endif %}>
+                        {{ action }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="content_type">Model</label>
+                <select name="content_type" id="content_type" class="form-control">
+                    <option value="">All Models</option>
+                    {% for ct in content_types %}
+                    <option value="{{ ct.id }}" {% if current_filters.content_type == ct.id|stringformat:"s" %}selected{% endif %}>
+                        {{ ct.model }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="user">User SAP</label>
+                <input type="text" name="user" id="user" class="form-control" 
+                       placeholder="e.g. ADMIN001" value="{{ current_filters.user }}">
+            </div>
+            <div class="col-md-2">
+                <label for="days">Time Period</label>
+                <select name="days" id="days" class="form-control">
+                    <option value="">All Time</option>
+                    <option value="1" {% if current_filters.days == "1" %}selected{% endif %}>Last 24 hours</option>
+                    <option value="7" {% if current_filters.days == "7" %}selected{% endif %}>Last 7 days</option>
+                    <option value="30" {% if current_filters.days == "30" %}selected{% endif %}>Last 30 days</option>
+                    <option value="90" {% if current_filters.days == "90" %}selected{% endif %}>Last 90 days</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary mr-2">Apply Filters</button>
+                <a href="{% url 'data_change_log_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="log-table">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Model</th>
+                        <th>Object ID</th>
+                        <th>Field</th>
+                        <th>Old Value</th>
+                        <th>New Value</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                        <td>
+                            {{ log.timestamp|date:"d/m/Y" }}<br>
+                            <small class="text-muted">{{ log.timestamp|date:"H:i:s" }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ log.user.sap }}</strong><br>
+                            <small class="text-muted">{{ log.user.full_name }}</small>
+                        </td>
+                        <td>
+                            <span class="action-badge {{ log.action }}">{{ log.action }}</span>
+                        </td>
+                        <td>{{ log.content_type.model }}</td>
+                        <td><code>{{ log.object_id }}</code></td>
+                        <td>
+                            {% if log.field_name %}
+                                <code>{{ log.field_name }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.old_value %}
+                                <span class="value-diff old" title="{{ log.old_value }}">
+                                    {{ log.old_value|truncatechars:30 }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.new_value %}
+                                <span class="value-diff new" title="{{ log.new_value }}">
+                                    {{ log.new_value|truncatechars:30 }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ log.ip_address|default:"-" }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            No change logs found matching your filters
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-3 border-top">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.content_type %}&content_type={{ current_filters.content_type }}{% endif %}{% if current_filters.days %}&days={{ current_filters.days }}{% endif %}">
+                            First
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.content_type %}&content_type={{ current_filters.content_type }}{% endif %}{% if current_filters.days %}&days={{ current_filters.days }}{% endif %}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.content_type %}&content_type={{ current_filters.content_type }}{% endif %}{% if current_filters.days %}&days={{ current_filters.days }}{% endif %}">
+                            Next
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.content_type %}&content_type={{ current_filters.content_type }}{% endif %}{% if current_filters.days %}&days={{ current_filters.days }}{% endif %}">
+                            Last
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-3">
+        <a href="{% url 'audit_dashboard' %}" class="btn btn-secondary">← Back to Audit Dashboard</a>
+    </div>
+</div>
+{% endblock %}

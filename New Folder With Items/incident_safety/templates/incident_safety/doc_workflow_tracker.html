@@ -1,0 +1,716 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Duty of Candour Workflow - {{ doc.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .doc-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .progress-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar-custom {
+        height: 30px;
+        border-radius: 15px;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        position: relative;
+        overflow: visible;
+    }
+
+    .progress-percentage {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .workflow-timeline {
+        position: relative;
+        padding: 2rem 0;
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 30px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #e5e7eb;
+    }
+
+    .timeline-progress {
+        position: absolute;
+        left: 30px;
+        top: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+        transition: height 0.5s ease;
+    }
+
+    .stage-item {
+        position: relative;
+        padding-left: 80px;
+        margin-bottom: 2rem;
+        min-height: 60px;
+    }
+
+    .stage-number {
+        position: absolute;
+        left: 0;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        border: 4px solid;
+        background: white;
+        z-index: 2;
+    }
+
+    .stage-completed .stage-number {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #10b981;
+        color: white;
+    }
+
+    .stage-current .stage-number {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-color: #3b82f6;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+
+    .stage-pending .stage-number {
+        background: white;
+        border-color: #e5e7eb;
+        color: #9ca3af;
+    }
+
+    .stage-content {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stage-completed .stage-content {
+        border-left: 4px solid #10b981;
+    }
+
+    .stage-current .stage-content {
+        border-left: 4px solid #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .stage-pending .stage-content {
+        border-left: 4px solid #e5e7eb;
+        opacity: 0.7;
+    }
+
+    .stage-content:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .stage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .stage-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .stage-date {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .stage-description {
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+
+    .stage-details {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .stage-details p {
+        margin-bottom: 0.5rem;
+    }
+
+    .stage-details p:last-child {
+        margin-bottom: 0;
+    }
+
+    .checkmark-icon {
+        background: #10b981;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .info-panel {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .info-panel-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .info-row {
+        display: flex;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+        width: 180px;
+        flex-shrink: 0;
+    }
+
+    .info-value {
+        color: #1f2937;
+        flex-grow: 1;
+    }
+
+    .severity-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .severity-critical { background: #fee2e2; color: #991b1b; }
+    .severity-major { background: #fed7aa; color: #9a3412; }
+    .severity-moderate { background: #fef3c7; color: #854d0e; }
+    .severity-minor { background: #cffafe; color: #155e75; }
+    .severity-no-harm { background: #d1fae5; color: #065f46; }
+
+    .communication-log {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .communication-item {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+    }
+
+    .communication-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .communication-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .communication-type {
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .communication-date {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .btn-secondary-custom:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-success-custom {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-success-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+
+    .btn-warning-custom {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-warning-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        color: white;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+        }
+    }
+
+    .rca-linked {
+        background: #eff6ff;
+        border: 2px solid #3b82f6;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .rca-link {
+        color: #3b82f6;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .rca-link:hover {
+        text-decoration: underline;
+    }
+
+    .inspectorate-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .inspectorate-reported {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .inspectorate-pending {
+        background: #fef3c7;
+        color: #854d0e;
+    }
+
+    .inspectorate-not-required {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #9ca3af;
+    }
+
+    .print-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        font-size: 24px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .print-button:hover {
+        transform: scale(1.1);
+    }
+
+    @media print {
+        .action-buttons,
+        .print-button,
+        .btn-custom {
+            display: none !important;
+        }
+        
+        .doc-header {
+            background: #667eea !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="doc-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-shield-check"></i> Duty of Candour Workflow
+                </h1>
+                <h3 class="mb-0">{{ doc.reference_number }}</h3>
+            </div>
+            <div class="text-end">
+                <div class="mb-2">
+                    <span class="severity-badge severity-{{ doc.harm_level|lower|cut:' ' }}">
+                        {{ doc.get_harm_level_display }}
+                    </span>
+                </div>
+                <div class="text-white-50">
+                    Incident Date: {{ doc.incident.incident_date|date:"d M Y" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Workflow Column -->
+        <div class="col-lg-8">
+            <!-- Progress Overview -->
+            <div class="progress-container">
+                <h4 class="mb-3">Overall Progress</h4>
+                <div class="progress" style="height: 30px; background-color: #e5e7eb;">
+                    <div class="progress-bar-custom" role="progressbar" style="width: {{ completion_percent }}%;">
+                        <span class="progress-percentage">{{ completion_percent }}%</span>
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0">
+                    {{ workflow_stages|length }} stages total • 
+                    {% with completed=workflow_stages|length %}
+                        {% for stage in workflow_stages %}
+                            {% if stage.status == 'completed' %}
+                                {% with completed=completed|add:1 %}{% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                    Completed
+                </p>
+            </div>
+
+            <!-- Workflow Timeline -->
+            <div class="workflow-timeline">
+                <div class="timeline-line"></div>
+                <div class="timeline-progress" style="height: {{ completion_percent }}%;"></div>
+
+                {% for stage in workflow_stages %}
+                <div class="stage-item stage-{{ stage.status }}">
+                    <div class="stage-number">
+                        {% if stage.status == 'completed' %}
+                            <i class="bi bi-check-lg"></i>
+                        {% elif stage.status == 'current' %}
+                            {{ forloop.counter }}
+                        {% else %}
+                            {{ forloop.counter }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="stage-content">
+                        <div class="stage-header">
+                            <div class="stage-title">
+                                {% if stage.status == 'completed' %}
+                                    <span class="checkmark-icon"><i class="bi bi-check"></i></span>
+                                {% endif %}
+                                {{ stage.name }}
+                            </div>
+                            {% if stage.date %}
+                                <div class="stage-date">
+                                    <i class="bi bi-calendar-check"></i> {{ stage.date|date:"d M Y" }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="stage-description">
+                            {{ stage.description }}
+                        </div>
+
+                        {% if stage.details %}
+                        <div class="stage-details">
+                            {% if stage.stage_number == 1 and doc.harm_assessment %}
+                                <p><strong>Harm Assessment:</strong> {{ doc.harm_assessment }}</p>
+                                <p><strong>Assessed By:</strong> {{ doc.assessment_completed_by }}</p>
+                            {% elif stage.stage_number == 2 and doc.family_notified_date %}
+                                <p><strong>Notification Method:</strong> {{ doc.notification_method|default:"Not specified" }}</p>
+                                <p><strong>Notified By:</strong> {{ doc.notification_completed_by }}</p>
+                            {% elif stage.stage_number == 3 and doc.apology_given_date %}
+                                <p><strong>Apology Given By:</strong> {{ doc.apology_given_by }}</p>
+                                <p><strong>Method:</strong> In person / Written</p>
+                            {% elif stage.stage_number == 4 and doc.investigation_complete_date %}
+                                <p><strong>Investigation Led By:</strong> {{ doc.investigation_led_by }}</p>
+                                {% if doc.linked_rca %}
+                                    <div class="rca-linked">
+                                        <i class="bi bi-link-45deg"></i> 
+                                        <strong>Linked RCA:</strong>
+                                        <a href="{% url 'incident_safety:rca_detail' doc.linked_rca.pk %}" class="rca-link">
+                                            {{ doc.linked_rca.reference_number }}
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% elif stage.stage_number == 5 and doc.family_feedback_date %}
+                                <p><strong>Feedback Shared By:</strong> {{ doc.feedback_shared_by }}</p>
+                                <p><strong>Family Response:</strong> {{ doc.family_response|default:"Documented in communications" }}</p>
+                            {% elif stage.stage_number == 6 and doc.action_plan_date %}
+                                <p><strong>Actions Documented:</strong> {{ doc.actions_documented_by }}</p>
+                                <p><strong>Implementation Timeline:</strong> {{ doc.action_timeline|default:"See action plans" }}</p>
+                            {% elif stage.stage_number == 7 and doc.final_review_date %}
+                                <p><strong>Reviewed By:</strong> {{ doc.final_review_by }}</p>
+                                <p><strong>Review Outcome:</strong> {{ doc.review_outcome|default:"Complete" }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if stage.status == 'current' %}
+                        <div class="mt-3">
+                            <a href="{% url 'incident_safety:doc_update' doc.pk %}" class="btn btn-sm btn-primary-custom">
+                                <i class="bi bi-pencil"></i> Update Stage
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Side Panel Column -->
+        <div class="col-lg-4">
+            <!-- Incident Information -->
+            <div class="info-panel">
+                <div class="info-panel-header">
+                    <i class="bi bi-exclamation-triangle"></i> Incident Details
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Reference:</div>
+                    <div class="info-value">
+                        <strong>{{ doc.incident.reference_number }}</strong>
+                        </a>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Type:</div>
+                    <div class="info-value">{{ doc.incident.get_incident_type_display }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Location:</div>
+                    <div class="info-value">{{ doc.incident.care_home.name }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Severity:</div>
+                    <div class="info-value">
+                        <span class="severity-badge severity-{{ doc.incident.severity|lower }}">
+                            {{ doc.get_severity_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Family Contact Information -->
+            <div class="info-panel">
+                <div class="info-panel-header">
+                    <i class="bi bi-people"></i> Family Contact
+                </div>
+                {% if doc.family_contact_name %}
+                <div class="info-row">
+                    <div class="info-label">Contact Name:</div>
+                    <div class="info-value">{{ doc.family_contact_name }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Relationship:</div>
+                    <div class="info-value">{{ doc.family_relationship }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Phone:</div>
+                    <div class="info-value">{{ doc.family_contact_phone }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value">{{ doc.family_contact_email|default:"Not provided" }}</div>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-person-x" style="font-size: 2rem;"></i>
+                    <p>No family contact recorded</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Care Inspectorate Notification -->
+            <div class="info-panel">
+                <div class="info-panel-header">
+                    <i class="bi bi-building"></i> Care Inspectorate
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Status:</div>
+                    <div class="info-value">
+                        {% if doc.care_inspectorate_notified %}
+                            <span class="inspectorate-status inspectorate-reported">
+                                <i class="bi bi-check-circle"></i> Reported
+                            </span>
+                        {% elif doc.requires_ci_notification %}
+                            <span class="inspectorate-status inspectorate-pending">
+                                <i class="bi bi-clock"></i> Pending
+                            </span>
+                        {% else %}
+                            <span class="inspectorate-status inspectorate-not-required">
+                                <i class="bi bi-dash-circle"></i> Not Required
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if doc.care_inspectorate_notified %}
+                <div class="info-row">
+                    <div class="info-label">Notification Date:</div>
+                    <div class="info-value">{{ doc.ci_notification_date|date:"d M Y" }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Reference:</div>
+                    <div class="info-value">{{ doc.ci_reference_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Communication Log -->
+            <div class="info-panel">
+                <div class="info-panel-header">
+                    <i class="bi bi-chat-left-text"></i> Communication Log
+                </div>
+                <div class="communication-log">
+                    {% if doc.communications.exists %}
+                        {% for comm in doc.communications.all %}
+                        <div class="communication-item">
+                            <div class="communication-header">
+                                <span class="communication-type">
+                                    <i class="bi bi-{{ comm.communication_type|lower }}"></i>
+                                    {{ comm.get_communication_type_display }}
+                                </span>
+                                <span class="communication-date">
+                                    {{ comm.communication_date|date:"d M Y" }}
+                                </span>
+                            </div>
+                            <div class="text-muted" style="font-size: 0.875rem;">
+                                {{ comm.summary|truncatewords:20 }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p>No communications logged yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'incident_safety:doc_add_communication' doc.pk %}" class="btn btn-sm btn-success-custom w-100">
+                        <i class="bi bi-plus-circle"></i> Add Communication
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'incident_safety:doc_list' %}" class="btn btn-secondary-custom">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+        <a href="{% url 'incident_safety:doc_detail' doc.pk %}" class="btn btn-primary-custom">
+            <i class="bi bi-file-text"></i> View Full Details
+        </a>
+        <a href="{% url 'incident_safety:doc_update' doc.pk %}" class="btn btn-warning-custom">
+            <i class="bi bi-pencil"></i> Edit Record
+        </a>
+        {% if doc.linked_rca %}
+        <a href="{% url 'incident_safety:rca_detail' doc.linked_rca.pk %}" class="btn btn-primary-custom">
+            <i class="bi bi-diagram-3"></i> View RCA
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Print Button -->
+    <button class="print-button" onclick="window.print()" title="Print Workflow">
+        <i class="bi bi-printer"></i>
+    </button>
+</div>
+{% endblock %}

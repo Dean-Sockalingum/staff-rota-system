@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Mitigation - {{ risk.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-shield-alt"></i> Add Mitigation Action</h1>
+        <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Risk
+        </a>
+    </div>
+    
+    <div class="alert alert-info">
+        <strong>Risk:</strong> {{ risk.title }} (Current Score: {{ risk.residual_score }})
+    </div>
+    
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Mitigation Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="action" class="form-label">Mitigation Action *</label>
+                    <input type="text" class="form-control" id="action" name="action" required
+                           placeholder="Brief description of the mitigation action">
+                    <div class="invalid-feedback">Please provide a mitigation action.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">Detailed Description *</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" required
+                              placeholder="Detailed description of how this mitigation will be implemented"></textarea>
+                    <div class="invalid-feedback">Please provide a description.</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="mitigation_type" class="form-label">Mitigation Type *</label>
+                        <select class="form-select" id="mitigation_type" name="mitigation_type" required>
+                            <option value="">Select type...</option>
+                            {% for type_choice in mitigation_types %}
+                            <option value="{{ type_choice.0 }}">{{ type_choice.1 }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            Eliminate, Reduce, Transfer, or Accept the risk
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="priority" class="form-label">Priority *</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="expected_likelihood_reduction" class="form-label">
+                            Expected Likelihood Reduction *
+                        </label>
+                        <select class="form-select" id="expected_likelihood_reduction" 
+                                name="expected_likelihood_reduction" required>
+                            <option value="0">No reduction</option>
+                            <option value="1" selected>-1 level</option>
+                            <option value="2">-2 levels</option>
+                            <option value="3">-3 levels</option>
+                            <option value="4">-4 levels</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="expected_impact_reduction" class="form-label">
+                            Expected Impact Reduction *
+                        </label>
+                        <select class="form-select" id="expected_impact_reduction" 
+                                name="expected_impact_reduction" required>
+                            <option value="0">No reduction</option>
+                            <option value="1" selected>-1 level</option>
+                            <option value="2">-2 levels</option>
+                            <option value="3">-3 levels</option>
+                            <option value="4">-4 levels</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Assignment & Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="assigned_to" class="form-label">Assigned To *</label>
+                        <select class="form-select" id="assigned_to" name="assigned_to" required>
+                            <option value="">Select user...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.get_full_name }} ({{ user.username }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">Please assign to a user.</div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            {% for status_choice in status_choices %}
+                            <option value="{{ status_choice.0 }}" 
+                                    {% if status_choice.0 == 'PLANNED' %}selected{% endif %}>
+                                {{ status_choice.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date">
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="target_completion_date" class="form-label">Target Completion Date *</label>
+                        <input type="date" class="form-control" id="target_completion_date" 
+                               name="target_completion_date" required>
+                        <div class="invalid-feedback">Please provide a target date.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Resources & Regulatory</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="estimated_cost" class="form-label">Estimated Cost (£)</label>
+                    <input type="number" class="form-control" id="estimated_cost" name="estimated_cost" 
+                           min="0" step="0.01" placeholder="0.00">
+                    <small class="form-text text-muted">Leave blank if no cost implications</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="resources_required" class="form-label">Resources Required</label>
+                    <textarea class="form-control" id="resources_required" name="resources_required" rows="3"
+                              placeholder="List of resources, staff, equipment needed"></textarea>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="regulatory_requirement" 
+                           name="regulatory_requirement">
+                    <label class="form-check-label" for="regulatory_requirement">
+                        This mitigation addresses a regulatory requirement
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Create Mitigation
+            </button>
+            <a href="{% url 'risk_management:risk_detail' risk.pk %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

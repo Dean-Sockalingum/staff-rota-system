@@ -1,0 +1,399 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Survey Distribution Dashboard - {{ care_home.name|default:"Experience & Feedback" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .channel-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 5px;
+    }
+    .progress-thin {
+        height: 8px;
+    }
+    .schedule-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.2s;
+    }
+    .schedule-card:hover {
+        transform: translateX(2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .distribution-row:hover {
+        background-color: #f8f9fa;
+    }
+    .needs-reminder {
+        background-color: #fff3cd;
+        border-left: 3px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-paper-plane text-primary"></i> Survey Distribution Dashboard</h2>
+            <p class="text-muted mb-0">Automated survey scheduling and tracking</p>
+        </div>
+        <div>
+            <a href="{% url 'experience_feedback:schedule_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Schedule
+            </a>
+            <a href="{% url 'experience_feedback:schedule_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list"></i> All Schedules
+            </a>
+        </div>
+    </div>
+
+    <!-- Care Home Selector -->
+    {% if care_homes.count > 1 %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label"><i class="fas fa-home"></i> Select Care Home</label>
+                    <select name="care_home" class="form-select" onchange="this.form.submit()">
+                        {% for home in care_homes %}
+                        <option value="{{ home.id }}" {% if home.id == care_home.id %}selected{% endif %}>
+                            {{ home.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not care_home %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> No care homes found. Please create a care home first.
+    </div>
+    {% else %}
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card border-primary">
+                <div class="card-body">
+                    <p class="stat-label">Sent (30 days)</p>
+                    <h3 class="stat-value text-primary">{{ total_sent }}</h3>
+                    <small class="text-muted">
+                        <i class="fas fa-check-circle text-success"></i> {{ total_delivered }} delivered ({{ delivery_rate }}%)
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-success">
+                <div class="card-body">
+                    <p class="stat-label">Responses</p>
+                    <h3 class="stat-value text-success">{{ total_responded }}</h3>
+                    <div class="progress progress-thin mt-2">
+                        <div class="progress-bar bg-success" style="width: {{ response_rate }}%"></div>
+                    </div>
+                    <small class="text-muted mt-1">{{ response_rate }}% response rate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-warning">
+                <div class="card-body">
+                    <p class="stat-label">Pending</p>
+                    <h3 class="stat-value text-warning">{{ total_pending }}</h3>
+                    <small class="text-muted">Not yet sent</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card border-info">
+                <div class="card-body">
+                    <p class="stat-label">Needs Reminder</p>
+                    <h3 class="stat-value text-info">{{ distributions_needing_reminder|length }}</h3>
+                    <small class="text-muted">Overdue for reminder</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution by Channel -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Distribution by Channel (30 days)</h5>
+                </div>
+                <div class="card-body">
+                    {% if channel_stats %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th>Sent</th>
+                                <th>Responded</th>
+                                <th>Response Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in channel_stats %}
+                            <tr>
+                                <td>
+                                    {% if stat.distribution_channel == 'EMAIL' %}
+                                    <span class="channel-badge bg-primary text-white">✉️ Email</span>
+                                    {% elif stat.distribution_channel == 'SMS' %}
+                                    <span class="channel-badge bg-success text-white">📱 SMS</span>
+                                    {% elif stat.distribution_channel == 'QR_CODE' %}
+                                    <span class="channel-badge bg-secondary text-white">📷 QR Code</span>
+                                    {% else %}
+                                    <span class="channel-badge bg-info text-white">{{ stat.distribution_channel }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ stat.responded }}</td>
+                                <td>
+                                    {% widthratio stat.responded stat.count 100 as rate %}
+                                    <div class="progress progress-thin">
+                                        <div class="progress-bar" style="width: {{ rate }}%"></div>
+                                    </div>
+                                    <small>{{ rate }}%</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No distributions in the last 30 days</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Active Schedules</h5>
+                </div>
+                <div class="card-body">
+                    {% if active_schedules %}
+                    {% for schedule in active_schedules %}
+                    <div class="schedule-card card mb-2">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ schedule.name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clipboard-list"></i> {{ schedule.get_survey_type_display }}
+                                        | <i class="fas fa-bolt"></i> {{ schedule.get_trigger_type_display }}
+                                    </small>
+                                    <div class="mt-1">
+                                        {% if schedule.send_email %}
+                                        <span class="channel-badge bg-primary text-white">✉️ Email</span>
+                                        {% endif %}
+                                        {% if schedule.send_sms %}
+                                        <span class="channel-badge bg-success text-white">📱 SMS</span>
+                                        {% endif %}
+                                        {% if schedule.print_qr_code %}
+                                        <span class="channel-badge bg-secondary text-white">📷 QR</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a href="{% url 'experience_feedback:schedule_edit' schedule.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center py-3">
+                        No active schedules. 
+                        <a href="{% url 'experience_feedback:schedule_create' %}">Create one</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distributions Needing Reminders -->
+    {% if distributions_needing_reminder %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-bell"></i> Distributions Needing Reminders
+                <span class="badge bg-dark">{{ distributions_needing_reminder|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Recipient</th>
+                            <th>Resident</th>
+                            <th>Survey Type</th>
+                            <th>Sent</th>
+                            <th>Days Since</th>
+                            <th>Reminders Sent</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dist in distributions_needing_reminder %}
+                        <tr class="needs-reminder">
+                            <td>
+                                {{ dist.recipient_name }}
+                                {% if dist.recipient_email %}
+                                <br><small class="text-muted">{{ dist.recipient_email }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ dist.resident.full_name }}</td>
+                            <td>{{ dist.get_survey_type_display }}</td>
+                            <td>{{ dist.sent_at|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">{{ dist.days_since_sent }} days</span>
+                            </td>
+                            <td>{{ dist.reminders_sent_count }} / {{ dist.schedule.max_reminders }}</td>
+                            <td>
+                                <a href="{% url 'experience_feedback:distribution_send' dist.pk %}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fas fa-paper-plane"></i> Send Reminder
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Distributions -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-history"></i> Recent Distributions (Last 50)</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_distributions %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Recipient</th>
+                            <th>Resident</th>
+                            <th>Survey Type</th>
+                            <th>Channel</th>
+                            <th>Sent</th>
+                            <th>Delivery</th>
+                            <th>Response</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dist in recent_distributions %}
+                        <tr class="distribution-row">
+                            <td><small>#{{ dist.id }}</small></td>
+                            <td>
+                                <strong>{{ dist.recipient_name }}</strong>
+                                <br><small class="text-muted">{{ dist.get_recipient_type_display }}</small>
+                            </td>
+                            <td>{{ dist.resident.full_name }}</td>
+                            <td>{{ dist.get_survey_type_display }}</td>
+                            <td>
+                                {% if dist.distribution_channel == 'EMAIL' %}
+                                <span class="channel-badge bg-primary text-white">✉️</span>
+                                {% elif dist.distribution_channel == 'SMS' %}
+                                <span class="channel-badge bg-success text-white">📱</span>
+                                {% elif dist.distribution_channel == 'QR_CODE' %}
+                                <span class="channel-badge bg-secondary text-white">📷</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dist.sent_at %}
+                                {{ dist.sent_at|date:"M d, H:i" }}
+                                {% else %}
+                                <span class="badge bg-secondary">Not sent</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dist.delivery_status == 'DELIVERED' %}
+                                <span class="badge bg-success">Delivered</span>
+                                {% elif dist.delivery_status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif dist.delivery_status == 'FAILED' %}
+                                <span class="badge bg-danger">Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dist.response_received %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Completed
+                                </span>
+                                {% elif dist.sent_at %}
+                                <span class="badge bg-warning text-dark">
+                                    Pending ({{ dist.days_since_sent }}d)
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not dist.sent_at %}
+                                <a href="{% url 'experience_feedback:distribution_send' dist.pk %}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </a>
+                                {% elif not dist.response_received %}
+                                <a href="{% url 'experience_feedback:public_survey_token' dist.survey_token %}" 
+                                   class="btn btn-sm btn-outline-secondary" target="_blank">
+                                    <i class="fas fa-link"></i> Link
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No distributions yet</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ action }} Survey Distribution Schedule{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 4px;
+    }
+    .form-section h5 {
+        color: #007bff;
+        margin-bottom: 1rem;
+    }
+    .conditional-field {
+        display: none;
+        padding: 1rem;
+        background: #e7f3ff;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+    }
+    .channel-option {
+        padding: 1rem;
+        border: 2px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        transition: all 0.2s;
+    }
+    .channel-option:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    .channel-option.selected {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2><i class="fas fa-calendar-plus text-primary"></i> {{ action }} Survey Distribution Schedule</h2>
+                <p class="text-muted">Configure automated survey distribution</p>
+            </div>
+
+            <form method="post" id="scheduleForm">
+                {% csrf_token %}
+
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h5><i class="fas fa-info-circle"></i> Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Schedule Name *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Care Home *</label>
+                            {{ form.care_home }}
+                            {% if form.care_home.errors %}
+                            <div class="text-danger small">{{ form.care_home.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Survey Type *</label>
+                            {{ form.survey_type }}
+                            {% if form.survey_type.errors %}
+                            <div class="text-danger small">{{ form.survey_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Schedule is Active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trigger Configuration -->
+                <div class="form-section">
+                    <h5><i class="fas fa-bolt"></i> Trigger Configuration</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trigger Type *</label>
+                            {{ form.trigger_type }}
+                            <small class="form-text text-muted">{{ form.trigger_type.help_text }}</small>
+                            {% if form.trigger_type.errors %}
+                            <div class="text-danger small">{{ form.trigger_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Distribution Time</label>
+                            {{ form.distribution_time }}
+                            <small class="form-text text-muted">{{ form.distribution_time.help_text }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Admission Trigger Fields -->
+                    <div id="admissionFields" class="conditional-field">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Days After Admission *</label>
+                                {{ form.days_after_admission }}
+                                <small class="form-text text-muted">{{ form.days_after_admission.help_text }}</small>
+                                {% if form.days_after_admission.errors %}
+                                <div class="text-danger small">{{ form.days_after_admission.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scheduled Trigger Fields -->
+                    <div id="scheduledFields" class="conditional-field">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Frequency *</label>
+                                {{ form.schedule_frequency }}
+                                <small class="form-text text-muted">{{ form.schedule_frequency.help_text }}</small>
+                                {% if form.schedule_frequency.errors %}
+                                <div class="text-danger small">{{ form.schedule_frequency.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3" id="dayOfMonthField">
+                                <label class="form-label">Day of Month</label>
+                                {{ form.schedule_day_of_month }}
+                                <small class="form-text text-muted">For monthly schedules</small>
+                            </div>
+                            <div class="col-md-4 mb-3" id="dayOfWeekField">
+                                <label class="form-label">Day of Week</label>
+                                {{ form.schedule_day_of_week }}
+                                <small class="form-text text-muted">For weekly schedules</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distribution Channels -->
+                <div class="form-section">
+                    <h5><i class="fas fa-share-alt"></i> Distribution Channels</h5>
+                    <p class="text-muted small">Select at least one distribution method</p>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="channel-option" id="emailChannel">
+                                <div class="form-check">
+                                    {{ form.send_email }}
+                                    <label class="form-check-label" for="{{ form.send_email.id_for_label }}">
+                                        <h6><i class="fas fa-envelope text-primary"></i> Email</h6>
+                                        <small class="text-muted">{{ form.send_email.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="channel-option" id="smsChannel">
+                                <div class="form-check">
+                                    {{ form.send_sms }}
+                                    <label class="form-check-label" for="{{ form.send_sms.id_for_label }}">
+                                        <h6><i class="fas fa-sms text-success"></i> SMS</h6>
+                                        <small class="text-muted">{{ form.send_sms.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="channel-option" id="qrChannel">
+                                <div class="form-check">
+                                    {{ form.print_qr_code }}
+                                    <label class="form-check-label" for="{{ form.print_qr_code.id_for_label }}">
+                                        <h6><i class="fas fa-qrcode text-secondary"></i> QR Code</h6>
+                                        <small class="text-muted">{{ form.print_qr_code.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-2">{{ form.non_field_errors.0 }}</div>
+                    {% endif %}
+
+                    <!-- Email Configuration -->
+                    <div id="emailConfig" class="conditional-field mt-3">
+                        <h6><i class="fas fa-envelope"></i> Email Configuration</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Email Subject</label>
+                                {{ form.email_subject }}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Email Introduction</label>
+                                {{ form.email_intro }}
+                                <small class="form-text text-muted">This will appear at the start of the email</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMS Configuration -->
+                    <div id="smsConfig" class="conditional-field mt-3">
+                        <h6><i class="fas fa-sms"></i> SMS Configuration</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">SMS Template</label>
+                                {{ form.sms_template }}
+                                <small class="form-text text-muted">Keep under 160 characters for standard SMS</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reminder Settings -->
+                <div class="form-section">
+                    <h5><i class="fas fa-bell"></i> Reminder Settings</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <div class="form-check">
+                                {{ form.enable_reminders }}
+                                <label class="form-check-label" for="{{ form.enable_reminders.id_for_label }}">
+                                    Enable Automatic Reminders
+                                </label>
+                                <br><small class="text-muted">{{ form.enable_reminders.help_text }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="reminderConfig" class="conditional-field">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Days Before Reminder</label>
+                                {{ form.reminder_days }}
+                                <small class="form-text text-muted">{{ form.reminder_days.help_text }}</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Maximum Reminders</label>
+                                {{ form.max_reminders }}
+                                <small class="form-text text-muted">{{ form.max_reminders.help_text }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'experience_feedback:schedule_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Schedule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const triggerType = document.getElementById('{{ form.trigger_type.id_for_label }}');
+    const scheduleFrequency = document.getElementById('{{ form.schedule_frequency.id_for_label }}');
+    const sendEmail = document.getElementById('{{ form.send_email.id_for_label }}');
+    const sendSMS = document.getElementById('{{ form.send_sms.id_for_label }}');
+    const printQR = document.getElementById('{{ form.print_qr_code.id_for_label }}');
+    const enableReminders = document.getElementById('{{ form.enable_reminders.id_for_label }}');
+
+    // Toggle trigger-specific fields
+    function updateTriggerFields() {
+        const admissionFields = document.getElementById('admissionFields');
+        const scheduledFields = document.getElementById('scheduledFields');
+        
+        if (triggerType.value === 'ADMISSION') {
+            admissionFields.style.display = 'block';
+            scheduledFields.style.display = 'none';
+        } else if (triggerType.value === 'SCHEDULED') {
+            admissionFields.style.display = 'none';
+            scheduledFields.style.display = 'block';
+        } else {
+            admissionFields.style.display = 'none';
+            scheduledFields.style.display = 'none';
+        }
+    }
+
+    // Toggle frequency-specific fields
+    function updateFrequencyFields() {
+        const dayOfMonthField = document.getElementById('dayOfMonthField');
+        const dayOfWeekField = document.getElementById('dayOfWeekField');
+        
+        if (scheduleFrequency.value === 'MONTHLY') {
+            dayOfMonthField.style.display = 'block';
+            dayOfWeekField.style.display = 'none';
+        } else if (scheduleFrequency.value === 'WEEKLY') {
+            dayOfMonthField.style.display = 'none';
+            dayOfWeekField.style.display = 'block';
+        } else {
+            dayOfMonthField.style.display = 'none';
+            dayOfWeekField.style.display = 'none';
+        }
+    }
+
+    // Toggle channel configurations
+    function updateChannelConfigs() {
+        const emailConfig = document.getElementById('emailConfig');
+        const smsConfig = document.getElementById('smsConfig');
+        const emailChannel = document.getElementById('emailChannel');
+        const smsChannel = document.getElementById('smsChannel');
+        const qrChannel = document.getElementById('qrChannel');
+        
+        emailConfig.style.display = sendEmail.checked ? 'block' : 'none';
+        smsConfig.style.display = sendSMS.checked ? 'block' : 'none';
+        
+        emailChannel.classList.toggle('selected', sendEmail.checked);
+        smsChannel.classList.toggle('selected', sendSMS.checked);
+        qrChannel.classList.toggle('selected', printQR.checked);
+    }
+
+    // Toggle reminder configuration
+    function updateReminderConfig() {
+        const reminderConfig = document.getElementById('reminderConfig');
+        reminderConfig.style.display = enableReminders.checked ? 'block' : 'none';
+    }
+
+    // Event listeners
+    triggerType.addEventListener('change', updateTriggerFields);
+    scheduleFrequency.addEventListener('change', updateFrequencyFields);
+    sendEmail.addEventListener('change', updateChannelConfigs);
+    sendSMS.addEventListener('change', updateChannelConfigs);
+    printQR.addEventListener('change', updateChannelConfigs);
+    enableReminders.addEventListener('change', updateReminderConfig);
+
+    // Initialize on load
+    updateTriggerFields();
+    updateFrequencyFields();
+    updateChannelConfigs();
+    updateReminderConfig();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Competency Frameworks{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-certificate"></i> Competency Frameworks
+            </h1>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Search competencies..." 
+                                   value="{{ request.GET.search }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Competency Type</label>
+                            <select name="type" class="form-select">
+                                <option value="">All Types</option>
+                                {% for code, label in competency_types %}
+                                    <option value="{{ code }}" {% if request.GET.type == code %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Role</label>
+                            <select name="role" class="form-select">
+                                <option value="">All Roles</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.id }}" {% if request.GET.role == role.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{% url 'training_competency:competency_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Competency List -->
+    <div class="row">
+        {% if competencies %}
+            {% for competency in competencies %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">{{ competency.code }}</h6>
+                                {% if competency.competency_type == 'CLINICAL' %}
+                                    <span class="badge bg-danger">Clinical</span>
+                                {% elif competency.competency_type == 'TECHNICAL' %}
+                                    <span class="badge bg-primary">Technical</span>
+                                {% elif competency.competency_type == 'BEHAVIORAL' %}
+                                    <span class="badge bg-success">Behavioral</span>
+                                {% elif competency.competency_type == 'LEADERSHIP' %}
+                                    <span class="badge bg-warning text-dark">Leadership</span>
+                                {% elif competency.competency_type == 'DIGITAL' %}
+                                    <span class="badge bg-info">Digital</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ competency.get_competency_type_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ competency.title }}</h5>
+                            <p class="card-text text-muted">{{ competency.description|truncatewords:20 }}</p>
+                            
+                            {% if competency.linked_training_courses.count > 0 %}
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-book"></i> {{ competency.linked_training_courses.count }} 
+                                        linked training course{{ competency.linked_training_courses.count|pluralize }}
+                                    </small>
+                                </div>
+                            {% endif %}
+                            
+                            <a href="{% url 'training_competency:competency_detail' competency.pk %}" 
+                               class="btn btn-sm btn-primary">
+                                View Details <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No competencies found matching your criteria.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

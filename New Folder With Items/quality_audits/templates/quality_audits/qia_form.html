@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Edit QIA{% else %}Create QIA{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-{% if object %}edit{% else %}plus{% endif %}"></i>
+                        {% if object %}
+                            Edit QIA: {{ object.qia_reference }}
+                        {% else %}
+                            Create New Quality Improvement Action
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <h5 class="alert-heading">Please correct the following errors:</h5>
+                            {{ form.errors }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endif %}
+
+                        <!-- Identification Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-primary">
+                                <i class="fas fa-id-badge"></i> Identification
+                            </legend>
+                            
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    {{ form.title|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    {{ form.priority|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    {{ form.action_type|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    {{ form.source_type|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    {{ form.source_reference|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.care_home|as_crispy_field }}
+                            </div>
+                        </fieldset>
+
+                        <!-- Problem Analysis Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-danger">
+                                <i class="fas fa-search"></i> Problem Analysis
+                            </legend>
+                            
+                            <div class="mb-3">
+                                {{ form.problem_description|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    Clearly describe the problem or opportunity identified
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.root_cause|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    What is the underlying cause? (Use 5 Whys, Fishbone, etc.)
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.impact_analysis|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    Who/what is affected? What are the consequences?
+                                </small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Action Planning Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-success">
+                                <i class="fas fa-tasks"></i> Action Planning
+                            </legend>
+                            
+                            <div class="mb-3">
+                                {{ form.action_plan|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    What actions will be taken to address the root cause?
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.success_criteria|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    How will you know the action has been successful?
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.resources_needed|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    Staff, budget, equipment, time required
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.verification_method|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    How will effectiveness be verified? (Audit, observation, data review, etc.)
+                                </small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Ownership Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-info">
+                                <i class="fas fa-users"></i> Ownership & Team
+                            </legend>
+                            
+                            <div class="mb-3">
+                                {{ form.responsible_person|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    This person is accountable for ensuring completion
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.team_members|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    Select all team members who will contribute
+                                </small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Timeline Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-warning">
+                                <i class="fas fa-calendar"></i> Timeline
+                            </legend>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.planned_start_date|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.target_completion_date|as_crispy_field }}
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        {% if object %}
+                        <!-- Status & Progress (only for editing existing QIA) -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-secondary">
+                                <i class="fas fa-chart-line"></i> Status & Progress
+                            </legend>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.status|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.percent_complete|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.progress_notes|as_crispy_field }}
+                            </div>
+                        </fieldset>
+                        {% endif %}
+
+                        <!-- Regulatory Section -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-dark">
+                                <i class="fas fa-shield-alt"></i> Regulatory Requirements
+                            </legend>
+                            
+                            <div class="mb-3">
+                                {{ form.regulatory_requirement|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    E.g., Care Inspectorate Quality Indicator, SSI Regulation, etc.
+                                </small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.requires_ci_notification }}
+                                        <label class="form-check-label" for="{{ form.requires_ci_notification.id_for_label }}">
+                                            Requires Care Inspectorate Notification
+                                        </label>
+                                    </div>
+                                </div>
+                                {% if object and object.ci_notification_date %}
+                                <div class="col-md-6 mb-3">
+                                    {{ form.ci_notification_date|as_crispy_field }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </fieldset>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% if object %}{% url 'quality_audits:qia_detail' object.pk %}{% else %}{% url 'quality_audits:qia_dashboard' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 
+                                {% if object %}Update QIA{% else %}Create QIA{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if not object %}
+            <!-- Help Card for new QIAs -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Tips for Creating QIAs</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Corrective Actions:</strong> Address existing problems or non-conformances</li>
+                        <li><strong>Preventive Actions:</strong> Prevent potential future problems</li>
+                        <li><strong>Root Cause:</strong> Use tools like 5 Whys, Fishbone diagrams, or Pareto analysis</li>
+                        <li><strong>SMART Actions:</strong> Ensure action plans are Specific, Measurable, Achievable, Relevant, Time-bound</li>
+                        <li><strong>Scottish Care Inspectorate:</strong> Link to relevant Quality Indicators (especially QI 7.3)</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Auto-populate source reference for incidents/audits/risks if coming from those modules
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceType = urlParams.get('source_type');
+    const sourceRef = urlParams.get('source_ref');
+    
+    if (sourceType) {
+        document.getElementById('id_source_type').value = sourceType;
+    }
+    if (sourceRef) {
+        document.getElementById('id_source_reference').value = sourceRef;
+    }
+});
+</script>
+{% endblock %}

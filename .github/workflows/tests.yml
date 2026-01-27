@@ -1,0 +1,185 @@
+name: Django Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      elasticsearch:
+        image: elasticsearch:7.17.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -f http://localhost:9200/_cat/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install system dependencies for LDAP
+      run: |
+        # Remove problematic Microsoft repositories that may be temporarily unavailable
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list 2>/dev/null || true
+        sudo apt-get update || sudo apt-get update  # Retry once if first attempt fails
+        sudo apt-get install -y libsasl2-dev python3-dev libldap2-dev libssl-dev
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r "New Folder With Items/requirements.txt"
+        pip install coverage
+    
+    - name: Run migrations
+      working-directory: New Folder With Items
+      env:
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        REDIS_URL: redis://localhost:6379/0
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        python manage.py migrate --noinput
+    
+    - name: Run tests with coverage
+      working-directory: New Folder With Items
+      env:
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        REDIS_URL: redis://localhost:6379/0
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        coverage run --source='scheduling' manage.py test scheduling --noinput --verbosity=2
+    
+    - name: Generate coverage report
+      if: always()
+      run: |
+        coverage report -m
+    
+    - name: Check critical tests
+      working-directory: New Folder With Items
+      env:
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        REDIS_URL: redis://localhost:6379/0
+        ELASTICSEARCH_HOST: localhost:9200
+        FIELD_ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==
+        SESSION_COOKIE_SAMESITE: Strict
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        echo "Running critical test suites..."
+        python manage.py test scheduling.tests.test_security --verbosity=2
+        echo "Security tests passed!"
+        coverage xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./New Folder With Items/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Run Phase 6 tests specifically
+      working-directory: New Folder With Items
+      env:
+        SECRET_KEY: 'django-insecure-test-key-for-ci-cd-only-do-not-use-in-production'
+        DEBUG: 'True'
+        FIELD_ENCRYPTION_KEY: 'test-encryption-key-32-characters-long-for-ci-cd-testing-only!'
+        ELASTICSEARCH_HOST: 'localhost:9200'
+        DB_ENGINE: django.db.backends.postgresql
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        REDIS_URL: redis://localhost:6379/0
+        SESSION_COOKIE_SAMESITE: Strict
+        DJANGO_SETTINGS_MODULE: rotasystems.settings
+      run: |
+        python manage.py test scheduling.tests.test_task55_activity_feed --verbosity=2
+        python manage.py test scheduling.tests.test_task56_compliance_widgets --verbosity=2
+        python manage.py test scheduling.tests.test_task57_form_autosave --verbosity=2
+        python manage.py test scheduling.tests.test_task59_leave_calendar --verbosity=2
+        python manage.py test scheduling.tests.test_phase6_integration --verbosity=2
+    
+    - name: Check for test failures
+      if: failure()
+      run: |
+        echo "❌ Tests failed. Please review the logs above."
+        exit 1
+    
+    - name: Test summary
+      if: success()
+      run: |
+        echo "✅ All tests passed successfully!"
+        coverage report --precision=2

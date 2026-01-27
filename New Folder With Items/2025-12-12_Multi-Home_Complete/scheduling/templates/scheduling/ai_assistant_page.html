@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Help Assistant - Staff Rota System</title>
+    {% load static %}
+    {% csrf_token %}
+    {% include 'scheduling/feedback_widget.html' %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+    .ai-demo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .ai-demo-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .ai-demo-header h1 {
+        color: #0066CC;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+    
+    .ai-demo-header p {
+        color: #666;
+        font-size: 1.2em;
+    }
+    
+    .demo-sections {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    .demo-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .demo-card h3 {
+        color: #0066CC;
+        margin-top: 0;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .demo-card h3 .icon {
+        font-size: 1.5em;
+    }
+    
+    .example-queries {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .example-queries li {
+        background: #f8f9fa;
+        border-left: 3px solid #0066CC;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-radius: 4px;
+    }
+    
+    .example-queries li:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    
+    .example-queries li::before {
+        content: "💬 ";
+        margin-right: 8px;
+    }
+    
+    .ai-chat-main {
+        background: white;
+        border: 2px solid #0066CC;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        min-height: 500px;
+    }
+    
+    .ai-chat-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .ai-chat-header h2 {
+        color: #0066CC;
+        margin: 0;
+    }
+    
+    .ai-chat-header p {
+        color: #666;
+        margin: 10px 0 0 0;
+    }
+    
+    #ai-demo-messages {
+        min-height: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .ai-message, .user-message {
+        margin-bottom: 15px;
+        padding: 12px 15px;
+        border-radius: 8px;
+        max-width: 80%;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .user-message {
+        background: #0066CC;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .ai-message {
+        background: white;
+        border: 1px solid #ddd;
+    }
+    
+    .ai-input-section {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .ai-input-section input {
+        flex: 1;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 1em;
+    }
+    
+    .ai-input-form {
+        display: flex;
+        gap: 12px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .ai-input-form input {
+        flex: 1;
+        padding: 16px 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.2s;
+    }
+    
+    .ai-input-form input:focus {
+        outline: none;
+        border-color: #0066CC;
+    }
+    
+    .ai-input-form button {
+        padding: 16px 32px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background 0.2s;
+        min-width: 100px;
+    }
+    
+    .ai-input-form button:hover {
+        background: #0052a3;
+    }
+    
+    .ai-input-form button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .ai-input-section button {
+        padding: 12px 30px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+    
+    .ai-input-section button:hover {
+        background: #0052a3;
+    }
+    
+    .ai-input-section button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 12px 15px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-width: 100px;
+    }
+    
+    .typing-indicator.active {
+        display: block;
+    }
+    
+    .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background: #0066CC;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 3px;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+        }
+        30% {
+            transform: translateY(-10px);
+        }
+    }
+    
+    /* Confidence Badge Styles */
+    .confidence-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: bold;
+        margin-left: 8px;
+        text-transform: uppercase;
+    }
+    
+    .confidence-high {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .confidence-medium {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .confidence-low {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    /* Recommendation Action Styles */
+    .recommendation-message {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .recommendation-header {
+        margin-bottom: 15px;
+        line-height: 1.6;
+    }
+    
+    .recommendation-actions {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .recommendation-actions h4 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-size: 1.1em;
+    }
+    
+    .moves-list {
+        list-style: none;
+        padding: 0;
+        margin: 15px 0;
+    }
+    
+    .moves-list li {
+        padding: 10px;
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        margin: 8px 0;
+        border-radius: 4px;
+        font-size: 0.95em;
+    }
+    
+    .unit-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        background: #e3f2fd;
+        color: #1565c0;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin: 0 2px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+        justify-content: flex-end;
+    }
+    
+    .btn-approve {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1em;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(56, 239, 125, 0.3);
+    }
+    
+    .btn-approve:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(56, 239, 125, 0.4);
+    }
+    
+    .btn-approve:disabled {
+        background: #ccc;
+        cursor: wait;
+        transform: none;
+    }
+    
+    .btn-reject {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1em;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(238, 9, 121, 0.3);
+    }
+    
+    .btn-reject:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(238, 9, 121, 0.4);
+    }
+    
+    .status-approved {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+    
+    .status-declined {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+    
+    /* Task 11: Feedback Widget */
+    .feedback-widget {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 3px solid #0066CC;
+    }
+    
+    .feedback-widget.submitted {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .feedback-title {
+        font-size: 0.9em;
+        color: #495057;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    .star-rating {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .star {
+        font-size: 1.8em;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #dee2e6;
+    }
+    
+    .star:hover,
+    .star.active {
+        color: #ffc107;
+        transform: scale(1.1);
+    }
+    
+    .feedback-types {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .feedback-type-btn {
+        padding: 6px 12px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .feedback-type-btn:hover {
+        border-color: #0066CC;
+        background: #e7f1ff;
+    }
+    
+    .feedback-type-btn.selected {
+        background: #0066CC;
+        color: white;
+        border-color: #0066CC;
+    }
+    
+    .feedback-comment {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        resize: vertical;
+        min-height: 60px;
+    }
+    
+    .feedback-submit {
+        padding: 8px 16px;
+        background: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .feedback-submit:hover {
+        background: #0052a3;
+    }
+    
+    .feedback-submit:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .feedback-success {
+        color: #28a745;
+        font-size: 0.9em;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="ai-demo-container">
+    <div class="ai-demo-header">
+        <h1>🤖 AI Help Assistant</h1>
+        <p>Ask questions about staff, shifts, care plans, and more!</p>
+    </div>
+    
+    <div class="demo-sections">
+        <div class="demo-card">
+            <h3><span class="icon">👥</span> Staff Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Who is working today?')">Who is working today?</li>
+                <li onclick="askQuestion('Show me Jane Smith details')">Show me Jane Smith details</li>
+                <li onclick="askQuestion('Who is on night shift tonight?')">Who is on night shift tonight?</li>
+                <li onclick="askQuestion('List all senior carers')">List all senior carers</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">📋</span> Care Plan Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('When is DEM01 review due?')">When is DEM01 review due?</li>
+                <li onclick="askQuestion('Show overdue care plan reviews')">Show overdue care plan reviews</li>
+                <li onclick="askQuestion('How many reviews this month?')">How many reviews this month?</li>
+                <li onclick="askQuestion('Care plan compliance status')">Care plan compliance status</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">📅</span> Leave & Absence</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Who is on leave this week?')">Who is on leave this week?</li>
+                <li onclick="askQuestion('Show my leave balance')">Show my leave balance</li>
+                <li onclick="askQuestion('Annual leave pending approvals')">Annual leave pending approvals</li>
+                <li onclick="askQuestion('Sickness absence report')">Sickness absence report</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card" style="border: 2px solid #28a745;">
+            <h3><span class="icon">🎯</span> AI Leave Predictions <span style="font-size: 0.7em; color: #28a745;">NEW!</span></h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Can I take leave from Dec 25 to Dec 27?')">Can I take leave from Dec 25 to Dec 27?</li>
+                <li onclick="askQuestion('When is the best time for leave in March?')">When is the best time for leave in March?</li>
+                <li onclick="askQuestion('What are my chances for next week?')">What are my chances for next week?</li>
+                <li onclick="askQuestion('Check leave availability for Jan 10-15')">Check leave availability for Jan 10-15</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">💰</span> Staffing & Costs</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Agency usage this month')">Agency usage this month</li>
+                <li onclick="askQuestion('Show staffing shortages')">Show staffing shortages</li>
+                <li onclick="askQuestion('Overtime costs this week')">Overtime costs this week</li>
+                <li onclick="askQuestion('Generate shortage message')">Generate shortage message</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">🏆</span> Head of Service Queries</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Show me Orchard Grove performance')">Show me Orchard Grove performance</li>
+                <li onclick="askQuestion('Quality audit for Victoria Gardens')">Quality audit for Victoria Gardens</li>
+                <li onclick="askQuestion('Compare all homes')">Compare all homes</li>
+                <li onclick="askQuestion('Which home has best compliance?')">Which home has best compliance?</li>
+            </ul>
+        </div>
+        
+        <div class="demo-card">
+            <h3><span class="icon">🏠</span> Home-Specific Metrics</h3>
+            <ul class="example-queries">
+                <li onclick="askQuestion('Hawthorn House occupancy rate')">Hawthorn House occupancy rate</li>
+                <li onclick="askQuestion('Meadowburn agency spend')">Meadowburn agency spend</li>
+                <li onclick="askQuestion('Riverside staffing today')">Riverside staffing today</li>
+                <li onclick="askQuestion('How is OG doing?')">How is OG doing?</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="ai-chat-main">
+        <div class="ai-chat-header">
+            <h2>💬 Chat with AI Assistant</h2>
+            <p>Type your question below or click an example above</p>
+        </div>
+        
+        <div id="ai-demo-messages"></div>
+        
+        <div class="typing-indicator" id="ai-demo-typing">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <form id="ai-demo-form" class="ai-input-form">
+            {% csrf_token %}
+            <input 
+                type="text" 
+                id="ai-demo-input" 
+                placeholder="Ask anything about staff, shifts, care plans, or home performance..."
+                autocomplete="off"
+                required
+            />
+            <button type="submit" id="ai-demo-send">
+                <span>Send</span>
+                <span class="loading-spinner"></span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const messagesContainer = document.getElementById('ai-demo-messages');
+    const inputField = document.getElementById('ai-demo-input');
+    const demoForm = document.getElementById('ai-demo-form');
+    const sendBtn = document.getElementById('ai-demo-send');
+    const typingIndicator = document.getElementById('ai-demo-typing');
+    
+    // Get CSRF token from Django template or cookie
+    function getCSRFToken() {
+        // Try to get from cookie first
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
+        }
+        // If not in cookie, try to get from hidden input
+        if (!cookieValue) {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                cookieValue = csrfInput.value;
+            }
+        }
+        return cookieValue;
+    }
+    
+    function askQuestion(question) {
+        inputField.value = question;
+        inputField.focus();
+        sendDemoMessage();
+    }
+    
+    // Handle form submission
+    demoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendDemoMessage();
+    });
+    
+    function sendDemoMessage() {
+        const query = inputField.value.trim();
+        if (!query) return;
+        
+        console.log('Sending query:', query);
+        
+        // Add user message
+        addMessage(query, 'user');
+        inputField.value = '';
+        
+        // Show typing indicator
+        typingIndicator.classList.add('active');
+        sendBtn.disabled = true;
+        
+        // Send to API
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'NOT FOUND');
+        
+        fetch('/api/ai-assistant/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ query: query })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            typingIndicator.classList.remove('active');
+            sendBtn.disabled = false;
+            
+            if (data.error) {
+                addMessage('❌ Sorry, I encountered an error: ' + data.error, 'ai');
+            } else {
+                // Check if response includes actionable recommendations
+                if (data.recommendations && data.recommendations.length > 0) {
+                    // Use enhanced recommendation message with action buttons
+                    addRecommendationMessage(data);
+                } else {
+                    // Regular text response - Task 11: Build queryData for feedback
+                    const message = data.answer || data.response || 'No response received';
+                    const confidence = data.confidence || null;
+                    const queryData = {
+                        query: query,
+                        intent: data.intent || 'UNKNOWN',
+                        confidence: confidence || 0,
+                        response: message,
+                        data: data
+                    };
+                    
+                    // Add action button if present (for leave prediction)
+                    addMessage(message, 'ai', confidence, queryData);
+                    
+                    if (data.action_button && data.action_button.visible) {
+                        const buttonDiv = document.createElement('div');
+                        buttonDiv.className = 'action-button-container';
+                        buttonDiv.style.marginTop = '15px';
+                        buttonDiv.style.marginLeft = '10px';
+                        buttonDiv.innerHTML = `
+                            <a href="${data.action_button.url}" 
+                               class="btn btn-primary" 
+                               style="background-color: #28a745; border: none; padding: 10px 20px; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                ${data.action_button.text}
+                            </a>
+                        `;
+                        messagesContainer.appendChild(buttonDiv);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            typingIndicator.classList.remove('active');
+            sendBtn.disabled = false;
+            addMessage('❌ Sorry, I encountered an error connecting to the assistant. Please try again.', 'ai');
+            console.error('Fetch Error:', error);
+        });
+    }
+    
+    // Task 11: Store last query for feedback
+    let lastQuery = {query: '', intent: '', confidence: 0, response: '', data: {}};
+    
+    function addMessage(text, type, confidence = null, queryData = null) {
+        console.log('Adding message:', type, text, 'confidence:', confidence);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = type === 'user' ? 'user-message' : 'ai-message';
+        
+        // Convert markdown-style formatting
+        let formattedText = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+            .replace(/\n/g, '<br>');  // Line breaks
+        
+        // Add confidence badge for AI messages
+        if (type === 'ai' && confidence !== null) {
+            const confidencePercent = Math.round(confidence * 100);
+            let badgeClass = 'confidence-low';
+            let badgeLabel = 'Low Confidence';
+            
+            if (confidence >= 0.8) {
+                badgeClass = 'confidence-high';
+                badgeLabel = 'High Confidence';
+            } else if (confidence >= 0.6) {
+                badgeClass = 'confidence-medium';
+                badgeLabel = 'Medium Confidence';
+            }
+            
+            formattedText += `<span class="confidence-badge ${badgeClass}">${confidencePercent}% ${badgeLabel}</span>`;
+        }
+        
+        messageDiv.innerHTML = formattedText;
+        
+        // Task 11: Add feedback widget for AI responses
+        if (type === 'ai' && queryData) {
+            lastQuery = queryData;
+            const feedbackWidget = createFeedbackWidget();
+            messageDiv.appendChild(feedbackWidget);
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        console.log('Message added successfully, total messages:', messagesContainer.children.length);
+    }
+    
+    // NEW: Handle AI recommendations with action buttons
+    function addRecommendationMessage(data) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'ai-message recommendation-message';
+        
+        let html = `<div class="recommendation-header">${data.answer || data.message}</div>`;
+        
+        // Check if this response has actionable recommendations
+        if (data.recommendations && data.recommendations.length > 0) {
+            html += `<div class="recommendation-actions">`;
+            html += `<h4>📋 Recommended Staff Moves:</h4>`;
+            html += `<ul class="moves-list">`;
+            
+            data.recommendations.forEach((move, index) => {
+                html += `
+                    <li>
+                        Move <strong>${move.staff_name}</strong> 
+                        from <span class="unit-badge">${move.from_unit}</span> 
+                        to <span class="unit-badge">${move.to_unit}</span>
+                    </li>
+                `;
+            });
+            
+            html += `</ul>`;
+            html += `
+                <div class="action-buttons">
+                    <button class="btn-approve" onclick="approveRecommendations('${data.recommendation_id}', ${JSON.stringify(data.recommendations).replace(/"/g, '&quot;')}, '${data.date}', '${data.reason}')">
+                        ✅ Approve All Moves
+                    </button>
+                    <button class="btn-reject" onclick="rejectRecommendations('${data.recommendation_id}')">
+                        ❌ Decline
+                    </button>
+                </div>
+            `;
+            html += `</div>`;
+        }
+        
+        messageDiv.innerHTML = html;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // NEW: Approve AI recommendations
+    function approveRecommendations(recommendationId, moves, date, reason) {
+        const csrfToken = getCSRFToken();
+        
+        // Show loading state
+        event.target.disabled = true;
+        event.target.textContent = '⏳ Executing moves...';
+        
+        fetch('/api/ai-recommendations/approve/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                recommendation_id: recommendationId,
+                type: 'staff_move',
+                moves: moves,
+                date: date,
+                reason: reason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage(`✅ Success! Executed ${data.executed_count} staff moves. ${data.message}`, 'ai');
+                // Disable the buttons after approval
+                event.target.closest('.action-buttons').innerHTML = '<span class="status-approved">✅ Approved and Executed</span>';
+            } else {
+                addMessage(`❌ Error: ${data.error}`, 'ai');
+                event.target.disabled = false;
+                event.target.textContent = '✅ Approve All Moves';
+            }
+        })
+        .catch(error => {
+            addMessage('❌ Error executing recommendations. Please try again.', 'ai');
+            console.error('Approval error:', error);
+            event.target.disabled = false;
+            event.target.textContent = '✅ Approve All Moves';
+        });
+    }
+    
+    // NEW: Reject AI recommendations
+    function rejectRecommendations(recommendationId) {
+        const csrfToken = getCSRFToken();
+        
+        fetch('/api/ai-recommendations/reject/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                recommendation_id: recommendationId,
+                reason: 'User declined via AI Assistant'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addMessage('Recommendations declined. No changes were made.', 'ai');
+                event.target.closest('.action-buttons').innerHTML = '<span class="status-declined">❌ Declined</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Rejection error:', error);
+        });
+    }
+    
+    // Task 11: Create feedback widget
+    function createFeedbackWidget() {
+        const widget = document.createElement('div');
+        widget.className = 'feedback-widget';
+        widget.innerHTML = `
+            <div class="feedback-title">💬 Was this response helpful?</div>
+            <div class="star-rating">
+                <span class="star" data-rating="1">⭐</span>
+                <span class="star" data-rating="2">⭐</span>
+                <span class="star" data-rating="3">⭐</span>
+                <span class="star" data-rating="4">⭐</span>
+                <span class="star" data-rating="5">⭐</span>
+            </div>
+            <div class="feedback-types" style="display:none;">
+                <button class="feedback-type-btn" data-type="HELPFUL">✅ Helpful</button>
+                <button class="feedback-type-btn" data-type="INACCURATE">❌ Inaccurate</button>
+                <button class="feedback-type-btn" data-type="INCOMPLETE">⚠️ Incomplete</button>
+                <button class="feedback-type-btn" data-type="TOO_TECHNICAL">🔧 Too Technical</button>
+                <button class="feedback-type-btn" data-type="TOO_SIMPLE">📚 Too Simple</button>
+                <button class="feedback-type-btn" data-type="WRONG_INTENT">🎯 Wrong Answer</button>
+            </div>
+            <textarea class="feedback-comment" placeholder="Additional comments (optional)" style="display:none;"></textarea>
+            <button class="feedback-submit" style="display:none;">Submit Feedback</button>
+            <div class="feedback-success" style="display:none;">✓ Thank you for your feedback!</div>
+        `;
+        
+        let selectedRating = 0;
+        let selectedType = null;
+        
+        // Star rating interaction
+        const stars = widget.querySelectorAll('.star');
+        const feedbackTypes = widget.querySelector('.feedback-types');
+        const comment = widget.querySelector('.feedback-comment');
+        const submitBtn = widget.querySelector('.feedback-submit');
+        const successMsg = widget.querySelector('.feedback-success');
+        
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.dataset.rating);
+                
+                // Update star display
+                stars.forEach((s, idx) => {
+                    if (idx < selectedRating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+                
+                // Show additional options
+                feedbackTypes.style.display = 'flex';
+                comment.style.display = 'block';
+                submitBtn.style.display = 'inline-block';
+            });
+            
+            // Hover effect
+            star.addEventListener('mouseenter', function() {
+                const rating = parseInt(this.dataset.rating);
+                stars.forEach((s, idx) => {
+                    if (idx < rating) {
+                        s.style.color = '#ffc107';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseleave', function() {
+                stars.forEach((s, idx) => {
+                    if (idx < selectedRating) {
+                        s.style.color = '#ffc107';
+                    } else {
+                        s.style.color = '#dee2e6';
+                    }
+                });
+            });
+        });
+        
+        // Feedback type buttons
+        const typeButtons = widget.querySelectorAll('.feedback-type-btn');
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                typeButtons.forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedType = this.dataset.type;
+            });
+        });
+        
+        // Submit feedback
+        submitBtn.addEventListener('click', function() {
+            if (selectedRating === 0) {
+                alert('Please select a rating');
+                return;
+            }
+            
+            submitFeedback({
+                rating: selectedRating,
+                feedback_type: selectedType,
+                comment: comment.value
+            });
+            
+            // Show success and disable widget
+            widget.classList.add('submitted');
+            submitBtn.style.display = 'none';
+            successMsg.style.display = 'block';
+        });
+        
+        return widget;
+    }
+    
+    // Task 11: Submit feedback to API
+    function submitFeedback(feedback) {
+        const csrfToken = getCSRFToken();
+        
+        const payload = {
+            query_text: lastQuery.query,
+            intent_detected: lastQuery.intent,
+            confidence_score: lastQuery.confidence,
+            response_text: lastQuery.response,
+            response_data: lastQuery.data,
+            rating: feedback.rating,
+            feedback_type: feedback.feedback_type,
+            feedback_comment: feedback.comment || ''
+        };
+        
+        fetch('/api/ai-assistant/feedback/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Feedback submitted:', data);
+            if (data.preferences_updated) {
+                console.log('User preferences updated:', data.user_preferences);
+            }
+        })
+        .catch(error => {
+            console.error('Feedback submission error:', error);
+        });
+    }
+    
+    // Focus input on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        inputField.focus();
+        console.log('AI Assistant page loaded');
+    });
+</script>
+</body>
+</html>

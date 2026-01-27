@@ -1,0 +1,946 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#0066FF">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Staff Rota">
+    <meta name="application-name" content="Staff Rota System">
+    <meta name="description" content="Multi-home care staff scheduling and management system for Glasgow HSCP">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- iOS App Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/icon-180x180.png' %}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'images/icon-152x152.png' %}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{% static 'images/icon-144x144.png' %}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{% static 'images/icon-120x120.png' %}">
+    
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    
+    <!-- Performance: DNS Prefetch for external resources -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <title>{% block title %}Staff Rota System{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter (Modern Typography) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Performance: Preload critical CSS and JS -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" as="script">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Performance: Load icons with lower priority -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"></noscript>
+    
+    {% load static %}
+    <!-- Design System Foundation - Modern CSS Variables -->
+    <link href="{% static 'css/design-system.css' %}?v=3.0" rel="stylesheet">
+    
+    <!-- Modern Theme - Replaces purple gradient with 2024 color palette -->
+    <link href="{% static 'css/modern-theme.css' %}?v=3.0" rel="stylesheet">
+    
+    <!-- Performance: Use minified CSS in production -->
+    {% if not debug %}
+    <link href="{% static 'css/mobile-responsive.min.css' %}?v=2" rel="stylesheet">
+    <link href="{% static 'css/ui-polish.min.css' %}?v=2" rel="stylesheet">
+    {% else %}
+    <link href="{% static 'css/mobile-responsive.css' %}?v=2" rel="stylesheet">
+    <link href="{% static 'css/ui-polish.css' %}?v=2" rel="stylesheet">
+    {% endif %}
+    
+    <!-- Responsive Tables CSS -->
+    <link href="{% static 'css/responsive-tables.css' %}?v=1.0" rel="stylesheet">
+    
+    <!-- WCAG Color Contrast Compliance -->
+    <link href="{% static 'css/wcag-color-compliance.css' %}?v=1.0" rel="stylesheet">
+    
+    <!-- Print Stylesheet -->
+    <link href="{% static 'css/print.css' %}?v=1.0" rel="stylesheet" media="print">
+    
+    <style>
+        /* Legacy styles - kept for backward compatibility */
+        /* Most spacing is now handled by modern-theme.css */
+        
+        .calendar-day {
+            border: 1px solid #dee2e6;
+            min-height: 120px;
+            padding: 8px;
+        }
+        
+        .calendar-day.today {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        
+        .calendar-day.past {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .leave-card {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 2px 0;
+            font-size: 0.8em;
+        }
+
+        .guidance-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .guidance-body .guidance-copy {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            font-size: 0.95rem;
+        }
+        
+        /* User profile dropdown - high visibility */
+        .user-profile-link {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            padding: 0.5rem 1.25rem !important;
+            border-radius: 8px !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            transition: all 0.2s ease !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .user-profile-link:hover,
+        .user-profile-link:focus {
+            background-color: rgba(255, 255, 255, 0.3) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        /* Force navbar to be visible on desktop to prevent Bootstrap collapse issues */
+        @media (min-width: 992px) {
+            #navbarContent {
+                display: flex !important;
+                visibility: visible !important;
+                flex-wrap: wrap !important;
+            }
+        }
+        
+        /* Fix dropdown z-index to appear above dashboard panels */
+        .navbar .dropdown-menu {
+            z-index: 1050 !important;
+        }
+        
+        .navbar {
+            z-index: 1040 !important;
+        }
+        
+        /* 2-Row Navigation Styling */
+        .navbar-collapse {
+            background-color: #0056b3 !important;
+        }
+        
+        .navbar .btn-sm {
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.375rem 0.75rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        
+        .navbar .btn-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* Ensure user profile dropdown stays on right */
+        .navbar-nav.ms-auto {
+            margin-left: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Skip Navigation Links (WCAG 2.1 Level A) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#navigation" class="skip-link">Skip to navigation</a>
+    <a href="#footer" class="skip-link">Skip to footer</a>
+    
+    <!-- System Mode Indicator Banner -->
+    {% if IS_DEMO_MODE %}
+    <div class="alert alert-warning text-center mb-0" role="alert" style="border-radius: 0; border: none; background-color: #ff9800; color: white; font-weight: bold; padding: 8px;">
+        <i class="fas fa-flask"></i> DEMO MODE - All changes are isolated from production data
+    </div>
+    {% elif IS_PRODUCTION_MODE %}
+    <div class="alert alert-danger text-center mb-0" role="alert" style="border-radius: 0; border: none; background-color: #dc3545; color: white; font-weight: bold; padding: 8px;">
+        <i class="fas fa-exclamation-triangle"></i> PRODUCTION MODE - Live data in use
+    </div>
+    {% endif %}
+    
+    <!-- Navigation -->
+    {% if user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" id="navigation" tabindex="-1">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% if user.role.is_management %}{% url 'manager_dashboard' %}{% else %}{% url 'staff_dashboard' %}{% endif %}">
+                <i class="fas fa-calendar-alt"></i> Staff Rota System
+                {% if IS_DEMO_MODE %}
+                    <span class="badge bg-warning text-dark ms-2">DEMO</span>
+                {% elif IS_PRODUCTION_MODE %}
+                    <span class="badge bg-danger ms-2">LIVE</span>
+                {% endif %}
+            </a>
+            
+            <!-- Navbar toggler for mobile -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarContent">
+                {% if user.role.is_management %}
+                <!-- ROW 1: Core & Strategic Functions -->
+                <div class="w-100 d-flex flex-wrap gap-2 mb-2 px-2 py-2">
+                    <a href="{% url 'manager_dashboard' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="{% url 'reports_dashboard' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-chart-bar"></i> Reports
+                    </a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-clipboard-list"></i> TQM Modules
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/quality-audits/"><i class="fas fa-chart-line"></i> Quality Audits (PDSA)</a></li>
+                            <li><a class="dropdown-item" href="/incident-safety/"><i class="fas fa-exclamation-triangle"></i> Incident & Safety</a></li>
+                            <li><a class="dropdown-item" href="/experience-feedback/"><i class="fas fa-comments"></i> Experience & Feedback</a></li>
+                            <li><a class="dropdown-item" href="/training_competency/"><i class="fas fa-graduation-cap"></i> Training & Competency</a></li>
+                            <li><a class="dropdown-item" href="/documents/"><i class="fas fa-folder-open"></i> Document Management</a></li>
+                            <li><a class="dropdown-item" href="/risk-management/"><i class="fas fa-shield-alt"></i> Risk Management</a></li>
+                            <li><a class="dropdown-item" href="/performance-kpis/"><i class="fas fa-chart-pie"></i> Performance KPIs</a></li>
+                        </ul>
+                    </div>
+                    {% if user.role.is_senior_management_team %}
+                    <a href="{% url 'senior_management_dashboard' %}" class="btn btn-dark btn-sm">
+                        <i class="fas fa-chart-line"></i> Head of Service
+                    </a>
+                    <a href="{% url 'performance_dashboard' %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-award"></i> Absence Management
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- ROW 2: Operations & Tools -->
+                <div class="w-100 d-flex flex-wrap gap-2 px-2 pb-2">
+                    {% if user.role.name == 'OM' or user.role.is_senior_management_team %}
+                    <a href="{% url 'forecasting_dashboard' %}" class="btn btn-sm" style="background-color: #17a2b8; color: white;">
+                        <i class="fas fa-brain"></i> AI Forecasting
+                    </a>
+                    <a href="{% url 'shift_optimization_dashboard' %}" class="btn btn-sm" style="background-color: #17a2b8; color: white;">
+                        <i class="fas fa-robot"></i> Shift Optimizer
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'audit_dashboard' %}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-shield-alt"></i> Audit & Compliance
+                    </a>
+                    <a href="{% url 'training_compliance_dashboard' %}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-graduation-cap"></i> Training Compliance
+                    </a>
+                    <a href="{% url 'staff_management' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-users-cog"></i> Staff Management
+                    </a>
+                    <a href="{% url 'staff_records:profile_list' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-address-book"></i> Staff Records
+                    </a>
+                    <a href="{% url 'global_search' %}" class="btn btn-light btn-sm text-dark">
+                        <i class="fas fa-search"></i> Search
+                    </a>
+                    <a href="{% url 'staff_guidance' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-book"></i> AI Guidance
+                    </a>
+                    <a href="{% url 'ai_assistant_page' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-robot"></i> AI Assistant
+                    </a>
+                    <a href="{% url 'careplan_manager_dashboard' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-clipboard-check"></i> Care Plans
+                    </a>
+                    <a href="{% url 'quality_audits:dashboard' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-chart-line"></i> PDSA Tracker
+                    </a>
+                    <a href="{% url 'overtime_preferences_list' %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-user-clock"></i> Overtime Preferences
+                    </a>
+                </div>
+                {% else %}
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'staff_dashboard' %}">
+                                <i class="fas fa-calendar"></i> My Rota
+                            </a>
+                        </li>
+                    </ul>
+                {% endif %}
+                
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                           style="color: #ffffff !important; 
+                                  font-weight: 600 !important; 
+                                  background: rgba(255,255,255,0.15) !important;
+                                  padding: 0.375rem 0.75rem !important; 
+                                  border-radius: 6px !important; 
+                                  border: 1px solid rgba(255,255,255,0.25) !important;">
+                            <i class="fas fa-user-circle me-1"></i>{{ user.full_name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item" style="background: none; border: none; cursor: pointer; text-align: left; width: 100%;">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+    </nav>
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container-fluid mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container-fluid mt-3" id="main-content" tabindex="-1">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- AI Assistant Widget (only for authenticated users) -->
+    {% if user.is_authenticated %}
+        {% include 'scheduling/ai_assistant_widget.html' %}
+    {% endif %}
+
+    <!-- Global Loading Spinner -->
+    <div id="global-spinner" class="spinner-overlay">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <p class="spinner-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light border-top mt-5 py-4" id="footer" tabindex="-1">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-muted">
+                        <small>&copy; {% now "Y" %} Glasgow HSCP - Staff Rota Management System</small>
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-0 text-muted">
+                        <small>
+                            <a href="#" class="text-muted text-decoration-none me-3">Privacy Policy</a>
+                            <a href="#" class="text-muted text-decoration-none me-3">Accessibility</a>
+                            <a href="#" class="text-muted text-decoration-none">Help</a>
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js for Dashboard Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Chart Helpers Library v2 - with colors support -->
+    <script src="{% static 'scheduling/js/chart-helpers-v2.js' %}"></script>
+    
+    <!-- Chart.js Configuration with Design System Colors -->
+    <script src="{% static 'js/chart-config.js' %}?v=2.1"></script>
+    
+    <!-- Responsive Tables JavaScript -->
+    <script src="{% static 'js/responsive-tables.js' %}?v=1.0"></script>
+    
+    <!-- WCAG Color Contrast Checker (Development Tool) -->
+    <script src="{% static 'js/color-contrast-checker.js' %}?v=1.0"></script>
+    
+    <!-- Global Spinner JavaScript -->
+    <script>
+        // Global loading spinner functions
+        window.showSpinner = function(text = 'Loading...') {
+            const spinner = document.getElementById('global-spinner');
+            const spinnerText = spinner.querySelector('.spinner-text');
+            if (spinnerText) {
+                spinnerText.textContent = text;
+            }
+            spinner.classList.add('active');
+        };
+
+        window.hideSpinner = function() {
+            const spinner = document.getElementById('global-spinner');
+            spinner.classList.remove('active');
+        };
+
+        // Auto-show spinner on form submissions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show spinner on form submissions
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    // Skip if form has data-no-spinner attribute
+                    if (!this.hasAttribute('data-no-spinner')) {
+                        showSpinner('Submitting...');
+                    }
+                });
+            });
+
+            // Show spinner on AJAX requests (if using fetch)
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                showSpinner();
+                return originalFetch.apply(this, args)
+                    .finally(() => {
+                        hideSpinner();
+                    });
+            };
+
+            // Show spinner on XMLHttpRequest (if using jQuery AJAX)
+            if (window.jQuery) {
+                $(document).ajaxStart(function() {
+                    showSpinner();
+                }).ajaxStop(function() {
+                    hideSpinner();
+                });
+            }
+        });
+    </script>
+    
+    <!-- PWA Install Prompt -->
+    <script>
+        // Global PWA Debug Functions (available immediately)
+        window.checkPWAStatus = async function() {
+            console.log('🔍 === PWA STATUS CHECK ===');
+            console.log('📱 User Agent:', navigator.userAgent);
+            console.log('🔧 Service Worker Support:', 'serviceWorker' in navigator);
+            console.log('📦 Cache Support:', 'caches' in window);
+            
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.getRegistration();
+                console.log('📋 SW Registration:', registration ? 'Found' : 'Not found');
+                if (registration) {
+                    console.log('  - Scope:', registration.scope);
+                    console.log('  - Active:', registration.active ? 'Yes' : 'No');
+                    console.log('  - Installing:', registration.installing ? 'Yes' : 'No');
+                    console.log('  - Waiting:', registration.waiting ? 'Yes' : 'No');
+                }
+            }
+            
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                console.log('💾 Available Caches:', cacheNames.length > 0 ? cacheNames : 'NONE');
+                for (const cacheName of cacheNames) {
+                    const cache = await caches.open(cacheName);
+                    const requests = await cache.keys();
+                    console.log(`📦 "${cacheName}": ${requests.length} items`);
+                    requests.slice(0, 5).forEach(req => console.log('  -', req.url));
+                    if (requests.length > 5) console.log(`  ... and ${requests.length - 5} more`);
+                }
+            }
+            
+            console.log('✅ Status check complete');
+        };
+        
+        window.checkCacheStatus = window.checkPWAStatus; // Alias for backward compatibility
+        
+        // PWA Install Prompt Functionality with Analytics
+        let deferredPrompt;
+        const pwaInstallKey = 'pwa-install-dismissed';
+        const pwaAnalyticsKey = 'pwa-analytics';
+        
+        // Analytics helper function
+        function trackPWAEvent(eventName, eventData = {}) {
+            const analytics = JSON.parse(localStorage.getItem(pwaAnalyticsKey) || '[]');
+            analytics.push({
+                event: eventName,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                standalone: window.matchMedia('(display-mode: standalone)').matches,
+                ...eventData
+            });
+            
+            // Keep only last 100 events
+            if (analytics.length > 100) {
+                analytics.shift();
+            }
+            
+            localStorage.setItem(pwaAnalyticsKey, JSON.stringify(analytics));
+            console.log(`[PWA Analytics] ${eventName}:`, eventData);
+        }
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            
+            trackPWAEvent('install_prompt_available');
+            
+            // Check if user has dismissed the prompt before
+            if (localStorage.getItem(pwaInstallKey)) {
+                trackPWAEvent('install_prompt_previously_dismissed');
+                return;
+            }
+            
+            // Show custom install button/banner after 5 seconds
+            setTimeout(() => {
+                trackPWAEvent('install_banner_shown');
+                showPWAInstallBanner();
+            }, 5000);
+        });
+        
+        function showPWAInstallBanner() {
+            // Create install banner
+            const banner = document.createElement('div');
+            banner.id = 'pwa-install-banner';
+            banner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, var(--primary-color, #0066FF) 0%, var(--secondary-color, #00C853) 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 102, 255, 0.3);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                max-width: 90%;
+                animation: slideUp 0.3s ease-out;
+            `;
+            
+            banner.innerHTML = `
+                <i class="fas fa-mobile-alt" style="font-size: 1.5rem;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Install Staff Rota App</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">Add to home screen for quick access</div>
+                </div>
+                <button id="pwa-install-btn" style="
+                    background: white;
+                    color: var(--primary-color, #0066FF);
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                ">Install</button>
+                <button id="pwa-dismiss-btn" style="
+                    background: transparent;
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    cursor: pointer;
+                    opacity: 0.8;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Add animation keyframes
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideUp {
+                    from {
+                        transform: translateX(-50%) translateY(100px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(-50%) translateY(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(banner);
+            
+            // Install button click
+            document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+                trackPWAEvent('install_button_clicked');
+                banner.remove();
+                if (!deferredPrompt) {
+                    trackPWAEvent('install_prompt_not_available');
+                    return;
+                }
+                
+                // Show the install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for the user to respond to the prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`PWA install prompt outcome: ${outcome}`);
+                
+                trackPWAEvent('install_prompt_response', { 
+                    outcome: outcome,
+                    accepted: outcome === 'accepted'
+                });
+                
+                // Clear the deferredPrompt
+                deferredPrompt = null;
+            });
+            
+            // Dismiss button click
+            document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+                trackPWAEvent('install_banner_dismissed');
+                banner.remove();
+                localStorage.setItem(pwaInstallKey, 'true');
+            });
+        }
+        
+        // Log when PWA is installed
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA installed successfully');
+            trackPWAEvent('app_installed_successfully');
+            localStorage.setItem(pwaInstallKey, 'true');
+        });
+        
+        // Detect if running as PWA
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isPWA) {
+            console.log('Running as PWA');
+            document.documentElement.classList.add('pwa-mode');
+            trackPWAEvent('app_launched_as_pwa');
+        } else {
+            trackPWAEvent('app_launched_in_browser');
+        }
+        
+        // Track page visibility changes (app switching)
+        document.addEventListener('visibilitychange', () => {
+            if (isPWA) {
+                trackPWAEvent('pwa_visibility_change', {
+                    visible: !document.hidden
+                });
+            }
+        });
+        
+        // Add function to view analytics (for debugging)
+        window.viewPWAAnalytics = function() {
+            const analytics = JSON.parse(localStorage.getItem(pwaAnalyticsKey) || '[]');
+            console.table(analytics);
+            return analytics;
+        };
+        
+        console.log('[PWA] Analytics tracking enabled. Use viewPWAAnalytics() to see data.');
+    </script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Check if running in standalone mode (PWA)
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                   window.navigator.standalone === true;
+                
+                console.log('🔍 PWA Detection:');
+                console.log('  - User Agent:', navigator.userAgent);
+                console.log('  - Is Standalone:', isStandalone);
+                console.log('  - Display Mode:', window.matchMedia('(display-mode: standalone)').matches);
+                console.log('  - iOS Standalone:', window.navigator.standalone);
+                
+                if (!isStandalone && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    console.log('📱 iOS Safari detected in browser mode');
+                    console.log('💡 Service Worker will activate once app is added to home screen');
+                    console.log('📌 Tap Share (⬆️) → "Add to Home Screen" to enable offline mode');
+                    return; // Skip SW registration in iOS Safari browser mode
+                }
+                
+                console.log('🚀 Registering Service Worker...');
+                navigator.serviceWorker.register("/service-worker.js?v=1.8", { 
+                    scope: '/',
+                    updateViaCache: 'none'  // Always fetch fresh service worker
+                })
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered successfully!');
+                        console.log('   Scope:', registration.scope);
+                        console.log('   Active:', registration.active ? 'Yes' : 'Waiting to activate';
+                        console.log('   Installing:', registration.installing ? 'Yes' : 'No');
+                        
+                        // Force update check
+                        registration.update().then(() => {
+                            console.log('🔄 Checked for SW updates');
+                        });
+                        
+                        // iOS: Pre-cache important pages for offline access
+                        if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+                            console.log('📱 iOS PWA DETECTED in standalone mode!');
+                            console.log('🔄 Waiting for Service Worker to be ready...');
+                            
+                            // Wait for SW to be ready before pre-caching
+                            navigator.serviceWorker.ready.then(() => {
+                                console.log('✅ Service Worker is READY!');
+                                preCacheImportantPages();
+                                
+                                // Check cache after 2 seconds
+                                setTimeout(() => {
+                                    console.log('🔍 Checking cache status...');
+                                    checkCacheStatus();
+                                }, 2000);
+                            });
+                        }
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            console.log('🔄 Service Worker update found');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available, show update notification
+                                    showUpdateNotification(newWorker);
+                                }
+                            });
+                        });
+                        
+                        // Handle controller change (new SW activated)
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            console.log('⚡ Service Worker controller changed');
+                            // Optionally reload to use new service worker
+                            // window.location.reload();
+                        });
+                        
+                        // Register background sync for offline forms
+                        if ('sync' in registration) {
+                            console.log('✅ Background Sync supported');
+                        }
+                        
+                        // Request notification permission for push updates
+                        if ('Notification' in window && Notification.permission === 'default') {
+                            // Don't auto-request - wait for user action
+                            console.log('ℹ️ Notification permission not yet requested');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+                
+                // Pre-cache important pages for offline use (iOS enhancement)
+                async function preCacheImportantPages() {
+                    console.log('📦 Pre-cache function started');
+                    const pagesToCache = [
+                        {% if user.role.is_management %}
+                        '{% url "manager_dashboard" %}',
+                        '{% url "rota_view" %}',
+                        '{% url "reports_dashboard" %}',
+                        {% else %}
+                        '{% url "staff_dashboard" %}',
+                        {% endif %}
+                    ];
+                    
+                    console.log('📋 Pages to cache:', pagesToCache);
+                    
+                    try {
+                        for (const url of pagesToCache) {
+                            try {
+                                console.log(`🔄 Fetching ${url}...`);
+                                const response = await fetch(url, { 
+                                    credentials: 'include',
+                                    cache: 'no-cache'
+                                });
+                                console.log(`✅ Fetched ${url} (Status: ${response.status})`);
+                            } catch (err) {
+                                console.error(`❌ Failed to fetch ${url}:`, err);
+                            }
+                        }
+                        console.log('🎉 Pre-caching complete!');
+                    } catch (error) {
+                        console.error('❌ Pre-caching failed:', error);
+                    }
+                }
+                
+                // Debug function to check cache status
+                async function checkCacheStatus() {
+                    try {
+                        const cacheNames = await caches.keys();
+                        console.log('💾 Available caches:', cacheNames);
+                        
+                        for (const cacheName of cacheNames) {
+                            const cache = await caches.open(cacheName);
+                            const requests = await cache.keys();
+                            console.log(`📦 Cache "${cacheName}" contains ${requests.length} items:`);
+                            requests.forEach(req => console.log('  -', req.url));
+                        }
+                        
+                        if (cacheNames.length === 0) {
+                            console.warn('⚠️ NO CACHES FOUND! Service worker may not have installed correctly.');
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to check cache:', error);
+                    }
+                }
+                
+                // Make checkCacheStatus available globally for manual debugging
+                window.checkCacheStatus = checkCacheStatus;
+                
+                // Listen for online/offline events
+                window.addEventListener('online', () => {
+                    console.log('🟢 Back online');
+                    showToast('You\'re back online!', 'success');
+                });
+                
+                window.addEventListener('offline', () => {
+                    console.log('🔴 Gone offline');
+                    showToast('You\'re offline. Some features may be limited.', 'warning');
+                });
+            });
+            
+            // Show update notification
+            function showUpdateNotification(newWorker) {
+                const updateBanner = document.createElement('div');
+                updateBanner.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 24px rgba(0, 200, 83, 0.4);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    animation: slideDown 0.3s ease-out;
+                `;
+                
+                updateBanner.innerHTML = `
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                    <div style="flex: 1;">
+                        <strong>Update Available</strong>
+                        <div style="font-size: 0.9em; opacity: 0.95;">A new version is ready to install</div>
+                    </div>
+                    <button id="sw-update-btn" style="
+                        background: white;
+                        color: #00C853;
+                        border: none;
+                        padding: 8px 20px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">Update Now</button>
+                    <button id="sw-dismiss-btn" style="
+                        background: transparent;
+                        color: white;
+                        border: 1px solid rgba(255,255,255,0.5);
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                    ">Later</button>
+                `;
+                
+                // Add animation
+                const style = document.createElement('style');
+                style.textContent = '@keyframes slideDown { from { top: -100px; opacity: 0; } to { top: 20px; opacity: 1; } }';
+                document.head.appendChild(style);
+                
+                document.body.appendChild(updateBanner);
+                
+                // Update button - activate new service worker
+                document.getElementById('sw-update-btn').addEventListener('click', () => {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    updateBanner.remove();
+                    
+                    // Reload after new SW takes control
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        window.location.reload();
+                    });
+                });
+                
+                // Dismiss button
+                document.getElementById('sw-dismiss-btn').addEventListener('click', () => {
+                    updateBanner.remove();
+                });
+            }
+            
+            // Toast notification helper
+            function showToast(message, type = 'info') {
+                const colors = {
+                    success: '#00C853',
+                    warning: '#FF6F00',
+                    info: '#0066FF',
+                    error: '#F44336'
+                };
+                
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: ${colors[type]};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease-out;
+                `;
+                toast.textContent = message;
+                
+                const style = document.createElement('style');
+                style.textContent = '@keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }';
+                document.head.appendChild(style);
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        } else {
+            console.warn('⚠️ Service Workers not supported in this browser');
+        }
+    </script>
+    
+    <!-- Skeleton Loader Utility -->
+    <script src="{% static 'js/skeleton-loader.js' %}?v=1.0"></script>
+    
+    {% block extra_js %}{% endblock %}
+
+
+    <!-- End of body and file -->
+</body>

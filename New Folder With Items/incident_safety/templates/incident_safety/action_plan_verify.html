@@ -1,0 +1,547 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Verify Action Plan - {{ action_plan.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .action-summary {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        margin-bottom: 2rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+
+    .summary-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .summary-value {
+        color: #1f2937;
+    }
+
+    .verification-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .verification-option {
+        padding: 1.5rem;
+        border: 3px solid #e5e7eb;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .verification-option input[type="radio"] {
+        display: none;
+    }
+
+    .verification-option:hover {
+        border-color: #667eea;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .verification-option input[type="radio"]:checked + .option-content {
+        font-weight: bold;
+    }
+
+    .verification-option.effective {
+        border-color: #10b981;
+        background: #d1fae5;
+    }
+
+    .verification-option.effective input[type="radio"]:checked ~ * {
+        color: #065f46;
+    }
+
+    .verification-option.partial {
+        border-color: #f59e0b;
+        background: #fef3c7;
+    }
+
+    .verification-option.partial input[type="radio"]:checked ~ * {
+        color: #854d0e;
+    }
+
+    .verification-option.not-effective {
+        border-color: #ef4444;
+        background: #fee2e2;
+    }
+
+    .verification-option.not-effective input[type="radio"]:checked ~ * {
+        color: #991b1b;
+    }
+
+    .option-icon {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .option-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .option-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: #ef4444;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .warning-box {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-success-custom {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .btn-success-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0;
+    }
+
+    .errorlist li {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .checklist-section {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1.5rem 0;
+    }
+
+    .checklist-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: white;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .checklist-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+    <!-- Header -->
+    <div class="verify-header">
+        <h1 class="mb-2">
+            <i class="bi bi-check-circle"></i> Verify Action Plan
+        </h1>
+        <h3 class="mb-0">{{ action_plan.reference_number }}</h3>
+    </div>
+
+    <!-- Action Plan Summary -->
+    <div class="action-summary">
+        <h5 class="mb-3">Action Plan Summary</h5>
+        <div class="summary-item">
+            <span class="summary-label">Problem:</span>
+            <span class="summary-value">{{ action_plan.problem_statement|truncatewords:15 }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Action:</span>
+            <span class="summary-value">{{ action_plan.action_description|truncatewords:15 }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Owner:</span>
+            <span class="summary-value">{{ action_plan.action_owner.get_full_name }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Target Date:</span>
+            <span class="summary-value">{{ action_plan.target_completion_date|date:"d M Y" }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Completion:</span>
+            <span class="summary-value">{{ action_plan.percent_complete }}%</span>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+        <strong><i class="bi bi-info-circle"></i> About Verification</strong>
+        <p class="mb-0 mt-1" style="color: #1e40af;">
+            Verification confirms that the action has been implemented as planned. Assess whether the action
+            has been effective in addressing the problem and achieving the expected outcome.
+        </p>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            <strong><i class="bi bi-exclamation-circle"></i> Form Errors:</strong>
+            <ul class="mb-0 mt-2">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Verification Checklist -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-list-check"></i> Verification Checklist
+            </div>
+
+            <div class="warning-box">
+                <strong><i class="bi bi-exclamation-triangle"></i> Before Verifying</strong>
+                <p class="mb-0 mt-1" style="color: #854d0e;">
+                    Confirm the following items have been completed before proceeding with verification.
+                </p>
+            </div>
+
+            <div class="checklist-section">
+                <div class="checklist-item">
+                    <input type="checkbox" id="check1" required>
+                    <label for="check1">Action has been fully implemented as described in the plan</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check2" required>
+                    <label for="check2">Supporting evidence of implementation has been documented</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check3" required>
+                    <label for="check3">All team members have confirmed their tasks are complete</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check4" required>
+                    <label for="check4">Sufficient time has passed to assess effectiveness</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check5" required>
+                    <label for="check5">Verification method (as specified) has been applied</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Outcome -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-clipboard-check"></i> Verification Outcome
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label required">Verification Result</label>
+                <div class="help-text mb-2">Select the outcome of your verification assessment</div>
+                
+                <div class="verification-options">
+                    <label class="verification-option effective">
+                        <input type="radio" name="verification_outcome" value="EFFECTIVE" required
+                               {% if form.verification_outcome.value == 'EFFECTIVE' %}checked{% endif %}>
+                        <div class="option-content">
+                            <div class="option-icon">✅</div>
+                            <div class="option-title">Effective</div>
+                            <div class="option-description">
+                                Action successfully addresses the problem
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="verification-option partial">
+                        <input type="radio" name="verification_outcome" value="PARTIALLY_EFFECTIVE"
+                               {% if form.verification_outcome.value == 'PARTIALLY_EFFECTIVE' %}checked{% endif %}>
+                        <div class="option-content">
+                            <div class="option-icon">⚠️</div>
+                            <div class="option-title">Partially Effective</div>
+                            <div class="option-description">
+                                Action helps but additional measures needed
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="verification-option not-effective">
+                        <input type="radio" name="verification_outcome" value="NOT_EFFECTIVE"
+                               {% if form.verification_outcome.value == 'NOT_EFFECTIVE' %}checked{% endif %}>
+                        <div class="option-content">
+                            <div class="option-icon">❌</div>
+                            <div class="option-title">Not Effective</div>
+                            <div class="option-description">
+                                Action did not address the problem
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                {% if form.verification_outcome.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.verification_outcome.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.verification_notes.id_for_label }}" class="form-label required">
+                    Verification Notes
+                </label>
+                {{ form.verification_notes }}
+                {% if form.verification_notes.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.verification_notes.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Provide detailed notes on your verification findings. Include:
+                    <ul class="mt-2">
+                        <li>Evidence reviewed</li>
+                        <li>Methods used for verification</li>
+                        <li>Assessment of effectiveness</li>
+                        <li>Recommendations for further action (if needed)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.verification_date.id_for_label }}" class="form-label required">
+                    Verification Date
+                </label>
+                {{ form.verification_date }}
+                {% if form.verification_date.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.verification_date.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Date when verification was completed
+                </div>
+            </div>
+        </div>
+
+        <!-- Effectiveness Review Planning -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-calendar-check"></i> Effectiveness Review (Optional)
+            </div>
+
+            <div class="info-box">
+                <strong><i class="bi bi-lightbulb"></i> Effectiveness Review</strong>
+                <p class="mb-0 mt-1" style="color: #1e40af;">
+                    Schedule a follow-up effectiveness review 3-6 months after implementation to assess
+                    long-term impact and sustained effectiveness of the action.
+                </p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.effectiveness_review_date.id_for_label }}" class="form-label">
+                        Effectiveness Review Date
+                    </label>
+                    {{ form.effectiveness_review_date }}
+                    {% if form.effectiveness_review_date.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.effectiveness_review_date.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="help-text">
+                        When should effectiveness be reviewed? (3-6 months recommended)
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.effectiveness_reviewed_by.id_for_label }}" class="form-label">
+                        Effectiveness Reviewer
+                    </label>
+                    {{ form.effectiveness_reviewed_by }}
+                    {% if form.effectiveness_reviewed_by.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.effectiveness_reviewed_by.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="help-text">
+                        Who will conduct the effectiveness review?
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% url 'incident_safety:action_plan_detail' action_plan.pk %}" class="btn btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-success-custom">
+                <i class="bi bi-check-circle"></i> Complete Verification
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+
+// Auto-fill current date for verification_date if empty
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[name="verification_date"]');
+    if (dateInput && !dateInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+    }
+
+    // Set effectiveness review date to 3 months from today by default
+    const reviewInput = document.querySelector('input[name="effectiveness_review_date"]');
+    if (reviewInput && !reviewInput.value) {
+        const threeMonths = new Date();
+        threeMonths.setMonth(threeMonths.getMonth() + 3);
+        const year = threeMonths.getFullYear();
+        const month = String(threeMonths.getMonth() + 1).padStart(2, '0');
+        const day = String(threeMonths.getDate()).padStart(2, '0');
+        reviewInput.value = `${year}-${month}-${day}`;
+    }
+});
+</script>
+{% endblock %}

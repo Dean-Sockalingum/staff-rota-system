@@ -1,0 +1,107 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Messages - Family Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-inbox"></i> My Messages</h2>
+                <div>
+                    <a href="{% url 'experience_feedback:family_message_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Message
+                    </a>
+                    <a href="{% url 'experience_feedback:family_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Messages</option>
+                                <option value="unanswered" {% if status_filter == 'unanswered' %}selected{% endif %}>Awaiting Response</option>
+                                <option value="answered" {% if status_filter == 'answered' %}selected{% endif %}>Responded</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                <option value="GENERAL" {% if category_filter == 'GENERAL' %}selected{% endif %}>General Enquiry</option>
+                                <option value="CARE" {% if category_filter == 'CARE' %}selected{% endif %}>Care Question</option>
+                                <option value="MEDICAL" {% if category_filter == 'MEDICAL' %}selected{% endif %}>Medical Information</option>
+                                <option value="VISIT" {% if category_filter == 'VISIT' %}selected{% endif %}>Visit Arrangement</option>
+                                <option value="ACTIVITIES" {% if category_filter == 'ACTIVITIES' %}selected{% endif %}>Activities & Social</option>
+                                <option value="FEEDBACK" {% if category_filter == 'FEEDBACK' %}selected{% endif %}>Feedback</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages List -->
+    <div class="row">
+        <div class="col-12">
+            {% if messages %}
+                <div class="list-group">
+                    {% for message in messages %}
+                        <a href="{% url 'experience_feedback:family_message_detail' message.id %}" 
+                           class="list-group-item list-group-item-action {% if not message.staff_responded %}list-group-item-warning{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ message.subject }}</h5>
+                                <small>{{ message.sent_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ message.message|truncatewords:30 }}</p>
+                            <small>
+                                <span class="badge bg-secondary">{{ message.get_category_display }}</span>
+                                <span class="badge {% if message.priority == 'URGENT' %}bg-danger{% elif message.priority == 'HIGH' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ message.get_priority_display }}
+                                </span>
+                                {% if message.staff_responded %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> Responded {{ message.response_time_days }} days after
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock"></i> Awaiting response ({{ message.days_since_sent }} days)
+                                    </span>
+                                {% endif %}
+                            </small>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-inbox fa-5x text-muted mb-3 opacity-25"></i>
+                        <h4 class="text-muted">No messages found</h4>
+                        <p class="text-muted">You haven't sent any messages yet.</p>
+                        <a href="{% url 'experience_feedback:family_message_create' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus"></i> Send Your First Message
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Collaboration Dashboard - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .notification-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .notification-unread {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196F3;
+    }
+    .notification-urgent {
+        border-left-color: #f44336 !important;
+    }
+    .notification-high {
+        border-left-color: #ff9800 !important;
+    }
+    .message-card {
+        border-left: 3px solid #4caf50;
+        transition: all 0.3s ease;
+    }
+    .message-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .message-important {
+        border-left-color: #f44336;
+    }
+    .activity-item {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s;
+    }
+    .activity-item:hover {
+        background-color: #f5f5f5;
+    }
+    .online-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .online-indicator.online {
+        background-color: #4caf50;
+        animation: pulse 2s infinite;
+    }
+    .online-indicator.away {
+        background-color: #ff9800;
+    }
+    .online-indicator.busy {
+        background-color: #f44336;
+    }
+    .online-indicator.offline {
+        background-color: #9e9e9e;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .stats-card {
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .badge-priority-urgent {
+        background-color: #f44336;
+        color: white;
+    }
+    .badge-priority-high {
+        background-color: #ff9800;
+        color: white;
+    }
+    .badge-priority-normal {
+        background-color: #2196F3;
+        color: white;
+    }
+    .badge-priority-low {
+        background-color: #9e9e9e;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="display-4">
+                <i class="fas fa-users"></i> Collaboration Dashboard
+            </h1>
+            <p class="lead">Real-time notifications, messages, and activity tracking</p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <a href="{% url 'send_message' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-envelope"></i> Send Message
+            </a>
+            <a href="{% url 'notifications_list' %}" class="btn btn-info btn-lg">
+                <i class="fas fa-bell"></i> All Notifications
+            </a>
+            <a href="{% url 'messages_inbox' %}" class="btn btn-success btn-lg">
+                <i class="fas fa-inbox"></i> Message Inbox
+            </a>
+            <a href="{% url 'activity_feed' %}" class="btn btn-warning btn-lg">
+                <i class="fas fa-stream"></i> Activity Feed
+            </a>
+            <a href="{% url 'online_users_list' %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-user-circle"></i> Online Users
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card bg-danger text-white">
+                <h2 class="display-4">{{ notification_summary.total_unread }}</h2>
+                <p class="mb-0"><i class="fas fa-bell"></i> Unread Notifications</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card bg-warning text-white">
+                <h2 class="display-4">{{ notification_summary.urgent }}</h2>
+                <p class="mb-0"><i class="fas fa-exclamation-circle"></i> Urgent Items</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card bg-success text-white">
+                <h2 class="display-4">{{ recent_messages|length }}</h2>
+                <p class="mb-0"><i class="fas fa-envelope"></i> Recent Messages</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card bg-info text-white">
+                <h2 class="display-4">{{ online_count }}</h2>
+                <p class="mb-0"><i class="fas fa-user-circle"></i> Online Users</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Your Presence Status -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-signal"></i> Your Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <span class="online-indicator {{ user_presence.status_code|lower }}"></span>
+                        <strong>{{ user_presence.status }}</strong>
+                        {% if user_presence.status_emoji %}
+                            {{ user_presence.status_emoji }}
+                        {% endif %}
+                        {% if user_presence.custom_status %}
+                            - {{ user_presence.custom_status }}
+                        {% endif %}
+                    </p>
+                    <p class="text-muted mb-0">
+                        Last seen: {{ user_presence.last_seen|timesince }} ago
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Notifications Column -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell"></i> Recent Notifications
+                        {% if notification_summary.total_unread > 0 %}
+                            <span class="badge badge-danger float-right">{{ notification_summary.total_unread }} unread</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_notifications %}
+                        <div class="list-group list-group-flush">
+                            {% for notification in recent_notifications %}
+                                <a href="{% url 'mark_notification_read' notification.id %}" 
+                                   class="list-group-item list-group-item-action notification-card {% if not notification.is_read %}notification-unread{% endif %} {% if notification.priority == 'URGENT' %}notification-urgent{% elif notification.priority == 'HIGH' %}notification-high{% endif %}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            {% if not notification.is_read %}
+                                                <i class="fas fa-circle text-primary" style="font-size: 8px;"></i>
+                                            {% endif %}
+                                            {{ notification.title }}
+                                        </h6>
+                                        <small>{{ notification.created_at|timesince }} ago</small>
+                                    </div>
+                                    <p class="mb-1">{{ notification.message|truncatewords:20 }}</p>
+                                    <div>
+                                        <span class="badge badge-priority-{{ notification.priority|lower }}">
+                                            {{ notification.get_priority_display }}
+                                        </span>
+                                        <span class="badge badge-secondary">
+                                            {{ notification.get_notification_type_display }}
+                                        </span>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                            <p>No recent notifications</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'notifications_list' %}" class="btn btn-sm btn-primary">
+                        View All Notifications
+                    </a>
+                    {% if notification_summary.total_unread > 0 %}
+                        <form method="post" action="{% url 'mark_all_notifications_read' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="fas fa-check"></i> Mark All Read
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Messages Column -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-envelope"></i> Recent Messages</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_messages %}
+                        <div class="list-group list-group-flush">
+                            {% for message in recent_messages %}
+                                <a href="{% url 'message_detail' message.id %}" 
+                                   class="list-group-item list-group-item-action message-card {% if message.is_important %}message-important{% endif %}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            {% if message.is_important %}
+                                                <i class="fas fa-exclamation-circle text-danger"></i>
+                                            {% endif %}
+                                            {{ message.subject|default:"No subject" }}
+                                        </h6>
+                                        <small>{{ message.created_at|timesince }} ago</small>
+                                    </div>
+                                    <p class="mb-1">
+                                        <strong>From:</strong> {{ message.sender.get_full_name|default:message.sender.username }}
+                                    </p>
+                                    <p class="mb-1 text-muted">{{ message.content|truncatewords:15 }}</p>
+                                    <span class="badge badge-info">{{ message.get_message_type_display }}</span>
+                                    {% if message.thread_id %}
+                                        <span class="badge badge-secondary">
+                                            <i class="fas fa-comments"></i> Thread
+                                        </span>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>No recent messages</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'messages_inbox' %}" class="btn btn-sm btn-success">
+                        View Message Inbox
+                    </a>
+                    <a href="{% url 'send_message' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Feed Row -->
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-stream"></i> Recent Activity Feed</h5>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    {% if activity_feed %}
+                        {% for activity in activity_feed %}
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge badge-{{ activity.activity_type|slice:':5'|lower == 'shift' and 'primary' or activity.activity_type|slice:':5'|lower == 'leave' and 'success' or activity.activity_type|slice:':4'|lower == 'swap' and 'info' or activity.activity_type|slice:':4'|lower == 'user' and 'secondary' or 'warning' }}">
+                                            {{ activity.get_activity_type_display }}
+                                        </span>
+                                        <strong>
+                                            {% if activity.user %}
+                                                {{ activity.user.get_full_name|default:activity.user.username }}
+                                            {% else %}
+                                                System
+                                            {% endif %}
+                                        </strong>
+                                        - {{ activity.description }}
+                                        {% if activity.care_home %}
+                                            <span class="text-muted">@ {{ activity.care_home.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="fas fa-stream fa-3x mb-3"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'activity_feed' %}" class="btn btn-sm btn-warning">
+                        View Full Activity Feed
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh notification count every 30 seconds
+    setInterval(function() {
+        fetch('{% url "notifications_list" %}')
+            .then(response => response.text())
+            .then(html => {
+                // Could update notification count badge dynamically
+                console.log('Notifications checked');
+            });
+    }, 30000);
+
+    // Update user presence status
+    function updatePresence(status) {
+        fetch('{% url "update_presence" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                status: status,
+                current_page: window.location.pathname
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Presence updated:', data.status);
+            }
+        });
+    }
+
+    // Update presence on page load
+    updatePresence('ONLINE');
+
+    // Update presence every 2 minutes
+    setInterval(function() {
+        updatePresence('ONLINE');
+    }, 120000);
+
+    // Set presence to AWAY when page is hidden
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            updatePresence('AWAY');
+        } else {
+            updatePresence('ONLINE');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Submit Training Record{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .form-section h5 {
+        color: #495057;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .required-field::after {
+        content: " *";
+        color: #e74c3c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-graduation-cap"></i> Submit Training Record</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="training-form" data-autosave="true" data-autosave-key="training-record">
+                        {% csrf_token %}
+                        
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        <!-- Training Details Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-book"></i> Training Details</h5>
+                            
+                            <div class="mb-3">
+                                <label for="course" class="form-label required-field">Training Course</label>
+                                <select name="course" id="course" class="form-select" required>
+                                    <option value="">-- Select Training Course --</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.name }} ({{ course.get_category_display }})</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select the training course you completed</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="completion_date" class="form-label required-field">Completion Date</label>
+                                <input type="date" name="completion_date" id="completion_date" class="form-control" required>
+                                <small class="form-text text-muted">The date you completed the training</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="trainer_name" class="form-label">Trainer Name</label>
+                                        <input type="text" name="trainer_name" id="trainer_name" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="training_provider" class="form-label">Training Provider</label>
+                                        <input type="text" name="training_provider" id="training_provider" class="form-control" placeholder="e.g., NHS, SSSC, Care Academy">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="certificate_number" class="form-label">Certificate Number</label>
+                                <input type="text" name="certificate_number" id="certificate_number" class="form-control">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="certificate_file" class="form-label">Upload Certificate</label>
+                                <input type="file" name="certificate_file" id="certificate_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                <small class="form-text text-muted">Upload a scanned copy or photo of your training certificate (PDF, JPG, PNG)</small>
+                            </div>
+                        </div>
+
+                        <!-- SSSC CPD Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-certificate"></i> SSSC CPD Information</h5>
+                            
+                            <div class="mb-3">
+                                <label for="sssc_cpd_hours" class="form-label">SSSC CPD Hours Claimed</label>
+                                <input type="number" name="sssc_cpd_hours" id="sssc_cpd_hours" class="form-control" step="0.5" min="0" max="100" placeholder="e.g., 3.5">
+                                <small class="form-text text-muted">
+                                    Enter the number of CPD hours you wish to claim for this training. 
+                                    SSSC registered workers must complete 35 hours CPD annually.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-sticky-note"></i> Additional Notes</h5>
+                            
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Any additional information about this training..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'my_training_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Submit Training Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Can't find your training course?</strong></p>
+                    <p>Contact your manager or the training coordinator to have the course added to the system.</p>
+                    
+                    <p class="mt-3"><strong>Don't have your certificate yet?</strong></p>
+                    <p>You can submit the record now and upload the certificate later by editing this record.</p>
+                    
+                    <p class="mt-3"><strong>How are expiry dates calculated?</strong></p>
+                    <p>Expiry dates are automatically calculated based on the course's validity period (e.g., annual training expires 1 year from completion).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/form-autosave.js' %}"></script>
+{% endblock %}

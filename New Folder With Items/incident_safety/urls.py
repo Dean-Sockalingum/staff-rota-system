@@ -1,0 +1,63 @@
+"""
+URL Configuration for Incident & Safety Management (TQM Module 2)
+
+This module defines URL patterns for:
+- Root Cause Analysis (RCA)
+- Corrective & Preventive Actions (CAPA)
+- Duty of Candour Records
+- Incident Trend Analysis
+
+All URLs are prefixed with /incident-safety/ in the main project URLconf.
+"""
+
+from django.urls import path
+from . import views
+
+app_name = 'incident_safety'
+
+urlpatterns = [
+    # Dashboard
+    path('', views.IncidentSafetyDashboardView.as_view(), name='dashboard'),
+    
+    # Root Cause Analysis URLs
+    path('rca/', views.RCAListView.as_view(), name='rca_list'),
+    path('rca/create/<int:incident_id>/', views.RCACreateView.as_view(), name='rca_create'),
+    path('rca/<int:pk>/', views.RCADetailView.as_view(), name='rca_detail'),
+    path('rca/<int:pk>/update/', views.RCAUpdateView.as_view(), name='rca_update'),
+    path('rca/<int:pk>/delete/', views.RCADeleteView.as_view(), name='rca_delete'),
+    path('rca/<int:pk>/fishbone/', views.rca_fishbone_view, name='rca_fishbone'),
+    path('rca/<int:pk>/five-whys/', views.rca_five_whys_view, name='rca_five_whys'),
+    path('rca/<int:pk>/progress/', views.rca_progress_update, name='rca_progress'),
+    
+    # CAPA URLs
+    path('action-plan/', views.SafetyActionPlanListView.as_view(), name='action_plan_list'),
+    path('action-plan/create/<int:incident_id>/', views.SafetyActionPlanCreateView.as_view(), name='action_plan_create'),
+    path('action-plan/<int:pk>/', views.SafetyActionPlanDetailView.as_view(), name='action_plan_detail'),
+    path('action-plan/<int:pk>/update/', views.SafetyActionPlanUpdateView.as_view(), name='action_plan_update'),
+    path('action-plan/<int:pk>/delete/', views.SafetyActionPlanDeleteView.as_view(), name='action_plan_delete'),
+    path('action-plan/<int:pk>/verify/', views.SafetyActionPlanVerifyView.as_view(), name='action_plan_verify'),
+    
+    # Duty of Candour URLs
+    path('doc/', views.DoCListView.as_view(), name='doc_list'),
+    path('doc/create/<int:incident_id>/', views.DoCCreateView.as_view(), name='doc_create'),
+    path('doc/<int:pk>/', views.DoCDetailView.as_view(), name='doc_detail'),
+    path('doc/<int:pk>/update/', views.DoCUpdateView.as_view(), name='doc_update'),
+    path('doc/<int:pk>/delete/', views.DoCDeleteView.as_view(), name='doc_delete'),
+    path('doc/<int:pk>/add-communication/', views.DoCAddCommunicationView.as_view(), name='doc_add_communication'),
+    path('doc/<int:pk>/workflow/', views.doc_workflow_tracker, name='doc_workflow'),
+    
+    # Learning Repository
+    path('learning/', views.learning_repository_view, name='learning_repository'),
+    
+    # Incident Trend Analysis URLs
+    path('trends/', views.TrendAnalysisListView.as_view(), name='trend_list'),
+    path('trends/create/', views.TrendAnalysisCreateView.as_view(), name='trend_create'),
+    path('trends/<int:pk>/', views.TrendAnalysisDetailView.as_view(), name='trend_detail'),
+    path('trends/<int:pk>/delete/', views.TrendAnalysisDeleteView.as_view(), name='trend_delete'),
+    path('trends/dashboard/', views.trend_analysis_dashboard, name='trend_dashboard'),
+    
+    # Analytics & Reports
+    path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
+    path('reports/', views.ReportsView.as_view(), name='reports'),
+    path('reports/export-action-plan/', views.ExportSafetyActionPlanView.as_view(), name='export_capa'),
+]

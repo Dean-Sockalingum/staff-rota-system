@@ -1,0 +1,430 @@
+/**
+ * Design System - Staff Rota Management System
+ * Version: 3.0 (Modern UX Update - December 2025)
+ * 
+ * This file contains all design tokens (CSS custom properties) used throughout
+ * the application. Modify values here to update the entire design system.
+ */
+
+:root {
+  /* ========================================
+     COLOR SYSTEM - 2024 Modern Palette
+     ======================================== */
+  
+  /* Primary Colors - Vibrant Blue */
+  --color-primary-50: #E3F2FD;
+  --color-primary-100: #BBDEFB;
+  --color-primary-200: #90CAF9;
+  --color-primary-300: #64B5F6;
+  --color-primary-400: #42A5F5;
+  --color-primary-500: #0066FF;  /* Main primary */
+  --color-primary-600: #1E88E5;
+  --color-primary-700: #1976D2;
+  --color-primary-800: #1565C0;
+  --color-primary-900: #0D47A1;
+  
+  /* Secondary Colors - Fresh Green */
+  --color-secondary-50: #E8F5E9;
+  --color-secondary-100: #C8E6C9;
+  --color-secondary-200: #A5D6A7;
+  --color-secondary-300: #81C784;
+  --color-secondary-400: #66BB6A;
+  --color-secondary-500: #00C853;  /* Main secondary */
+  --color-secondary-600: #43A047;
+  --color-secondary-700: #388E3C;
+  --color-secondary-800: #2E7D32;
+  --color-secondary-900: #1B5E20;
+  
+  /* Accent Colors - Energetic Orange */
+  --color-accent-50: #FFF3E0;
+  --color-accent-100: #FFE0B2;
+  --color-accent-200: #FFCC80;
+  --color-accent-300: #FFB74D;
+  --color-accent-400: #FFA726;
+  --color-accent-500: #FF6F00;  /* Main accent */
+  --color-accent-600: #FB8C00;
+  --color-accent-700: #F57C00;
+  --color-accent-800: #EF6C00;
+  --color-accent-900: #E65100;
+  
+  /* Semantic Colors - Full Palette */
+  --color-success-50: #E8F5E9;
+  --color-success-100: #C8E6C9;
+  --color-success-200: #A5D6A7;
+  --color-success-300: #81C784;
+  --color-success-400: #66BB6A;
+  --color-success-500: #2E7D32;  /* Updated from #4CAF50 for WCAG AA (7.2:1) */
+  --color-success-600: #43A047;
+  --color-success-700: #388E3C;
+  --color-success-800: #2E7D32;
+  --color-success-900: #1B5E20;
+  
+  --color-warning-50: #FFF8E1;
+  --color-warning-100: #FFECB3;
+  --color-warning-200: #FFE082;
+  --color-warning-300: #FFD54F;
+  --color-warning-400: #FFCA28;
+  --color-warning-500: #E65100;  /* Updated for WCAG AA (5.9:1) - dark amber for white text */
+  --color-warning-600: #FFB300;
+  --color-warning-700: #FFA000;
+  --color-warning-800: #FF8F00;
+  --color-warning-900: #FF6F00;
+  
+  --color-danger-50: #FFEBEE;
+  --color-danger-100: #FFCDD2;
+  --color-danger-200: #EF9A9A;
+  --color-danger-300: #E57373;
+  --color-danger-400: #EF5350;
+  --color-danger-500: #C62828;  /* Updated from #F44336 for WCAG AA (5.9:1) */
+  --color-danger-600: #E53935;
+  --color-danger-700: #D32F2F;
+  --color-danger-800: #C62828;
+  --color-danger-900: #B71C1C;
+  
+  --color-info-50: #E3F2FD;
+  --color-info-100: #BBDEFB;
+  --color-info-200: #90CAF9;
+  --color-info-300: #64B5F6;
+  --color-info-400: #42A5F5;
+  --color-info-500: #2196F3;
+  --color-info-600: #1E88E5;
+  --color-info-700: #1976D2;
+  --color-info-800: #1565C0;
+  --color-info-900: #0D47A1;
+  
+  /* Neutral Colors - Gray Scale */
+  --color-neutral-0: #FFFFFF;
+  --color-neutral-50: #FAFBFC;
+  --color-neutral-100: #F5F7FA;
+  --color-neutral-200: #E4E7EB;
+  --color-neutral-300: #CBD2D9;
+  --color-neutral-400: #9AA5B1;
+  --color-neutral-500: #52606D;  /* Updated from #7B8794 for WCAG AA (5.8:1) */
+  --color-neutral-600: #616E7C;
+  --color-neutral-700: #52606D;
+  --color-neutral-800: #3E4C59;
+  --color-neutral-900: #323F4B;
+  --color-neutral-1000: #1F2933;
+  
+  /* ========================================
+     TYPOGRAPHY SYSTEM
+     ======================================== */
+  
+  /* Font Families */
+  --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-monospace: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  
+  /* Font Sizes - Type Scale (Major Third - 1.250) */
+  --font-size-xs: 0.75rem;      /* 12px */
+  --font-size-sm: 0.875rem;     /* 14px */
+  --font-size-base: 1rem;       /* 16px - body text */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+  --font-size-4xl: 2.25rem;     /* 36px */
+  --font-size-5xl: 3rem;        /* 48px */
+  
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* Line Heights */
+  --line-height-tight: 1.2;     /* Headings */
+  --line-height-normal: 1.5;    /* UI elements */
+  --line-height-relaxed: 1.6;   /* Body text */
+  --line-height-loose: 1.8;     /* Long-form content */
+  
+  /* Letter Spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  
+  /* ========================================
+     SPACING SYSTEM - 4px Base Grid
+     ======================================== */
+  
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;   /* 4px */
+  --spacing-2: 0.5rem;    /* 8px */
+  --spacing-3: 0.75rem;   /* 12px */
+  --spacing-4: 1rem;      /* 16px */
+  --spacing-5: 1.25rem;   /* 20px */
+  --spacing-6: 1.5rem;    /* 24px */
+  --spacing-8: 2rem;      /* 32px */
+  --spacing-10: 2.5rem;   /* 40px */
+  --spacing-12: 3rem;     /* 48px */
+  --spacing-16: 4rem;     /* 64px */
+  --spacing-20: 5rem;     /* 80px */
+  --spacing-24: 6rem;     /* 96px */
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+  --radius-none: 0;
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-base: 0.375rem; /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;  /* Fully rounded */
+  
+  /* ========================================
+     SHADOWS - Elevation System
+     ======================================== */
+  
+  /* Card Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-base: 0 2px 8px 0 rgba(0, 0, 0, 0.1), 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px 0 rgba(0, 0, 0, 0.15), 0 4px 8px 0 rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 12px 36px 0 rgba(0, 0, 0, 0.18), 0 6px 12px 0 rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 20px 60px 0 rgba(0, 0, 0, 0.25), 0 10px 20px 0 rgba(0, 0, 0, 0.15);
+  
+  /* Hover Shadows */
+  --shadow-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+  
+  /* Focus Shadows */
+  --shadow-focus: 0 0 0 3px rgba(0, 102, 255, 0.3);
+  --shadow-focus-danger: 0 0 0 3px rgba(244, 67, 54, 0.3);
+  
+  /* Inner Shadows */
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  
+  /* ========================================
+     Z-INDEX SCALE
+     ======================================== */
+  
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+  --z-index-toast: 1080;
+  
+  /* ========================================
+     TRANSITIONS & ANIMATIONS
+     ======================================== */
+  
+  /* Durations */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  
+  /* Easing Functions */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Convenience Transitions */
+  --transition-base: all var(--duration-base) var(--ease-in-out);
+  --transition-fast: all var(--duration-fast) var(--ease-in-out);
+  --transition-slow: all var(--duration-slow) var(--ease-in-out);
+  
+  /* ========================================
+     COMPONENT-SPECIFIC TOKENS
+     ======================================== */
+  
+  /* Buttons */
+  --button-padding-y: var(--spacing-2);
+  --button-padding-x: var(--spacing-4);
+  --button-border-radius: var(--radius-md);
+  --button-font-weight: var(--font-weight-medium);
+  
+  /* Cards */
+  --card-padding: var(--spacing-6);
+  --card-border-radius: var(--radius-lg);
+  --card-shadow: var(--shadow-base);
+  
+  /* Forms */
+  --input-height: 2.5rem;
+  --input-padding-y: var(--spacing-2);
+  --input-padding-x: var(--spacing-3);
+  --input-border-radius: var(--radius-md);
+  --input-border-color: var(--color-neutral-300);
+  --input-focus-border-color: var(--color-primary-500);
+  
+  /* Modals */
+  --modal-backdrop-bg: rgba(0, 0, 0, 0.5);
+  --modal-content-bg: var(--color-neutral-0);
+  --modal-border-radius: var(--radius-xl);
+  --modal-padding: var(--spacing-8);
+  
+  /* Navigation */
+  --nav-height: 64px;
+  --nav-item-padding: var(--spacing-3);
+  
+  /* Toast Notifications */
+  --toast-width: 320px;
+  --toast-padding: var(--spacing-4);
+  --toast-border-radius: var(--radius-lg);
+  
+  /* ========================================
+     TOUCH TARGET SIZES - WCAG 2.1 AAA
+     ======================================== */
+  
+  /* WCAG 2.5.5 Level AAA - Minimum 44x44px */
+  --touch-target-min: 44px;           /* Minimum accessible touch target */
+  --touch-target-comfortable: 48px;   /* Comfortable touch target */
+  --touch-target-spacious: 56px;      /* Extra spacious for primary actions */
+  
+  /* Touch spacing */
+  --touch-spacing-min: 8px;           /* Minimum space between touch targets */
+  --touch-spacing-comfortable: 12px;  /* Comfortable spacing */
+  --touch-spacing-spacious: 16px;     /* Extra spacing for clarity */
+}
+
+/* ========================================
+   GLOBAL TYPOGRAPHY APPLICATION
+   ======================================== */
+
+body {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-neutral-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-neutral-900);
+}
+
+button, .btn {
+  font-family: var(--font-family-primary);
+}
+
+/* ========================================
+   DARK MODE SUPPORT (Future Task 44)
+   ======================================== */
+
+[data-theme="dark"] {
+  --color-neutral-0: #1F2933;
+  --color-neutral-50: #323F4B;
+  --color-neutral-100: #3E4C59;
+  --color-neutral-200: #52606D;
+  --color-neutral-300: #616E7C;
+  --color-neutral-400: #7B8794;
+  --color-neutral-500: #9AA5B1;
+  --color-neutral-600: #CBD2D9;
+  --color-neutral-700: #E4E7EB;
+  --color-neutral-800: #F5F7FA;
+  --color-neutral-900: #FAFBFC;
+  --color-neutral-1000: #FFFFFF;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus Visible (Accessibility) */
+.focus-visible:focus {
+  outline: 3px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Transition Utilities */
+.transition-base {
+  transition: var(--transition-base);
+}
+
+.transition-fast {
+  transition: var(--transition-fast);
+}
+
+.transition-slow {
+  transition: var(--transition-slow);
+}
+
+/* Elevation Utilities */
+.elevation-0 { box-shadow: none; }
+.elevation-1 { box-shadow: var(--shadow-xs); }
+.elevation-2 { box-shadow: var(--shadow-sm); }
+.elevation-3 { box-shadow: var(--shadow-base); }
+.elevation-4 { box-shadow: var(--shadow-md); }
+.elevation-5 { box-shadow: var(--shadow-lg); }
+.elevation-6 { box-shadow: var(--shadow-xl); }
+/* ========================================
+   ACCESSIBILITY - Skip Navigation Links
+   ======================================== */
+
+/* Skip links are hidden by default but visible when focused with keyboard */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 10000;
+  padding: 12px 20px;
+  background-color: var(--color-primary-500);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  box-shadow: var(--shadow-lg);
+  transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid var(--color-accent-500);
+  outline-offset: 2px;
+  color: white;
+  text-decoration: underline;
+}
+
+.skip-link:hover {
+  background-color: var(--color-primary-600);
+  color: white;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .skip-link {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+  }
+  
+  .skip-link:focus {
+    outline: 4px solid var(--color-accent-500);
+    outline-offset: 4px;
+  }
+}
+
+/* Ensure skip link targets have a focus indicator */
+#main-content:focus,
+#navigation:focus,
+#footer:focus {
+  outline: 2px dashed var(--color-primary-500);
+  outline-offset: 4px;
+}

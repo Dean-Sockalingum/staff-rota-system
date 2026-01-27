@@ -1,0 +1,584 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Staff Guidance Library - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h2><i class="fas fa-book-open"></i> Staff Guidance Library</h2>
+            <p class="text-muted mb-0">Comprehensive guides, FAQs, and operational checklists for staff and managers.</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-upload"></i> Upload Document
+        </button>
+    </div>
+</div>
+
+<!-- Category Tabs -->
+<ul class="nav nav-tabs mb-3" id="guidanceTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+            <i class="fas fa-th-large"></i> All Documents
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff" type="button" role="tab">
+            <i class="fas fa-users"></i> Staff Guides
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="manager-tab" data-bs-toggle="tab" data-bs-target="#manager" type="button" role="tab">
+            <i class="fas fa-user-tie"></i> Manager Resources
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="guidanceTabContent">
+    <!-- All Documents Tab -->
+    <div class="tab-pane fade show active" id="all" role="tabpanel">
+        <div class="row">
+            <!-- Document Library -->
+            <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-folder-open"></i> Document Library
+                        <span class="badge bg-light text-dark float-end">{{ guidance_docs|length }}</span>
+                    </div>
+                    <div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                        {% for doc in guidance_docs %}
+                            <a href="?doc={{ doc.slug }}" class="list-group-item list-group-item-action{% if doc.slug == selected_doc.slug %} active{% endif %}">
+                                <div class="d-flex w-100 justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <i class="fas {{ doc.icon }} me-2"></i>
+                                        <strong>{{ doc.title }}</strong>
+                                        <p class="mb-1 small text-muted">{{ doc.description }}</p>
+                                        <span class="badge {% if doc.category == 'manager' %}bg-warning{% else %}bg-primary{% endif %}">{{ doc.category|title }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        {% empty %}
+                            <div class="list-group-item text-muted text-center">
+                                <i class="fas fa-inbox fa-3x mb-2"></i>
+                                <p>No documents uploaded yet.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Viewer -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas {{ selected_doc.icon }} me-2"></i>
+                            {{ selected_doc.title }}
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                            <a href="{{ selected_doc.file }}" download class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body guidance-body" style="max-height: 600px; overflow-y: auto;">
+                        {% if selected_doc.content %}
+                            {{ selected_doc.content|safe }}
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-file-alt fa-4x mb-3"></i>
+                                <p>Select a document from the library to view its contents.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Guides Tab -->
+    <div class="tab-pane fade" id="staff" role="tabpanel">
+        <div class="row">
+            <!-- Document Cards -->
+            <div class="col-lg-4 mb-3">
+                <h5 class="mb-3"><i class="fas fa-users"></i> Staff Guides</h5>
+                <div class="row">
+                    {% for doc in guidance_docs %}
+                        {% if doc.category == 'staff' %}
+                            <div class="col-12 mb-3">
+                                <div class="card shadow-sm{% if doc.slug == selected_doc.slug %} border-primary{% endif %}">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start">
+                                            <i class="fas {{ doc.icon }} fa-2x text-primary me-3"></i>
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ doc.title }}</h6>
+                                                <p class="card-text text-muted small mb-2">{{ doc.description }}</p>
+                                                <a href="?doc={{ doc.slug }}" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Document Viewer -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas {{ selected_doc.icon }} me-2"></i>
+                            {{ selected_doc.title }}
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body guidance-body" style="max-height: 600px; overflow-y: auto;">
+                        {% if selected_doc.content %}
+                            {{ selected_doc.content|safe }}
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-file-alt fa-4x mb-3"></i>
+                                <p>Select a document from the list to view its contents.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager Resources Tab -->
+    <div class="tab-pane fade" id="manager" role="tabpanel">
+        <div class="row">
+            <!-- Document Cards -->
+            <div class="col-lg-4 mb-3">
+                <h5 class="mb-3"><i class="fas fa-user-tie"></i> Manager Resources</h5>
+                <div class="row">
+                    {% for doc in guidance_docs %}
+                        {% if doc.category == 'manager' %}
+                            <div class="col-12 mb-3">
+                                <div class="card shadow-sm border-warning{% if doc.slug == selected_doc.slug %} border-2{% endif %}">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start">
+                                            <i class="fas {{ doc.icon }} fa-2x text-warning me-3"></i>
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ doc.title }}</h6>
+                                                <p class="card-text text-muted small mb-2">{{ doc.description }}</p>
+                                                <a href="?doc={{ doc.slug }}" class="btn btn-outline-warning btn-sm">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Document Viewer -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+                        <span>
+                            <i class="fas {{ selected_doc.icon }} me-2"></i>
+                            {{ selected_doc.title }}
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body guidance-body" style="max-height: 600px; overflow-y: auto;">
+                        {% if selected_doc.content %}
+                            {{ selected_doc.content|safe }}
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-file-alt fa-4x mb-3"></i>
+                                <p>Select a document from the list to view its contents.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload New Guidance Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Drag and Drop Zone -->
+                    <div class="mb-4">
+                        <div id="dropZone" class="border border-2 border-dashed rounded p-5 text-center" style="cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">Drag and drop your file here</h5>
+                            <p class="text-muted mb-3">or click to browse</p>
+                            <input type="file" id="fileInput" name="document" class="d-none" accept=".md,.txt,.pdf,.docx">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> Choose File
+                            </button>
+                        </div>
+                        <div id="fileInfo" class="mt-3 d-none">
+                            <div class="alert alert-info">
+                                <i class="fas fa-file-alt me-2"></i>
+                                <strong>Selected:</strong> <span id="fileName"></span>
+                                <span class="badge bg-primary ms-2" id="fileSize"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Document Metadata -->
+                    <div class="mb-3">
+                        <label for="docTitle" class="form-label">Document Title *</label>
+                        <input type="text" class="form-control" id="docTitle" name="title" required placeholder="e.g., Working Time Directive Guide">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="docDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="docDescription" name="description" rows="2" required placeholder="Brief description of the document content"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="docCategory" class="form-label">Category *</label>
+                            <select class="form-select" id="docCategory" name="category" required>
+                                <option value="">-- Select Category --</option>
+                                <option value="staff">Staff Guide</option>
+                                <option value="manager">Manager Resource</option>
+                                <option value="policy">Policy Document</option>
+                                <option value="training">Training Material</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="docIcon" class="form-label">Icon</label>
+                            <select class="form-select" id="docIcon" name="icon">
+                                <option value="fa-file-alt">📄 Document</option>
+                                <option value="fa-book">📖 Book</option>
+                                <option value="fa-clipboard-list">📋 Checklist</option>
+                                <option value="fa-question-circle">❓ FAQ</option>
+                                <option value="fa-user-graduate">🎓 Training</option>
+                                <option value="fa-shield-alt">🛡️ Policy</option>
+                                <option value="fa-phone">📞 Telephone</option>
+                                <option value="fa-calendar-check">📅 Leave</option>
+                                <option value="fa-notes-medical">🏥 Medical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Supported file formats are Markdown (.md), Text (.txt), PDF (.pdf), and Word (.docx). Files will be stored in the <code>/docs/staff_guidance/</code> directory.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" form="uploadForm" class="btn btn-primary" id="uploadBtn" disabled>
+                    <i class="fas fa-upload"></i> Upload Document
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Markdown content styling */
+.guidance-body {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #212529;
+}
+
+.guidance-body h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #dee2e6;
+    color: #0d6efd;
+}
+
+.guidance-body h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #495057;
+}
+
+.guidance-body h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: #6c757d;
+}
+
+.guidance-body h4 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.guidance-body p {
+    margin-bottom: 1rem;
+}
+
+.guidance-body ul, .guidance-body ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+
+.guidance-body li {
+    margin-bottom: 0.5rem;
+}
+
+.guidance-body strong {
+    font-weight: 600;
+    color: #212529;
+}
+
+.guidance-body em {
+    font-style: italic;
+}
+
+.guidance-body code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: #e83e8c;
+}
+
+.guidance-body pre {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+}
+
+.guidance-body pre code {
+    background-color: transparent;
+    padding: 0;
+    color: #212529;
+}
+
+.guidance-body table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+    border: 1px solid #dee2e6;
+}
+
+.guidance-body table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    text-align: left;
+}
+
+.guidance-body table td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+}
+
+.guidance-body table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.guidance-body blockquote {
+    border-left: 4px solid #0d6efd;
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-bottom: 1rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.guidance-body hr {
+    margin: 2rem 0;
+    border: 0;
+    border-top: 1px solid #dee2e6;
+}
+
+.guidance-body a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.guidance-body a:hover {
+    text-decoration: underline;
+}
+
+/* Drag and drop styling */
+#dropZone.drag-over {
+    border-color: #0d6efd !important;
+    background-color: #e7f1ff;
+}
+
+/* Card animations */
+.card.h-100 {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card.h-100:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('drag-over');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('drag-over');
+    }
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFiles(files);
+        }
+    }
+
+    // Handle file selection via input
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.remove('d-none');
+            uploadBtn.disabled = false;
+
+            // Auto-populate title from filename (remove extension)
+            const titleInput = document.getElementById('docTitle');
+            if (!titleInput.value) {
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+                titleInput.value = nameWithoutExt.replace(/[-_]/g, ' ');
+            }
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    // Click anywhere in drop zone to trigger file input
+    dropZone.addEventListener('click', function(e) {
+        if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
+            fileInput.click();
+        }
+    });
+
+    // Form submission (placeholder - would need backend implementation)
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        uploadBtn.disabled = true;
+
+        // Simulate upload (replace with actual AJAX request)
+        setTimeout(function() {
+            alert('Note: File upload requires backend implementation. This is a demo interface.\n\n' +
+                  'To implement:\n' +
+                  '1. Add upload view in Django\n' +
+                  '2. Save file to /docs/staff_guidance/\n' +
+                  '3. Update guidance_docs list\n' +
+                  '4. Refresh page');
+            
+            // Reset form
+            document.getElementById('uploadForm').reset();
+            fileInfo.classList.add('d-none');
+            uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Document';
+            uploadBtn.disabled = true;
+        }, 1500);
+    });
+});
+</script>
+{% endblock %}

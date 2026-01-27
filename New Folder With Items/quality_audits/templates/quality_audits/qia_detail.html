@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ qia.qia_reference }} - QIA Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qia-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid white;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="qia-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="text-white-50 mb-2">{{ qia.qia_reference }}</h6>
+                <h2 class="mb-3">{{ qia.title }}</h2>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-{% if qia.priority == 'CRITICAL' %}danger{% elif qia.priority == 'HIGH' %}warning{% elif qia.priority == 'MEDIUM' %}info{% else %}success{% endif %}">
+                        {{ qia.get_priority_display }} Priority
+                    </span>
+                    <span class="badge bg-{% if qia.action_type == 'CORRECTIVE' %}warning{% else %}success{% endif %}">
+                        {{ qia.get_action_type_display }}
+                    </span>
+                    <span class="badge bg-secondary">
+                        {{ qia.get_source_type_display }}
+                    </span>
+                    <span class="badge bg-{% if qia.status == 'CLOSED' %}success{% elif qia.status == 'VERIFIED' %}info{% else %}warning{% endif %}">
+                        {{ qia.get_status_display }}
+                    </span>
+                    {% if qia.is_overdue %}
+                    <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if qia.status not in 'CLOSED,REJECTED' %}
+                <div class="btn-group" role="group">
+                    <a href="{% url 'quality_audits:qia_update' qia.pk %}" class="btn btn-light">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{% url 'quality_audits:qia_progress' qia.pk %}" class="btn btn-light">
+                        <i class="fas fa-plus"></i> Add Update
+                    </a>
+                    {% if qia.status == 'IMPLEMENTED' or qia.percent_complete == 100 %}
+                    <a href="{% url 'quality_audits:qia_review' qia.pk %}" class="btn btn-success">
+                        <i class="fas fa-check-double"></i> Review
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Details -->
+        <div class="col-md-8">
+            <!-- Problem Analysis -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-search"></i> Problem Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="info-label">Problem Description</div>
+                        <div class="info-value">{{ qia.problem_description }}</div>
+                    </div>
+                    
+                    {% if qia.root_cause %}
+                    <div class="mb-3">
+                        <div class="info-label">Root Cause</div>
+                        <div class="info-value">{{ qia.root_cause }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if qia.impact_analysis %}
+                    <div class="mb-3">
+                        <div class="info-label">Impact Analysis</div>
+                        <div class="info-value">{{ qia.impact_analysis }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Plan -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Action Plan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="info-label">Planned Actions</div>
+                        <div class="info-value">{{ qia.action_plan }}</div>
+                    </div>
+                    
+                    {% if qia.success_criteria %}
+                    <div class="mb-3">
+                        <div class="info-label">Success Criteria</div>
+                        <div class="info-value">{{ qia.success_criteria }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if qia.resources_needed %}
+                    <div class="mb-3">
+                        <div class="info-label">Resources Needed</div>
+                        <div class="info-value">{{ qia.resources_needed }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <div class="info-label">Verification Method</div>
+                        <div class="info-value">{{ qia.verification_method|default:"Not specified" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Updates -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Progress Updates</h5>
+                </div>
+                <div class="card-body">
+                    {% if updates %}
+                    <div class="timeline">
+                        {% for update in updates %}
+                        <div class="timeline-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {{ update.update_date|date:"d M Y" }} - {{ update.updated_by.get_full_name }}
+                                    </h6>
+                                    {% if update.status_change %}
+                                    <span class="badge bg-info mb-2">{{ update.status_change }}</span>
+                                    {% endif %}
+                                    <p class="mb-1">{{ update.update_notes }}</p>
+                                    {% if update.evidence_description %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-paperclip"></i> {{ update.evidence_description }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-primary">{{ update.percent_complete }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No progress updates yet</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reviews -->
+            {% if reviews %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Effectiveness Reviews</h5>
+                </div>
+                <div class="card-body">
+                    {% for review in reviews %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6>{{ review.review_date|date:"d M Y" }} - {{ review.reviewer.get_full_name }}</h6>
+                                <span class="badge bg-{% if review.is_effective %}success{% else %}warning{% endif %}">
+                                    {% if review.is_effective %}Effective{% else %}Not Effective{% endif %}
+                                </span>
+                                <span class="badge bg-secondary">Rating: {{ review.effectiveness_rating }}/5</span>
+                            </div>
+                            {% if review.approved_for_closure %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-lock"></i> Approved for Closure
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <div class="info-label">Evidence</div>
+                            <div class="info-value">{{ review.effectiveness_evidence }}</div>
+                        </div>
+                        
+                        {% if review.lessons_learned %}
+                        <div class="mb-2">
+                            <div class="info-label">Lessons Learned</div>
+                            <div class="info-value">{{ review.lessons_learned }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if review.recommend_spread %}
+                        <div class="alert alert-success mb-0">
+                            <strong>Recommended for Spread:</strong> {{ review.spread_notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Key Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Key Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="info-label">Care Home</div>
+                        <div class="info-value">{{ qia.care_home.name }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="info-label">Responsible Person</div>
+                        <div class="info-value">{{ qia.responsible_person.get_full_name }}</div>
+                    </div>
+                    
+                    {% if qia.team_members.exists %}
+                    <div class="mb-3">
+                        <div class="info-label">Team Members</div>
+                        <div class="info-value">
+                            {% for member in qia.team_members.all %}
+                                <span class="badge bg-secondary">{{ member.get_full_name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <div class="info-label">Source</div>
+                        <div class="info-value">
+                            {{ qia.get_source_type_display }}
+                            {% if qia.source_reference %}
+                            <br><small class="text-muted">Ref: {{ qia.source_reference }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-calendar"></i> Timeline</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="info-label">Identified</div>
+                        <div class="info-value">{{ qia.identified_date|date:"d M Y" }}</div>
+                    </div>
+                    
+                    {% if qia.planned_start_date %}
+                    <div class="mb-3">
+                        <div class="info-label">Planned Start</div>
+                        <div class="info-value">{{ qia.planned_start_date|date:"d M Y" }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <div class="info-label">Target Completion</div>
+                        <div class="info-value {% if is_overdue %}text-danger{% endif %}">
+                            {{ qia.target_completion_date|date:"d M Y" }}
+                            {% if is_overdue %}
+                            <br><small class="text-danger">{{ days_remaining|abs }} days overdue</small>
+                            {% elif days_remaining > 0 %}
+                            <br><small class="text-muted">{{ days_remaining }} days remaining</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if qia.actual_completion_date %}
+                    <div class="mb-3">
+                        <div class="info-label">Actual Completion</div>
+                        <div class="info-value text-success">{{ qia.actual_completion_date|date:"d M Y" }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progress -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Progress</h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ qia.percent_complete }}%"
+                             aria-valuenow="{{ qia.percent_complete }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ qia.percent_complete }}%
+                        </div>
+                    </div>
+                    
+                    {% if qia.progress_notes %}
+                    <div class="alert alert-info mb-0">
+                        <small>{{ qia.progress_notes }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Regulatory -->
+            {% if qia.regulatory_requirement %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Regulatory</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="info-label">Requirement</div>
+                        <div class="info-value">{{ qia.regulatory_requirement }}</div>
+                    </div>
+                    
+                    {% if qia.requires_ci_notification %}
+                    <div class="alert alert-warning mb-0">
+                        <small><strong>Care Inspectorate Notification Required</strong></small>
+                        {% if qia.ci_notification_date %}
+                        <br><small>Notified: {{ qia.ci_notification_date|date:"d M Y" }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

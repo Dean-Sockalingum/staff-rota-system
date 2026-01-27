@@ -1,0 +1,533 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+    .calendar-controls {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .fc {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+    
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 2px 4px;
+    }
+    
+    .fc-event:hover {
+        opacity: 0.85;
+    }
+    
+    .leave-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .coverage-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    
+    .coverage-good { background-color: #d1e7dd; color: #0f5132; }
+    .coverage-medium { background-color: #fff3cd; color: #664d03; }
+    .coverage-low { background-color: #f8d7da; color: #842029; }
+    
+    #event-detail-modal .modal-header {
+        border-bottom: 3px solid #dee2e6;
+    }
+    
+    .event-detail-row {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .event-detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .event-detail-label {
+        font-weight: 600;
+        color: #495057;
+        min-width: 140px;
+        display: inline-block;
+    }
+    
+    @media (max-width: 768px) {
+        .calendar-controls {
+            padding: 10px;
+        }
+        
+        .leave-legend {
+            gap: 10px;
+        }
+        
+        .legend-item {
+            font-size: 0.9em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>
+                <i class="fas fa-calendar-alt"></i> {{ page_title }}
+            </h2>
+            <p class="text-muted">
+                {% if view_type == 'personal' %}
+                    View your approved and pending leave requests in calendar format
+                {% else %}
+                    Team leave overview - plan staffing and identify coverage gaps
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    
+    <!-- Calendar Controls -->
+    <div class="calendar-controls">
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if view_type == 'team' %}
+                    <!-- Care Home Filter -->
+                    <select id="care-home-filter" class="form-select form-select-sm" style="max-width: 250px;">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                        <option value="{{ home.id }}">{{ home.name }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <!-- Unit Filter -->
+                    <select id="unit-filter" class="form-select form-select-sm" style="max-width: 200px;">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                        <option value="{{ unit.id }}" data-care-home="{{ unit.care_home_id }}">
+                            {{ unit.name }} ({{ unit.care_home.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                    
+                    <!-- View Type Toggle -->
+                    <div class="btn-group" role="group">
+                        {% if view_type == 'team' %}
+                        <a href="{% url 'leave_calendar' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-user"></i> My Leave
+                        </a>
+                        <button class="btn btn-sm btn-primary active">
+                            <i class="fas fa-users"></i> Team View
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-primary active">
+                            <i class="fas fa-user"></i> My Leave
+                        </button>
+                        {% if permission_level == 'FULL' or permission_level == 'READ_ONLY' %}
+                        <a href="{% url 'team_leave_calendar' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-users"></i> Team View
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 col-md-12">
+                <div class="d-flex gap-2 justify-content-lg-end flex-wrap">
+                    <a href="{% url 'request_annual_leave' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus"></i> Request Leave
+                    </a>
+                    {% if view_type == 'team' %}
+                    <a href="{% url 'leave_approval_dashboard' %}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-clipboard-check"></i> Approvals
+                    </a>
+                    <button id="coverage-report-btn" class="btn btn-sm btn-info">
+                        <i class="fas fa-chart-bar"></i> Coverage Report
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Legend -->
+        <div class="leave-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #28a745;"></div>
+                <span>Approved Annual</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #fd7e14;"></div>
+                <span>Approved Sick</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #007bff;"></div>
+                <span>Approved Training</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ffc107;"></div>
+                <span>Pending</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff9800;"></div>
+                <span>Manual Review</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #dc3545;"></div>
+                <span>Denied</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Calendar Container -->
+    <div class="card">
+        <div class="card-body">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Detail Modal -->
+<div class="modal fade" id="event-detail-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="event-modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="event-modal-body">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coverage Report Modal -->
+{% if view_type == 'team' %}
+<div class="modal fade" id="coverage-report-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar"></i> Staffing Coverage Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="coverage-report-body">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Calculating coverage...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    const viewType = '{{ view_type }}';
+    
+    // Initialize FullCalendar
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,dayGridWeek,listWeek'
+        },
+        height: 'auto',
+        eventSources: [
+            {
+                url: '{% url "leave_calendar_data_api" %}',
+                method: 'GET',
+                extraParams: function() {
+                    const params = {
+                        view_type: viewType
+                    };
+                    
+                    {% if view_type == 'team' %}
+                    const careHomeId = document.getElementById('care-home-filter').value;
+                    const unitId = document.getElementById('unit-filter').value;
+                    
+                    if (careHomeId) params.care_home_id = careHomeId;
+                    if (unitId) params.unit_id = unitId;
+                    {% endif %}
+                    
+                    return params;
+                },
+                failure: function(error) {
+                    console.error('Error loading calendar events:', error);
+                    alert('Failed to load leave data. Please refresh the page.');
+                }
+            }
+        ],
+        eventClick: function(info) {
+            showEventDetail(info.event);
+        },
+        eventDidMount: function(info) {
+            // Add tooltip
+            const props = info.event.extendedProps;
+            let tooltip = info.event.title;
+            
+            if (props.reason) {
+                tooltip += `\n${props.reason}`;
+            }
+            
+            info.el.title = tooltip;
+        }
+    });
+    
+    calendar.render();
+    
+    // Filter change handlers
+    {% if view_type == 'team' %}
+    const careHomeFilter = document.getElementById('care-home-filter');
+    const unitFilter = document.getElementById('unit-filter');
+    
+    careHomeFilter.addEventListener('change', function() {
+        const selectedHome = this.value;
+        
+        // Filter unit dropdown
+        Array.from(unitFilter.options).forEach(option => {
+            if (option.value === '') {
+                option.style.display = 'block';
+            } else {
+                const careHomeId = option.dataset.careHome;
+                option.style.display = !selectedHome || careHomeId === selectedHome ? 'block' : 'none';
+            }
+        });
+        
+        // Reset unit filter if hidden
+        if (unitFilter.options[unitFilter.selectedIndex].style.display === 'none') {
+            unitFilter.value = '';
+        }
+        
+        // Refetch events
+        calendar.refetchEvents();
+    });
+    
+    unitFilter.addEventListener('change', function() {
+        calendar.refetchEvents();
+    });
+    
+    // Coverage Report
+    document.getElementById('coverage-report-btn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('coverage-report-modal'));
+        modal.show();
+        
+        // Get current calendar date range
+        const view = calendar.view;
+        const start = view.currentStart.toISOString().split('T')[0];
+        const end = view.currentEnd.toISOString().split('T')[0];
+        const careHomeId = careHomeFilter.value;
+        
+        // Fetch coverage data
+        let url = `{% url "leave_coverage_report_api" %}?start=${start}&end=${end}`;
+        if (careHomeId) url += `&care_home_id=${careHomeId}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                displayCoverageReport(data);
+            })
+            .catch(error => {
+                document.getElementById('coverage-report-body').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Failed to load coverage report: ${error.message}
+                    </div>
+                `;
+            });
+    });
+    {% endif %}
+    
+    // Event detail modal
+    function showEventDetail(event) {
+        const props = event.extendedProps;
+        const modal = new bootstrap.Modal(document.getElementById('event-detail-modal'));
+        
+        document.getElementById('event-modal-title').innerHTML = `
+            <i class="fas fa-calendar-alt"></i> ${event.title}
+        `;
+        
+        let statusBadge = '';
+        if (props.status === 'APPROVED') {
+            statusBadge = '<span class="badge bg-success">Approved</span>';
+        } else if (props.status === 'PENDING') {
+            statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+        } else if (props.status === 'MANUAL_REVIEW') {
+            statusBadge = '<span class="badge bg-warning">Manual Review</span>';
+        } else if (props.status === 'DENIED') {
+            statusBadge = '<span class="badge bg-danger">Denied</span>';
+        }
+        
+        let detailsHtml = `
+            <div class="event-detail-row">
+                <span class="event-detail-label">Status:</span>
+                ${statusBadge}
+            </div>
+        `;
+        
+        {% if view_type == 'team' %}
+        detailsHtml += `
+            <div class="event-detail-row">
+                <span class="event-detail-label">Staff Member:</span>
+                ${props.userName} (${props.userSap})
+            </div>
+        `;
+        {% endif %}
+        
+        detailsHtml += `
+            <div class="event-detail-row">
+                <span class="event-detail-label">Leave Type:</span>
+                ${event.title.replace(/[⏳✓✗]\s/, '')}
+            </div>
+            <div class="event-detail-row">
+                <span class="event-detail-label">Start Date:</span>
+                ${event.start.toLocaleDateString('en-GB')}
+            </div>
+            <div class="event-detail-row">
+                <span class="event-detail-label">End Date:</span>
+                ${new Date(event.end.getTime() - 86400000).toLocaleDateString('en-GB')}
+            </div>
+            <div class="event-detail-row">
+                <span class="event-detail-label">Days Requested:</span>
+                ${props.daysRequested}
+            </div>
+        `;
+        
+        if (props.reason) {
+            detailsHtml += `
+                <div class="event-detail-row">
+                    <span class="event-detail-label">Reason:</span>
+                    <br><em>${props.reason}</em>
+                </div>
+            `;
+        }
+        
+        if (props.approvedBy) {
+            detailsHtml += `
+                <div class="event-detail-row">
+                    <span class="event-detail-label">Approved By:</span>
+                    ${props.approvedBy}
+                </div>
+                <div class="event-detail-row">
+                    <span class="event-detail-label">Approval Date:</span>
+                    ${new Date(props.approvalDate).toLocaleString('en-GB')}
+                </div>
+            `;
+        }
+        
+        if (props.isBlackout) {
+            detailsHtml += `
+                <div class="alert alert-warning mt-2 mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Blackout Period
+                </div>
+            `;
+        }
+        
+        if (props.staffingRisk) {
+            detailsHtml += `
+                <div class="alert alert-danger mt-2 mb-0">
+                    <i class="fas fa-users-slash"></i> Staffing Risk Identified
+                </div>
+            `;
+        }
+        
+        if (props.automated && props.status === 'APPROVED') {
+            detailsHtml += `
+                <div class="alert alert-info mt-2 mb-0">
+                    <i class="fas fa-robot"></i> Auto-approved by system
+                </div>
+            `;
+        }
+        
+        document.getElementById('event-modal-body').innerHTML = detailsHtml;
+        modal.show();
+    }
+    
+    {% if view_type == 'team' %}
+    function displayCoverageReport(data) {
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-sm table-bordered">';
+        html += '<thead><tr><th>Date</th>';
+        
+        // Get unique units from first date
+        if (data.length > 0) {
+            data[0].units.forEach(unit => {
+                html += `<th>${unit.unit_name}</th>`;
+            });
+        }
+        
+        html += '</tr></thead><tbody>';
+        
+        // Table rows
+        data.forEach(dateData => {
+            const date = new Date(dateData.date).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'});
+            html += `<tr><td><strong>${date}</strong></td>`;
+            
+            dateData.units.forEach(unit => {
+                let badgeClass = 'coverage-good';
+                if (unit.coverage_pct < 50) badgeClass = 'coverage-low';
+                else if (unit.coverage_pct < 75) badgeClass = 'coverage-medium';
+                
+                html += `
+                    <td class="text-center">
+                        <span class="coverage-badge ${badgeClass}">
+                            ${unit.available}/${unit.total_staff}
+                            <small>(${unit.coverage_pct}%)</small>
+                        </span>
+                    </td>
+                `;
+            });
+            
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        
+        document.getElementById('coverage-report-body').innerHTML = html;
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

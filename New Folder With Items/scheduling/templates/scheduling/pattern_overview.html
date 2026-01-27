@@ -1,0 +1,650 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Pattern Overview - {{ selected_home_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Helper to strip home prefix from unit names */
+    {% comment %}
+    This CSS will work with template filters to show just unit names
+    {% endcomment %}
+    /* Unit color scheme - matching professional design */
+    .unit-cell {
+        padding: 10px 6px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+        border: 2px solid rgba(0,0,0,0.2);
+        border-radius: 6px;
+        min-height: 42px;
+        min-width: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .unit-cell:hover {
+        transform: scale(1.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        z-index: 10;
+        border-width: 3px;
+    }
+    
+    /* Position-based color palette (9 colors reused across all homes) */
+    /* Unit 1 - Purple */
+    .unit-cell.unit-pos-1 { background-color: #9C27B0 !important; color: #fff !important; }
+    .unit-cell.unit-pos-1.night { background-color: #7B1FA2 !important; }
+    
+    /* Unit 2 - Deep Purple */
+    .unit-cell.unit-pos-2 { background-color: #673AB7 !important; color: #fff !important; }
+    .unit-cell.unit-pos-2.night { background-color: #512DA8 !important; }
+    
+    /* Unit 3 - Indigo */
+    .unit-cell.unit-pos-3 { background-color: #3F51B5 !important; color: #fff !important; }
+    .unit-cell.unit-pos-3.night { background-color: #303F9F !important; }
+    
+    /* Unit 4 - Blue */
+    .unit-cell.unit-pos-4 { background-color: #2196F3 !important; color: #fff !important; }
+    .unit-cell.unit-pos-4.night { background-color: #1976D2 !important; }
+    
+    /* Unit 5 - Teal */
+    .unit-cell.unit-pos-5 { background-color: #009688 !important; color: #fff !important; }
+    .unit-cell.unit-pos-5.night { background-color: #00796B !important; }
+    
+    /* Unit 6 - Green */
+    .unit-cell.unit-pos-6 { background-color: #4CAF50 !important; color: #fff !important; }
+    .unit-cell.unit-pos-6.night { background-color: #388E3C !important; }
+    
+    /* Unit 7 - Orange */
+    .unit-cell.unit-pos-7 { background-color: #FF9800 !important; color: #fff !important; }
+    .unit-cell.unit-pos-7.night { background-color: #F57C00 !important; }
+    
+    /* Unit 8 - Deep Orange */
+    .unit-cell.unit-pos-8 { background-color: #FF5722 !important; color: #fff !important; }
+    .unit-cell.unit-pos-8.night { background-color: #E64A19 !important; }
+    
+    /* Unit 9 - Pink (Management/9th unit) */
+    .unit-cell.unit-pos-9 { background-color: #E91E63 !important; color: #fff !important; }
+    .unit-cell.unit-pos-9.night { background-color: #C2185B !important; }
+    
+    /* Empty cells */
+    .unit-cell.empty {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    /* CRITICAL: Override any parent backgrounds */
+    table td {
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    
+    /* Force unit cell backgrounds to show */
+    table .unit-cell {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+    }
+    
+    /* Ensure TD elements don't interfere with colored backgrounds */
+    .pattern-table tbody td {
+        padding: 0 !important;
+        background-color: transparent !important;
+        background: none !important;
+    }
+    
+    /* Remove any Bootstrap table styling that might interfere */
+    .table > :not(caption) > * > * {
+        padding: 0 !important;
+        background-color: transparent !important;
+    }
+    
+    /* Make unit-cell fill entire TD and appear above any backgrounds */
+    .unit-cell {
+        position: relative;
+        z-index: 10;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 50px;
+        display: block !important;
+        line-height: 50px;
+        text-align: center;
+    }
+    
+    /* Sticky headers with horizontal scroll */
+    .pattern-table {
+        position: relative;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: calc(100vh - 250px);
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        /* Enable smooth scrolling */
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .pattern-table table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 100%;
+        /* Ensure table is wide enough to show all 21 days + staff column */
+        /* Each day cell approx 80px + staff column 280px = ~1960px total */
+    }
+    
+    .pattern-table thead th,
+    .pattern-table tbody td {
+        white-space: nowrap;
+        min-width: 80px;
+    }
+    
+    .pattern-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .pattern-table thead th {
+        padding: 12px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.2);
+        text-align: center;
+        white-space: nowrap;
+    }
+    
+    .staff-info-col {
+        position: sticky;
+        left: 0;
+        z-index: 50;
+        background-color: #fff;
+        border-right: 3px solid #667eea;
+        min-width: 280px;
+        max-width: 280px;
+    }
+    
+    .staff-info-col.header {
+        z-index: 150;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    tbody tr:nth-child(even) .staff-info-col {
+        background-color: #f8f9fa;
+    }
+    
+    tbody tr:hover {
+        background-color: #e3f2fd !important;
+    }
+    
+    tbody tr:hover .staff-info-col {
+        background-color: #bbdefb !important;
+    }
+    
+    .staff-name {
+        font-weight: 600;
+        color: #1976d2;
+        font-size: 13px;
+    }
+    
+    .staff-details {
+        font-size: 11px;
+        color: #666;
+        margin-top: 2px;
+    }
+    
+    .vacancy-row {
+        background-color: #fff3cd !important;
+    }
+    
+    .vacancy-row .staff-name {
+        color: #856404;
+    }
+    
+    .btn-mark-vacancy {
+        padding: 2px 8px;
+        font-size: 10px;
+        margin-top: 4px;
+    }
+    
+    .unit-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .legend-color {
+        width: 50px;
+        height: 24px;
+        border-radius: 4px;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .legend-label {
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .filter-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .stats-badges {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .stat-badge .number {
+        font-size: 24px;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-table"></i> Pattern Overview - {{ selected_home_label }}</h2>
+            <p class="text-muted">Excel-style 3-week rota patterns with unit allocations</p>
+        </div>
+        <div class="stats-badges">
+            <div class="stat-badge">
+                <small>Total Positions</small>
+                <span class="number">{{ total_positions }}</span>
+            </div>
+            <div class="stat-badge" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <small>Vacancies</small>
+                <span class="number">{{ total_vacancies }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><i class="fas fa-home"></i> Care Home</label>
+                <select name="care_home" class="form-select" onchange="this.form.submit()">
+                    <option value="all" {% if selected_home == 'all' %}selected{% endif %}>All Homes</option>
+                    {% for home in care_homes %}
+                    <option value="{{ home.name }}" {% if selected_home == home.name %}selected{% endif %}>
+                        {{ home.get_name_display }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="fas fa-layer-group"></i> Unit (Color Coded)</label>
+                <select name="unit" class="form-select" onchange="this.form.submit()" style="font-weight: 600;">
+                    <option value="all" {% if selected_unit == 'all' %}selected{% endif %}>All Units</option>
+                    {% for item in all_home_units %}
+                    {% if item.color_position == 1 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[PURPLE] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 2 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[D.PURPLE] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 3 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[INDIGO] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 4 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[BLUE] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 5 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[TEAL] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 6 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[GREEN] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 7 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[ORANGE] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 8 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[D.ORANGE] {{ item.name|upper }}</option>
+                    {% elif item.color_position == 9 %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[PINK] {{ item.name|upper }}</option>
+                    {% else %}
+                        <option value="{{ item.name }}" {% if selected_unit == item.name %}selected{% endif %}>[PURPLE] {{ item.name|upper }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><i class="fas fa-clock"></i> Shift Type</label>
+                <select name="shift_type" class="form-select" onchange="this.form.submit()">
+                    <option value="all" {% if selected_shift_type == 'all' %}selected{% endif %}>All Shifts</option>
+                    <option value="day" {% if selected_shift_type == 'day' %}selected{% endif %}>Day Staff Only</option>
+                    <option value="night" {% if selected_shift_type == 'night' %}selected{% endif %}>Night Staff Only</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'pattern_overview' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-redo"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Pattern Table -->
+    <div class="pattern-table">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th class="staff-info-col header">Staff / Position</th>
+                    {% for day in date_range %}
+                    <th>
+                        <div>{{ day.day_name }}</div>
+                        <div>{{ day.day_num }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for unit_clean_name, unit_info in units_data.items %}
+                    <!-- Unit Header Row -->
+                    <tr style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <td colspan="{{ date_range|length|add:1 }}" class="text-center fw-bold py-2">
+                            <i class="fas fa-layer-group"></i> {{ unit_info.clean_name }} ({{ unit_info.staff_list|length }} staff)
+                        </td>
+                    </tr>
+                    
+                    {% for staff in unit_info.staff_list %}
+                    <tr {% if staff.is_vacancy %}class="vacancy-row"{% endif %}>
+                        <td class="staff-info-col">
+                            <div class="staff-name">
+                                {% if staff.is_vacancy %}
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                {% endif %}
+                                {{ staff.name }}
+                            </div>
+                            <div class="staff-details">
+                                SAP: {{ staff.sap }} | {{ staff.role }} | {{ staff.team }}<br>
+                                {{ staff.hours_per_week }}hrs/wk
+                                {% if not staff.is_vacancy %}
+                                <button class="btn btn-sm btn-outline-danger btn-mark-vacancy" 
+                                        onclick="markVacancy({{ staff.id }}, '{{ staff.name }}')">
+                                    <i class="fas fa-times"></i> Mark Vacancy
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% for day in staff.pattern %}
+                        <td class="p-0" style="padding: 0 !important; background: transparent !important;">
+                            {% if day.clean_unit_name %}
+                            {% comment %}Inline styles based on color position{% endcomment %}
+                            {% if day.color_position == 1 %}
+                                <div class="unit-cell unit-pos-1 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #9C27B0 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 2 %}
+                                <div class="unit-cell unit-pos-2 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #673AB7 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 3 %}
+                                <div class="unit-cell unit-pos-3 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #3F51B5 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 4 %}
+                                <div class="unit-cell unit-pos-4 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #2196F3 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 5 %}
+                                <div class="unit-cell unit-pos-5 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #009688 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 6 %}
+                                <div class="unit-cell unit-pos-6 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #4CAF50 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 7 %}
+                                <div class="unit-cell unit-pos-7 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #FF9800 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 8 %}
+                                <div class="unit-cell unit-pos-8 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #FF5722 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% elif day.color_position == 9 %}
+                                <div class="unit-cell unit-pos-9 {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #E91E63 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% else %}
+                                <div class="unit-cell {% if day.is_night %}night{% endif %}" 
+                                     style="background-color: #9C27B0 !important; color: #fff !important; display: block !important; width: 100% !important; min-height: 50px !important; line-height: 50px !important; text-align: center !important;"
+                                     data-shift-id="{{ day.shift_id }}" data-staff-id="{{ staff.id }}" data-date="{{ day.date|date:'Y-m-d' }}" data-full-unit="{{ day.unit_name }}" onclick="editShiftUnit(this)">{{ day.clean_unit_name }}</div>
+                            {% endif %}
+                            {% else %}
+                            <div class="unit-cell empty" style="background-color: #f8f9fa !important; display: block !important; width: 100% !important; min-height: 50px !important;"></div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Unit Modal -->
+<div class="modal fade" id="editUnitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Change Unit Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Staff Member</label>
+                    <input type="text" class="form-control" id="editStaffName" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="text" class="form-control" id="editDate" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Current Unit</label>
+                    <input type="text" class="form-control" id="editCurrentUnit" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">New Unit / Leave Type</label>
+                    <select class="form-select" id="editNewUnit" style="font-weight: 600;">
+                        <option value="">-- Select Option --</option>
+                        <optgroup label="Units">
+                            {% for unit in all_home_units %}
+                            {% if unit.color_position == 1 %}
+                                <option value="{{ unit.name }}">[PURPLE] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 2 %}
+                                <option value="{{ unit.name }}">[D.PURPLE] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 3 %}
+                                <option value="{{ unit.name }}">[INDIGO] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 4 %}
+                                <option value="{{ unit.name }}">[BLUE] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 5 %}
+                                <option value="{{ unit.name }}">[TEAL] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 6 %}
+                                <option value="{{ unit.name }}">[GREEN] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 7 %}
+                                <option value="{{ unit.name }}">[ORANGE] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 8 %}
+                                <option value="{{ unit.name }}">[D.ORANGE] {{ unit.name|upper }}</option>
+                            {% elif unit.color_position == 9 %}
+                                <option value="{{ unit.name }}">[PINK] {{ unit.name|upper }}</option>
+                            {% else %}
+                                <option value="{{ unit.name }}">[PURPLE] {{ unit.name|upper }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Absences/Leave">
+                            <option value="LEAVE_ANNUAL" style="background: #2ecc71; color: white; font-weight: bold;">📅 Annual Leave</option>
+                            <option value="LEAVE_SICK" style="background: #e74c3c; color: white; font-weight: bold;">🤒 Sickness</option>
+                            <option value="LEAVE_UNAUTHORISED" style="background: #e67e22; color: white; font-weight: bold;">⚠️ Unauthorised Leave</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUnitChange()">
+                    <i class="fas fa-save"></i> Save Change
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Remove any stray modal backdrops on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.querySelectorAll('.modal').forEach(el => el.classList.remove('show'));
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+});
+
+let currentEditShiftId = null;
+let currentEditCell = null;
+
+function editShiftUnit(cell) {
+    const shiftId = cell.dataset.shiftId;
+    const staffId = cell.dataset.staffId;
+    const date = cell.dataset.date;
+    const currentUnit = cell.textContent.trim();
+    
+    currentEditShiftId = shiftId;
+    currentEditCell = cell;
+    
+    // Populate modal
+    document.getElementById('editStaffName').value = cell.closest('tr').querySelector('.staff-name').textContent.trim();
+    document.getElementById('editDate').value = date;
+    document.getElementById('editCurrentUnit').value = currentUnit;
+    document.getElementById('editNewUnit').value = '';
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('editUnitModal')).show();
+}
+
+function saveUnitChange() {
+    const newUnit = document.getElementById('editNewUnit').value;
+    
+    if (!newUnit) {
+        alert('Please select a unit or leave type');
+        return;
+    }
+    
+    // Make AJAX call to update shift unit in database
+    fetch('/api/update-shift-unit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            shift_id: currentEditShiftId,
+            unit_name: newUnit
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update cell display
+            if (data.leave_type) {
+                // Leave type selected - update cell with special styling
+                if (data.leave_type === 'SICK') {
+                    currentEditCell.textContent = 'SICK';
+                    currentEditCell.style.backgroundColor = '#e74c3c';
+                    currentEditCell.style.color = '#fff';
+                } else if (data.leave_type === 'ANNUAL') {
+                    currentEditCell.textContent = 'A/L';
+                    currentEditCell.style.backgroundColor = '#2ecc71';
+                    currentEditCell.style.color = '#fff';
+                } else if (data.leave_type === 'UNAUTHORISED') {
+                    currentEditCell.textContent = 'UNAUTH';
+                    currentEditCell.style.backgroundColor = '#e67e22';
+                    currentEditCell.style.color = '#fff';
+                }
+            } else {
+                // Unit change - update with clean unit name (keep existing color)
+                currentEditCell.textContent = data.unit_name;
+            }
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('editUnitModal')).hide();
+            
+            // Show success message
+            alert(data.message);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error updating shift: ' + error);
+    });
+}
+
+function markVacancy(staffId, staffName) {
+    if (!confirm(`Mark ${staffName} as VACANCY? This will make the position available for recruitment.`)) {
+        return;
+    }
+    
+    fetch('{% url "toggle_vacancy_status" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            staff_id: staffId,
+            set_as_vacancy: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}

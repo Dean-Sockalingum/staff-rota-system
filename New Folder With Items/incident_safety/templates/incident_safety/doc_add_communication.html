@@ -1,0 +1,305 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Add Communication - {{ doc.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: #ef4444;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .btn-secondary-custom:hover {
+        background: #667eea;
+        color: white;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0;
+    }
+
+    .errorlist li {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .doc-info {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        margin-bottom: 1.5rem;
+    }
+
+    .doc-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+    }
+
+    .doc-info-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .doc-info-value {
+        color: #1f2937;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <!-- Header -->
+    <div class="form-header">
+        <h1 class="mb-2">
+            <i class="bi bi-chat-left-text"></i> Add Communication
+        </h1>
+        <p class="mb-0">{{ doc.reference_number }}</p>
+    </div>
+
+    <!-- DoC Record Info -->
+    <div class="doc-info">
+        <div class="doc-info-row">
+            <span class="doc-info-label">Incident:</span>
+            <span class="doc-info-value">{{ doc.incident.reference_number }}</span>
+        </div>
+        <div class="doc-info-row">
+            <span class="doc-info-label">Family Contact:</span>
+            <span class="doc-info-value">{{ doc.family_contact_name|default:"Not recorded" }}</span>
+        </div>
+        <div class="doc-info-row">
+            <span class="doc-info-label">Harm Level:</span>
+            <span class="doc-info-value">{{ doc.get_harm_level_display }}</span>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+        <strong><i class="bi bi-info-circle"></i> Communication Log</strong>
+        <p class="mb-0 mt-1" style="color: #1e40af;">
+            Record all communications with the family regarding this Duty of Candour case,
+            including notifications, updates, feedback sessions, and apologies.
+        </p>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="form-section">
+            <div class="mb-3">
+                <label for="{{ form.communication_type.id_for_label }}" class="form-label required">
+                    Communication Type
+                </label>
+                {{ form.communication_type }}
+                {% if form.communication_type.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.communication_type.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Select the method of communication
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.communication_date.id_for_label }}" class="form-label required">
+                    Communication Date & Time
+                </label>
+                {{ form.communication_date }}
+                {% if form.communication_date.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.communication_date.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    When did this communication take place?
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.attendees.id_for_label }}" class="form-label">
+                    Attendees / Participants
+                </label>
+                {{ form.attendees }}
+                {% if form.attendees.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.attendees.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Who was involved in this communication? (e.g., "Jane Smith (Family), John Doe (Manager)")
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.summary.id_for_label }}" class="form-label required">
+                    Summary of Communication
+                </label>
+                {{ form.summary }}
+                {% if form.summary.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.summary.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Provide a clear summary of what was discussed and any outcomes
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.follow_up_actions.id_for_label }}" class="form-label">
+                    Follow-up Actions Required
+                </label>
+                {{ form.follow_up_actions }}
+                {% if form.follow_up_actions.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.follow_up_actions.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="help-text">
+                    Note any actions that need to be taken following this communication
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% url 'incident_safety:doc_detail' doc.pk %}" class="btn btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="bi bi-check-circle"></i> Save Communication
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+
+// Auto-fill current date/time for communication_date if empty
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[name="communication_date"]');
+    if (dateInput && !dateInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+});
+</script>
+{% endblock %}

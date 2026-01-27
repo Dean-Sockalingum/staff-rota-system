@@ -1,0 +1,31 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Welcome to Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="display-4 mb-4">Welcome to the Staff Rota System</h1>
+    <p class="lead mb-4">Easily manage staff, shifts, and teams.</p>
+    
+    {% if user.is_authenticated %}
+    <div class="alert alert-info mb-4">
+        Currently logged in as: <strong>{{ user.full_name }}</strong> ({{ user.role.name }})
+        <form method="post" action="{% url 'logout' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </form>
+    </div>
+    {% endif %}
+    
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <a href="{% url 'senior_management_dashboard' %}" class="btn btn-danger btn-lg">
+            <i class="fas fa-chart-line"></i> Head of Service Dashboard
+        </a>
+        <a href="{% url 'manager_dashboard' %}" class="btn btn-primary btn-lg">Manager Dashboard</a>
+        <a href="{% url 'staff_dashboard' %}" class="btn btn-secondary btn-lg">Staff Dashboard</a>
+        <a href="{% url 'staff_home_units' %}" class="btn btn-outline-info btn-lg">View Staff Home Units</a>
+    </div>
+</div>
+{% endblock %}

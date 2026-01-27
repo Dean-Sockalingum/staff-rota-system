@@ -1,0 +1,126 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Staff Management Tour{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/onboarding.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="tour-overlay" id="tourOverlay">
+        <div class="tour-content">
+            <div class="tour-header">
+                <h2><i class="fas fa-users"></i> Staff Management Tour</h2>
+                <button class="btn-skip" onclick="skipTour()">Skip Tour</button>
+            </div>
+            
+            <div class="tour-step active" id="step-1">
+                <div class="tour-step-content">
+                    <h3>Staff Directory</h3>
+                    <p>Manage your entire team from one central location.</p>
+                    <p>View staff details, availability, leave balances, and performance metrics.</p>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-2">
+                <div class="tour-step-content">
+                    <h3>Adding & Editing Staff</h3>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-user-plus"></i> Add new team members with full onboarding</li>
+                        <li><i class="fas fa-edit"></i> Update roles, contracts, and preferences</li>
+                        <li><i class="fas fa-home"></i> Assign to units and teams</li>
+                        <li><i class="fas fa-calendar"></i> Set shift patterns and availability</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-3">
+                <div class="tour-step-content">
+                    <h3>Leave Management</h3>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-umbrella-beach"></i> Approve or decline leave requests</li>
+                        <li><i class="fas fa-calendar-check"></i> Track annual leave allowances</li>
+                        <li><i class="fas fa-chart-bar"></i> View leave patterns and trends</li>
+                        <li><i class="fas fa-bell"></i> Get alerts for pending approvals</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="tour-step" id="step-4">
+                <div class="tour-step-content">
+                    <h3>Performance & Compliance</h3>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-clock"></i> Monitor Working Time Directive compliance</li>
+                        <li><i class="fas fa-exclamation-triangle"></i> View alerts for potential issues</li>
+                        <li><i class="fas fa-chart-line"></i> Track attendance and punctuality</li>
+                        <li><i class="fas fa-file-contract"></i> Manage certifications and training</li>
+                    </ul>
+                </div>
+                <div class="tour-navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-success" onclick="completeTour()">Got It! <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function showStep(stepNumber) {
+    document.querySelectorAll('.tour-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.getElementById('step-' + stepNumber).classList.add('active');
+    currentStep = stepNumber;
+}
+
+function nextStep() {
+    if (currentStep < totalSteps) {
+        showStep(currentStep + 1);
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        showStep(currentStep - 1);
+    }
+}
+
+function skipTour() {
+    if (confirm('Are you sure you want to skip this tour?')) {
+        window.location.href = "{{ next_url }}";
+    }
+}
+
+function completeTour() {
+    fetch('{% url "onboarding_mark_step_complete" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            step: 'staff_tour'
+        })
+    }).then(response => {
+        window.location.href = "{{ next_url }}";
+    });
+}
+</script>
+{% endblock %}

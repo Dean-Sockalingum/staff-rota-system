@@ -1,0 +1,186 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Welcome to Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/onboarding.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-welcome">
+        <!-- Progress indicator -->
+        <div class="onboarding-progress-bar">
+            <div class="progress-fill" style="width: {{ progress.completion_percentage }}%"></div>
+        </div>
+        
+        <!-- Welcome hero section -->
+        <div class="welcome-hero">
+            <div class="welcome-icon">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <h1 class="welcome-title">Welcome to Your Staff Rota System!</h1>
+            <p class="welcome-subtitle">
+                {% if is_senior %}
+                    As a <strong>{{ user.role.name }}</strong>, you have full access to multi-home management, strategic reporting, and AI-powered insights.
+                {% elif is_management %}
+                    As a <strong>{{ user.role.name }}</strong>, you can manage rotas, staff, and view comprehensive reports for your care home.
+                {% else %}
+                    Welcome <strong>{{ user.get_full_name }}</strong>! Let's get you started with your personal dashboard and shift management.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Feature highlights -->
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon primary">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3>Smart Scheduling</h3>
+                <p>AI-powered rota generation that respects staff preferences, leave, and compliance rules</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon success">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3>Mobile First</h3>
+                <p>Full-featured mobile experience - manage your rota from anywhere, anytime</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon info">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Assistant</h3>
+                <p>Natural language commands for common tasks - just ask and get instant results</p>
+            </div>
+
+            {% if is_management %}
+            <div class="feature-card">
+                <div class="feature-icon warning">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Real-time Analytics</h3>
+                <p>Live dashboards with compliance tracking, staffing levels, and cost management</p>
+            </div>
+            {% else %}
+            <div class="feature-card">
+                <div class="feature-icon warning">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <h3>Shift Swapping</h3>
+                <p>Easy shift swaps with colleagues - request, approve, and track in one place</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Role-specific quick wins -->
+        <div class="quick-wins">
+            <h2>What You Can Do Right Now</h2>
+            <div class="quick-wins-list">
+                {% if is_management %}
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>View today's staffing levels across all units</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Generate next week's rota with AI assistance</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Track compliance and WTD regulations</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Approve leave requests and shift swaps</span>
+                    </div>
+                {% else %}
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>View your upcoming shifts and leave balance</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Request time off with one click</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Swap shifts with colleagues easily</span>
+                    </div>
+                    <div class="quick-win-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Get mobile notifications for schedule changes</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tour time estimate -->
+        <div class="tour-info">
+            <div class="tour-info-card">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <strong>Tour Duration:</strong> 3-5 minutes
+                </div>
+            </div>
+            <div class="tour-info-card">
+                <i class="fas fa-star"></i>
+                <div>
+                    <strong>What's Included:</strong> Dashboard, Rota View, AI Assistant, Mobile Tips
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="welcome-actions">
+            <form method="post" class="action-form">
+                {% csrf_token %}
+                <button type="submit" name="action" value="start" class="btn btn-primary btn-lg btn-onboarding">
+                    <i class="fas fa-play-circle"></i>
+                    Start Interactive Tour
+                </button>
+                <button type="submit" name="action" value="skip" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-forward"></i>
+                    Skip Tour
+                </button>
+            </form>
+        </div>
+
+        <!-- Reassurance -->
+        <p class="tour-reassurance">
+            <i class="fas fa-info-circle"></i>
+            You can restart this tour anytime from your settings
+        </p>
+    </div>
+</div>
+
+<!-- Floating particles animation -->
+<div class="particles-background"></div>
+
+<script>
+// Add some subtle animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate feature cards on scroll
+    const cards = document.querySelectorAll('.feature-card');
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Animate quick wins
+    const wins = document.querySelectorAll('.quick-win-item');
+    wins.forEach((win, index) => {
+        setTimeout(() => {
+            win.style.opacity = '1';
+            win.style.transform = 'translateX(0)';
+        }, 400 + (index * 100));
+    });
+});
+</script>
+{% endblock %}

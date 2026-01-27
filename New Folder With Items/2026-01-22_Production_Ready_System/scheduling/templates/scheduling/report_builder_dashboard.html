@@ -1,0 +1,363 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Report Builder - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reports-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .reports-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .reports-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .report-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+    
+    .report-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .report-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .report-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+    }
+    
+    .report-card-meta {
+        font-size: 0.875rem;
+        color: #718096;
+        margin-top: 0.25rem;
+    }
+    
+    .report-card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .report-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .report-badge-staffing { background: #e6f7ff; color: #1890ff; }
+    .report-badge-shifts { background: #f0f5ff; color: #597ef7; }
+    .report-badge-leave { background: #fff7e6; color: #fa8c16; }
+    .report-badge-training { background: #f6ffed; color: #52c41a; }
+    .report-badge-compliance { background: #fff1f0; color: #f5222d; }
+    .report-badge-incidents { background: #fff0f6; color: #eb2f96; }
+    .report-badge-residents { background: #e6fffb; color: #13c2c2; }
+    .report-badge-custom { background: #f9f0ff; color: #722ed1; }
+    
+    .schedule-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #10b981;
+    }
+    
+    .schedule-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .schedule-info-item {
+        font-size: 0.875rem;
+    }
+    
+    .schedule-info-label {
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 0.25rem;
+    }
+    
+    .schedule-info-value {
+        color: #6b7280;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #9ca3af;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-primary-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .btn-sm-action {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="reports-header">
+        <h1>
+            <i class="fas fa-chart-bar me-3"></i>
+            Report Builder
+        </h1>
+        <p>Create custom reports with drag-and-drop field selection and advanced filtering</p>
+    </div>
+    
+    <!-- Create New Report Button -->
+    <div class="mb-4">
+        <a href="{% url 'report_builder_create' %}" class="btn btn-primary-gradient">
+            <i class="fas fa-plus me-2"></i>Create New Report
+        </a>
+    </div>
+    
+    <!-- My Report Templates -->
+    <div class="mb-5">
+        <h2 class="section-title">
+            <i class="fas fa-folder me-2"></i>My Report Templates
+        </h2>
+        
+        {% if user_reports %}
+            {% for report in user_reports %}
+            <div class="report-card">
+                <div class="report-card-header">
+                    <div>
+                        <h3 class="report-card-title">{{ report.name }}</h3>
+                        <div class="report-card-meta">
+                            <span class="report-badge report-badge-{{ report.report_type|lower }}">
+                                {{ report.get_report_type_display }}
+                            </span>
+                            <span class="ms-2">
+                                <i class="far fa-clock me-1"></i>
+                                Updated {{ report.updated_at|date:"M d, Y" }}
+                            </span>
+                            {% if report.is_public %}
+                            <span class="ms-2">
+                                <i class="fas fa-globe text-success me-1"></i>Public
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if report.description %}
+                        <p class="mt-2 mb-0 text-muted">{{ report.description }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="report-card-actions">
+                        <a href="{% url 'report_builder_create' %}?template={{ report.id }}" 
+                           class="btn btn-sm btn-outline-primary btn-sm-action" 
+                           title="Edit Template">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <button class="btn btn-sm btn-outline-success btn-sm-action" 
+                                onclick="runReport({{ report.id }})"
+                                title="Run Report">
+                            <i class="fas fa-play"></i> Run
+                        </button>
+                        <a href="{% url 'report_template_delete' report.id %}" 
+                           class="btn btn-sm btn-outline-danger btn-sm-action"
+                           onclick="return confirm('Delete this template?')"
+                           title="Delete Template">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-list me-1"></i>{{ report.selected_fields|length }} fields
+                        <span class="ms-3"><i class="fas fa-file-{{ report.output_format|lower }} me-1"></i>{{ report.get_output_format_display }}</span>
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="far fa-folder-open"></i>
+                </div>
+                <p>No saved report templates yet. Create your first custom report!</p>
+                <a href="{% url 'report_builder_create' %}" class="btn btn-primary-gradient mt-3">
+                    <i class="fas fa-plus me-2"></i>Create Your First Report
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Public Templates -->
+    {% if public_reports %}
+    <div class="mb-5">
+        <h2 class="section-title">
+            <i class="fas fa-globe me-2"></i>Public Templates
+        </h2>
+        
+        {% for report in public_reports %}
+        <div class="report-card">
+            <div class="report-card-header">
+                <div>
+                    <h3 class="report-card-title">{{ report.name }}</h3>
+                    <div class="report-card-meta">
+                        <span class="report-badge report-badge-{{ report.report_type|lower }}">
+                            {{ report.get_report_type_display }}
+                        </span>
+                        <span class="ms-2">
+                            <i class="fas fa-user me-1"></i>
+                            Created by {{ report.created_by.full_name }}
+                        </span>
+                    </div>
+                    {% if report.description %}
+                    <p class="mt-2 mb-0 text-muted">{{ report.description }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="report-card-actions">
+                    <button class="btn btn-sm btn-outline-success btn-sm-action" 
+                            onclick="runReport({{ report.id }})"
+                            title="Run Report">
+                        <i class="fas fa-play"></i> Run
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Scheduled Reports -->
+    <div class="mb-5">
+        <h2 class="section-title">
+            <i class="fas fa-clock me-2"></i>Scheduled Reports
+        </h2>
+        
+        {% if scheduled_reports %}
+            {% for schedule in scheduled_reports %}
+            <div class="schedule-card">
+                <div class="report-card-header">
+                    <div>
+                        <h3 class="report-card-title">{{ schedule.report_template.name }}</h3>
+                        <div class="report-card-meta">
+                            <span class="report-badge report-badge-{{ schedule.report_template.report_type|lower }}">
+                                {{ schedule.get_frequency_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="report-card-actions">
+                        <a href="{% url 'report_schedule_delete' schedule.id %}" 
+                           class="btn btn-sm btn-outline-danger btn-sm-action"
+                           onclick="return confirm('Delete this schedule?')"
+                           title="Delete Schedule">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="schedule-info">
+                    <div class="schedule-info-item">
+                        <div class="schedule-info-label">Frequency</div>
+                        <div class="schedule-info-value">{{ schedule.get_frequency_display }}</div>
+                    </div>
+                    
+                    {% if schedule.next_run %}
+                    <div class="schedule-info-item">
+                        <div class="schedule-info-label">Next Run</div>
+                        <div class="schedule-info-value">{{ schedule.next_run|date:"M d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if schedule.last_run %}
+                    <div class="schedule-info-item">
+                        <div class="schedule-info-label">Last Run</div>
+                        <div class="schedule-info-value">{{ schedule.last_run|date:"M d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="schedule-info-item">
+                        <div class="schedule-info-label">Recipients</div>
+                        <div class="schedule-info-value">{{ schedule.recipients|length }} recipient(s)</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="far fa-clock"></i>
+                </div>
+                <p>No scheduled reports. Schedule automatic report generation and delivery.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function runReport(templateId) {
+    // Redirect to report builder with template loaded for execution
+    window.location.href = `{% url 'report_builder_create' %}?template=${templateId}&run=1`;
+}
+</script>
+{% endblock %}

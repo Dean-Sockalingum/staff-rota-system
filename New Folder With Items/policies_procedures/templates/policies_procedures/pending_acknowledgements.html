@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pending Acknowledgements{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-exclamation-circle me-2 text-warning"></i>Pending Policy Acknowledgements</h2>
+            <p class="text-muted mb-0">Mandatory policies requiring your acknowledgement</p>
+        </div>
+        <a href="{% url 'policies_procedures:my_acknowledgements' %}" class="btn btn-success">
+            <i class="fas fa-user-check me-1"></i>My Acknowledgements
+        </a>
+    </div>
+
+    <!-- Alert -->
+    {% if pending_policies %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Action Required:</strong> You have {{ pending_policies.count }} mandatory polic{{ pending_policies.count|pluralize:"y,ies" }} 
+        awaiting acknowledgement. Please review and acknowledge each policy.
+    </div>
+    {% endif %}
+
+    <!-- Pending Policies -->
+    <div class="row">
+        {% if pending_policies %}
+        {% for policy in pending_policies %}
+        <div class="col-md-6 mb-4">
+            <div class="card border-warning h-100">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>{{ policy.policy_number }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ policy.title }}</h6>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-secondary me-2">{{ policy.get_category_display }}</span>
+                        <span class="badge bg-danger">Mandatory</span>
+                        <span class="badge bg-info">Version {{ policy.version }}</span>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Effective Date:</small><br>
+                            <strong>{{ policy.effective_date|date:"d M Y" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Status:</small><br>
+                            {% if policy.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ policy.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <p class="card-text"><strong>Summary:</strong><br>{{ policy.summary|truncatewords:30 }}</p>
+
+                    {% if policy.regulatory_framework %}
+                    <p class="card-text"><small class="text-muted"><strong>Regulatory Framework:</strong><br>{{ policy.regulatory_framework|truncatewords:15 }}</small></p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'policies_procedures:policy_detail' policy.pk %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                        <a href="{% url 'policies_procedures:acknowledge_policy' policy.pk %}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-signature me-1"></i>Acknowledge Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h4 class="text-success">All Caught Up!</h4>
+                    <p class="text-muted">You have no pending policy acknowledgements at this time.</p>
+                    <a href="{% url 'policies_procedures:my_acknowledgements' %}" class="btn btn-success">
+                        <i class="fas fa-list me-1"></i>View My Acknowledgements
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>About Policy Acknowledgements</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Why do I need to acknowledge policies?</h6>
+                    <p>Policy acknowledgements ensure that all staff members have read, understood, and agree to comply with 
+                    mandatory organizational policies. This is a regulatory requirement and helps maintain compliance standards.</p>
+
+                    <h6>What happens when I acknowledge a policy?</h6>
+                    <ul>
+                        <li>Your acknowledgement is recorded with a timestamp and digital signature</li>
+                        <li>The system logs your IP address for audit purposes</li>
+                        <li>You confirm that you have read and understood the policy</li>
+                        <li>The policy is moved to your "Acknowledged" list</li>
+                    </ul>
+
+                    <h6>How often do I need to acknowledge policies?</h6>
+                    <p>You need to acknowledge policies when they are first published and whenever significant updates are made. 
+                    The system will notify you when re-acknowledgement is required.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

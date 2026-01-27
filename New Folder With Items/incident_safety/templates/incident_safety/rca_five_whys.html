@@ -1,0 +1,467 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}5 Whys Analysis - RCA {{ rca.incident.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .whys-container {
+        max-width: 900px;
+        margin: 30px auto;
+    }
+    
+    .why-level {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .why-level:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .why-number {
+        position: absolute;
+        top: -15px;
+        left: 25px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+    }
+    
+    .why-question {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 20px 0 15px 0;
+    }
+    
+    .why-answer {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        min-height: 60px;
+    }
+    
+    .why-empty {
+        color: #999;
+        font-style: italic;
+    }
+    
+    .arrow-down {
+        text-align: center;
+        color: #667eea;
+        font-size: 2rem;
+        margin: 10px 0;
+        animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+    
+    .root-cause-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 35px;
+        border-radius: 12px;
+        text-align: center;
+        margin-top: 30px;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .root-cause-panel h3 {
+        margin: 0 0 15px 0;
+        font-size: 1.8rem;
+    }
+    
+    .root-cause-panel p {
+        font-size: 1.2rem;
+        margin: 0;
+        line-height: 1.6;
+    }
+    
+    .incident-header {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .incident-badge {
+        background: #dc3545;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+    
+    .severity-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: 600;
+    }
+    
+    .progress-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin: 30px 0;
+        position: relative;
+    }
+    
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    
+    .progress-dot {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e9ecef;
+        border: 3px solid #dee2e6;
+        margin: 0 auto 10px;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .progress-dot.completed {
+        background: #667eea;
+        border-color: #667eea;
+    }
+    
+    .progress-line {
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        right: -50%;
+        height: 3px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+    
+    .progress-step:last-child .progress-line {
+        display: none;
+    }
+    
+    .progress-line.completed {
+        background: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="incident-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="h2 mb-3">
+                    <i class="bi bi-list-ol"></i> 5 Whys Root Cause Analysis
+                </h1>
+                <div class="mb-2">
+                    <span class="incident-badge">
+                        {{ rca.incident.reference_number }}
+                    </span>
+                    <span class="severity-badge bg-{{ rca.incident.severity|lower }}">
+                        {{ rca.incident.get_severity_display }}
+                    </span>
+                </div>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-calendar"></i> {{ rca.incident.incident_date|date:"d M Y" }}
+                    <span class="mx-2">|</span>
+                    <i class="bi bi-building"></i> {{ rca.incident.location }}
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'incident_safety:rca_detail' rca.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Back to RCA
+                </a>
+                <a href="{% url 'incident_safety:rca_fishbone' rca.pk %}" class="btn btn-success">
+                    <i class="bi bi-diagram-3"></i> View Fishbone
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+        <div class="progress-step">
+            <div class="progress-dot {% if rca.why_1 %}completed{% endif %}"></div>
+            <div class="progress-line {% if rca.why_1 %}completed{% endif %}"></div>
+            <small>Why 1</small>
+        </div>
+        <div class="progress-step">
+            <div class="progress-dot {% if rca.why_2 %}completed{% endif %}"></div>
+            <div class="progress-line {% if rca.why_2 %}completed{% endif %}"></div>
+            <small>Why 2</small>
+        </div>
+        <div class="progress-step">
+            <div class="progress-dot {% if rca.why_3 %}completed{% endif %}"></div>
+            <div class="progress-line {% if rca.why_3 %}completed{% endif %}"></div>
+            <small>Why 3</small>
+        </div>
+        <div class="progress-step">
+            <div class="progress-dot {% if rca.why_4 %}completed{% endif %}"></div>
+            <div class="progress-line {% if rca.why_4 %}completed{% endif %}"></div>
+            <small>Why 4</small>
+        </div>
+        <div class="progress-step">
+            <div class="progress-dot {% if rca.why_5 %}completed{% endif %}"></div>
+            <small>Why 5</small>
+        </div>
+    </div>
+    
+    <!-- 5 Whys Analysis -->
+    <div class="whys-container">
+        <!-- Problem Statement -->
+        <div class="why-level" style="border-left: 5px solid #dc3545;">
+            <div class="why-number" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="why-question">What happened?</div>
+            <div class="why-answer">
+                <strong>{{ rca.incident.description }}</strong>
+            </div>
+        </div>
+        
+        <div class="arrow-down">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        
+        <!-- Why 1 -->
+        <div class="why-level">
+            <div class="why-number">1</div>
+            <div class="why-question">Why did this happen?</div>
+            <div class="why-answer">
+                {% if rca.why_1 %}
+                    {{ rca.why_1 }}
+                {% else %}
+                    <span class="why-empty">First "why" not yet documented</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if rca.why_1 %}
+        <div class="arrow-down">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        
+        <!-- Why 2 -->
+        <div class="why-level">
+            <div class="why-number">2</div>
+            <div class="why-question">Why did that happen?</div>
+            <div class="why-answer">
+                {% if rca.why_2 %}
+                    {{ rca.why_2 }}
+                {% else %}
+                    <span class="why-empty">Second "why" not yet documented</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if rca.why_2 %}
+        <div class="arrow-down">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        
+        <!-- Why 3 -->
+        <div class="why-level">
+            <div class="why-number">3</div>
+            <div class="why-question">Why did that occur?</div>
+            <div class="why-answer">
+                {% if rca.why_3 %}
+                    {{ rca.why_3 }}
+                {% else %}
+                    <span class="why-empty">Third "why" not yet documented</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if rca.why_3 %}
+        <div class="arrow-down">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        
+        <!-- Why 4 -->
+        <div class="why-level">
+            <div class="why-number">4</div>
+            <div class="why-question">What caused that?</div>
+            <div class="why-answer">
+                {% if rca.why_4 %}
+                    {{ rca.why_4 }}
+                {% else %}
+                    <span class="why-empty">Fourth "why" not yet documented</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if rca.why_4 %}
+        <div class="arrow-down">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        
+        <!-- Why 5 -->
+        <div class="why-level">
+            <div class="why-number">5</div>
+            <div class="why-question">What is the underlying cause?</div>
+            <div class="why-answer">
+                {% if rca.why_5 %}
+                    {{ rca.why_5 }}
+                {% else %}
+                    <span class="why-empty">Fifth "why" not yet documented</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Root Cause -->
+        {% if rca.root_cause_summary %}
+        <div class="root-cause-panel">
+            <h3>
+                <i class="bi bi-bullseye"></i> Root Cause Identified
+            </h3>
+            <p>{{ rca.root_cause_summary }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Actions Panel -->
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> Lessons Learned
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if rca.lessons_learned %}
+                        <p>{{ rca.lessons_learned }}</p>
+                    {% else %}
+                        <p class="text-muted"><em>To be documented after analysis completion</em></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if rca.recommendations %}
+                        <p>{{ rca.recommendations }}</p>
+                    {% else %}
+                        <p class="text-muted"><em>To be documented after analysis completion</em></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Investigation Team -->
+    {% if rca.investigation_team.all %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i> Investigation Team
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for member in rca.investigation_team.all %}
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-primary me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>{{ member.get_full_name }}</strong><br>
+                                    <small class="text-muted">{{ member.role.name }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Method Info -->
+    <div class="alert alert-info mt-4">
+        <h6><i class="bi bi-info-circle"></i> About the 5 Whys Method</h6>
+        <p class="mb-0">
+            The 5 Whys is an iterative interrogative technique used to explore cause-and-effect relationships. 
+            By repeatedly asking "Why?" (typically five times), you can peel away layers of symptoms to reveal 
+            the root cause of a problem. This method was developed by Sakichi Toyoda and was used within Toyota 
+            Motor Corporation during the evolution of its manufacturing methodologies.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add smooth scroll animation
+        const whyLevels = document.querySelectorAll('.why-level');
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '0';
+                    entry.target.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        entry.target.style.transition = 'all 0.5s ease';
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, 100);
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+        
+        whyLevels.forEach(level => {
+            observer.observe(level);
+        });
+    });
+</script>
+{% endblock %}

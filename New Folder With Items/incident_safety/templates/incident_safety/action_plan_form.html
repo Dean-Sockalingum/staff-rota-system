@@ -1,0 +1,623 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Safety Action Plan{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: #ef4444;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .priority-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .priority-option {
+        padding: 1rem;
+        border: 3px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .priority-option input[type="radio"] {
+        display: none;
+    }
+
+    .priority-option:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+    }
+
+    .priority-option input[type="radio"]:checked + .priority-label {
+        font-weight: bold;
+    }
+
+    .priority-option.immediate {
+        border-color: #ef4444;
+        background: #fee2e2;
+    }
+
+    .priority-option.immediate input[type="radio"]:checked ~ * {
+        color: #991b1b;
+    }
+
+    .priority-option.high {
+        border-color: #f59e0b;
+        background: #fed7aa;
+    }
+
+    .priority-option.medium {
+        border-color: #fbbf24;
+        background: #fef3c7;
+    }
+
+    .priority-option.low {
+        border-color: #10b981;
+        background: #d1fae5;
+    }
+
+    .action-type-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .action-type-option {
+        padding: 1.25rem;
+        border: 3px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .action-type-option input[type="radio"] {
+        display: none;
+    }
+
+    .action-type-option:hover {
+        border-color: #667eea;
+        background: #f5f7ff;
+    }
+
+    .action-type-option input[type="radio"]:checked + .type-content {
+        color: #667eea;
+    }
+    
+    .action-type-option input[type="radio"]:checked {
+        background: #667eea;
+    }
+
+    .type-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+
+    .type-icon {
+        font-size: 2rem;
+        color: #667eea;
+        min-width: 3rem;
+        text-align: center;
+    }
+    
+    .type-details {
+        flex: 1;
+    }
+
+    .type-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        color: #1f2937;
+    }
+
+    .type-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .btn-success-custom {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0;
+    }
+
+    .errorlist li {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .required-note {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="form-header">
+        <h1 class="mb-0">
+            <i class="bi bi-shield-check"></i>
+            {% if form.instance.pk %}
+                Edit Health and Safety Action Plan
+            {% else %}
+                Create Health and Safety Action Plan
+            {% endif %}
+        </h1>
+        {% if form.instance.pk %}
+        <p class="mb-0 mt-2">{{ form.instance.reference_number }}</p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <strong><i class="bi bi-info-circle"></i> About Safety Action Plans</strong>
+            <p class="mb-0 mt-1" style="color: #1e40af;">
+                Safety Action Plans document corrective actions (fix problems), preventive actions (prevent recurrence),
+                or improvement actions (enhance safety systems). Each plan should have clear ownership, timelines, and verification methods.
+            </p>
+        </div>
+
+        <!-- Required Fields Note -->
+        <div class="required-note">
+            <strong><i class="bi bi-asterisk"></i> Required Fields</strong>
+            <p class="mb-0 mt-1">Fields marked with an asterisk (*) must be completed.</p>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-info-circle"></i> Basic Information
+            </div>
+
+            <div class="row">
+                {% if incident %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        Linked Incident
+                    </label>
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-exclamation-circle"></i> 
+                        <strong>{{ incident.reference_number }}</strong>
+                        <p class="mb-0 mt-1 small">{{ incident.incident_type }} - {{ incident.location }}</p>
+                    </div>
+                    <div class="help-text">
+                        This action plan will be created for the above incident
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.root_cause_analysis.id_for_label }}" class="form-label">
+                        Linked Root Cause Analysis
+                    </label>
+                    {{ form.root_cause_analysis }}
+                    {% if form.root_cause_analysis.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.root_cause_analysis.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="help-text">
+                        Optional: Link to an RCA if investigation was completed
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label required">Action Type</label>
+                <div class="help-text mb-2">Select the type of action this plan addresses</div>
+                <div class="action-type-selector">
+                    {% for value, label in form.action_type.field.choices %}
+                    {% if value %}
+                    <label class="action-type-option">
+                        <input type="radio" name="action_type" value="{{ value }}" 
+                               {% if form.action_type.value == value %}checked{% endif %}>
+                        <div class="type-content">
+                            <div class="type-icon">
+                                {% if value == 'CORRECTIVE' %}<i class="bi bi-tools"></i>
+                                {% elif value == 'PREVENTIVE' %}<i class="bi bi-shield-check"></i>
+                                {% elif value == 'IMPROVEMENT' %}<i class="bi bi-graph-up-arrow"></i>{% endif %}
+                            </div>
+                            <div class="type-details">
+                                <div class="type-title">
+                                    {% if value == 'CORRECTIVE' %}Corrective Action
+                                    {% elif value == 'PREVENTIVE' %}Preventive Action
+                                    {% elif value == 'IMPROVEMENT' %}Improvement Action{% endif %}
+                                </div>
+                                <div class="type-description">
+                                    {% if value == 'CORRECTIVE' %}Fix existing problems
+                                    {% elif value == 'PREVENTIVE' %}Prevent future recurrence
+                                    {% elif value == 'IMPROVEMENT' %}Enhance processes and improve systems{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.action_type.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.action_type.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label required">Priority Level</label>
+                <div class="help-text mb-2">Select the urgency of this action</div>
+                <div class="priority-selector">
+                    <label class="priority-option immediate">
+                        <input type="radio" name="priority" value="IMMEDIATE" 
+                               {% if form.priority.value == 'IMMEDIATE' %}checked{% endif %}>
+                        <div class="priority-label">
+                            <div style="font-size: 1.5rem;">🔴</div>
+                            <div>IMMEDIATE</div>
+                            <small>Within 24 hours</small>
+                        </div>
+                    </label>
+                    <label class="priority-option high">
+                        <input type="radio" name="priority" value="HIGH" 
+                               {% if form.priority.value == 'HIGH' %}checked{% endif %}>
+                        <div class="priority-label">
+                            <div style="font-size: 1.5rem;">🟠</div>
+                            <div>HIGH</div>
+                            <small>Within 1 week</small>
+                        </div>
+                    </label>
+                    <label class="priority-option medium">
+                        <input type="radio" name="priority" value="MEDIUM" 
+                               {% if form.priority.value == 'MEDIUM' %}checked{% endif %}>
+                        <div class="priority-label">
+                            <div style="font-size: 1.5rem;">🟡</div>
+                            <div>MEDIUM</div>
+                            <small>Within 1 month</small>
+                        </div>
+                    </label>
+                    <label class="priority-option low">
+                        <input type="radio" name="priority" value="LOW" 
+                               {% if form.priority.value == 'LOW' %}checked{% endif %}>
+                        <div class="priority-label">
+                            <div style="font-size: 1.5rem;">🟢</div>
+                            <div>LOW</div>
+                            <small>Within 3 months</small>
+                        </div>
+                    </label>
+                </div>
+                {% if form.priority.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.priority.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Problem & Action Description -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-file-text"></i> Problem & Action Description
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.problem_statement.id_for_label }}" class="form-label required">Problem Statement</label>
+                <div class="help-text mb-2">Clearly describe the problem or risk that needs to be addressed</div>
+                {{ form.problem_statement }}
+                {% if form.problem_statement.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.problem_statement.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.action_description.id_for_label }}" class="form-label required">Action Description</label>
+                <div class="help-text mb-2">Describe what action will be taken to address the problem</div>
+                {{ form.action_description }}
+                {% if form.action_description.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.action_description.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.expected_outcome.id_for_label }}" class="form-label required">Expected Outcome</label>
+                <div class="help-text mb-2">What result do you expect when this action is successfully implemented?</div>
+                {{ form.expected_outcome }}
+                {% if form.expected_outcome.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.expected_outcome.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Ownership & Timeline -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-people"></i> Ownership & Timeline
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <label for="{{ form.action_owner.id_for_label }}" class="form-label required">Action Owner</label>
+                    <div class="help-text mb-2">Person responsible for implementing this action</div>
+                    {{ form.action_owner }}
+                    {% if form.action_owner.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.action_owner.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <label for="{{ form.supporting_staff.id_for_label }}" class="form-label">Supporting Staff</label>
+                    <div class="help-text mb-2">Team members who will support implementation (hold Ctrl/Cmd to select multiple)</div>
+                    {{ form.supporting_staff }}
+                    {% if form.supporting_staff.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.supporting_staff.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <label for="{{ form.target_completion_date.id_for_label }}" class="form-label required">Target Completion Date</label>
+                    <div class="help-text mb-2">When should this action be completed?</div>
+                    {{ form.target_completion_date }}
+                    {% if form.target_completion_date.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.target_completion_date.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <label for="{{ form.percent_complete.id_for_label }}" class="form-label">Percent Complete</label>
+                    <div class="help-text mb-2">Current completion percentage (0-100%)</div>
+                    {{ form.percent_complete }}
+                    {% if form.percent_complete.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.percent_complete.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="help-text">
+                        Current completion percentage (0-100%)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implementation Details -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="bi bi-gear"></i> Implementation Details
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.implementation_plan.id_for_label }}" class="form-label">Implementation Plan</label>
+                <div class="help-text mb-2">Detailed steps for implementing this action</div>
+                {{ form.implementation_plan }}
+                {% if form.implementation_plan.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.implementation_plan.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.resources_required.id_for_label }}" class="form-label">Resources Required</label>
+                <div class="help-text mb-2">What resources (budget, equipment, training) are needed?</div>
+                {{ form.resources_required }}
+                {% if form.resources_required.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.resources_required.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.barriers_identified.id_for_label }}" class="form-label">Barriers Identified</label>
+                <div class="help-text mb-2">Potential obstacles or challenges to implementation</div>
+                {{ form.barriers_identified }}
+                {% if form.barriers_identified.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.barriers_identified.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.verification_method.id_for_label }}" class="form-label">Verification Method</label>
+                <div class="help-text mb-2">How will you verify that this action has been successfully implemented?</div>
+                {{ form.verification_method }}
+                {% if form.verification_method.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.verification_method.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% if form.instance.pk %}{% url 'incident_safety:action_plan_detail' form.instance.pk %}{% else %}{% url 'incident_safety:action_plan_list' %}{% endif %}" 
+               class="btn btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" name="save_draft" class="btn btn-success-custom">
+                <i class="bi bi-save"></i> Save Draft
+            </button>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="bi bi-check-circle"></i> Save Action Plan
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

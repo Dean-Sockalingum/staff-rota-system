@@ -1,0 +1,211 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Delete Duty of Candour - {{ object.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-header {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .delete-warning {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        border-left: 6px solid #ef4444;
+    }
+
+    .warning-icon {
+        font-size: 4rem;
+        color: #ef4444;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .warning-text {
+        font-size: 1.25rem;
+        color: #1f2937;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .record-info {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .info-value {
+        color: #1f2937;
+    }
+
+    .consequences-list {
+        background: #fef3c7;
+        border: 2px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .consequences-list h5 {
+        color: #92400e;
+        margin-bottom: 1rem;
+    }
+
+    .consequences-list ul {
+        color: #92400e;
+        margin-bottom: 0;
+    }
+
+    .consequences-list li {
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #6b7280;
+        border: 2px solid #e5e7eb;
+    }
+
+    .btn-secondary-custom:hover {
+        background: #f9fafb;
+        border-color: #6b7280;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <!-- Header -->
+    <div class="delete-header">
+        <h1 class="text-center mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Delete Duty of Candour Record
+        </h1>
+    </div>
+
+    <!-- Warning Message -->
+    <div class="delete-warning">
+        <div class="warning-icon">
+            <i class="bi bi-shield-x"></i>
+        </div>
+        <div class="warning-text">
+            <strong>Are you sure you want to delete this Duty of Candour record?</strong>
+        </div>
+        <p class="text-center text-muted mb-0">
+            This action cannot be undone. All associated data will be permanently removed.
+        </p>
+    </div>
+
+    <!-- Record Information -->
+    <div class="record-info">
+        <h5 class="mb-3">Record Details</h5>
+        <div class="info-row">
+            <span class="info-label">Reference Number:</span>
+            <span class="info-value">{{ object.reference_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Incident:</span>
+            <span class="info-value">{{ object.incident.reference_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Harm Level:</span>
+            <span class="info-value">{{ object.get_harm_level_display }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Family Contact:</span>
+            <span class="info-value">{{ object.family_contact_name|default:"Not recorded" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Created:</span>
+            <span class="info-value">{{ object.created_at|date:"d M Y H:i" }}</span>
+        </div>
+        {% if object.care_inspectorate_notified %}
+        <div class="info-row">
+            <span class="info-label">CI Notification:</span>
+            <span class="info-value">{{ object.ci_reference_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Consequences Warning -->
+    <div class="consequences-list">
+        <h5><i class="bi bi-exclamation-circle"></i> Deletion Consequences</h5>
+        <ul>
+            <li>This Duty of Candour record will be permanently deleted</li>
+            <li>All communication logs ({{ object.communications.count }}) will be removed</li>
+            <li>Workflow history and progress will be lost</li>
+            {% if object.care_inspectorate_notified %}
+            <li><strong>Care Inspectorate notification records will be deleted</strong></li>
+            {% endif %}
+            {% if object.linked_rca %}
+            <li>Link to RCA {{ object.linked_rca.reference_number }} will be removed</li>
+            {% endif %}
+            <li>The linked incident will remain unaffected</li>
+            <li>This action will be logged in the audit trail</li>
+        </ul>
+    </div>
+
+    <!-- Deletion Form -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="action-buttons">
+            <a href="{% url 'incident_safety:doc_detail' object.pk %}" class="btn btn-secondary-custom">
+                <i class="bi bi-arrow-left"></i> Cancel - Keep Record
+            </a>
+            <button type="submit" class="btn btn-danger-custom">
+                <i class="bi bi-trash"></i> Yes, Delete Permanently
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

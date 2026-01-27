@@ -1,0 +1,324 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Audit Dashboard - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #666;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .stat-card .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-card.critical .stat-value {
+        color: #dc3545;
+    }
+    .stat-card.warning .stat-value {
+        color: #ffc107;
+    }
+    .stat-card.success .stat-value {
+        color: #28a745;
+    }
+    .stat-card.info .stat-value {
+        color: #17a2b8;
+    }
+    .activity-log {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .activity-item {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .activity-item .timestamp {
+        color: #999;
+        font-size: 12px;
+    }
+    .activity-item .user {
+        font-weight: 600;
+        color: #007bff;
+    }
+    .activity-item .action {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin: 0 4px;
+    }
+    .action.CREATE { background: #d4edda; color: #155724; }
+    .action.UPDATE { background: #fff3cd; color: #856404; }
+    .action.DELETE { background: #f8d7da; color: #721c24; }
+    .action.LOGIN { background: #d1ecf1; color: #0c5460; }
+    .action.LOGOUT { background: #e2e3e5; color: #383d41; }
+    .action.LOGIN_FAILED { background: #f8d7da; color: #721c24; }
+    .violation-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .violation-badge.CRITICAL { background: #dc3545; color: white; }
+    .violation-badge.HIGH { background: #fd7e14; color: white; }
+    .violation-badge.MEDIUM { background: #ffc107; color: #000; }
+    .violation-badge.LOW { background: #17a2b8; color: white; }
+    .nav-tabs {
+        margin-bottom: 20px;
+    }
+    .filter-bar {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Audit Dashboard</h2>
+            <p class="text-muted">System activity and compliance monitoring</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" class="form-inline">
+            <label class="mr-2">Time Period:</label>
+            <select name="days" class="form-control mr-2" title="Select time period for audit data" onchange="this.form.submit()">
+                <option value="1" {% if days == 1 %}selected{% endif %}>Last 24 hours</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <h3>Data Changes</h3>
+                <div class="stat-value">{{ stats.total_changes }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <h3>Access Events</h3>
+                <div class="stat-value">{{ stats.total_access_events }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card {% if stats.open_violations > 0 %}warning{% else %}success{% endif %}">
+                <h3>Open Violations</h3>
+                <div class="stat-value">{{ stats.open_violations }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card {% if stats.critical_violations > 0 %}critical{% else %}success{% endif %}">
+                <h3>Critical Issues</h3>
+                <div class="stat-value">{{ stats.critical_violations }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-3">
+            <div class="stat-card {% if stats.failed_logins > 0 %}critical{% else %}success{% endif %}">
+                <h3>Failed Logins</h3>
+                <div class="stat-value">{{ stats.failed_logins }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <h3>Compliance Checks</h3>
+                <div class="stat-value">{{ stats.recent_checks }}</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card">
+                <h3>Change Breakdown</h3>
+                {% for item in change_breakdown %}
+                <span class="action {{ item.action }}">{{ item.action }}: {{ item.count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mt-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#recent-changes" type="button" role="tab">Recent Changes</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#access-logs" type="button" role="tab">Access Logs</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#violations" type="button" role="tab">Violations</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#checks" type="button" role="tab">Compliance Checks</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Recent Changes Tab -->
+        <div id="recent-changes" class="tab-pane fade show active">
+            <div class="activity-log">
+                <h4>Recent Data Changes</h4>
+                {% if recent_changes %}
+                    {% for change in recent_changes %}
+                    <div class="activity-item">
+                        <span class="timestamp">{{ change.timestamp|date:"d/m/Y H:i" }}</span> -
+                        <span class="user">{{ change.user.sap }}</span>
+                        <span class="action {{ change.action }}">{{ change.action }}</span>
+                        <strong>{{ change.content_type.model }}</strong>
+                        {% if change.field_name %}
+                            - Field: <code>{{ change.field_name }}</code>
+                            {% if change.old_value %}
+                                <br><small class="ml-5">Old: {{ change.old_value|truncatewords:10 }}</small>
+                            {% endif %}
+                            {% if change.new_value %}
+                                <br><small class="ml-5">New: {{ change.new_value|truncatewords:10 }}</small>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'data_change_log_list' %}" class="btn btn-primary">View All Changes</a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent changes</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Access Logs Tab -->
+        <div id="access-logs" class="tab-pane fade">
+            <div class="activity-log">
+                <h4>Recent Access Events</h4>
+                {% if recent_access %}
+                    {% for access in recent_access %}
+                    <div class="activity-item">
+                        <span class="timestamp">{{ access.timestamp|date:"d/m/Y H:i" }}</span> -
+                        <span class="user">{{ access.user.sap }}</span>
+                        <span class="action {{ access.access_type }}">{{ access.get_access_type_display }}</span>
+                        {% if not access.success %}
+                            <span class="badge badge-danger">FAILED</span>
+                            {% if access.failure_reason %}
+                                - {{ access.failure_reason }}
+                            {% endif %}
+                        {% endif %}
+                        <br><small class="ml-5">IP: {{ access.ip_address }}</small>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'system_access_log_list' %}" class="btn btn-primary">View All Access Logs</a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent access events</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Violations Tab -->
+        <div id="violations" class="tab-pane fade">
+            <div class="activity-log">
+                <h4>Open Compliance Violations</h4>
+                {% if open_violations %}
+                    {% for violation in open_violations %}
+                    <div class="activity-item">
+                        <span class="timestamp">{{ violation.detected_at|date:"d/m/Y H:i" }}</span>
+                        <span class="violation-badge {{ violation.compliance_check.rule.severity }}">
+                            {{ violation.compliance_check.rule.get_severity_display }}
+                        </span>
+                        <strong>{{ violation.compliance_check.rule.name }}</strong>
+                        {% if violation.affected_user %}
+                            <br><small class="ml-5">Affected: {{ violation.affected_user.full_name }}</small>
+                        {% endif %}
+                        <br><small class="ml-5">{{ violation.description|truncatewords:20 }}</small>
+                        <br><a href="{% url 'compliance_violation_detail' violation.id %}" class="ml-5">View Details</a>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'compliance_violation_list' %}" class="btn btn-primary">View All Violations</a>
+                    </div>
+                {% else %}
+                    <p class="text-success">✓ No open violations</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Compliance Checks Tab -->
+        <div id="checks" class="tab-pane fade">
+            <div class="activity-log">
+                <h4>Recent Compliance Checks</h4>
+                {% if recent_checks %}
+                    {% for check in recent_checks %}
+                    <div class="activity-item">
+                        <span class="timestamp">{{ check.started_at|date:"d/m/Y H:i" }}</span> -
+                        <strong>{{ check.rule.name }}</strong>
+                        <span class="badge badge-{{ check.status|lower }}">{{ check.get_status_display }}</span>
+                        {% if check.violations_found %}
+                            <span class="badge badge-warning">{{ check.violations_found }} violation(s)</span>
+                        {% else %}
+                            <span class="badge badge-success">No violations</span>
+                        {% endif %}
+                        <br><small class="ml-5">Checked {{ check.items_checked }} item(s)</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent compliance checks</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'compliance_dashboard' %}" class="btn btn-info mr-2">Compliance Dashboard</a>
+                    <a href="{% url 'audit_report_list' %}" class="btn btn-primary mr-2">Audit Reports</a>
+                    <a href="{% url 'generate_audit_report' %}" class="btn btn-success mr-2">Generate Report</a>
+                    <a href="{% url 'data_change_log_list' %}" class="btn btn-secondary mr-2">All Data Changes</a>
+                    <a href="{% url 'system_access_log_list' %}" class="btn btn-secondary">All Access Logs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

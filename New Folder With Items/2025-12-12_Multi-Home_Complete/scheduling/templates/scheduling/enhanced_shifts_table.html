@@ -1,0 +1,448 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css">
+<style>
+    .datatable-toolbar {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .bulk-actions {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        background: #e3f2fd;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+    .bulk-actions.show {
+        display: flex;
+    }
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.375rem 0.75rem;
+        background: #0d6efd;
+        color: white;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .filter-chip button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        margin-left: 0.25rem;
+    }
+    .advanced-filters {
+        display: none;
+        padding: 1rem;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+    }
+    .advanced-filters.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Enhanced Shifts Table</h2>
+            <p class="text-muted">Advanced filtering, sorting, and bulk operations</p>
+        </div>
+        <div>
+            <a href="{% url 'shift_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Simple View
+            </a>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="datatable-toolbar">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" id="toggleFilters">
+                        <i class="bi bi-funnel"></i> Advanced Filters
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="exportCSV">
+                        <i class="bi bi-download"></i> Export CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-info" id="exportJSON">
+                        <i class="bi bi-code"></i> Export JSON
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <button type="button" class="btn btn-primary" id="clearFilters">
+                    <i class="bi bi-x-circle"></i> Clear All Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Filters -->
+        <div id="activeFilters" class="mt-3"></div>
+
+        <!-- Advanced Filters Panel -->
+        <div id="advancedFilters" class="advanced-filters">
+            <h5>Advanced Filters</h5>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <input type="date" class="form-control" id="filterDateFrom" placeholder="From">
+                    <input type="date" class="form-control mt-2" id="filterDateTo" placeholder="To">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Home</label>
+                    <select class="form-select" id="filterHome">
+                        <option value="">All Homes</option>
+                        {% for home in homes %}
+                        <option value="{{ home.id }}">{{ home.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Unit</label>
+                    <select class="form-select" id="filterUnit">
+                        <option value="">All Units</option>
+                        {% for unit in units %}
+                        <option value="{{ unit.id }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Staff Status</label>
+                    <select class="form-select" id="filterStaffed">
+                        <option value="">All Shifts</option>
+                        <option value="staffed">Staffed Only</option>
+                        <option value="vacant">Vacant Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary" id="applyFilters">
+                    <i class="bi bi-check"></i> Apply Filters
+                </button>
+                <button type="button" class="btn btn-secondary" id="resetFilters">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div id="bulkActionsBar" class="bulk-actions">
+        <strong><span id="selectedCount">0</span> selected</strong>
+        <select class="form-select form-select-sm" id="bulkAction" style="width: auto;">
+            <option value="">Select Action...</option>
+            <option value="delete">Delete</option>
+            <option value="update_type">Update Shift Type</option>
+            <option value="assign_staff">Assign Staff</option>
+        </select>
+        <button type="button" class="btn btn-sm btn-primary" id="executeBulkAction">Execute</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelSelection">Cancel</button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card">
+        <div class="card-body">
+            <table id="shiftsTable" class="table table-striped table-hover" style="width:100%">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Home</th>
+                        <th>Unit</th>
+                        <th>Shift Type</th>
+                        <th>Staff</th>
+                        <th>SAP</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in shifts %}
+                    <tr data-shift-id="{{ shift.id }}">
+                        <td><input type="checkbox" class="row-select" value="{{ shift.id }}"></td>
+                        <td data-order="{{ shift.date|date:'Y-m-d' }}">{{ shift.date|date:'d M Y' }}</td>
+                        <td>{{ shift.start_time|time:'H:i' }} - {{ shift.end_time|time:'H:i' }}</td>
+                        <td>{{ shift.home.name }}</td>
+                        <td>{{ shift.unit.name|default:'-' }}</td>
+                        <td>{{ shift.shift_type.name|default:'-' }}</td>
+                        <td>
+                            {% if shift.staff %}
+                            {{ shift.staff.get_full_name }}
+                            {% else %}
+                            <span class="badge bg-warning">Vacant</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ shift.staff.sap|default:'-' }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'shift_detail' shift.id %}" class="btn btn-outline-primary" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'edit_shift' shift.id %}" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">No shifts found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination Info -->
+    <div class="mt-3 text-muted">
+        Showing {{ shifts|length }} of {{ total }} total shifts
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    const table = $('#shiftsTable').DataTable({
+        select: {
+            style: 'multi',
+            selector: 'td:first-child input[type="checkbox"]'
+        },
+        order: [[1, 'desc']], // Default sort by date descending
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rt<"row"<"col-sm-6"i><"col-sm-6"p>>',
+        columnDefs: [
+            {
+                orderable: false,
+                targets: [0, 8] // Checkbox and actions columns
+            }
+        ]
+    });
+
+    // Handle "Select All" checkbox
+    $('#selectAll').on('click', function() {
+        const rows = table.rows({ 'search': 'applied' }).nodes();
+        $('input[type="checkbox"]', rows).prop('checked', this.checked);
+        updateBulkActionsBar();
+    });
+
+    // Handle individual row selection
+    $('#shiftsTable tbody').on('change', 'input[type="checkbox"]', function() {
+        updateBulkActionsBar();
+    });
+
+    // Update bulk actions bar
+    function updateBulkActionsBar() {
+        const selected = $('.row-select:checked').length;
+        $('#selectedCount').text(selected);
+        
+        if (selected > 0) {
+            $('#bulkActionsBar').addClass('show');
+        } else {
+            $('#bulkActionsBar').removeClass('show');
+        }
+    }
+
+    // Toggle advanced filters
+    $('#toggleFilters').on('click', function() {
+        $('#advancedFilters').toggleClass('show');
+    });
+
+    // Apply filters
+    $('#applyFilters').on('click', function() {
+        applyAdvancedFilters();
+    });
+
+    // Reset filters
+    $('#resetFilters').on('click', function() {
+        $('#filterDateFrom, #filterDateTo').val('');
+        $('#filterHome, #filterUnit, #filterStaffed').val('');
+        $('#activeFilters').empty();
+        applyAdvancedFilters();
+    });
+
+    // Clear all filters
+    $('#clearFilters').on('click', function() {
+        table.search('').columns().search('').draw();
+        $('#activeFilters').empty();
+        $('#filterDateFrom, #filterDateTo').val('');
+        $('#filterHome, #filterUnit, #filterStaffed').val('');
+    });
+
+    // Apply advanced filters function
+    function applyAdvancedFilters() {
+        const filters = [];
+        const dateFrom = $('#filterDateFrom').val();
+        const dateTo = $('#filterDateTo').val();
+        const home = $('#filterHome').val();
+        const unit = $('#filterUnit').val();
+        const staffed = $('#filterStaffed').val();
+
+        // Apply date filter
+        if (dateFrom && dateTo) {
+            filters.push({
+                field: 'date',
+                operator: 'date_range',
+                value: `${dateFrom},${dateTo}`
+            });
+        }
+
+        // Apply home filter
+        if (home) {
+            table.column(3).search(home ? $('option:selected', '#filterHome').text() : '');
+            filters.push({
+                field: 'home',
+                operator: 'equals',
+                value: home
+            });
+        }
+
+        // Apply unit filter
+        if (unit) {
+            table.column(4).search(unit ? $('option:selected', '#filterUnit').text() : '');
+            filters.push({
+                field: 'unit',
+                operator: 'equals',
+                value: unit
+            });
+        }
+
+        // Apply staffed filter
+        if (staffed === 'vacant') {
+            table.column(6).search('Vacant');
+        } else if (staffed === 'staffed') {
+            table.column(6).search('', true, false);
+        }
+
+        table.draw();
+        displayActiveFilters(filters);
+    }
+
+    // Display active filters as chips
+    function displayActiveFilters(filters) {
+        const container = $('#activeFilters');
+        container.empty();
+
+        filters.forEach(filter => {
+            const chip = $('<span>', {
+                class: 'filter-chip',
+                html: `${filter.field}: ${filter.value} <button onclick="removeFilter('${filter.field}')">×</button>`
+            });
+            container.append(chip);
+        });
+    }
+
+    // Export to CSV
+    $('#exportCSV').on('click', function() {
+        const filters = buildFilterJSON();
+        const sort = buildSortJSON();
+        window.location.href = `?export=csv&filters=${encodeURIComponent(filters)}&sort=${encodeURIComponent(sort)}`;
+    });
+
+    // Export to JSON
+    $('#exportJSON').on('click', function() {
+        const filters = buildFilterJSON();
+        const sort = buildSortJSON();
+        window.location.href = `?export=json&filters=${encodeURIComponent(filters)}&sort=${encodeURIComponent(sort)}`;
+    });
+
+    // Build filter JSON
+    function buildFilterJSON() {
+        const filters = [];
+        // Add current filters to array
+        return JSON.stringify(filters);
+    }
+
+    // Build sort JSON
+    function buildSortJSON() {
+        const order = table.order();
+        const columns = table.settings().init().columns;
+        const sort = order.map(o => ({
+            field: columns[o[0]].data || columns[o[0]].name,
+            direction: o[1]
+        }));
+        return JSON.stringify(sort);
+    }
+
+    // Execute bulk action
+    $('#executeBulkAction').on('click', function() {
+        const action = $('#bulkAction').val();
+        if (!action) {
+            alert('Please select an action');
+            return;
+        }
+
+        const selected = $('.row-select:checked').map(function() {
+            return $(this).val();
+        }).get();
+
+        if (selected.length === 0) {
+            alert('No items selected');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to ${action} ${selected.length} shift(s)?`)) {
+            return;
+        }
+
+        // Send AJAX request
+        $.ajax({
+            url: window.location.pathname,
+            method: 'POST',
+            data: {
+                action: action,
+                selected_ids: JSON.stringify(selected),
+                csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('An error occurred');
+            }
+        });
+    });
+
+    // Cancel selection
+    $('#cancelSelection').on('click', function() {
+        $('.row-select, #selectAll').prop('checked', false);
+        updateBulkActionsBar();
+    });
+});
+</script>
+{% endblock %}

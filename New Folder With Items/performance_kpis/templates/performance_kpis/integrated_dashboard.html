@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Executive TQM Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .score-card {
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .score-card.green { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+    .score-card.amber { background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #212529; }
+    .score-card.red { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+    
+    .score-number {
+        font-size: 3.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .score-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid #007bff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #212529;
+        margin: 5px 0;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+    
+    .metric-sub {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .module-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .module-header {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .badge-rag {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .badge-rag.green { background-color: #28a745; color: white; }
+    .badge-rag.amber { background-color: #ffc107; color: #212529; }
+    .badge-rag.red { background-color: #dc3545; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-tachometer-alt"></i> Executive TQM Dashboard</h1>
+            <p class="text-muted mb-0">
+                Real-time metrics from all 7 TQM modules • Last {{ period_days }} days • As of {{ report_date|date:"d M Y" }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'performance_kpis:dashboard_view' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line"></i> Detailed KPIs
+            </a>
+            <button class="btn btn-success" onclick="window.print()">
+                <i class="fas fa-download"></i> Export Report
+            </button>
+        </div>
+    </div>
+    
+    <!-- Executive Summary - 3 Key Scores -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="score-card {{ safety_rag|lower }}">
+                <div class="score-label">Overall Safety Score</div>
+                <div class="score-number">{{ safety_score }}%</div>
+                <span class="badge-rag {{ safety_rag|lower }}">{{ safety_rag }}</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="score-card {{ quality_rag|lower }}">
+                <div class="score-label">Overall Quality Score</div>
+                <div class="score-number">{{ quality_score }}%</div>
+                <span class="badge-rag {{ quality_rag|lower }}">{{ quality_rag }}</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="score-card {{ compliance_rag|lower }}">
+                <div class="score-label">Overall Compliance Score</div>
+                <div class="score-number">{{ compliance_score }}%</div>
+                <span class="badge-rag {{ compliance_rag|lower }}">{{ compliance_rag }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 2: Incident & Safety -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-shield-alt text-danger"></i> Module 2: Incident Management & Safety
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total Incidents</div>
+                    <div class="metric-value">{{ total_incidents }}</div>
+                    <div class="metric-sub">
+                        <span class="text-danger">{{ high_severity_incidents }}</span> high severity
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">HSAP Completion</div>
+                    <div class="metric-value">{{ hsap_completion_rate }}%</div>
+                    <div class="metric-sub">{{ active_hsaps }} active / {{ total_hsaps }} total</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">RCA Completion</div>
+                    <div class="metric-value">{{ rca_completion_rate }}%</div>
+                    <div class="metric-sub">{{ total_rcas }} root cause analyses</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Active Trends</div>
+                    <div class="metric-value">{{ active_trends }}</div>
+                    <div class="metric-sub">Pattern analysis ongoing</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 3: Experience & Feedback -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-comments text-info"></i> Module 3: Experience & Feedback
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total Feedback</div>
+                    <div class="metric-value">{{ total_feedback }}</div>
+                    <div class="metric-sub">All channels combined</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Positive Feedback</div>
+                    <div class="metric-value">{{ positive_feedback }}</div>
+                    <div class="metric-sub">Compliments received</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Complaints</div>
+                    <div class="metric-value">{{ complaints_count }}</div>
+                    <div class="metric-sub">Avg response: {{ avg_complaint_response_days }} days</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Satisfaction Score</div>
+                    <div class="metric-value">{{ avg_satisfaction }}/10</div>
+                    <div class="metric-sub">Average rating</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 1: Quality Audits & PDSA -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-clipboard-check text-success"></i> Module 1: Quality Audits & PDSA
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">PDSA Projects</div>
+                    <div class="metric-value">{{ total_pdsa_projects }}</div>
+                    <div class="metric-sub">{{ active_pdsa }} active, {{ completed_pdsa }} completed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">PDSA Success Rate</div>
+                    <div class="metric-value">{{ pdsa_success_rate }}%</div>
+                    <div class="metric-sub">Improvement cycles effectiveness</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total QIAs</div>
+                    <div class="metric-value">{{ total_qias }}</div>
+                    <div class="metric-sub">{{ active_qias }} active, {{ closed_qias }} closed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">QIA Closure Rate</div>
+                    <div class="metric-value">{{ qia_closure_rate }}%</div>
+                    <div class="metric-sub">
+                        {% if overdue_qias > 0 %}
+                        <span class="text-danger">{{ overdue_qias }} overdue</span>
+                        {% else %}
+                        On track
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="alert alert-info mb-0">
+                    <strong>QIA Sources:</strong> 
+                    {{ qias_from_incidents }} from incidents, 
+                    {{ qias_from_audits }} from audits, 
+                    {{ qias_from_risks }} from risks |
+                    <strong>Priority:</strong> 
+                    {{ critical_qias }} critical, {{ high_priority_qias }} high
+                    <a href="{% url 'quality_audits:qia_dashboard' %}" class="float-end btn btn-sm btn-info">
+                        <i class="fas fa-arrow-right"></i> View QIA Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 4: Training & Competency -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-graduation-cap text-primary"></i> Module 4: Training & Competency
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Training Courses</div>
+                    <div class="metric-value">{{ total_training_courses }}</div>
+                    <div class="metric-sub">{{ mandatory_courses }} mandatory</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Competency Pass Rate</div>
+                    <div class="metric-value">{{ competency_pass_rate }}%</div>
+                    <div class="metric-sub">Assessment success</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Workforce Readiness</div>
+                    <div class="metric-value">
+                        {% if competency_pass_rate >= 80 %}
+                            <i class="fas fa-check-circle text-success"></i>
+                        {% elif competency_pass_rate >= 60 %}
+                            <i class="fas fa-exclamation-circle text-warning"></i>
+                        {% else %}
+                            <i class="fas fa-times-circle text-danger"></i>
+                        {% endif %}
+                    </div>
+                    <div class="metric-sub">Staff capability</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 5: Policies & Procedures -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-file-alt text-warning"></i> Module 5: Policies & Procedures
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Active Policies</div>
+                    <div class="metric-value">{{ active_policies }}</div>
+                    <div class="metric-sub">{{ total_policies }} total</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Review Due Soon</div>
+                    <div class="metric-value">{{ policies_needing_review }}</div>
+                    <div class="metric-sub">Next 30 days</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-label">Recent Acknowledgements</div>
+                    <div class="metric-value">{{ recent_policy_acks }}</div>
+                    <div class="metric-sub">Staff compliance tracking</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module 6: Risk Management -->
+    <div class="module-section">
+        <div class="module-header">
+            <i class="fas fa-exclamation-triangle text-danger"></i> Module 6: Risk Management
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total Risks</div>
+                    <div class="metric-value">{{ total_risks }}</div>
+                    <div class="metric-sub">In risk register</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Critical/High Risks</div>
+                    <div class="metric-value text-danger">{{ critical_risks }}/{{ high_risks }}</div>
+                    <div class="metric-sub">Requiring immediate attention</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Risk Control Rate</div>
+                    <div class="metric-value">{{ risk_control_rate }}%</div>
+                    <div class="metric-sub">Risks under control</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Mitigation Completion</div>
+                    <div class="metric-value">{{ mitigation_completion_rate }}%</div>
+                    <div class="metric-sub">Actions completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Health Summary -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> System Health Summary</h5>
+                <p class="mb-0">
+                    <strong>TQM System Status:</strong> All 7 modules operational and collecting data. 
+                    Overall system performance is 
+                    {% if safety_score >= 80 and quality_score >= 80 and compliance_score >= 80 %}
+                        <span class="badge bg-success">EXCELLENT</span>
+                    {% elif safety_score >= 60 and quality_score >= 60 and compliance_score >= 60 %}
+                        <span class="badge bg-warning">GOOD</span>
+                    {% else %}
+                        <span class="badge bg-danger">NEEDS ATTENTION</span>
+                    {% endif %}
+                    . Continue monitoring trends and addressing areas flagged as red or amber.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3 class="mb-4">
+                <i class="fas fa-chart-line text-primary"></i> Performance Trends & Analytics
+            </h3>
+        </div>
+    </div>
+    
+    <!-- Row 1: Incident Trends and Risk Distribution -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="incidentTrendChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="riskDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Row 2: Training Completion -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="trainingCompletionChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Row 3: PDSA Success and QIA Closure Trends -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="pdsaSuccessChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="qiaClosureTrendChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for charts (JSON) -->
+<script id="incident-trend-data" type="application/json">{{ incident_trend_data|safe }}</script>
+<script id="risk-distribution-data" type="application/json">{{ risk_distribution_data|safe }}</script>
+<script id="training-completion-data" type="application/json">{{ training_completion_data|safe }}</script>
+<script id="pdsa-success-data" type="application/json">{{ pdsa_success_data|safe }}</script>
+<script id="qia-closure-data" type="application/json">{{ qia_closure_data|safe }}</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Custom Dashboard Charts -->
+<script src="{% static 'js/integrated_dashboard.js' %}"></script>
+{% endblock %}

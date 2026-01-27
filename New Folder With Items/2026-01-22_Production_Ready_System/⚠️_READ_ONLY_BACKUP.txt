@@ -1,0 +1,54 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║                    ⚠️  READ-ONLY BACKUP  ⚠️                   ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+🚫 DO NOT EDIT FILES IN THIS LOCATION!
+
+This is a BACKUP copy only. All work should be done from:
+
+    📁 /Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete
+
+═══════════════════════════════════════════════════════════════
+
+Why?
+------
+• NVMe is the PRIMARY workspace (source of truth)
+• Desktop is BACKUP only (synced daily)
+• Editing here will cause sync conflicts
+
+═══════════════════════════════════════════════════════════════
+
+What to do instead:
+-------------------
+
+1. Open terminal
+
+2. Navigate to NVMe:
+   cd /Volumes/NVMe_990Pro/Staff_Rota_Backups/2025-12-12_Multi-Home_Complete
+
+3. Work from there
+
+4. At end of day, run:
+   ./sync_to_desktop.sh
+
+═══════════════════════════════════════════════════════════════
+
+If NVMe is not available:
+--------------------------
+• This Desktop backup is read-only reference only
+• Do NOT make changes here
+• Pull latest from GitHub if you need to work:
+  
+  git pull origin main
+  
+• But switch back to NVMe as soon as possible
+
+═══════════════════════════════════════════════════════════════
+
+Current sync status: b281b3c (26 Dec 2025)
+
+Last synced: Check DAILY_WORKFLOW.md for sync instructions
+
+═══════════════════════════════════════════════════════════════

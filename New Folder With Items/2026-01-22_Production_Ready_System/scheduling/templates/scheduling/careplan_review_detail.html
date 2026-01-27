@@ -1,0 +1,273 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Care Plan Review - {{ resident.resident_id }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'careplan_overview' %}">Care Plan Reviews</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'careplan_unit_view' resident.unit.name %}">{{ resident.unit.name }}</a></li>
+                <li class="breadcrumb-item active">{{ resident.resident_id }}</li>
+            </ol>
+        </nav>
+        <h2>
+            <i class="fas fa-file-medical"></i> Care Plan Review
+            {% if review.status == 'OVERDUE' %}
+                <span class="badge bg-danger">OVERDUE</span>
+            {% elif review.status == 'DUE' %}
+                <span class="badge bg-warning text-dark">DUE SOON</span>
+            {% elif review.status == 'COMPLETED' %}
+                <span class="badge bg-success">COMPLETED</span>
+            {% elif review.status == 'IN_PROGRESS' %}
+                <span class="badge bg-primary">IN PROGRESS</span>
+            {% elif review.status == 'PENDING_APPROVAL' %}
+                <span class="badge bg-secondary">PENDING APPROVAL</span>
+            {% endif %}
+        </h2>
+    </div>
+</div>
+
+<!-- Resident Information -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user"></i> Resident Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Resident ID:</strong></div>
+                    <div class="col-7">{{ resident.resident_id }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Name:</strong></div>
+                    <div class="col-7">{{ resident.full_name }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Unit:</strong></div>
+                    <div class="col-7">{{ resident.unit.name }} - Room {{ resident.room_number }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Admission Date:</strong></div>
+                    <div class="col-7">{{ resident.admission_date|date:"M j, Y" }} ({{ resident.days_since_admission }} days)</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Keyworker:</strong></div>
+                    <div class="col-7">
+                        {% if resident.keyworker %}
+                            {{ resident.keyworker.full_name }}
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-5"><strong>Unit Manager:</strong></div>
+                    <div class="col-7">
+                        {% if resident.unit_manager %}
+                            {{ resident.unit_manager.full_name }}
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar"></i> Review Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Review Type:</strong></div>
+                    <div class="col-7">{{ review.get_review_type_display }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Due Date:</strong></div>
+                    <div class="col-7">
+                        {{ review.due_date|date:"M j, Y" }}
+                        {% if review.status == 'OVERDUE' %}
+                            <span class="text-danger">({{ review.days_overdue }} days overdue)</span>
+                        {% elif review.status == 'DUE' or review.status == 'UPCOMING' %}
+                            <span class="text-muted">({{ review.days_until_due }} days)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Status:</strong></div>
+                    <div class="col-7">{{ review.get_status_display }}</div>
+                </div>
+                {% if review.completed_date %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Completed Date:</strong></div>
+                        <div class="col-7">{{ review.completed_date|date:"M j, Y" }}</div>
+                    </div>
+                {% endif %}
+                {% if review.completed_by %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Completed By:</strong></div>
+                        <div class="col-7">{{ review.completed_by.full_name }}</div>
+                    </div>
+                {% endif %}
+                {% if review.manager_approved %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Approved By:</strong></div>
+                        <div class="col-7">
+                            {{ review.manager_approved_by.full_name }}
+                            <span class="text-muted">({{ review.manager_approval_date|date:"M j, Y" }})</span>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if review.status == 'COMPLETED' %}
+                    <div class="row">
+                        <div class="col-5"><strong>Next Review Due:</strong></div>
+                        <div class="col-7">
+                            {% with next_review=resident.care_plan_reviews.all|dictsort:"due_date"|last %}
+                                {% if next_review.status != 'COMPLETED' and next_review.id != review.id %}
+                                    <span class="badge bg-info">{{ next_review.due_date|date:"M j, Y" }}</span>
+                                    <small class="text-muted">({{ next_review.get_review_type_display }})</small>
+                                {% else %}
+                                    <span class="text-muted">Not yet scheduled</span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Review Form -->
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Care Plan Review Details</h5>
+                </div>
+                <div class="card-body">
+                    {% if review.status == 'COMPLETED' %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> This review has been completed and approved.
+                        </div>
+                    {% elif review.status == 'PENDING_APPROVAL' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock"></i> This review is pending manager approval.
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="care_needs_assessment" class="form-label">
+                            <strong>Care Needs Assessment</strong>
+                            <small class="text-muted">- Review current care needs and any changes</small>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="care_needs_assessment" 
+                            name="care_needs_assessment" 
+                            rows="4"
+                            {% if review.status == 'COMPLETED' %}readonly{% endif %}
+                        >{{ review.care_needs_assessment }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="goals_progress" class="form-label">
+                            <strong>Goals & Progress</strong>
+                            <small class="text-muted">- Progress towards care plan goals</small>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="goals_progress" 
+                            name="goals_progress" 
+                            rows="4"
+                            {% if review.status == 'COMPLETED' %}readonly{% endif %}
+                        >{{ review.goals_progress }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="changes_required" class="form-label">
+                            <strong>Changes Required</strong>
+                            <small class="text-muted">- Any modifications to care plan needed</small>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="changes_required" 
+                            name="changes_required" 
+                            rows="4"
+                            {% if review.status == 'COMPLETED' %}readonly{% endif %}
+                        >{{ review.changes_required }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="family_involvement" class="form-label">
+                            <strong>Family Involvement</strong>
+                            <small class="text-muted">- Family contact and input received</small>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="family_involvement" 
+                            name="family_involvement" 
+                            rows="4"
+                            {% if review.status == 'COMPLETED' %}readonly{% endif %}
+                        >{{ review.family_involvement }}</textarea>
+                    </div>
+                    
+                    {% if review.status == 'PENDING_APPROVAL' and user == review.unit_manager %}
+                        <div class="mb-3">
+                            <label for="manager_comments" class="form-label">
+                                <strong>Manager Comments</strong>
+                                <small class="text-muted">- Your approval comments</small>
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="manager_comments" 
+                                name="manager_comments" 
+                                rows="3"
+                            >{{ review.manager_comments }}</textarea>
+                        </div>
+                    {% elif review.manager_comments %}
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Manager Comments</strong></label>
+                            <p class="form-control-plaintext border p-2 bg-light">{{ review.manager_comments }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer">
+                    {% if review.status != 'COMPLETED' %}
+                        <div class="d-flex gap-2">
+                            {% if review.status != 'PENDING_APPROVAL' %}
+                                <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+                                    <i class="fas fa-save"></i> Save Draft
+                                </button>
+                                <button type="submit" name="action" value="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Submit for Approval
+                                </button>
+                            {% endif %}
+                            
+                            {% if review.status == 'PENDING_APPROVAL' and user == review.unit_manager %}
+                                <button type="submit" name="action" value="approve" class="btn btn-success">
+                                    <i class="fas fa-check"></i> Approve & Complete
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    <a href="{% url 'careplan_unit_view' resident.unit.name %}" class="btn btn-outline-secondary mt-2">
+                        <i class="fas fa-arrow-left"></i> Back to {{ resident.unit.name }} Unit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

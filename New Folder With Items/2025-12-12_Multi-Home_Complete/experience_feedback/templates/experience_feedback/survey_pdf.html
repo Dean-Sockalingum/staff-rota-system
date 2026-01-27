@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Survey Results - {{ survey.respondent_name|default:"Anonymous" }}</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .header { text-align: center; border-bottom: 3px solid #667eea; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #667eea; margin: 0; }
+        .metadata { background: #f0f2f5; padding: 15px; border-radius: 5px; margin-bottom: 30px; }
+        .metadata-item { margin-bottom: 8px; }
+        .section { margin-bottom: 30px; page-break-inside: avoid; }
+        .section-title { background: #667eea; color: white; padding: 10px 15px; margin-bottom: 15px; font-weight: bold; }
+        .rating-item { margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-left: 4px solid #667eea; }
+        .rating-label { font-weight: bold; margin-bottom: 5px; }
+        .rating-value { display: inline-block; padding: 5px 15px; background: #667eea; color: white; border-radius: 3px; font-weight: bold; }
+        .nps-score { font-size: 48px; color: #667eea; text-align: center; margin: 20px 0; }
+        .nps-category { text-align: center; font-size: 18px; font-weight: bold; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .promoter { background: #d4edda; color: #155724; }
+        .passive { background: #fff3cd; color: #856404; }
+        .detractor { background: #f8d7da; color: #721c24; }
+        .feedback-text { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; min-height: 60px; margin-top: 10px; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    
+    <!-- Header -->
+    <div class="header">
+        <h1>Satisfaction Survey Results</h1>
+        <p>{{ survey.get_survey_type_display }}</p>
+    </div>
+    
+    <!-- Metadata -->
+    <div class="metadata">
+        <div class="metadata-item"><strong>Survey Date:</strong> {{ survey.survey_date }}</div>
+        <div class="metadata-item"><strong>Care Home:</strong> {{ survey.care_home.name }}</div>
+        {% if survey.resident %}
+        <div class="metadata-item"><strong>Resident:</strong> {{ survey.resident.full_name }}</div>
+        {% endif %}
+        {% if not survey.is_anonymous %}
+        <div class="metadata-item"><strong>Respondent:</strong> {{ survey.respondent_name }}</div>
+        <div class="metadata-item"><strong>Relationship:</strong> {{ survey.relationship_to_resident }}</div>
+        {% else %}
+        <div class="metadata-item"><strong>Respondent:</strong> Anonymous</div>
+        {% endif %}
+        <div class="metadata-item"><strong>Average Score:</strong> {{ avg_score }}/5.0</div>
+    </div>
+    
+    <!-- Rating Scores -->
+    <div class="section">
+        <div class="section-title">Satisfaction Ratings</div>
+        
+        {% if survey.overall_satisfaction %}
+        <div class="rating-item">
+            <div class="rating-label">Overall Satisfaction</div>
+            <span class="rating-value">{{ survey.overall_satisfaction }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.quality_of_care %}
+        <div class="rating-item">
+            <div class="rating-label">Quality of Care</div>
+            <span class="rating-value">{{ survey.quality_of_care }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.staff_attitude %}
+        <div class="rating-item">
+            <div class="rating-label">Staff Friendliness & Professionalism</div>
+            <span class="rating-value">{{ survey.staff_attitude }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.communication %}
+        <div class="rating-item">
+            <div class="rating-label">Communication</div>
+            <span class="rating-value">{{ survey.communication }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.environment_cleanliness %}
+        <div class="rating-item">
+            <div class="rating-label">Cleanliness & Environment</div>
+            <span class="rating-value">{{ survey.environment_cleanliness }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.meals_nutrition %}
+        <div class="rating-item">
+            <div class="rating-label">Meals & Nutrition</div>
+            <span class="rating-value">{{ survey.meals_nutrition }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.activities_engagement %}
+        <div class="rating-item">
+            <div class="rating-label">Activities & Engagement</div>
+            <span class="rating-value">{{ survey.activities_engagement }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.dignity_respect %}
+        <div class="rating-item">
+            <div class="rating-label">Dignity & Respect</div>
+            <span class="rating-value">{{ survey.dignity_respect }}/5</span>
+        </div>
+        {% endif %}
+        
+        {% if survey.safety_security %}
+        <div class="rating-item">
+            <div class="rating-label">Safety & Security</div>
+            <span class="rating-value">{{ survey.safety_security }}/5</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Net Promoter Score -->
+    <div class="section">
+        <div class="section-title">Net Promoter Score</div>
+        {% if survey.likelihood_recommend is not None %}
+        <div class="nps-score">{{ survey.likelihood_recommend }}/10</div>
+        <div class="nps-category {{ nps_category|lower }}">
+            {{ nps_category }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Qualitative Feedback -->
+    <div class="section">
+        <div class="section-title">Detailed Feedback</div>
+        
+        {% if survey.what_works_well %}
+        <div style="margin-bottom: 20px;">
+            <strong>What works well:</strong>
+            <div class="feedback-text">{{ survey.what_works_well }}</div>
+        </div>
+        {% endif %}
+        
+        {% if survey.areas_for_improvement %}
+        <div style="margin-bottom: 20px;">
+            <strong>What could we improve:</strong>
+            <div class="feedback-text">{{ survey.areas_for_improvement }}</div>
+        </div>
+        {% endif %}
+        
+        {% if survey.additional_comments %}
+        <div style="margin-bottom: 20px;">
+            <strong>Additional comments:</strong>
+            <div class="feedback-text">{{ survey.additional_comments }}</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <p>Generated on {{ survey.created_at|date:"d/m/Y H:i" }}</p>
+        <p>Confidential - For Internal Use Only</p>
+    </div>
+    
+</body>
+</html>

@@ -1,0 +1,329 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Report Incident{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form-autosave.css' %}">
+<style>
+    .incident-form .form-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+    .incident-form .form-section.critical {
+        border-left-color: #e74c3c;
+    }
+    .incident-form .form-section h5 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    .required-field label::after {
+        content: " *";
+        color: #e74c3c;
+    }
+    .severity-indicator {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .alert-care-inspectorate {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 incident-form">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Report Incident</h4>
+                    <small>Complete this form as soon as possible after the incident occurs</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="incident-form" data-autosave="true" data-autosave-key="incident-report">
+                        {% csrf_token %}
+                        
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        <!-- Reference Number (Auto-generated) -->
+                        <div class="alert alert-info">
+                            <strong><i class="fas fa-info-circle"></i> Incident Reference:</strong> 
+                            A unique reference number will be automatically generated when you submit this form.
+                        </div>
+
+                        <!-- Basic Incident Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-calendar-alt"></i> When and Where</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 required-field">
+                                    <div class="mb-3">
+                                        <label for="incident_date" class="form-label">Incident Date</label>
+                                        <input type="date" name="incident_date" id="incident_date" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 required-field">
+                                    <div class="mb-3">
+                                        <label for="incident_time" class="form-label">Incident Time</label>
+                                        <input type="time" name="incident_time" id="incident_time" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 required-field">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" name="location" id="location" class="form-control" required placeholder="e.g., Resident's Bedroom, Dining Room, Garden">
+                                <small class="form-text text-muted">Specific location where the incident occurred</small>
+                            </div>
+                        </div>
+
+                        <!-- Incident Classification -->
+                        <div class="form-section critical">
+                            <h5><i class="fas fa-list-ul"></i> Incident Classification</h5>
+                            
+                            <div class="mb-3 required-field">
+                                <label for="incident_type" class="form-label">Incident Type</label>
+                                <select name="incident_type" id="incident_type" class="form-select" required>
+                                    <option value="">-- Select Incident Type --</option>
+                                    {% for value, label in incident_types %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 required-field">
+                                    <div class="mb-3">
+                                        <label for="severity" class="form-label">Severity</label>
+                                        <select name="severity" id="severity" class="form-select" required>
+                                            <option value="">-- Select Severity --</option>
+                                            {% for value, label in severity_choices %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            <div><span class="severity-indicator" style="background-color: #2ecc71;"></span> No Harm</div>
+                                            <div><span class="severity-indicator" style="background-color: #3498db;"></span> Low (First Aid only)</div>
+                                            <div><span class="severity-indicator" style="background-color: #f39c12;"></span> Moderate (Medical review needed)</div>
+                                            <div><span class="severity-indicator" style="background-color: #c0392b;"></span> Major (Hospitalization)</div>
+                                            <div><span class="severity-indicator" style="background-color: #000;"></span> Death</div>
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 required-field">
+                                    <div class="mb-3">
+                                        <label for="risk_rating" class="form-label">Risk Rating</label>
+                                        <select name="risk_rating" id="risk_rating" class="form-select" required>
+                                            <option value="">-- Select Risk Rating --</option>
+                                            {% for value, label in risk_ratings %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="form-text text-muted">Overall risk level of this incident</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Service User Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user"></i> Person(s) Involved</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="service_user_name" class="form-label">Service User Name</label>
+                                        <input type="text" name="service_user_name" id="service_user_name" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="service_user_dob" class="form-label">Date of Birth</label>
+                                        <input type="date" name="service_user_dob" id="service_user_dob" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="witnesses" class="form-label">Witnesses</label>
+                                <textarea name="witnesses" id="witnesses" class="form-control" rows="2" placeholder="Names of any witnesses to the incident"></textarea>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input type="checkbox" name="was_witnessed" id="was_witnessed" class="form-check-input">
+                                <label class="form-check-label" for="was_witnessed">
+                                    Incident was witnessed by staff
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Incident Description -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-align-left"></i> What Happened</h5>
+                            
+                            <div class="mb-3 required-field">
+                                <label for="description" class="form-label">Detailed Description</label>
+                                <textarea name="description" id="description" class="form-control" rows="6" required placeholder="Describe exactly what happened in chronological order..."></textarea>
+                                <small class="form-text text-muted">
+                                    Be factual and objective. Include:
+                                    <ul>
+                                        <li>What was happening before the incident?</li>
+                                        <li>What happened during the incident?</li>
+                                        <li>What was the person's response?</li>
+                                        <li>Were there any warning signs?</li>
+                                    </ul>
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Immediate Actions Taken -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-ambulance"></i> Immediate Actions & Medical Details</h5>
+                            
+                            <div class="mb-3">
+                                <label for="immediate_actions" class="form-label">Actions Taken</label>
+                                <textarea name="immediate_actions" id="immediate_actions" class="form-control" rows="3" placeholder="What did you do immediately after the incident? Include first aid, comfort measures, environmental changes, etc."></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="injuries_sustained" class="form-label">Injuries Sustained</label>
+                                <textarea name="injuries_sustained" id="injuries_sustained" class="form-control" rows="2" placeholder="Describe any injuries, including location and appearance"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="body_map_completed" id="body_map_completed" class="form-check-input">
+                                        <label class="form-check-label" for="body_map_completed">Body map completed</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="photos_taken" id="photos_taken" class="form-check-input">
+                                        <label class="form-check-label" for="photos_taken">Photos taken</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="gp_contacted" id="gp_contacted" class="form-check-input">
+                                        <label class="form-check-label" for="gp_contacted">GP contacted</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="ambulance_called" id="ambulance_called" class="form-check-input">
+                                        <label class="form-check-label" for="ambulance_called">Ambulance called</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="hospital_attendance" id="hospital_attendance" class="form-check-input">
+                                        <label class="form-check-label" for="hospital_attendance">Hospital attendance</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" name="hospital_admission" id="hospital_admission" class="form-check-input">
+                                        <label class="form-check-label" for="hospital_admission">Hospital admission</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 mt-3">
+                                <label for="medical_notes" class="form-label">Medical Notes</label>
+                                <textarea name="medical_notes" id="medical_notes" class="form-control" rows="3" placeholder="Any additional medical information, GP advice, hospital outcomes, etc."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Care Inspectorate Notification Alert -->
+                        <div id="ci-notification-alert" class="alert-care-inspectorate" style="display: none;">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Care Inspectorate Notification Required</h6>
+                            <p>
+                                Based on the severity of this incident, notification to the Care Inspectorate 
+                                may be required within 24 hours. A manager will review this incident and determine if notification is necessary.
+                            </p>
+                            <p class="mb-0"><strong>Notifiable incidents include:</strong></p>
+                            <ul>
+                                <li>Death of a service user</li>
+                                <li>Major harm requiring hospital treatment</li>
+                                <li>Allegations of abuse</li>
+                                <li>Unexplained absence of a service user</li>
+                                <li>Outbreak of infectious disease</li>
+                                <li>Events affecting the safety or wellbeing of service users</li>
+                            </ul>
+                        </div>
+
+                        <!-- Recorder Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user-edit"></i> Recorded By</h5>
+                            <p><strong>Reporter:</strong> {{ request.user.full_name|default:request.user.sap }}</p>
+                            <p><strong>Date/Time:</strong> <span id="current-datetime"></span></p>
+                            <small class="text-muted">This incident report will be submitted under your user account</small>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'my_incident_reports' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-paper-plane"></i> Submit Incident Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Important Information Card -->
+            <div class="card mt-3 border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Important Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><strong>Report as soon as possible:</strong> Incidents should be reported immediately or within 24 hours</li>
+                        <li><strong>Be factual:</strong> Describe what happened objectively without making assumptions</li>
+                        <li><strong>Include all details:</strong> Even small details can be important for investigation</li>
+                        <li><strong>Confidentiality:</strong> This report is confidential and will only be shared with relevant staff</li>
+                        <li><strong>Follow-up:</strong> A manager will review this incident and may contact you for additional information</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Display current date/time
+    const now = new Date();
+    document.getElementById('current-datetime').textContent = now.toLocaleString('en-GB');
+    
+    // Show Care Inspectorate alert for serious incidents
+    const severitySelect = document.getElementById('severity');
+    const ciAlert = document.getElementById('ci-notification-alert');
+    
+    function checkCINotification() {
+        const severity = severitySelect ? severitySelect.value : '';
+        const showAlert = ['MAJOR_HARM', 'DEATH'].includes(severity);
+        if (ciAlert) ciAlert.style.display = showAlert ? 'block' : 'none';
+    }
+    
+    if (severitySelect) {
+        severitySelect.addEventListener('change', checkCINotification);
+        checkCINotification(); // Check initial state
+    }
+});
+</script>
+<script src="{% static 'js/form-autosave.js' %}"></script>
+{% endblock %}

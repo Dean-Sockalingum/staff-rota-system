@@ -1,0 +1,48 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Access Denied{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Access Denied
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <h5 class="alert-heading">Insufficient Permissions</h5>
+                        <p class="mb-0">{{ message|default:"You do not have permission to access this page." }}</p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>What you can do:</h6>
+                        <ul>
+                            <li>Return to the <a href="{% url 'home' %}">home page</a></li>
+                            {% if user.is_authenticated %}
+                            {% if user.role.is_management %}
+                            <li>Go to the <a href="{% url 'manager_dashboard' %}">Manager Dashboard</a></li>
+                            {% else %}
+                            <li>Go to the <a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+                            {% endif %}
+                            {% else %}
+                            <li><a href="{% url 'login' %}">Login</a> with appropriate credentials</li>
+                            {% endif %}
+                            <li>Contact your system administrator if you believe you should have access</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        If you need access to this area, please contact your Head of Service or IT administrator.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

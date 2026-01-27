@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}You Said, We Did - All Actions{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2"><i class="bi bi-list-ul"></i> All You Said, We Did Actions</h1>
+                </div>
+                <div>
+                    <a href="{% url 'experience_feedback:yswda_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-speedometer"></i> Dashboard
+                    </a>
+                    <a href="{% url 'experience_feedback:yswda_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Add New Action
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="care_home" class="form-label">Care Home</label>
+                            <select name="care_home" id="care_home" class="form-select">
+                                <option value="">All Care Homes</option>
+                                {% for home in care_homes %}
+                                <option value="{{ home.id }}" {% if request.GET.care_home == home.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ home.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="PLANNED" {% if request.GET.status == 'PLANNED' %}selected{% endif %}>Planned</option>
+                                <option value="IN_PROGRESS" {% if request.GET.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                                <option value="COMPLETED" {% if request.GET.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select name="category" id="category" class="form-select">
+                                <option value="">All Categories</option>
+                                <option value="CARE" {% if request.GET.category == 'CARE' %}selected{% endif %}>Care & Support</option>
+                                <option value="FOOD" {% if request.GET.category == 'FOOD' %}selected{% endif %}>Food & Dining</option>
+                                <option value="ACTIVITIES" {% if request.GET.category == 'ACTIVITIES' %}selected{% endif %}>Activities & Social</option>
+                                <option value="ENVIRONMENT" {% if request.GET.category == 'ENVIRONMENT' %}selected{% endif %}>Environment</option>
+                                <option value="COMMUNICATION" {% if request.GET.category == 'COMMUNICATION' %}selected{% endif %}>Communication</option>
+                                <option value="STAFF" {% if request.GET.category == 'STAFF' %}selected{% endif %}>Staffing</option>
+                                <option value="OTHER" {% if request.GET.category == 'OTHER' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                            <a href="{% url 'experience_feedback:yswda_list' %}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions ({{ actions.count }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if actions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Care Home</th>
+                                    <th>You Said</th>
+                                    <th>We Did</th>
+                                    <th>Category</th>
+                                    <th>Sentiment</th>
+                                    <th>Status</th>
+                                    <th>Display</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for action in actions %}
+                                <tr>
+                                    <td>{{ action.feedback_date|date:"d M Y" }}</td>
+                                    <td>{{ action.care_home.name }}</td>
+                                    <td>{{ action.you_said|truncatewords:8 }}</td>
+                                    <td>{{ action.we_did|truncatewords:8 }}</td>
+                                    <td><span class="badge bg-secondary">{{ action.get_category_display }}</span></td>
+                                    <td>
+                                        {% if action.sentiment == 'POSITIVE' %}
+                                        <span class="badge bg-success">Positive</span>
+                                        {% elif action.sentiment == 'NEUTRAL' %}
+                                        <span class="badge bg-secondary">Neutral</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Concern</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if action.status == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif action.status == 'IN_PROGRESS' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Planned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if action.display_on_board %}
+                                        <i class="bi bi-pin-angle-fill text-info" title="On notice board"></i>
+                                        {% else %}
+                                        <i class="bi bi-pin text-muted" title="Not displayed"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'experience_feedback:yswda_detail' action.pk %}" class="btn btn-outline-primary" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'experience_feedback:yswda_update' action.pk %}" class="btn btn-outline-warning" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'experience_feedback:yswda_delete' action.pk %}" class="btn btn-outline-danger" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> No actions found. Try adjusting your filters or <a href="{% url 'experience_feedback:yswda_create' %}">add a new action</a>.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

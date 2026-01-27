@@ -1,0 +1,222 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Compliance Violations - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .violation-table {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-badge.OPEN { background: #ffc107; color: #000; }
+    .status-badge.ACKNOWLEDGED { background: #17a2b8; color: white; }
+    .status-badge.IN_PROGRESS { background: #007bff; color: white; }
+    .status-badge.RESOLVED { background: #28a745; color: white; }
+    .status-badge.ACCEPTED_RISK { background: #6c757d; color: white; }
+    .status-badge.FALSE_POSITIVE { background: #e9ecef; color: #495057; }
+    .severity-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .severity-badge.CRITICAL { background: #dc3545; color: white; }
+    .severity-badge.HIGH { background: #fd7e14; color: white; }
+    .severity-badge.MEDIUM { background: #ffc107; color: #000; }
+    .severity-badge.LOW { background: #17a2b8; color: white; }
+    .severity-badge.INFO { background: #6c757d; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Compliance Violations</h2>
+            <p class="text-muted">Track and manage regulatory compliance violations</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-panel">
+        <form method="get" class="form-row">
+            <div class="col-md-2">
+                <label for="status">Status</label>
+                <select name="status" id="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    {% for status_code, status_name in statuses %}
+                    <option value="{{ status_code }}" {% if current_filters.status == status_code %}selected{% endif %}>
+                        {{ status_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="severity">Severity</label>
+                <select name="severity" id="severity" class="form-control">
+                    <option value="">All Severities</option>
+                    {% for severity_code, severity_name in severities %}
+                    <option value="{{ severity_code }}" {% if current_filters.severity == severity_code %}selected{% endif %}>
+                        {{ severity_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="category">Category</label>
+                <select name="category" id="category" class="form-control">
+                    <option value="">All Categories</option>
+                    {% for category_code, category_name in categories %}
+                    <option value="{{ category_code }}" {% if current_filters.category == category_code %}selected{% endif %}>
+                        {{ category_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="affected_user">Affected Staff</label>
+                <input type="text" name="affected_user" id="affected_user" class="form-control" 
+                       placeholder="SAP number" value="{{ current_filters.affected_user }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary mr-2">Apply Filters</button>
+                <a href="{% url 'compliance_violation_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="violation-table">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Detected</th>
+                        <th>Rule</th>
+                        <th>Category</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Affected Staff</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for violation in page_obj %}
+                    <tr>
+                        <td>
+                            {{ violation.detected_at|date:"d/m/Y" }}<br>
+                            <small class="text-muted">{{ violation.detected_at|date:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ violation.compliance_check.rule.name }}</strong><br>
+                            <small class="text-muted">{{ violation.compliance_check.rule.code }}</small>
+                        </td>
+                        <td>
+                            <small>{{ violation.compliance_check.rule.get_category_display }}</small>
+                        </td>
+                        <td>
+                            <span class="severity-badge {{ violation.compliance_check.rule.severity }}">
+                                {{ violation.compliance_check.rule.get_severity_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ violation.status }}">
+                                {{ violation.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if violation.affected_user %}
+                                <strong>{{ violation.affected_user.sap }}</strong><br>
+                                <small class="text-muted">{{ violation.affected_user.full_name }}</small>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ violation.description|truncatewords:15 }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'compliance_violation_detail' violation.id %}" 
+                               class="btn btn-sm btn-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No violations found matching your filters
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-3 border-top">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.affected_user %}&affected_user={{ current_filters.affected_user }}{% endif %}">
+                            First
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.affected_user %}&affected_user={{ current_filters.affected_user }}{% endif %}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.affected_user %}&affected_user={{ current_filters.affected_user }}{% endif %}">
+                            Next
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.affected_user %}&affected_user={{ current_filters.affected_user }}{% endif %}">
+                            Last
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-3">
+        <a href="{% url 'compliance_dashboard' %}" class="btn btn-secondary">← Back to Compliance Dashboard</a>
+    </div>
+</div>
+{% endblock %}

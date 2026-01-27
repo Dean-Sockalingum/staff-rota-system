@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Rota System - Operations Manager Walkthrough</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            overflow-x: hidden;
+        }
+
+        .walkthrough-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 1000;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a6f);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 24px;
+        }
+
+        .step.active {
+            background: #ffe0e0;
+            border-radius: 8px;
+        }
+
+        .step.completed {
+            background: #ffd0d0;
+            border-radius: 8px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            border-radius: 50%;
+            background: #ccc;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .step.active .step-number {
+            background: #ff6b6b;
+            animation: pulse 2s infinite;
+        }
+
+        .step.completed .step-number {
+            background: #ee5a6f;
+        }
+
+        .step.completed .step-number::before {
+            content: '✓';
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .dashboard-view {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 30px;
+            min-height: 600px;
+            display: none;
+        }
+
+        .dashboard-view.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .dashboard-title {
+            font-size: 28px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            background: #ff6b6b;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ee5a6f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-magic {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border-color: #ff6b6b;
+        }
+
+        .metric-card.highlight {
+            animation: highlight 2s infinite;
+        }
+
+        @keyframes highlight {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+            50% { box-shadow: 0 0 20px 5px rgba(255, 107, 107, 0.4); }
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .metric-change {
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .metric-change.positive {
+            background: #d4edda;
+            color: #28a745;
+        }
+
+        .metric-change.negative {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+
+        .metric-change.neutral {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert-box.critical {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .alert-box.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .alert-box.magic {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-left: none;
+        }
+
+        .alert-icon {
+            font-size: 24px;
+        }
+
+        .narration-box {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .narration-box strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .rota-grid {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .rota-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .rota-table th {
+            background: #ff6b6b;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .rota-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .rota-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .shift-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .shift-early {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .shift-late {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .shift-night {
+            background: #d6d8db;
+            color: #383d41;
+        }
+
+        .staff-role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .role-rn {
+            background: #0066cc;
+            color: white;
+        }
+
+        .role-ssw {
+            background: #28a745;
+            color: white;
+        }
+
+        .role-hca {
+            background: #6c757d;
+            color: white;
+        }
+
+        .ai-panel {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .ai-suggestion {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .ai-suggestion:last-child {
+            margin-bottom: 0;
+        }
+
+        .suggestion-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .suggestion-details {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        .suggestion-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .drag-drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .drag-drop-area:hover {
+            border-color: #ff6b6b;
+            background: #fff;
+        }
+
+        .drag-drop-area.active {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .comparison-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .before-after {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .before-after h4 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .time-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .time-item:last-child {
+            border-bottom: none;
+        }
+
+        .time-value {
+            float: right;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step-indicator {
+                flex-direction: column;
+            }
+
+            .step:not(:last-child)::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -10px;
+                transform: translateX(50%);
+            }
+
+            .comparison-box {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="walkthrough-container">
+        <div class="header">
+            <h1>⚡ Operations Manager Dashboard</h1>
+            <p>Interactive Walkthrough - AI-Powered Rota Management</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-title">Quick Overview</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-title">AI Rota Builder</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-title">Smart Matching</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-title">Drag & Drop</div>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-title">Time Saved</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Quick Overview -->
+        <div class="dashboard-view active" id="step1">
+            <div class="narration-box">
+                <strong>Welcome to Your New Workflow</strong>
+                Remember spending 4-6 hours daily building rotas? Those days are over. The AI creates complete 4-week rotas in 3 minutes. You just review, adjust if needed, and publish.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">⚡</div>
+                    <span>Victoria Gardens - Rota Dashboard</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-magic">🤖 AI Generate Rota</button>
+                    <button class="btn btn-primary">📅 View Calendar</button>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card highlight">
+                    <div class="metric-label">Current Week</div>
+                    <div class="metric-value">100%</div>
+                    <div class="metric-change positive">✓ Fully staffed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Active Staff</div>
+                    <div class="metric-value">124</div>
+                    <div class="metric-change positive">Available this week</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Shifts This Week</div>
+                    <div class="metric-value">336</div>
+                    <div class="metric-change positive">All allocated</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">AI Confidence</div>
+                    <div class="metric-value">98%</div>
+                    <div class="metric-change positive">High quality match</div>
+                </div>
+            </div>
+
+            <div class="alert-box magic">
+                <div class="alert-icon">🚀</div>
+                <div>
+                    <strong>Your AI Assistant is Ready!</strong> Click "AI Generate Rota" to create a complete 4-week rota considering: staff availability, qualifications, WTD limits, shift preferences, leave requests, and training schedules.
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">📊 This Week at a Glance</h3>
+            <div class="rota-grid">
+                <table class="rota-table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Early Shift (7am-3pm)</th>
+                            <th>Late Shift (3pm-11pm)</th>
+                            <th>Night Shift (11pm-7am)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Monday</strong></td>
+                            <td>2 RN, 3 SSW, 8 HCA</td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tuesday</strong></td>
+                            <td>2 RN, 3 SSW, 8 HCA</td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Wednesday</strong></td>
+                            <td>2 RN, 3 SSW, 8 HCA</td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Thursday</strong></td>
+                            <td>2 RN, 3 SSW, 8 HCA</td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Friday</strong></td>
+                            <td>2 RN, 3 SSW, 8 HCA</td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Saturday</strong></td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 2 SSW, 6 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sunday</strong></td>
+                            <td>2 RN, 2 SSW, 7 HCA</td>
+                            <td>1 RN, 2 SSW, 6 HCA</td>
+                            <td>1 RN, 1 SSW, 4 HCA</td>
+                            <td><span class="metric-change positive">✓ Complete</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert-box success">
+                <div class="alert-icon">✅</div>
+                <div>
+                    <strong>Zero Compliance Issues:</strong> All WTD limits respected, RN ratios maintained, no training conflicts detected.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" disabled>← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: See AI in Action →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: AI Rota Builder -->
+        <div class="dashboard-view" id="step2">
+            <div class="narration-box">
+                <strong>AI Rota Generation (The Magic Moment)</strong>
+                You click one button. The AI analyzes 124 staff profiles, checks availability, balances workloads, avoids WTD violations, and creates 672 shifts (4 weeks × 168 shifts/week). In 3 minutes.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">🤖</div>
+                    <span>AI Rota Generator</span>
+                </div>
+            </div>
+
+            <div class="ai-panel">
+                <h3 style="margin-bottom: 20px;">🎯 AI Rota Generation Settings</h3>
+                
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px;">Time Period:</label>
+                        <select style="width: 100%; padding: 10px; border-radius: 6px; border: none; font-size: 14px;">
+                            <option>Next 4 weeks (Recommended)</option>
+                            <option>Next 2 weeks</option>
+                            <option>Next 6 weeks</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px;">
+                            <input type="checkbox" checked> Balance workload evenly
+                        </label>
+                        <label style="display: block; margin-bottom: 8px;">
+                            <input type="checkbox" checked> Respect shift preferences
+                        </label>
+                        <label style="display: block; margin-bottom: 8px;">
+                            <input type="checkbox" checked> Avoid consecutive nights (>3)
+                        </label>
+                        <label style="display: block; margin-bottom: 8px;">
+                            <input type="checkbox" checked> Pair new starters with mentors
+                        </label>
+                    </div>
+
+                    <button class="btn btn-success" style="width: 100%; padding: 15px; font-size: 16px;">
+                        🚀 Generate 4-Week Rota (Est. 3 mins)
+                    </button>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
+                    <h4 style="margin-bottom: 15px;">What the AI Considers:</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            ✅ Staff availability (leave, training)<br>
+                            ✅ Qualifications & roles (RN/SSW/HCA)<br>
+                            ✅ WTD limits (48 hrs/week avg)<br>
+                            ✅ Min/max staffing requirements
+                        </div>
+                        <div>
+                            ✅ Shift preferences<br>
+                            ✅ Fair distribution of shifts<br>
+                            ✅ New starter supervision<br>
+                            ✅ Historical patterns
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box magic">
+                <div class="alert-icon">⚡</div>
+                <div>
+                    <strong>Processing Speed:</strong> AI analyzes 15,000+ possible combinations per second to find the optimal rota. What took you 4-6 hours now takes 3 minutes.
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">📊 After Generation - AI Confidence Report</h3>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Shifts Created</div>
+                    <div class="metric-value">672</div>
+                    <div class="metric-change positive">4 weeks complete</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Staff Utilized</div>
+                    <div class="metric-value">124/124</div>
+                    <div class="metric-change positive">100% allocated</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">WTD Violations</div>
+                    <div class="metric-value">0</div>
+                    <div class="metric-change positive">✓ Perfect compliance</div>
+                </div>
+                <div class="metric-card highlight">
+                    <div class="metric-label">AI Confidence</div>
+                    <div class="metric-value">98%</div>
+                    <div class="metric-change positive">High quality match</div>
+                </div>
+            </div>
+
+            <div class="alert-box success">
+                <div class="alert-icon">🎉</div>
+                <div>
+                    <strong>Rota Generated Successfully!</strong> 672 shifts created in 2 mins 47 seconds. Zero violations detected. Ready for your review.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Smart Matching →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Smart Matching -->
+        <div class="dashboard-view" id="step3">
+            <div class="narration-box">
+                <strong>Smart Staff Matching (When You Need Coverage)</strong>
+                Need to fill an unexpected gap? Type the shift details and AI instantly suggests the 5 best-qualified staff who are available, haven't exceeded WTD limits, and prefer that shift type.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">🎯</div>
+                    <span>Smart Staff Matching</span>
+                </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 20px;">🔍 Find Staff for Shift</h3>
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #ff6b6b;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Date:</label>
+                            <input type="date" value="2026-01-15" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Shift:</label>
+                            <select style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                                <option>Early (7am-3pm)</option>
+                                <option>Late (3pm-11pm)</option>
+                                <option selected>Night (11pm-7am)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Role Needed:</label>
+                            <select style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                                <option selected>Registered Nurse (RN)</option>
+                                <option>Senior Support Worker (SSW)</option>
+                                <option>Healthcare Assistant (HCA)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-magic" style="width: 100%; padding: 15px; font-size: 16px;">
+                        🤖 Find Best Matches (Instant)
+                    </button>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">✨ AI Recommendations (Ranked)</h3>
+            <div class="ai-panel">
+                <div class="ai-suggestion" style="background: rgba(40, 167, 69, 0.2);">
+                    <div class="suggestion-title">
+                        🥇 #1 Best Match: Sarah MacKenzie 
+                        <span class="staff-role-badge role-rn">RN</span>
+                        <span style="float: right; background: #28a745; padding: 4px 12px; border-radius: 12px; font-size: 13px;">98% Match</span>
+                    </div>
+                    <div class="suggestion-details">
+                        ✅ Available Jan 15 night shift<br>
+                        ✅ Prefers night shifts (requested 70% of nights)<br>
+                        ✅ WTD: 42 hrs this week (safe to add 8 hrs)<br>
+                        ✅ Last worked: Jan 12 (good rest period)<br>
+                        ✅ Fire Marshal certified (bonus for overnight coverage)
+                    </div>
+                    <div class="suggestion-actions">
+                        <button class="btn btn-success">✓ Assign to Shift</button>
+                        <button class="btn btn-secondary">📱 Send Invite</button>
+                    </div>
+                </div>
+
+                <div class="ai-suggestion">
+                    <div class="suggestion-title">
+                        🥈 #2 David Wilson 
+                        <span class="staff-role-badge role-rn">RN</span>
+                        <span style="float: right; background: #0066cc; padding: 4px 12px; border-radius: 12px; font-size: 13px;">94% Match</span>
+                    </div>
+                    <div class="suggestion-details">
+                        ✅ Available Jan 15 night shift<br>
+                        ✅ Night shift specialist (90% night shifts)<br>
+                        ✅ WTD: 38 hrs this week (safe to add 8 hrs)<br>
+                        ⚠️ Worked Jan 13-14 nights (back-to-back, still safe)<br>
+                        ✅ Advanced dementia care trained
+                    </div>
+                    <div class="suggestion-actions">
+                        <button class="btn btn-success">✓ Assign to Shift</button>
+                        <button class="btn btn-secondary">📱 Send Invite</button>
+                    </div>
+                </div>
+
+                <div class="ai-suggestion">
+                    <div class="suggestion-title">
+                        🥉 #3 Fiona Grant 
+                        <span class="staff-role-badge role-rn">RN</span>
+                        <span style="float: right; background: #17a2b8; padding: 4px 12px; border-radius: 12px; font-size: 13px;">89% Match</span>
+                    </div>
+                    <div class="suggestion-details">
+                        ✅ Available Jan 15 night shift<br>
+                        ⚠️ Prefers day shifts (only 20% nights historically)<br>
+                        ✅ WTD: 36 hrs this week (safe to add 8 hrs)<br>
+                        ✅ Last worked: Jan 11 (good rest)<br>
+                        ⚠️ Training renewal Jan 16 2pm (might be tired)
+                    </div>
+                    <div class="suggestion-actions">
+                        <button class="btn btn-success">✓ Assign to Shift</button>
+                        <button class="btn btn-secondary">📱 Send Invite</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box magic">
+                <div class="alert-icon">⚡</div>
+                <div>
+                    <strong>AI Analysis Complete:</strong> Searched 124 staff in 0.3 seconds. Sarah MacKenzie is optimal - prefers nights, well-rested, WTD safe, Fire Marshal certified.
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Drag & Drop →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Drag & Drop -->
+        <div class="dashboard-view" id="step4">
+            <div class="narration-box">
+                <strong>Drag & Drop Adjustments (Super Easy)</strong>
+                AI created the base rota, but you want to swap two staff? Just drag and drop. The system validates in real-time - if the swap causes a WTD violation, you get an instant warning.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">🎨</div>
+                    <span>Visual Rota Editor</span>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">💾 Save Changes</button>
+                    <button class="btn btn-secondary">↩️ Undo</button>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 20px;">📅 Week of Jan 15-21, 2026</h3>
+            <div class="rota-grid">
+                <table class="rota-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Staff Member</th>
+                            <th>Mon</th>
+                            <th>Tue</th>
+                            <th>Wed</th>
+                            <th>Thu</th>
+                            <th>Fri</th>
+                            <th>Sat</th>
+                            <th>Sun</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Sarah MacKenzie</strong>
+                                <span class="staff-role-badge role-rn">RN</span>
+                            </td>
+                            <td><span class="shift-badge shift-night">Night</span></td>
+                            <td><span class="shift-badge shift-night">Night</span></td>
+                            <td><span class="shift-badge shift-night">Night</span></td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>David Wilson</strong>
+                                <span class="staff-role-badge role-rn">RN</span>
+                            </td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Michael Chen</strong>
+                                <span class="staff-role-badge role-ssw">SSW</span>
+                            </td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Emma Thompson</strong>
+                                <span class="staff-role-badge role-hca">HCA</span>
+                                <span style="font-size: 11px; color: #666;">(New)</span>
+                            </td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td style="background: #fff3cd;">Training</td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>James Robertson</strong>
+                                <span class="staff-role-badge role-hca">HCA</span>
+                            </td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td><span class="shift-badge shift-early">Early</span></td>
+                            <td><span class="shift-badge shift-late">Late</span></td>
+                            <td style="background: #f0f0f0;">OFF</td>
+                            <td><span class="shift-badge shift-night">Night</span></td>
+                            <td><span class="shift-badge shift-night">Night</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="drag-drop-area">
+                <div style="font-size: 48px; margin-bottom: 15px;">👆</div>
+                <h3 style="margin-bottom: 10px;">Drag & Drop to Swap Shifts</h3>
+                <p style="color: #666;">
+                    Click any shift badge above and drag to another cell to swap staff.<br>
+                    Real-time validation ensures WTD compliance.
+                </p>
+            </div>
+
+            <div class="alert-box success">
+                <div class="alert-icon">✅</div>
+                <div>
+                    <strong>Smart Validation Active:</strong> All changes validated instantly. If a swap violates WTD limits, you'll see a warning before saving.
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px;">🔔 Recent Changes</h3>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                <div style="padding: 12px; background: white; border-left: 4px solid #28a745; margin-bottom: 10px; border-radius: 4px;">
+                    ✅ <strong>Sarah MacKenzie</strong> assigned to Jan 15 Night (AI suggestion #1 accepted)
+                </div>
+                <div style="padding: 12px; background: white; border-left: 4px solid #0066cc; margin-bottom: 10px; border-radius: 4px;">
+                    ℹ️ <strong>Emma Thompson</strong> (new starter) paired with <strong>Michael Chen</strong> (mentor) on all shifts
+                </div>
+                <div style="padding: 12px; background: white; border-left: 4px solid #28a745; border-radius: 4px;">
+                    ✅ WTD check passed - all staff within 48 hrs/week average
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next: Time Saved →</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Time Saved -->
+        <div class="dashboard-view" id="step5">
+            <div class="narration-box">
+                <strong>The Bottom Line: Your Life Back</strong>
+                You used to spend 4-6 hours daily on rotas - that's 20-30 hours per week. Now it's 45 minutes. With 9 OMs across the organization, that's 17,280-19,440 hours saved annually.
+            </div>
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <div class="icon">⏱️</div>
+                    <span>Time Savings Analysis</span>
+                </div>
+            </div>
+
+            <div class="comparison-box">
+                <div class="before-after" style="background: linear-gradient(135deg, #f8d7da, #fff);">
+                    <h4 style="color: #dc3545;">❌ Before This System</h4>
+                    <div class="time-item">
+                        <span>Monday: Build Week 1 rota</span>
+                        <span class="time-value" style="color: #dc3545;">5 hours</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Tuesday: Build Week 2 rota</span>
+                        <span class="time-value" style="color: #dc3545;">5 hours</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Wednesday: Build Week 3 rota</span>
+                        <span class="time-value" style="color: #dc3545;">5 hours</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Thursday: Build Week 4 rota</span>
+                        <span class="time-value" style="color: #dc3545;">4 hours</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Friday: Fix gaps & conflicts</span>
+                        <span class="time-value" style="color: #dc3545;">3 hours</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Daily: Staff queries & swaps</span>
+                        <span class="time-value" style="color: #dc3545;">1 hr/day</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Weekly: Leave approvals</span>
+                        <span class="time-value" style="color: #dc3545;">2 hours</span>
+                    </div>
+                    <div class="time-item" style="border-top: 2px solid #dc3545; padding-top: 15px; margin-top: 15px;">
+                        <span><strong>TOTAL PER WEEK:</strong></span>
+                        <span class="time-value" style="color: #dc3545; font-size: 20px;">27 hours</span>
+                    </div>
+                </div>
+
+                <div class="before-after" style="background: linear-gradient(135deg, #d4edda, #fff);">
+                    <h4 style="color: #28a745;">✅ With This System</h4>
+                    <div class="time-item">
+                        <span>Monday: AI generate 4-week rota</span>
+                        <span class="time-value" style="color: #28a745;">3 mins</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Review & adjust AI rota</span>
+                        <span class="time-value" style="color: #28a745;">15 mins</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Publish to staff</span>
+                        <span class="time-value" style="color: #28a745;">2 mins</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Daily: Check dashboard</span>
+                        <span class="time-value" style="color: #28a745;">5 mins/day</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Daily: Staff queries (AI-assisted)</span>
+                        <span class="time-value" style="color: #28a745;">10 mins/day</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Weekly: Leave approvals (AI flags)</span>
+                        <span class="time-value" style="color: #28a745;">30 mins</span>
+                    </div>
+                    <div class="time-item">
+                        <span>Ad-hoc: Fill gaps (AI matching)</span>
+                        <span class="time-value" style="color: #28a745;">5 mins each</span>
+                    </div>
+                    <div class="time-item" style="border-top: 2px solid #28a745; padding-top: 15px; margin-top: 15px;">
+                        <span><strong>TOTAL PER WEEK:</strong></span>
+                        <span class="time-value" style="color: #28a745; font-size: 20px;">2 hours</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700)); color: white; padding: 40px; border-radius: 12px; margin-top: 30px; text-align: center;">
+                <h2 style="margin-bottom: 30px;">📊 Your Personal Time Savings</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                    <div>
+                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">Per Week</div>
+                        <div style="font-size: 48px; font-weight: bold;">25 hours</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">saved</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">Per Month</div>
+                        <div style="font-size: 48px; font-weight: bold;">100 hours</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">saved</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">Per Year</div>
+                        <div style="font-size: 48px; font-weight: bold;">1,300 hours</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">saved</div>
+                    </div>
+                </div>
+                <div style="border-top: 2px solid rgba(255,255,255,0.3); padding-top: 30px;">
+                    <div style="font-size: 20px; margin-bottom: 15px;">Organization-Wide (9 OMs)</div>
+                    <div style="font-size: 56px; font-weight: bold; margin-bottom: 10px;">17,280-19,440 hours/year</div>
+                    <div style="font-size: 32px; color: #90EE90;">= £605,000-£680,000 value</div>
+                </div>
+            </div>
+
+            <div class="alert-box success" style="margin-top: 30px;">
+                <div class="alert-icon">🎉</div>
+                <div>
+                    <strong>You got your life back!</strong> Those 25 hours/week you spent on rotas? Now you can focus on staff development, resident care, or simply have a better work-life balance.
+                </div>
+            </div>
+
+            <h3 style="margin: 40px 0 20px; text-align: center; font-size: 24px;">What Will You Do With 25 Extra Hours Per Week?</h3>
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 12px; text-align: center;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <div style="font-size: 48px; margin-bottom: 10px;">🏃</div>
+                        <div style="font-weight: 600;">More floor time</div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">with residents & staff</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 48px; margin-bottom: 10px;">📚</div>
+                        <div style="font-weight: 600;">Training & development</div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">upskill your team</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 48px; margin-bottom: 10px;">☕</div>
+                        <div style="font-weight: 600;">Lunch breaks</div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">remember those?</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 48px; margin-bottom: 10px;">🏡</div>
+                        <div style="font-weight: 600;">Work-life balance</div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">finish on time</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Previous</button>
+                <button class="btn btn-success" onclick="restartWalkthrough()">🔄 Restart Walkthrough</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showStep(stepNum) {
+            document.querySelectorAll('.dashboard-view').forEach(view => {
+                view.classList.remove('active');
+            });
+
+            document.getElementById('step' + stepNum).classList.add('active');
+
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                const stepNumber = index + 1;
+                
+                if (stepNumber < stepNum) {
+                    step.classList.add('completed');
+                } else if (stepNumber === stepNum) {
+                    step.classList.add('active');
+                }
+            });
+
+            currentStep = stepNum;
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function restartWalkthrough() {
+            showStep(1);
+        }
+
+        document.querySelectorAll('.step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepNum = parseInt(this.dataset.step);
+                showStep(stepNum);
+            });
+        });
+
+        updateProgress();
+    </script>
+</body>
+</html>

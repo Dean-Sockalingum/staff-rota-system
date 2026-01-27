@@ -1,0 +1,234 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{{ analysis.name }} - Trend Analysis{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">{{ analysis.name }}</h1>
+                <p class="text-purple-100">{{ analysis.description }}</p>
+                <div class="flex items-center space-x-4 mt-3 text-purple-100">
+                    <span>{{ analysis.get_metric_type_display }}</span>
+                    <span>•</span>
+                    <span>{{ analysis.start_date|date:"M d, Y" }} - {{ analysis.end_date|date:"M d, Y" }}</span>
+                    {% if analysis.care_home %}
+                    <span>•</span>
+                    <span>{{ analysis.care_home.name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <a href="{% url 'trend_analysis_dashboard' %}" class="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition duration-200">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-600 text-sm font-medium">Trend Direction</span>
+                {% if analysis.trend_direction == 'INCREASING' %}
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                {% elif analysis.trend_direction == 'DECREASING' %}
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                </svg>
+                {% else %}
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"></path>
+                </svg>
+                {% endif %}
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ analysis.get_trend_direction_display }}</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-600 text-sm font-medium">Goodness of Fit (R²)</span>
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ analysis.r_squared|floatformat:3 }}</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-600 text-sm font-medium">Slope</span>
+                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ analysis.slope|floatformat:4 }}</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-600 text-sm font-medium">Forecast Confidence</span>
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <p class="text-2xl font-bold text-gray-900">{{ analysis.confidence_interval|floatformat:1 }}%</p>
+        </div>
+    </div>
+
+    <!-- Trend Chart -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Trend Analysis</h2>
+        <canvas id="trendChart"></canvas>
+    </div>
+
+    <!-- Decomposition Chart -->
+    {% if decomp_chart %}
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Time Series Decomposition</h2>
+        <p class="text-gray-600 mb-4">Additive model: Y = Trend + Seasonal + Residual</p>
+        <canvas id="decompChart"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- Seasonality Patterns -->
+    {% if seasonality_patterns %}
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Seasonality Patterns</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for pattern in seasonality_patterns %}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ pattern.get_pattern_type_display }} Pattern</h3>
+                    {% if pattern.is_significant %}
+                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">Significant</span>
+                    {% endif %}
+                </div>
+                <div class="space-y-2">
+                    <div>
+                        <span class="text-sm text-gray-600">Strength:</span>
+                        <span class="text-sm font-semibold text-gray-900">{{ pattern.strength|floatformat:1 }}%</span>
+                    </div>
+                    {% if pattern.peak_periods %}
+                    <div>
+                        <span class="text-sm text-gray-600">Peak Periods:</span>
+                        <span class="text-sm font-semibold text-gray-900">{{ pattern.peak_periods|join:", " }}</span>
+                    </div>
+                    {% endif %}
+                    {% if pattern.trough_periods %}
+                    <div>
+                        <span class="text-sm text-gray-600">Trough Periods:</span>
+                        <span class="text-sm font-semibold text-gray-900">{{ pattern.trough_periods|join:", " }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Forecast Chart -->
+    {% if forecast_chart %}
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">7-Day Forecast</h2>
+        <p class="text-gray-600 mb-4">Linear extrapolation with {{ analysis.confidence_interval|floatformat:1 }}% confidence</p>
+        <canvas id="forecastChart"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- Anomalies Table -->
+    {% if anomalies %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Detected Anomalies</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deviation</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Z-Score</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for anomaly in anomalies %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ anomaly.detected_date|date:"M d, Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ anomaly.get_anomaly_type_display }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if anomaly.severity == 'CRITICAL' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">CRITICAL</span>
+                            {% elif anomaly.severity == 'HIGH' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">HIGH</span>
+                            {% elif anomaly.severity == 'MEDIUM' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">MEDIUM</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">LOW</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ anomaly.actual_value }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ anomaly.expected_value }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">
+                            {% if anomaly.deviation > 0 %}+{% endif %}{{ anomaly.deviation }} ({{ anomaly.deviation_percentage }}%)
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ anomaly.z_score|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if anomaly.acknowledged %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">Acknowledged</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if not anomaly.acknowledged %}
+                            <a href="{% url 'anomaly_acknowledge' anomaly.id %}" class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Acknowledge
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Trend Chart
+    const trendConfig = {{ trend_chart|safe }};
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, trendConfig);
+
+    // Decomposition Chart
+    {% if decomp_chart %}
+    const decompConfig = {{ decomp_chart|safe }};
+    const decompCtx = document.getElementById('decompChart').getContext('2d');
+    new Chart(decompCtx, decompConfig);
+    {% endif %}
+
+    // Forecast Chart
+    {% if forecast_chart %}
+    const forecastConfig = {{ forecast_chart|safe }};
+    const forecastCtx = document.getElementById('forecastChart').getContext('2d');
+    new Chart(forecastCtx, forecastConfig);
+    {% endif %}
+});
+</script>
+{% endblock %}

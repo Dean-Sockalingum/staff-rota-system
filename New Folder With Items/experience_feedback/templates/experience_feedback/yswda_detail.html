@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}You Said, We Did - Action Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'experience_feedback:yswda_dashboard' %}">You Said, We Did</a></li>
+                    <li class="breadcrumb-item active">Action Detail</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2"><i class="bi bi-file-text"></i> Action Detail</h1>
+                <div>
+                    <a href="{% url 'experience_feedback:yswda_update' action.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="{% url 'experience_feedback:yswda_delete' action.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Main Details Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-chat-quote"></i> Feedback & Response</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">You Said:</h6>
+                        <p class="lead">{{ action.you_said }}</p>
+                    </div>
+                    <hr>
+                    <div>
+                        <h6 class="text-muted mb-2">We Did:</h6>
+                        <p class="lead"><strong>{{ action.we_did }}</strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Action Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Care Home:</strong><br>
+                            {{ action.care_home.name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Feedback Date:</strong><br>
+                            {{ action.feedback_date|date:"d F Y" }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <strong>Category:</strong><br>
+                            <span class="badge bg-secondary">{{ action.get_category_display }}</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Sentiment:</strong><br>
+                            {% if action.sentiment == 'POSITIVE' %}
+                            <span class="badge bg-success">{{ action.get_sentiment_display }}</span>
+                            {% elif action.sentiment == 'NEUTRAL' %}
+                            <span class="badge bg-secondary">{{ action.get_sentiment_display }}</span>
+                            {% else %}
+                            <span class="badge bg-warning">{{ action.get_sentiment_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Status:</strong><br>
+                            {% if action.status == 'COMPLETED' %}
+                            <span class="badge bg-success">{{ action.get_status_display }}</span>
+                            {% elif action.status == 'IN_PROGRESS' %}
+                            <span class="badge bg-warning">{{ action.get_status_display }}</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ action.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if action.source_type or action.person_raised %}
+                    <hr>
+                    <div class="row">
+                        {% if action.source_type %}
+                        <div class="col-md-6 mb-3">
+                            <strong>Source Type:</strong><br>
+                            {{ action.get_source_type_display }}
+                        </div>
+                        {% endif %}
+                        {% if action.person_raised %}
+                        <div class="col-md-6 mb-3">
+                            <strong>Raised By:</strong><br>
+                            {{ action.person_raised }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if action.action_taken_by or action.action_date or action.completion_date %}
+                    <hr>
+                    <div class="row">
+                        {% if action.action_taken_by %}
+                        <div class="col-md-4 mb-3">
+                            <strong>Action Taken By:</strong><br>
+                            {{ action.action_taken_by }}
+                        </div>
+                        {% endif %}
+                        {% if action.action_date %}
+                        <div class="col-md-4 mb-3">
+                            <strong>Action Date:</strong><br>
+                            {{ action.action_date|date:"d F Y" }}
+                        </div>
+                        {% endif %}
+                        {% if action.completion_date %}
+                        <div class="col-md-4 mb-3">
+                            <strong>Completed:</strong><br>
+                            {{ action.completion_date|date:"d F Y" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Communication Card -->
+            {% if action.communication_details or action.communicated_back %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-envelope"></i> Communication</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Communicated Back:</strong><br>
+                            {% if action.communicated_back %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                            {% else %}
+                            <span class="badge bg-warning"><i class="bi bi-hourglass-split"></i> Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if action.communication_details %}
+                    <div class="mt-2">
+                        <strong>Details:</strong><br>
+                        {{ action.communication_details }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Display Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pin-angle"></i> Display Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <strong>Display on Public Notice Board:</strong><br>
+                            {% if action.display_on_board %}
+                            <span class="badge bg-info"><i class="bi bi-eye"></i> Enabled</span>
+                            {% if action.is_displayable %}
+                            <span class="badge bg-success">Currently Visible</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Not Currently Visible (check dates)</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary"><i class="bi bi-eye-slash"></i> Disabled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if action.display_on_board %}
+                    <div class="row">
+                        {% if action.display_start_date %}
+                        <div class="col-md-6 mb-3">
+                            <strong>Display From:</strong><br>
+                            {{ action.display_start_date|date:"d F Y" }}
+                        </div>
+                        {% endif %}
+                        {% if action.display_end_date %}
+                        <div class="col-md-6 mb-3">
+                            <strong>Display Until:</strong><br>
+                            {{ action.display_end_date|date:"d F Y" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Audit Trail -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Audit Trail</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Created:</strong><br>
+                        <small class="text-muted">{{ action.created_at|date:"d M Y H:i" }}</small><br>
+                        {% if action.created_by %}
+                        <small class="text-muted">by {{ action.created_by.get_full_name|default:action.created_by.username }}</small>
+                        {% endif %}
+                    </div>
+                    {% if action.updated_at %}
+                    <div>
+                        <strong>Last Updated:</strong><br>
+                        <small class="text-muted">{{ action.updated_at|date:"d M Y H:i" }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'experience_feedback:yswda_update' action.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit This Action
+                        </a>
+                        {% if action.display_on_board and action.is_displayable %}
+                        <a href="{% url 'experience_feedback:yswda_public_board' action.care_home.pk %}" target="_blank" class="btn btn-outline-info">
+                            <i class="bi bi-box-arrow-up-right"></i> View Public Board
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'experience_feedback:yswda_create' %}?care_home={{ action.care_home.pk }}" class="btn btn-outline-success">
+                            <i class="bi bi-plus-lg"></i> Add New Action
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

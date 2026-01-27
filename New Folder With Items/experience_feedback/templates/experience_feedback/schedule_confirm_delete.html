@@ -1,0 +1,61 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Delete Schedule - {{ schedule.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Delete Survey Distribution Schedule</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle"></i> 
+                        <strong>Warning:</strong> You are about to delete this survey distribution schedule.
+                    </div>
+
+                    <h5>{{ schedule.name }}</h5>
+                    
+                    <div class="bg-light p-3 rounded mb-3">
+                        <p class="mb-2"><strong>Care Home:</strong> {{ schedule.care_home.name }}</p>
+                        <p class="mb-2"><strong>Survey Type:</strong> {{ schedule.get_survey_type_display }}</p>
+                        <p class="mb-2"><strong>Trigger:</strong> {{ schedule.get_trigger_type_display }}</p>
+                        <p class="mb-0"><strong>Status:</strong> 
+                            {% if schedule.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Note:</strong> Deleting this schedule will not delete past survey distributions 
+                        that were created from it. However, no new distributions will be created automatically.
+                    </div>
+
+                    <p class="text-danger">
+                        <strong>This action cannot be undone.</strong>
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'experience_feedback:schedule_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Delete Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

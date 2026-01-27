@@ -1,0 +1,115 @@
+AXES: BEGIN version 8.1.0, blocking by ip_address
+================================================================================
+🔍 COMPREHENSIVE DATA QUALITY AUDIT
+================================================================================
+Audit Date: 2026-01-01 18:35:21
+================================================================================
+
+📋 1. STAFF DATA QUALITY
+--------------------------------------------------------------------------------
+Total staff records: 1352
+Active staff: 813
+Inactive staff: 539
+
+  1.1 SAP Number Integrity:
+    ✅ All SAP numbers unique
+    ✅ All SAP numbers are 6 digits
+
+  1.2 Email Address Quality:
+    ✅ All email addresses valid
+    ✅ All email addresses unique
+
+  1.3 Role Assignments:
+    ✅ All active staff have roles assigned
+
+  1.4 Unit Assignments:
+    ✅ All active staff have units assigned
+
+  1.5 MGMT Unit Compliance:
+    ✅ MGMT units contain only SM/OM staff
+
+  1.6 Name Quality:
+    ✅ All names clean (no suffixes)
+
+================================================================================
+📅 2. SHIFT DATA QUALITY
+--------------------------------------------------------------------------------
+Total shift records: 32487
+
+  2.1 Orphaned Shifts:
+    ✅ All shifts have valid users
+
+  2.2 Shift Unit Validity:
+    ✅ All shifts have valid units
+
+  2.3 Shift Type Validity:
+    ✅ All shifts have valid shift types
+
+  2.4 Date Range Validity:
+    ✅ All shifts within reasonable date range
+    📊 Shift date range: 2025-01-01 to 2026-01-31
+    📊 Spans 395 days (13.2 months)
+
+  2.5 Duplicate Shift Detection:
+    ✅ No duplicate shifts detected
+
+================================================================================
+🏢 3. UNIT DATA QUALITY
+--------------------------------------------------------------------------------
+Total units: 42
+
+  3.1 Care Home Assignments:
+    ✅ All units assigned to care homes
+
+  3.2 Unit Distribution by Care Home:
+    ✅ HAWTHORN_HOUSE: 8 care units + 1 MGMT (expected 8+1)
+    ✅ MEADOWBURN: 8 care units + 1 MGMT (expected 8+1)
+    ✅ ORCHARD_GROVE: 8 care units + 1 MGMT (expected 8+1)
+    ✅ RIVERSIDE: 8 care units + 1 MGMT (expected 8+1)
+    ✅ VICTORIA_GARDENS: 5 care units + 1 MGMT (expected 5+1)
+
+================================================================================
+👥 4. ROLE DATA QUALITY
+--------------------------------------------------------------------------------
+Total roles: 11
+
+  4.1 Expected Roles:
+    ✅ SM: 6 active staff
+    ✅ OM: 9 active staff
+    ✅ SSCW: 42 active staff
+    ✅ SSCWN: 30 active staff
+    ✅ SCW: 124 active staff
+    ✅ SCWN: 67 active staff
+    ✅ SCA: 239 active staff
+    ✅ SCAN: 296 active staff
+    ✅ HOS: 1 active staff
+    ✅ Admin: 0 active staff
+
+  4.2 Unused Roles:
+    ⚠️  2 roles with no active staff:
+       - Admin
+       - OPERATIONS_MANAGER
+
+================================================================================
+🏠 5. CARE HOME DATA QUALITY
+--------------------------------------------------------------------------------
+Total care homes: 5
+
+  5.1 Expected Care Homes:
+    ✅ ORCHARD_GROVE: 181 active staff
+    ✅ HAWTHORN_HOUSE: 178 active staff
+    ✅ MEADOWBURN: 178 active staff
+    ✅ RIVERSIDE: 178 active staff
+    ✅ VICTORIA_GARDENS: 98 active staff
+
+================================================================================
+📊 AUDIT SUMMARY
+================================================================================
+
+✅ NO ISSUES FOUND - Database is clean!
+
+================================================================================
+✅ AUDIT COMPLETE
+================================================================================
+
+📄 Report saved to: DATA_QUALITY_AUDIT_REPORT.txt

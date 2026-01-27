@@ -1,0 +1,300 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Delete Safety Action Plan - {{ object.reference_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-header {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .delete-warning {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        border-left: 6px solid #ef4444;
+    }
+
+    .warning-icon {
+        font-size: 4rem;
+        color: #ef4444;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .warning-text {
+        font-size: 1.25rem;
+        color: #1f2937;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-plan-info {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .info-value {
+        color: #1f2937;
+    }
+
+    .priority-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .priority-immediate { background: #fee2e2; color: #991b1b; }
+    .priority-high { background: #fed7aa; color: #9a3412; }
+    .priority-medium { background: #fef3c7; color: #854d0e; }
+    .priority-low { background: #d1fae5; color: #065f46; }
+
+    .consequences-list {
+        background: #fef3c7;
+        border: 2px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .consequences-list h5 {
+        color: #92400e;
+        margin-bottom: 1rem;
+    }
+
+    .consequences-list ul {
+        color: #92400e;
+        margin-bottom: 0;
+    }
+
+    .consequences-list li {
+        margin-bottom: 0.5rem;
+    }
+
+    .recommendation-box {
+        background: #eff6ff;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .recommendation-box h5 {
+        color: #1e40af;
+        margin-bottom: 1rem;
+    }
+
+    .recommendation-box ul {
+        color: #1e40af;
+        margin-bottom: 0;
+    }
+
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: white;
+        color: #6b7280;
+        border: 2px solid #e5e7eb;
+    }
+
+    .btn-secondary-custom:hover {
+        background: #f9fafb;
+        border-color: #6b7280;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <!-- Header -->
+    <div class="delete-header">
+        <h1 class="text-center mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Delete Health and Safety Action Plan
+        </h1>
+    </div>
+
+    <!-- Warning Message -->
+    <div class="delete-warning">
+        <div class="warning-icon">
+            <i class="bi bi-shield-x"></i>
+        </div>
+        <div class="warning-text">
+            <strong>Are you sure you want to delete this Health and Safety Action Plan?</strong>
+        </div>
+        <p class="text-center text-muted mb-0">
+            This action cannot be undone. All associated data will be permanently removed.
+        </p>
+    </div>
+
+    <!-- Action Plan Information -->
+    <div class="action-plan-info">
+        <h5 class="mb-3">Action Plan Details</h5>
+        <div class="info-row">
+            <span class="info-label">Reference Number:</span>
+            <span class="info-value">{{ object.reference_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Problem:</span>
+            <span class="info-value">{{ object.problem_statement|truncatewords:10 }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Action Type:</span>
+            <span class="info-value">{{ object.get_action_type_display }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Priority:</span>
+            <span class="info-value">
+                <span class="priority-badge priority-{{ object.priority|lower }}">
+                    {{ object.get_priority_display }}
+                </span>
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value">{{ object.get_status_display }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Owner:</span>
+            <span class="info-value">{{ object.action_owner.get_full_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Linked Incident:</span>
+            <span class="info-value">{{ object.incident.reference_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Created:</span>
+            <span class="info-value">{{ object.created_at|date:"d M Y H:i" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Completion:</span>
+            <span class="info-value">{{ object.percent_complete }}%</span>
+        </div>
+        {% if object.verification_date %}
+        <div class="info-row">
+            <span class="info-label">Verified:</span>
+            <span class="info-value">{{ object.verification_date|date:"d M Y" }} ({{ object.get_verification_outcome_display }})</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Consequences Warning -->
+    <div class="consequences-list">
+        <h5><i class="bi bi-exclamation-circle"></i> Deletion Consequences</h5>
+        <ul>
+            <li>This Health and Safety Action Plan will be permanently deleted</li>
+            <li>All implementation details and progress data will be lost</li>
+            <li>Verification records (if completed) will be removed</li>
+            <li>Team assignments and ownership records will be deleted</li>
+            <li>Evidence of implementation will be removed</li>
+            <li>The linked incident will remain unaffected</li>
+            {% if object.root_cause_analysis %}
+            <li>Link to RCA {{ object.root_cause_analysis.reference_number }} will be removed</li>
+            {% endif %}
+            <li>This action will be logged in the audit trail</li>
+        </ul>
+    </div>
+
+    <!-- Recommendation Box -->
+    {% if object.status in 'IDENTIFIED,PLANNED,IN_PROGRESS' %}
+    <div class="recommendation-box">
+        <h5><i class="bi bi-lightbulb"></i> Consider These Alternatives</h5>
+        <p>Instead of deleting, you might want to:</p>
+        <ul>
+            <li><strong>Close the plan:</strong> Mark it as completed or closed if no longer needed</li>
+            <li><strong>Update the status:</strong> Change status to reflect current situation</li>
+            <li><strong>Add notes:</strong> Document why the action is being discontinued</li>
+            <li><strong>Reassign:</strong> Transfer ownership if the current owner cannot complete it</li>
+        </ul>
+        <p class="mb-0 mt-3">
+            <a href="{% url 'incident_safety:action_plan_update' object.pk %}" class="text-primary">
+                <i class="bi bi-pencil"></i> Edit Action Plan Instead
+            </a>
+        </p>
+    </div>
+    {% endif %}
+
+    {% if object.status in 'VERIFIED,EFFECTIVE,CLOSED' %}
+    <div class="consequences-list" style="background: #fee2e2; border-color: #ef4444;">
+        <h5 style="color: #991b1b;"><i class="bi bi-shield-x"></i> Important Warning</h5>
+        <p style="color: #991b1b;" class="mb-2">
+            <strong>This action plan has been verified and closed.</strong>
+        </p>
+        <p style="color: #991b1b;" class="mb-0">
+            Deleting verified actions may impact compliance reporting and audit trails.
+            Consider archiving instead of deleting, or consult with your Quality Manager before proceeding.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Deletion Form -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="action-buttons">
+            <a href="{% url 'incident_safety:action_plan_detail' object.pk %}" class="btn btn-secondary-custom">
+                <i class="bi bi-arrow-left"></i> Cancel - Keep Action Plan
+            </a>
+            <button type="submit" class="btn btn-danger-custom">
+                <i class="bi bi-trash"></i> Yes, Delete Permanently
+            </button>
+        </div>
+    </form>
+
+    {% if object.status in 'VERIFIED,EFFECTIVE,CLOSED' %}
+    <div class="text-center mt-4">
+        <p class="text-muted">
+            <i class="bi bi-info-circle"></i> Deletion requires additional confirmation for verified actions
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

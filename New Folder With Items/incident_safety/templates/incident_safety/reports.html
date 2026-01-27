@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Incident Safety Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-bar-chart-fill"></i> Incident Safety Reports</h2>
+            <p class="text-muted">Analytics, trends, and compliance reporting</p>
+        </div>
+        <div>
+            <a href="{% url 'incident_safety:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h6 class="card-title">Total Incidents (YTD)</h6>
+                    <h2>{{ total_incidents|default:0 }}</h2>
+                    <small><i class="bi bi-calendar"></i> Year to Date</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h6 class="card-title">RCAs Completed</h6>
+                    <h2>{{ completed_rcas|default:0 }}</h2>
+                    <small><i class="bi bi-check-circle"></i> Approved</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h6 class="card-title">Active Action Plans</h6>
+                    <h2>{{ active_saps|default:0 }}</h2>
+                    <small><i class="bi bi-list-check"></i> In Progress</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h6 class="card-title">DoC Notifications</h6>
+                    <h2>{{ doc_notifications|default:0 }}</h2>
+                    <small><i class="bi bi-bell"></i> This Month</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Reports Section -->
+    <div class="row">
+        <!-- Incident Reports -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Incident Reports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'incident_safety:incident_list' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">All Incidents Report</h6>
+                                <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                            </div>
+                            <p class="mb-1 small">Comprehensive list of all incidents with filters and export options</p>
+                        </a>
+                        <a href="{% url 'incident_safety:incident_list' %}?severity=CRITICAL" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">High Severity Incidents</h6>
+                                <small class="badge bg-danger">Critical</small>
+                            </div>
+                            <p class="mb-1 small">Incidents requiring immediate attention and senior review</p>
+                        </a>
+                        <a href="{% url 'incident_safety:incident_list' %}?status=OPEN" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Open Incidents</h6>
+                                <small class="badge bg-warning">Active</small>
+                            </div>
+                            <p class="mb-1 small">Incidents currently under investigation or pending closure</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RCA Reports -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3-fill"></i> Root Cause Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'incident_safety:rca_list' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">All RCA Reports</h6>
+                                <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                            </div>
+                            <p class="mb-1 small">Complete list of root cause analyses with status tracking</p>
+                        </a>
+                        <a href="{% url 'incident_safety:learning_repository' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Learning Repository</h6>
+                                <small class="badge bg-info">Lessons</small>
+                            </div>
+                            <p class="mb-1 small">Approved RCAs with lessons learned and best practices</p>
+                        </a>
+                        <a href="{% url 'incident_safety:trend_dashboard' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Trend Analysis Dashboard</h6>
+                                <small class="badge bg-primary">Analytics</small>
+                            </div>
+                            <p class="mb-1 small">Identify patterns and recurring themes in incident data</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health and Safety Action Plans -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Health and Safety Action Plans</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'incident_safety:action_plan_list' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">All Action Plans</h6>
+                                <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                            </div>
+                            <p class="mb-1 small">Complete list of safety improvement actions</p>
+                        </a>
+                        <a href="{% url 'incident_safety:action_plan_list' %}?status=IN_PROGRESS" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Actions In Progress</h6>
+                                <small class="badge bg-warning">Active</small>
+                            </div>
+                            <p class="mb-1 small">Currently active improvement initiatives</p>
+                        </a>
+                        <a href="{% url 'incident_safety:action_plan_list' %}?overdue=true" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Overdue Actions</h6>
+                                <small class="badge bg-danger">Urgent</small>
+                            </div>
+                            <p class="mb-1 small">Actions that have passed their target completion date</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Duty of Candour Reports -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-shield-fill-check"></i> Duty of Candour</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'incident_safety:doc_list' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">All DoC Notifications</h6>
+                                <small class="text-muted"><i class="bi bi-chevron-right"></i></small>
+                            </div>
+                            <p class="mb-1 small">Complete record of candour notifications and follow-up</p>
+                        </a>
+                        <a href="{% url 'incident_safety:doc_list' %}?status=PENDING" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Pending Notifications</h6>
+                                <small class="badge bg-warning">Action Required</small>
+                            </div>
+                            <p class="mb-1 small">DoC processes awaiting completion</p>
+                        </a>
+                        <a href="{% url 'incident_safety:doc_list' %}?compliance=true" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Compliance Report</h6>
+                                <small class="badge bg-success">Regulatory</small>
+                            </div>
+                            <p class="mb-1 small">DoC compliance tracking for regulatory inspection</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export and Custom Reports -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-download"></i> Export & Custom Reports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>Standard Exports</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <button type="button" class="btn btn-outline-primary mb-2" onclick="exportData('incidents', 'csv')">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Export Incidents (CSV)
+                                </button>
+                                <button type="button" class="btn btn-outline-success mb-2" onclick="exportData('rca', 'pdf')">
+                                    <i class="bi bi-file-earmark-pdf"></i> Export RCA Summary (PDF)
+                                </button>
+                                <button type="button" class="btn btn-outline-info mb-2" onclick="exportData('sap', 'xlsx')">
+                                    <i class="bi bi-file-earmark-excel"></i> Export Action Plans (Excel)
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Compliance Reports</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <button type="button" class="btn btn-outline-warning mb-2" onclick="exportData('doc', 'pdf')">
+                                    <i class="bi bi-file-earmark-pdf"></i> DoC Compliance Report
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary mb-2" onclick="exportData('regulatory', 'pdf')">
+                                    <i class="bi bi-file-earmark-pdf"></i> Regulatory Summary
+                                </button>
+                                <button type="button" class="btn btn-outline-dark mb-2" onclick="exportData('audit', 'pdf')">
+                                    <i class="bi bi-file-earmark-pdf"></i> Audit Trail Report
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Custom Report Builder</h6>
+                            <p class="small text-muted">Create tailored reports with custom date ranges and filters</p>
+                            <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#customReportModal">
+                                <i class="bi bi-gear-fill"></i> Build Custom Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Report Modal -->
+<div class="modal fade" id="customReportModal" tabindex="-1" aria-labelledby="customReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customReportModalLabel">Custom Report Builder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="customReportForm">
+                    <div class="mb-3">
+                        <label for="reportType" class="form-label">Report Type</label>
+                        <select class="form-select" id="reportType" required>
+                            <option value="">Select report type...</option>
+                            <option value="incidents">Incidents</option>
+                            <option value="rca">Root Cause Analysis</option>
+                            <option value="sap">Health and Safety Action Plans</option>
+                            <option value="doc">Duty of Candour</option>
+                            <option value="trends">Trend Analysis</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="exportFormat" class="form-label">Export Format</label>
+                        <select class="form-select" id="exportFormat" required>
+                            <option value="pdf">PDF</option>
+                            <option value="csv">CSV</option>
+                            <option value="xlsx">Excel</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Include</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeCharts" checked>
+                            <label class="form-check-label" for="includeCharts">
+                                Charts and Visualizations
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeStats" checked>
+                            <label class="form-check-label" for="includeStats">
+                                Statistical Summary
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeDetails">
+                            <label class="form-check-label" for="includeDetails">
+                                Detailed Records
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generateCustomReport()">
+                    <i class="bi bi-download"></i> Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportData(type, format) {
+    // Placeholder for export functionality
+    alert(`Exporting ${type} as ${format.toUpperCase()}...\nThis feature will be fully implemented with backend support.`);
+    // In production, this would call an API endpoint:
+    // window.location.href = `/incident-safety/export/${type}/?format=${format}`;
+}
+
+function generateCustomReport() {
+    const form = document.getElementById('customReportForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const reportType = document.getElementById('reportType').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const exportFormat = document.getElementById('exportFormat').value;
+    
+    alert(`Generating custom ${reportType} report from ${startDate} to ${endDate} in ${exportFormat.toUpperCase()} format...`);
+    
+    // In production, this would submit to backend:
+    // const params = new URLSearchParams({type: reportType, start: startDate, end: endDate, format: exportFormat});
+    // window.location.href = `/incident-safety/custom-report/?${params.toString()}`;
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('customReportModal')).hide();
+}
+</script>
+{% endblock %}

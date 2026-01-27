@@ -1,0 +1,325 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}Forecast Accuracy - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-check-circle"></i> Forecast Accuracy Analysis</h2>
+                    <p class="text-muted">
+                        Predicted vs Actual Comparison | 
+                        <span class="badge bg-primary">{{ total_comparisons }} comparisons</span>
+                        <span class="badge bg-success">{{ ci_coverage }}% within CI</span>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'forecasting_dashboard' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line"></i> Back to Forecasts
+                    </a>
+                    <a href="{% url 'unit_performance' %}" class="btn btn-outline-info">
+                        <i class="fas fa-trophy"></i> Unit Performance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Care Home</label>
+                            <select name="care_home" class="form-select">
+                                <option value="">All Care Homes</option>
+                                {% for home in care_homes %}
+                                <option value="{{ home.name }}" {% if home.name == selected_care_home %}selected{% endif %}>
+                                    {{ home.get_name_display }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Unit</label>
+                            <select name="unit" class="form-select">
+                                <option value="">All Units</option>
+                                {% for unit in units %}
+                                <option value="{{ unit.name }}" {% if unit.name == selected_unit %}selected{% endif %}>
+                                    {{ unit.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Lookback Period</label>
+                            <select name="lookback_days" class="form-select">
+                                <option value="7" {% if lookback_days == 7 %}selected{% endif %}>7 days</option>
+                                <option value="14" {% if lookback_days == 14 %}selected{% endif %}>14 days</option>
+                                <option value="30" {% if lookback_days == 30 %}selected{% endif %}>30 days</option>
+                                <option value="60" {% if lookback_days == 60 %}selected{% endif %}>60 days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter"></i> Apply
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accuracy Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h6 class="card-title">Mean Absolute Error</h6>
+                    <p class="h4 mb-0">{{ avg_mae|floatformat:2 }} shifts</p>
+                    <small>Average prediction error</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h6 class="card-title">Mean Absolute % Error</h6>
+                    <p class="h4 mb-0">{{ avg_mape|floatformat:1 }}%</p>
+                    <small>Industry benchmark: &lt;30%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h6 class="card-title">CI Coverage</h6>
+                    <p class="h4 mb-0">{{ ci_coverage|floatformat:1 }}%</p>
+                    <small>Actual within 80% CI</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h6 class="card-title">Outside CI</h6>
+                    <p class="h4 mb-0">{{ outside_ci_count }}</p>
+                    <small>Of {{ total_comparisons }} forecasts</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accuracy Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Predicted vs Actual Demand</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="accuracyChart" style="max-height: 400px;"></canvas>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        Blue = Predicted, Orange = Actual, Gray area = 80% confidence interval. 
+                        Good model has actual within CI most days.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Unit</th>
+                                    <th>Predicted</th>
+                                    <th>Actual</th>
+                                    <th>Error</th>
+                                    <th>% Error</th>
+                                    <th>Within CI?</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for comp in comparisons %}
+                                <tr {% if not comp.within_ci %}class="table-warning"{% endif %}>
+                                    <td>{{ comp.date|date:"D, M j" }}</td>
+                                    <td><span class="badge bg-secondary">{{ comp.unit }}</span></td>
+                                    <td>
+                                        <strong>{{ comp.predicted|floatformat:1 }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            [{{ comp.ci_lower|floatformat:1 }}, {{ comp.ci_upper|floatformat:1 }}]
+                                        </small>
+                                    </td>
+                                    <td><strong>{{ comp.actual }}</strong> shifts</td>
+                                    <td>
+                                        {% if comp.error > 0 %}
+                                            <span class="text-danger">+{{ comp.error|floatformat:1 }}</span>
+                                        {% elif comp.error < 0 %}
+                                            <span class="text-success">{{ comp.error|floatformat:1 }}</span>
+                                        {% else %}
+                                            <span class="text-muted">0.0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ comp.pct_error }}%</td>
+                                    <td>
+                                        {% if comp.within_ci %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        No historical forecasts available for comparison.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interpretation Guide -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-book"></i> Interpretation Guide</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>MAE (Mean Absolute Error):</strong>
+                            <p class="small mb-0">
+                                Average shift count error. Lower is better. 
+                                &lt;2 shifts = excellent, &lt;3 shifts = good.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>MAPE (Mean Absolute % Error):</strong>
+                            <p class="small mb-0">
+                                Average percentage error. Industry standard: &lt;15% excellent, 
+                                &lt;25% good, &lt;40% acceptable.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>CI Coverage:</strong>
+                            <p class="small mb-0">
+                                % of actual values within 80% confidence interval. 
+                                Target: 75-85% (calibrated model).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {{ chart_data|safe }};
+    
+    const ctx = document.getElementById('accuracyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.dates,
+            datasets: [
+                {
+                    label: 'Predicted',
+                    data: chartData.predicted,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                },
+                {
+                    label: 'Actual',
+                    data: chartData.actual,
+                    borderColor: '#FF9800',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                },
+                {
+                    label: '80% CI Lower',
+                    data: chartData.ci_lower,
+                    borderColor: '#B0BEC5',
+                    backgroundColor: 'rgba(176, 190, 197, 0.2)',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: '+1',
+                },
+                {
+                    label: '80% CI Upper',
+                    data: chartData.ci_upper,
+                    borderColor: '#B0BEC5',
+                    backgroundColor: 'rgba(176, 190, 197, 0.2)',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Forecast Accuracy: Predicted vs Actual'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Shifts'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

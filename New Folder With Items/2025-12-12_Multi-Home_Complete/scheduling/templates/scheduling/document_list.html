@@ -1,0 +1,392 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Document Management - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: white;
+        transition: all 0.3s;
+        display: flex;
+        gap: 1.5rem;
+    }
+    
+    .document-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .document-icon {
+        font-size: 3rem;
+        color: #6c757d;
+        flex-shrink: 0;
+    }
+    
+    .document-content {
+        flex-grow: 1;
+    }
+    
+    .document-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .document-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .document-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .access-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .access-public { background: #d4edda; color: #155724; }
+    .access-staff { background: #d1ecf1; color: #0c5460; }
+    .access-managers { background: #fff3cd; color: #856404; }
+    .access-private { background: #f8d7da; color: #721c24; }
+    .access-confidential { background: #e2e3e5; color: #383d41; }
+    
+    .category-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background: #e9ecef;
+        color: #495057;
+    }
+    
+    .document-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .stats-card h3 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-card p {
+        margin: 0;
+        opacity: 0.9;
+    }
+    
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 3rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 2rem;
+    }
+    
+    .upload-zone:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .upload-zone.dragover {
+        border-color: #28a745;
+        background: #d4edda;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-file-alt"></i>
+            Document Management
+        </h2>
+        {% if perms.scheduling.can_manage_rota %}
+        <a href="{% url 'document_upload' %}" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload Document
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Documents</h5>
+                    <h2 class="text-primary">{{ total_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">My Uploads</h5>
+                    <h2 class="text-success">{{ my_uploads }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Shared With Me</h5>
+                    <h2 class="text-info">{{ shared_with_me }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Categories</h5>
+                    <h2 class="text-warning">{{ categories.count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                <a href="{% url 'document_list' %}" class="btn btn-outline-primary {% if not request.GET %}active{% endif %}">
+                    <i class="fas fa-folder"></i> All Documents
+                </a>
+                <a href="{% url 'my_documents' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-user"></i> My Documents
+                </a>
+                <a href="{% url 'shared_with_me' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-share"></i> Shared With Me
+                </a>
+                {% if perms.scheduling.can_manage_rota %}
+                <a href="{% url 'category_manage' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-tags"></i> Manage Categories
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        class="form-control" 
+                        placeholder="Search documents..." 
+                        value="{{ search_query }}"
+                    >
+                </div>
+                <div class="col-md-2">
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="access_level" class="form-select">
+                        <option value="">All Access Levels</option>
+                        <option value="public" {% if access_level_filter == 'public' %}selected{% endif %}>Public</option>
+                        <option value="staff" {% if access_level_filter == 'staff' %}selected{% endif %}>Staff Only</option>
+                        <option value="managers" {% if access_level_filter == 'managers' %}selected{% endif %}>Managers Only</option>
+                        <option value="private" {% if access_level_filter == 'private' %}selected{% endif %}>Private</option>
+                        <option value="confidential" {% if access_level_filter == 'confidential' %}selected{% endif %}>Confidential</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="file_type" class="form-select">
+                        <option value="">All File Types</option>
+                        <option value="pdf" {% if file_type_filter == 'pdf' %}selected{% endif %}>PDF</option>
+                        <option value="doc" {% if file_type_filter == 'doc' %}selected{% endif %}>Word</option>
+                        <option value="xls" {% if file_type_filter == 'xls' %}selected{% endif %}>Excel</option>
+                        <option value="ppt" {% if file_type_filter == 'ppt' %}selected{% endif %}>PowerPoint</option>
+                        <option value="jpg" {% if file_type_filter == 'jpg' %}selected{% endif %}>Image</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Document List -->
+    {% if documents %}
+        {% for document in documents %}
+        <div class="document-card">
+            <div class="document-icon">
+                <i class="fas {{ document.get_file_icon }} text-primary"></i>
+            </div>
+            
+            <div class="document-content">
+                <div class="document-title">
+                    <a href="{% url 'document_detail' document.id %}" class="text-decoration-none text-dark">
+                        {{ document.title }}
+                    </a>
+                </div>
+                
+                {% if document.description %}
+                <p class="text-muted mb-2">{{ document.description|truncatewords:30 }}</p>
+                {% endif %}
+                
+                <div class="d-flex gap-2 mb-2">
+                    <span class="access-badge access-{{ document.access_level }}">
+                        {{ document.get_access_level_display }}
+                    </span>
+                    
+                    {% if document.category %}
+                    <span class="category-badge">
+                        <i class="fas {{ document.category.icon }}"></i>
+                        {{ document.category.name }}
+                    </span>
+                    {% endif %}
+                    
+                    {% if document.version > 1 %}
+                    <span class="badge bg-info">v{{ document.version }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="document-meta">
+                    <span class="document-meta-item">
+                        <i class="fas fa-file"></i>
+                        {{ document.get_file_size_display }}
+                    </span>
+                    <span class="document-meta-item">
+                        <i class="fas fa-user"></i>
+                        {{ document.uploaded_by.get_full_name }}
+                    </span>
+                    <span class="document-meta-item">
+                        <i class="fas fa-calendar"></i>
+                        {{ document.uploaded_at|date:"M d, Y" }}
+                    </span>
+                    <span class="document-meta-item">
+                        <i class="fas fa-download"></i>
+                        {{ document.download_count }} downloads
+                    </span>
+                    <span class="document-meta-item">
+                        <i class="fas fa-eye"></i>
+                        {{ document.view_count }} views
+                    </span>
+                </div>
+            </div>
+            
+            <div class="document-actions">
+                <a href="{% url 'document_detail' document.id %}" class="btn btn-sm btn-primary" title="View Details">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                
+                <a href="{% url 'document_download' document.id %}" class="btn btn-sm btn-success" title="Download">
+                    <i class="fas fa-download"></i> Download
+                </a>
+                
+                {% if perms.scheduling.can_manage_rota and document.uploaded_by == request.user or request.user.is_superuser %}
+                <a href="{% url 'document_edit' document.id %}" class="btn btn-sm btn-warning" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                
+                <a href="{% url 'document_share' document.id %}" class="btn btn-sm btn-info" title="Share">
+                    <i class="fas fa-share"></i> Share
+                </a>
+                
+                <form method="post" action="{% url 'document_delete' document.id %}" class="d-inline" onsubmit="return confirm('Archive this document?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" title="Archive">
+                        <i class="fas fa-trash"></i> Archive
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if documents.has_other_pages %}
+        <nav aria-label="Document pagination">
+            <ul class="pagination justify-content-center">
+                {% if documents.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if access_level_filter %}&access_level={{ access_level_filter }}{% endif %}{% if file_type_filter %}&file_type={{ file_type_filter }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ documents.number }} of {{ documents.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if documents.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if access_level_filter %}&access_level={{ access_level_filter }}{% endif %}{% if file_type_filter %}&file_type={{ file_type_filter }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-3x mb-3"></i>
+            <h5>No documents found</h5>
+            <p>{% if search_query or category_filter or access_level_filter or file_type_filter %}
+                Try adjusting your search filters or 
+                <a href="{% url 'document_list' %}">clear all filters</a>.
+            {% else %}
+                Get started by uploading your first document.
+            {% endif %}</p>
+            {% if perms.scheduling.can_manage_rota %}
+            <a href="{% url 'document_upload' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-upload"></i> Upload Document
+            </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh stats every 60 seconds
+    setInterval(function() {
+        location.reload();
+    }, 60000);
+</script>
+{% endblock %}

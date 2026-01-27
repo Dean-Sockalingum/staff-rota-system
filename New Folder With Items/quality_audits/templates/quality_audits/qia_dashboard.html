@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}QIA Dashboard - Quality Improvement Actions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .metric-card.critical { border-left-color: #dc3545; }
+    .metric-card.high { border-left-color: #fd7e14; }
+    .metric-card.medium { border-left-color: #ffc107; }
+    .metric-card.low { border-left-color: #28a745; }
+    
+    .status-badge {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.75rem;
+    }
+    
+    .overdue-row {
+        background-color: #fff3cd;
+        border-left: 3px solid #dc3545;
+    }
+    
+    .progress-bar-container {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .qia-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="fas fa-tasks text-primary"></i> QIA Dashboard
+            </h2>
+            <p class="text-muted mt-1">Quality Improvement Actions - Scottish Care Inspectorate Quality Indicator 7.3</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'quality_audits:qia_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create QIA
+            </a>
+            <a href="{% url 'quality_audits:qia_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list"></i> Full List
+            </a>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#evidencePackModal">
+                <i class="fas fa-file-pdf"></i> Generate Evidence Pack
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total QIAs</h6>
+                    <h2 class="mb-0">{{ total_qias }}</h2>
+                    <small class="text-muted">All improvement actions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">In Progress</h6>
+                    <h2 class="mb-0 text-warning">{{ in_progress }}</h2>
+                    <small class="text-muted">Active actions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Verified</h6>
+                    <h2 class="mb-0 text-info">{{ verified }}</h2>
+                    <small class="text-muted">Awaiting closure</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Closed</h6>
+                    <h2 class="mb-0 text-success">{{ closed }}</h2>
+                    <small class="text-muted">Completed actions</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Priority Breakdown -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card critical h-100">
+                <div class="card-body">
+                    <h6 class="text-danger mb-2">
+                        <i class="fas fa-exclamation-triangle"></i> Critical
+                    </h6>
+                    <h3 class="mb-0">{{ critical }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card high h-100">
+                <div class="card-body">
+                    <h6 class="text-warning mb-2">
+                        <i class="fas fa-exclamation-circle"></i> High
+                    </h6>
+                    <h3 class="mb-0">{{ high }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card medium h-100">
+                <div class="card-body">
+                    <h6 class="text-info mb-2">
+                        <i class="fas fa-info-circle"></i> Medium
+                    </h6>
+                    <h3 class="mb-0">{{ medium }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card low h-100">
+                <div class="card-body">
+                    <h6 class="text-success mb-2">
+                        <i class="fas fa-check-circle"></i> Low
+                    </h6>
+                    <h3 class="mb-0">{{ low }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- My QIAs -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check"></i> My QIAs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if my_qias %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Title</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for qia in my_qias %}
+                                    <tr class="{% if qia.is_overdue %}overdue-row{% endif %}">
+                                        <td>
+                                            <a href="{% url 'quality_audits:qia_detail' qia.pk %}">
+                                                {{ qia.qia_reference }}
+                                            </a>
+                                        </td>
+                                        <td>{{ qia.title|truncatewords:5 }}</td>
+                                        <td>
+                                            {{ qia.target_completion_date|date:"d M Y" }}
+                                            {% if qia.is_overdue %}
+                                                <i class="fas fa-exclamation-triangle text-danger" title="Overdue"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ qia.status|lower }}">
+                                                {{ qia.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">No QIAs assigned to you</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue QIAs -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock"></i> Overdue QIAs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if overdue_qias %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Title</th>
+                                        <th>Due Date</th>
+                                        <th>Days Overdue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for qia in overdue_qias %}
+                                    <tr class="overdue-row">
+                                        <td>
+                                            <a href="{% url 'quality_audits:qia_detail' qia.pk %}">
+                                                {{ qia.qia_reference }}
+                                            </a>
+                                        </td>
+                                        <td>{{ qia.title|truncatewords:4 }}</td>
+                                        <td>{{ qia.target_completion_date|date:"d M Y" }}</td>
+                                        <td>
+                                            <span class="badge bg-danger">
+                                                {{ qia.days_until_due|abs }} days
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-success text-center py-3">
+                            <i class="fas fa-check-circle"></i> No overdue QIAs!
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent QIAs and Source Breakdown -->
+    <div class="row">
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Recent QIAs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_qias %}
+                        <div class="table-responsive">
+                            <table class="table table-hover qia-table">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Source</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for qia in recent_qias %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'quality_audits:qia_detail' qia.pk %}">
+                                                {{ qia.qia_reference }}
+                                            </a>
+                                        </td>
+                                        <td>{{ qia.title|truncatewords:6 }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ qia.get_action_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ qia.get_source_type_display }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if qia.priority == 'CRITICAL' %}danger{% elif qia.priority == 'HIGH' %}warning{% elif qia.priority == 'MEDIUM' %}info{% else %}success{% endif %}">
+                                                {{ qia.get_priority_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge status-badge bg-{% if qia.status == 'CLOSED' %}success{% elif qia.status == 'VERIFIED' %}info{% else %}warning{% endif %}">
+                                                {{ qia.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="progress-bar-container">
+                                                <div class="progress-bar bg-success" style="width: {{ qia.percent_complete }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ qia.percent_complete }}%</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No QIAs found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Source Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if source_breakdown %}
+                        <div class="list-group">
+                            {% for item in source_breakdown %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ item.source_type }}
+                                <span class="badge bg-primary rounded-pill">{{ item.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6 class="text-muted">Action Type Split</h6>
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    Corrective
+                                    <span class="badge bg-warning rounded-pill">{{ corrective_count }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    Preventive
+                                    <span class="badge bg-success rounded-pill">{{ preventive_count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Evidence Pack Modal -->
+<div class="modal fade" id="evidencePackModal" tabindex="-1" aria-labelledby="evidencePackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="evidencePackModalLabel">
+                    <i class="fas fa-file-pdf"></i> Generate QIA Evidence Pack
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="get" action="{% url 'quality_audits:qia_evidence_pack' %}" target="_blank">
+                <div class="modal-body">
+                    <p class="text-muted">
+                        Generate a comprehensive PDF evidence pack for Care Inspectorate submissions, 
+                        mapping QIAs to Quality Indicators with detailed analysis.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Date Range (optional)</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">From:</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">To:</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                        <small class="text-muted">Leave blank to include all QIAs</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="qi" class="form-label fw-bold">Quality Indicator (optional)</label>
+                        <input type="text" class="form-control" id="qi" name="qi" placeholder="e.g., 1.3">
+                        <small class="text-muted">Filter by specific QI code</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="source" class="form-label fw-bold">Source Type (optional)</label>
+                        <select class="form-select" id="source" name="source">
+                            <option value="">All Sources</option>
+                            <option value="INCIDENT">Incident</option>
+                            <option value="AUDIT">Audit</option>
+                            <option value="RISK">Risk Assessment</option>
+                            <option value="COMPLAINT">Complaint</option>
+                            <option value="TREND">Trend Analysis</option>
+                            <option value="PDSA">PDSA Cycle</option>
+                            <option value="INSPECTION">Inspection Finding</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="priority" class="form-label fw-bold">Priority (optional)</label>
+                        <select class="form-select" id="priority" name="priority">
+                            <option value="">All Priorities</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Note:</strong> The evidence pack includes:
+                        <ul class="mb-0 mt-2">
+                            <li>Executive summary</li>
+                            <li>Quality Indicator mapping</li>
+                            <li>Source and priority analysis</li>
+                            <li>Timeline trends</li>
+                            <li>Effectiveness reviews</li>
+                            <li>Lessons learned</li>
+                            <li>Recommendations for spread</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-download"></i> Generate PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

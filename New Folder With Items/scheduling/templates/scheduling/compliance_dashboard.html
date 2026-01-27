@@ -1,0 +1,319 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Compliance Dashboard - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .compliance-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .stat-box {
+        text-align: center;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .stat-box.open { background: #fff3cd; border-left: 4px solid #ffc107; }
+    .stat-box.acknowledged { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+    .stat-box.in-progress { background: #cce5ff; border-left: 4px solid #007bff; }
+    .stat-box.resolved { background: #d4edda; border-left: 4px solid #28a745; }
+    .stat-box .count { font-size: 36px; font-weight: bold; }
+    .stat-box .label { font-size: 14px; color: #666; text-transform: uppercase; }
+    .severity-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 4px;
+    }
+    .severity-badge.CRITICAL { background: #dc3545; color: white; }
+    .severity-badge.HIGH { background: #fd7e14; color: white; }
+    .severity-badge.MEDIUM { background: #ffc107; color: #000; }
+    .severity-badge.LOW { background: #17a2b8; color: white; }
+    .severity-badge.INFO { background: #6c757d; color: white; }
+    .rule-card {
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .rule-card.CRITICAL { border-left-color: #dc3545; }
+    .rule-card.HIGH { border-left-color: #fd7e14; }
+    .rule-card.MEDIUM { border-left-color: #ffc107; }
+    .rule-card.LOW { border-left-color: #17a2b8; }
+    .violation-item {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        background: white;
+    }
+    .violation-item:hover {
+        background: #f8f9fa;
+    }
+    .category-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #e9ecef;
+        color: #495057;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Compliance Dashboard</h2>
+            <p class="text-muted">Regulatory compliance monitoring and violation tracking</p>
+        </div>
+    </div>
+
+    <!-- Violation Status Overview -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-box open">
+                <div class="count">{{ violation_stats.OPEN|default:0 }}</div>
+                <div class="label">Open</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box acknowledged">
+                <div class="count">{{ violation_stats.ACKNOWLEDGED|default:0 }}</div>
+                <div class="label">Acknowledged</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box in-progress">
+                <div class="count">{{ violation_stats.IN_PROGRESS|default:0 }}</div>
+                <div class="label">In Progress</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box resolved">
+                <div class="count">{{ violation_stats.RESOLVED|default:0 }}</div>
+                <div class="label">Resolved</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Severity Breakdown -->
+        <div class="col-md-6">
+            <div class="compliance-card">
+                <h4>Open Violations by Severity</h4>
+                {% if severity_breakdown %}
+                    {% for item in severity_breakdown %}
+                    <div class="mb-2">
+                        <span class="severity-badge {{ item.compliance_check__rule__severity }}">
+                            {{ item.compliance_check__rule__severity }}
+                        </span>
+                        <strong>{{ item.count }}</strong> violation(s)
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-success">✓ No open violations</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="col-md-6">
+            <div class="compliance-card">
+                <h4>Open Violations by Category</h4>
+                {% if category_breakdown %}
+                    {% for item in category_breakdown %}
+                    <div class="mb-2">
+                        <span class="category-badge">{{ item.compliance_check__rule__category }}</span>
+                        <strong>{{ item.count }}</strong> violation(s)
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-success">✓ No open violations</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Violations -->
+    {% if critical_violations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="compliance-card">
+                <h4>Critical Violations Requiring Immediate Attention</h4>
+                {% for violation in critical_violations %}
+                <div class="violation-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="severity-badge CRITICAL">CRITICAL</span>
+                            <strong>{{ violation.compliance_check.rule.name }}</strong>
+                            <span class="category-badge">{{ violation.compliance_check.rule.get_category_display }}</span>
+                            <br>
+                            <small class="text-muted">Detected: {{ violation.detected_at|date:"d/m/Y H:i" }}</small>
+                            {% if violation.affected_user %}
+                                | <small>Affected: <strong>{{ violation.affected_user.full_name }}</strong></small>
+                            {% endif %}
+                            <br>
+                            <small>{{ violation.description|truncatewords:30 }}</small>
+                        </div>
+                        <div>
+                            <a href="{% url 'compliance_violation_detail' violation.id %}" class="btn btn-sm btn-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'compliance_violation_list' %}?severity=CRITICAL" class="btn btn-danger">
+                        View All Critical Violations
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Compliance Rules -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="compliance-card">
+                <h4>Active Compliance Rules</h4>
+                <p class="text-muted">Currently monitored regulatory requirements</p>
+                
+                {% regroup rules by category as rules_by_category %}
+                {% for category in rules_by_category %}
+                    <h5 class="mt-4">{{ category.grouper }}</h5>
+                    {% for rule in category.list %}
+                    <div class="rule-card {{ rule.severity }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="severity-badge {{ rule.severity }}">{{ rule.get_severity_display }}</span>
+                                <strong>{{ rule.name }}</strong> ({{ rule.code }})
+                                <br>
+                                <small>{{ rule.description }}</small>
+                                {% if rule.remediation_steps %}
+                                    <br><small class="text-muted">Remediation: {{ rule.remediation_steps|truncatewords:20 }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Compliance Checks -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="compliance-card">
+                <h4>Recent Compliance Checks</h4>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Rule</th>
+                                <th>Status</th>
+                                <th>Items Checked</th>
+                                <th>Violations</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for check in recent_checks %}
+                            <tr>
+                                <td>{{ check.started_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <strong>{{ check.rule.name }}</strong>
+                                    <br><small class="text-muted">{{ check.rule.get_category_display }}</small>
+                                </td>
+                                <td>
+                                    {% if check.status == 'COMPLETED' %}
+                                        <span class="badge badge-success">Completed</span>
+                                    {% elif check.status == 'FAILED' %}
+                                        <span class="badge badge-danger">Failed</span>
+                                    {% elif check.status == 'IN_PROGRESS' %}
+                                        <span class="badge badge-info">In Progress</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ check.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ check.items_checked|default:"N/A" }}</td>
+                                <td>
+                                    {% if check.violations_found > 0 %}
+                                        <span class="badge badge-warning">{{ check.violations_found }}</span>
+                                    {% else %}
+                                        <span class="badge badge-success">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if check.check_results.execution_time_seconds %}
+                                        {{ check.check_results.execution_time_seconds|floatformat:2 }}s
+                                    {% elif check.completed_at and check.started_at %}
+                                        {% widthratio check.completed_at.timestamp check.started_at.timestamp 1 %}s
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No compliance checks yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6>Manager Actions</h6>
+                            <a href="{% url 'induction_management' %}" class="btn btn-primary me-2 mb-2">
+                                <i class="fas fa-user-graduate"></i> Induction Management
+                            </a>
+                            <a href="{% url 'supervision_management' %}" class="btn btn-primary me-2 mb-2">
+                                <i class="fas fa-user-check"></i> Supervision Management
+                            </a>
+                            <a href="{% url 'incident_management' %}" class="btn btn-danger me-2 mb-2">
+                                <i class="fas fa-exclamation-triangle"></i> Incident Management
+                            </a>
+                            <a href="{% url 'create_supervision_record' %}" class="btn btn-success me-2 mb-2">
+                                <i class="fas fa-plus"></i> Create Supervision
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>Compliance Reports</h6>
+                            <a href="{% url 'compliance_violation_list' %}" class="btn btn-primary me-2 mb-2">View All Violations</a>
+                            <a href="{% url 'compliance_violation_list' %}?status=OPEN" class="btn btn-warning me-2 mb-2">Open Violations</a>
+                            <a href="{% url 'audit_dashboard' %}" class="btn btn-info me-2 mb-2">Audit Dashboard</a>
+                            <a href="{% url 'generate_audit_report' %}" class="btn btn-success mb-2">Generate Report</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

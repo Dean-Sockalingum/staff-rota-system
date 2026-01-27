@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .analytics-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 24px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stat-card.success {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4);
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+    }
+    
+    .stat-card.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    }
+    
+    .stat-value {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        font-size: 0.95rem;
+        opacity: 0.95;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 350px;
+        padding: 20px;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .metric-row:last-child {
+        border-bottom: none;
+    }
+    
+    .metric-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .metric-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #007bff;
+    }
+    
+    .score-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .score-excellent {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .score-good {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .score-fair {
+        background-color: #ffc107;
+        color: #333;
+    }
+    
+    .score-poor {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">
+                        <i class="bi bi-graph-up"></i> Advanced Analytics Dashboard
+                    </h1>
+                    <p class="text-muted mb-0">Module 3: Experience & Feedback Analytics</p>
+                </div>
+                <div>
+                    <a href="{% url 'experience_feedback:analytics_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if selected_home %}&care_home={{ selected_home.id }}{% endif %}" 
+                       class="btn btn-success">
+                        <i class="bi bi-download"></i> Export CSV
+                    </a>
+                    <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Care Home</label>
+                <select name="care_home" class="form-select">
+                    <option value="">All Care Homes</option>
+                    {% for home in care_homes %}
+                        <option value="{{ home.id }}" {% if selected_home.id == home.id %}selected{% endif %}>
+                            {{ home.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Overall Experience Score -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card analytics-card">
+                <div class="card-body text-center py-5">
+                    <h3 class="mb-3">Overall Experience Score</h3>
+                    <div class="display-1 mb-3">
+                        <span class="score-badge 
+                            {% if overall_score >= 85 %}score-excellent
+                            {% elif overall_score >= 70 %}score-good
+                            {% elif overall_score >= 55 %}score-fair
+                            {% else %}score-poor{% endif %}">
+                            {{ overall_score }}%
+                        </span>
+                    </div>
+                    <p class="text-muted">
+                        Weighted composite score based on satisfaction (40%), complaint resolution (30%), 
+                        family engagement (20%), and action completion (10%)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Avg Satisfaction</div>
+                <div class="stat-value">{{ avg_satisfaction }}/5</div>
+                <div>Based on {{ total_surveys }} surveys</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="stat-label">Resolution Rate</div>
+                <div class="stat-value">{{ resolution_rate }}%</div>
+                <div>{{ resolved_complaints }}/{{ total_complaints }} complaints</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <div class="stat-label">Family Response Rate</div>
+                <div class="stat-value">{{ response_rate }}%</div>
+                <div>{{ responded_messages }}/{{ total_family_messages }} messages</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <div class="stat-label">Action Completion</div>
+                <div class="stat-value">{{ completion_rate }}%</div>
+                <div>{{ completed_actions }}/{{ total_actions }} actions</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Monthly Survey Trends</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlySurveyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Complaints by Severity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="complaintSeverityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 2 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Family Messages by Priority</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="messagePriorityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Actions by Category</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="actionCategoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Metrics Tables -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Survey Metrics</h5>
+                </div>
+                <div class="card-body">
+                    {% for survey in survey_by_type %}
+                    <div class="metric-row">
+                        <span class="metric-label">{{ survey.survey_type }}</span>
+                        <span class="metric-value">{{ survey.count }} ({{ survey.avg_score|floatformat:2 }}/5)</span>
+                    </div>
+                    {% endfor %}
+                    <div class="metric-row bg-light">
+                        <span class="metric-label">Average NPS Score</span>
+                        <span class="metric-value">{{ avg_nps }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Complaint Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="metric-row">
+                        <span class="metric-label">Open Complaints</span>
+                        <span class="metric-value text-danger">{{ open_complaints }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Resolved Complaints</span>
+                        <span class="metric-value text-success">{{ resolved_complaints }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Resolution Time</span>
+                        <span class="metric-value">{{ avg_resolution_days }} days</span>
+                    </div>
+                    <div class="metric-row bg-light">
+                        <span class="metric-label">Resolution Rate</span>
+                        <span class="metric-value">{{ resolution_rate }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Family Engagement Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="metric-row">
+                        <span class="metric-label">Active Family Members</span>
+                        <span class="metric-value">{{ active_family_members }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Messages</span>
+                        <span class="metric-value">{{ total_family_messages }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Pending Responses</span>
+                        <span class="metric-value text-warning">{{ pending_messages }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Response Time</span>
+                        <span class="metric-value">{{ avg_response_time }} days</span>
+                    </div>
+                    <div class="metric-row bg-light">
+                        <span class="metric-label">Response Rate</span>
+                        <span class="metric-value">{{ response_rate }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Survey Distribution Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="metric-row">
+                        <span class="metric-label">Surveys Distributed</span>
+                        <span class="metric-value">{{ total_distributions }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Responses Received</span>
+                        <span class="metric-value text-success">{{ completed_distributions }}</span>
+                    </div>
+                    <div class="metric-row bg-light">
+                        <span class="metric-label">Response Rate</span>
+                        <span class="metric-value">{{ response_rate_surveys }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Chart.js defaults
+    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, sans-serif';
+    Chart.defaults.color = '#495057';
+    
+    // Monthly Survey Trends Chart
+    const monthlySurveyCtx = document.getElementById('monthlySurveyChart').getContext('2d');
+    new Chart(monthlySurveyCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for item in monthly_surveys %}
+                    '{{ item.month|date:"M Y" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Survey Count',
+                data: [
+                    {% for item in monthly_surveys %}
+                        {{ item.count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Avg Satisfaction',
+                data: [
+                    {% for item in monthly_surveys %}
+                        {{ item.avg_satisfaction|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#56ab2f',
+                backgroundColor: 'rgba(86, 171, 47, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Complaint Severity Chart
+    const complaintSeverityCtx = document.getElementById('complaintSeverityChart').getContext('2d');
+    new Chart(complaintSeverityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for item in complaints_by_severity %}
+                    '{{ item.severity }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for item in complaints_by_severity %}
+                        {{ item.count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#dc3545',
+                    '#ffc107',
+                    '#17a2b8',
+                    '#28a745'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+    
+    // Message Priority Chart
+    const messagePriorityCtx = document.getElementById('messagePriorityChart').getContext('2d');
+    new Chart(messagePriorityCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for item in messages_by_priority %}
+                    '{{ item.priority }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Messages',
+                data: [
+                    {% for item in messages_by_priority %}
+                        {{ item.count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#dc3545',
+                    '#ffc107',
+                    '#17a2b8'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Action Category Chart
+    const actionCategoryCtx = document.getElementById('actionCategoryChart').getContext('2d');
+    new Chart(actionCategoryCtx, {
+        type: 'polarArea',
+        data: {
+            labels: [
+                {% for item in actions_by_category %}
+                    '{{ item.category }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for item in actions_by_category %}
+                        {{ item.count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.7)',
+                    'rgba(86, 171, 47, 0.7)',
+                    'rgba(79, 172, 254, 0.7)',
+                    'rgba(240, 147, 251, 0.7)',
+                    'rgba(245, 87, 108, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

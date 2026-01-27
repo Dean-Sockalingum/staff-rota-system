@@ -1,0 +1,199 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}{{ unit.name }} - Care Plan Reviews{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'careplan_overview' %}">Care Plan Reviews</a></li>
+                <li class="breadcrumb-item active">{{ unit.name }}</li>
+            </ol>
+        </nav>
+        <h2><i class="fas fa-building"></i> {{ unit.name }} Unit - Care Plan Reviews</h2>
+        <p class="text-muted">{{ total_residents }} residents with {{ compliance_rate }}% compliance</p>
+    </div>
+</div>
+
+<!-- Unit Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h4 class="text-primary mb-0">{{ total_residents }}</h4>
+                <p class="text-muted small mb-0">Total Residents</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h4 class="text-success mb-0">{{ completed_count }}</h4>
+                <p class="text-muted small mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h4 class="text-warning mb-0">{{ due_count }}</h4>
+                <p class="text-muted small mb-0">Due Soon</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h4 class="text-danger mb-0">{{ overdue_count }}</h4>
+                <p class="text-muted small mb-0">Overdue</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Residents Grid -->
+<div class="row">
+    {% for item in residents %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 
+                {% if item.review %}
+                    {% if item.review.status == 'OVERDUE' %}border-danger
+                    {% elif item.review.status == 'DUE' %}border-warning
+                    {% elif item.review.status == 'COMPLETED' %}border-success
+                    {% else %}border-info
+                    {% endif %}
+                {% endif %}">
+                <div class="card-header 
+                    {% if item.review %}
+                        {% if item.review.status == 'OVERDUE' %}bg-danger text-white
+                        {% elif item.review.status == 'DUE' %}bg-warning
+                        {% elif item.review.status == 'COMPLETED' %}bg-success text-white
+                        {% else %}bg-info text-white
+                        {% endif %}
+                    {% else %}bg-secondary text-white
+                    {% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bed"></i> Room {{ item.resident.room_number }}
+                        {% if item.review %}
+                            {% if item.review.status == 'OVERDUE' %}
+                                <span class="float-end badge bg-light text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> OVERDUE
+                                </span>
+                            {% elif item.review.status == 'DUE' %}
+                                <span class="float-end badge bg-light text-warning">
+                                    <i class="fas fa-clock"></i> DUE SOON
+                                </span>
+                            {% elif item.review.status == 'COMPLETED' %}
+                                <span class="float-end badge bg-light text-success">
+                                    <i class="fas fa-check"></i> DONE
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <strong>{{ item.resident.resident_id }}</strong><br>
+                        <small class="text-muted">{{ item.resident.full_name }}</small>
+                    </h6>
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">Admitted:</small><br>
+                        <strong>{{ item.resident.admission_date|date:"M j, Y" }}</strong>
+                        <span class="text-muted">({{ item.resident.days_since_admission }} days ago)</span>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">Keyworker:</small><br>
+                        {% if item.resident.keyworker %}
+                            <strong>{{ item.resident.keyworker.full_name }}</strong>
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if item.review %}
+                        <hr>
+                        <div class="mb-2">
+                            <small class="text-muted">Review Type:</small><br>
+                            <strong>{{ item.review.get_review_type_display }}</strong>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Due Date:</small><br>
+                            <strong>{{ item.review.due_date|date:"M j, Y" }}</strong>
+                        </div>
+                        
+                        <div class="mb-2">
+                            {% if item.review.status == 'OVERDUE' %}
+                                <div class="alert alert-danger py-2 mb-0">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>{{ item.review.days_overdue }} days overdue</strong>
+                                </div>
+                            {% elif item.review.status == 'DUE' %}
+                                <div class="alert alert-warning py-2 mb-0">
+                                    <i class="fas fa-clock"></i>
+                                    Due in <strong>{{ item.review.days_until_due }} days</strong>
+                                </div>
+                            {% elif item.review.status == 'COMPLETED' %}
+                                <div class="alert alert-success py-2 mb-0">
+                                    <i class="fas fa-check-circle"></i>
+                                    Completed {{ item.review.completed_date|date:"M j, Y" }}
+                                </div>
+                            {% elif item.review.status == 'UPCOMING' %}
+                                <div class="alert alert-info py-2 mb-0">
+                                    <i class="fas fa-calendar"></i>
+                                    Due in <strong>{{ item.review.days_until_due }} days</strong>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if item.review.care_needs_assessment %}
+                            <div class="mb-2">
+                                <small class="text-muted">Notes:</small><br>
+                                <small>{{ item.review.care_needs_assessment|truncatewords:15 }}</small>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning py-2 mb-0">
+                            <i class="fas fa-info-circle"></i> No review scheduled
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if item.review %}
+                        {% if item.review.status == 'COMPLETED' %}
+                            <a href="{% url 'careplan_review_detail' item.review.id %}" class="btn btn-sm btn-outline-success w-100">
+                                <i class="fas fa-check"></i> Review Complete
+                            </a>
+                        {% elif item.review.status == 'OVERDUE' or item.review.status == 'DUE' %}
+                            <a href="{% url 'careplan_review_detail' item.review.id %}" class="btn btn-sm btn-primary w-100">
+                                <i class="fas fa-edit"></i> Complete Review
+                            </a>
+                        {% else %}
+                            <a href="{% url 'careplan_review_detail' item.review.id %}" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <button class="btn btn-sm btn-outline-secondary w-100" disabled>
+                            <i class="fas fa-plus"></i> Schedule Review
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Back Button -->
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{% url 'careplan_overview' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to All Residents
+        </a>
+    </div>
+</div>
+
+{% endblock %}

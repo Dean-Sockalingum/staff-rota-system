@@ -1,0 +1,191 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block extra_css %}
+<style>
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+    .form-help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-exclamation-triangle"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:complaint_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-file-alt"></i> Complaint Details</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Care Home -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.care_home.id_for_label }}" class="required-field">Care Home</label>
+                        {{ form.care_home }}
+                        {% if form.care_home.errors %}
+                        <div class="invalid-feedback d-block">{{ form.care_home.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Complaint Reference -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.complaint_reference.id_for_label }}" class="required-field">Complaint Reference</label>
+                        {{ form.complaint_reference }}
+                        <small class="form-help-text">e.g., COMP-2026-001</small>
+                        {% if form.complaint_reference.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complaint_reference.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Date Received -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.date_received.id_for_label }}" class="required-field">Date Received</label>
+                        {{ form.date_received }}
+                        {% if form.date_received.errors %}
+                        <div class="invalid-feedback d-block">{{ form.date_received.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Category -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.complaint_category.id_for_label }}" class="required-field">Category</label>
+                        {{ form.complaint_category }}
+                        {% if form.complaint_category.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complaint_category.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Severity -->
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.severity.id_for_label }}" class="required-field">Severity</label>
+                        {{ form.severity }}
+                        <small class="form-help-text">Determines investigation timeline</small>
+                        {% if form.severity.errors %}
+                        <div class="invalid-feedback d-block">{{ form.severity.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-user"></i> Complainant Information</h6>
+
+                <div class="row">
+                    <!-- Complainant Name -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.complainant_name.id_for_label }}" class="required-field">Complainant Name</label>
+                        {{ form.complainant_name }}
+                        {% if form.complainant_name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complainant_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Relationship -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.complainant_relationship.id_for_label }}">Relationship to Resident</label>
+                        {{ form.complainant_relationship }}
+                        <small class="form-help-text">e.g., Daughter, Son, Self</small>
+                        {% if form.complainant_relationship.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complainant_relationship.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Contact Details -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.complainant_contact.id_for_label }}">Contact Details</label>
+                        {{ form.complainant_contact }}
+                        <small class="form-help-text">Phone or email</small>
+                        {% if form.complainant_contact.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complainant_contact.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Related Resident -->
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.resident.id_for_label }}">Related Resident</label>
+                        {{ form.resident }}
+                        {% if form.resident.errors %}
+                        <div class="invalid-feedback d-block">{{ form.resident.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-file-alt"></i> Complaint Details</h6>
+
+                <!-- Complaint Description -->
+                <div class="mb-3">
+                    <label for="{{ form.complaint_description.id_for_label }}" class="required-field">Complaint Description</label>
+                    {{ form.complaint_description }}
+                    <small class="form-help-text">Provide detailed description of the complaint</small>
+                    {% if form.complaint_description.errors %}
+                    <div class="invalid-feedback d-block">{{ form.complaint_description.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Desired Outcome -->
+                <div class="mb-3">
+                    <label for="{{ form.desired_outcome.id_for_label }}">Desired Outcome</label>
+                    {{ form.desired_outcome }}
+                    <small class="form-help-text">What outcome does the complainant want?</small>
+                    {% if form.desired_outcome.errors %}
+                    <div class="invalid-feedback d-block">{{ form.desired_outcome.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> <strong>Note:</strong> Target resolution dates will be automatically calculated based on severity:
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Critical:</strong> 7 days</li>
+                        <li><strong>High:</strong> 14 days</li>
+                        <li><strong>Medium/Low:</strong> 20 days</li>
+                    </ul>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> {% if action == 'create' %}Register Complaint{% else %}Update Complaint{% endif %}
+                    </button>
+                    <a href="{% url 'experience_feedback:complaint_list' %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Feedback Results - Management View{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-line"></i> Demo Feedback Results</h1>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Responses</h5>
+                    <h2 class="mb-0">{{ total_responses }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Avg Overall Rating</h5>
+                    <h2 class="mb-0">{{ avg_overall }}/5 ⭐</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Would Recommend</h5>
+                    <h2 class="mb-0">{{ would_recommend_pct }}%</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Needs Attention</h5>
+                    <h2 class="mb-0">{{ needs_attention }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Ratings -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0"><i class="fas fa-star"></i> Feature Ratings (Average)</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>Rota Viewing</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ feature_ratings.rota_viewing_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.rota_viewing_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>Shift Swapping</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ feature_ratings.shift_swapping_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.shift_swapping_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>Leave Requests</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ feature_ratings.leave_request_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.leave_request_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>AI Assistant</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: {{ feature_ratings.ai_assistant_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.ai_assistant_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>Dashboard</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: {{ feature_ratings.dashboard_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.dashboard_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <strong>Mobile Experience</strong>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: {{ feature_ratings.mobile_experience_rating|default:0|floatformat:0|add:"0" }}%">
+                                {{ feature_ratings.mobile_experience_rating|default:"N/A" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Responses by Role -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0"><i class="fas fa-users"></i> Responses by Role</h4>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role_data in by_role %}
+                    <tr>
+                        <td>{{ role_data.user_role }}</td>
+                        <td><span class="badge bg-primary">{{ role_data.count }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Individual Responses -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h4 class="mb-0"><i class="fas fa-comments"></i> Individual Feedback ({{ feedbacks.count }})</h4>
+        </div>
+        <div class="card-body">
+            {% if feedbacks %}
+            <div class="accordion" id="feedbackAccordion">
+                {% for feedback in feedbacks %}
+                <div class="accordion-item mb-2">
+                    <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#collapse{{ forloop.counter }}">
+                            <strong>{{ feedback.submitted_by.get_full_name|default:feedback.submitted_by.username }}</strong>
+                            <span class="ms-2 text-muted">({{ feedback.user_role }})</span>
+                            <span class="ms-auto me-3">
+                                <span class="badge {% if feedback.overall_rating >= 4 %}bg-success{% elif feedback.overall_rating >= 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ feedback.overall_rating }}/5
+                                </span>
+                                {% if feedback.needs_attention %}
+                                <span class="badge bg-danger">⚠️ Needs Attention</span>
+                                {% endif %}
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ forloop.counter }}" 
+                         class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                         data-bs-parent="#feedbackAccordion">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Submitted:</strong> {{ feedback.created_at|date:"M d, Y g:i A" }}</p>
+                                    <p><strong>Session Duration:</strong> {{ feedback.session_duration|default:"Not provided" }} minutes</p>
+                                    <p><strong>Care Home:</strong> {{ feedback.care_home }}</p>
+                                    <p><strong>Ease of Use:</strong> {{ feedback.ease_of_use }}/5</p>
+                                    <p><strong>Would Recommend:</strong> {% if feedback.would_recommend %}✅ Yes{% else %}❌ No{% endif %}</p>
+                                    <p><strong>Ready for Daily Use:</strong> {% if feedback.ready_to_use_daily %}✅ Yes{% else %}❌ No{% endif %}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Average Feature Rating:</strong> {{ feedback.average_feature_rating|floatformat:1 }}/5</p>
+                                    <p><strong>Sentiment Score:</strong> {{ feedback.sentiment_score }}/20</p>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6 class="mt-3">Most Useful Features:</h6>
+                            <p class="text-muted">{{ feedback.most_useful_features|default:"No response" }}</p>
+                            
+                            <h6 class="mt-3">Least Useful Features:</h6>
+                            <p class="text-muted">{{ feedback.least_useful_features|default:"No response" }}</p>
+                            
+                            <h6 class="mt-3">Missing Features:</h6>
+                            <p class="text-muted">{{ feedback.missing_features|default:"No response" }}</p>
+                            
+                            {% if feedback.navigation_issues %}
+                            <h6 class="mt-3">Navigation Issues:</h6>
+                            <p class="text-muted">{{ feedback.navigation_issues }}</p>
+                            {% endif %}
+                            
+                            {% if feedback.confusing_areas %}
+                            <h6 class="mt-3">Confusing Areas:</h6>
+                            <p class="text-muted">{{ feedback.confusing_areas }}</p>
+                            {% endif %}
+                            
+                            {% if feedback.concerns_before_rollout %}
+                            <h6 class="mt-3 text-danger">Concerns Before Rollout:</h6>
+                            <p class="text-muted">{{ feedback.concerns_before_rollout }}</p>
+                            {% endif %}
+                            
+                            {% if feedback.bugs_encountered %}
+                            <h6 class="mt-3 text-warning">Bugs Encountered:</h6>
+                            <p class="text-muted">{{ feedback.bugs_encountered }}</p>
+                            {% endif %}
+                            
+                            {% if feedback.additional_comments %}
+                            <h6 class="mt-3">Additional Comments:</h6>
+                            <p class="text-muted">{{ feedback.additional_comments }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No feedback has been submitted yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress {
+        height: 25px;
+    }
+    .progress-bar {
+        line-height: 25px;
+        color: white;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

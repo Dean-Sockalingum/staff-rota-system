@@ -1,0 +1,903 @@
+{% extends "scheduling/base.html" %}
+
+{% block title %}CI Performance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="dashboard-header mb-4">
+        <h1><i class="fas fa-chart-line"></i> Care Inspectorate Performance Dashboard</h1>
+        <p class="text-muted">Predicted rating and peer benchmarking analysis</p>
+        
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Care Home:</label>
+                <select id="care_home_filter" class="form-control" onchange="updateFilters()">
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}" {% if selected_care_home and selected_care_home.id == home.id %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 offset-md-6">
+                <label>&nbsp;</label>
+                <a href="?care_home={{ selected_care_home.id }}&export=csv" class="btn btn-success btn-block">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CI Rating Display -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="ci-rating-card">
+                <div class="rating-header">
+                    <h2>Predicted CI Rating</h2>
+                </div>
+                <div class="rating-display">
+                    <div class="rating-score {{ ci_data.executive_summary.status_text|lower }}">
+                        {{ ci_data.executive_summary.ci_rating_score }}
+                    </div>
+                    <div class="rating-status">
+                        <span class="status-icon">{{ ci_data.executive_summary.status_light }}</span>
+                        <span class="status-text">{{ ci_data.executive_summary.status_text }}</span>
+                    </div>
+                    <div class="rating-grade">
+                        Grade: {{ ci_data.executive_summary.predicted_grade }}
+                    </div>
+                    <div class="rating-confidence">
+                        Confidence: {{ ci_data.executive_summary.confidence|floatformat:0 }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CI Performance Charts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-chart-bar"></i> Performance Analytics</h5>
+                    <small>Visual insights into regulatory compliance and quality indicators</small>
+                </div>
+                <div class="card-body">
+                    <!-- Row 1: Inspection Scores Trend + Quality Breakdown -->
+                    <div class="row mb-4">
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm">
+                                <div class="card-header" style="background: var(--primary-color, #0066FF); color: white;">
+                                    <i class="fas fa-chart-line"></i> Inspection Scores Trend (6-Month)
+                                </div>
+                                <div class="card-body" style="position: relative; height: 350px;">
+                                    {% include 'scheduling/skeleton_components.html' with component='chart' %}
+                                    <canvas id="inspectionScoresTrendChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header" style="background: var(--secondary-color, #00C853); color: white;">
+                                    <i class="fas fa-clipboard-check"></i> Quality Indicators (Current)
+                                </div>
+                                <div class="card-body" style="position: relative; height: 350px;">
+                                    {% include 'scheduling/skeleton_components.html' with component='chart' %}
+                                    <canvas id="qualityIndicatorsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 2: Peer Benchmarking Comparison -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header" style="background: var(--accent-color, #FF6F00); color: white;">
+                                    <i class="fas fa-balance-scale"></i> Peer Benchmarking Comparison (4 Themes)
+                                </div>
+                                <div class="card-body" style="position: relative; height: 350px;">
+                                    {% include 'scheduling/skeleton_components.html' with component='chart' %}
+                                    <canvas id="peerBenchmarkingChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peer Benchmarking -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-trophy"></i> Peer Benchmarking</h5>
+                    <small class="text-muted">CI Ratings: 6=Excellent, 5=Very Good, 4=Good, 3=Adequate, 2=Weak, 1=Unsatisfactory</small>
+                </div>
+                <div class="card-body">
+                    <div class="peer-ranking mb-3">
+                        <div class="ranking-label">Your Ranking:</div>
+                        <div class="ranking-value">#{{ ci_data.executive_summary.peer_rank }} of {{ ci_data.executive_summary.total_homes }}</div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-3" style="font-size: 0.85rem;">
+                        <i class="fas fa-info-circle"></i> <strong>Note:</strong> Overall CI Rating is the <strong>lowest</strong> theme rating (as per Care Inspectorate methodology)
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">Rank</th>
+                                    <th style="width: 18%;">Care Home</th>
+                                    <th style="width: 12%;">CS Number</th>
+                                    <th style="width: 8%;">CI Rating</th>
+                                    <th style="width: 10%;">Care & Support</th>
+                                    <th style="width: 10%;">Environment</th>
+                                    <th style="width: 10%;">Staffing</th>
+                                    <th style="width: 10%;">Management</th>
+                                    <th style="width: 12%;">Last Inspection</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for peer in ci_data.peer_benchmarking %}
+                                <tr {% if peer.home_name == 'This Home' %}class="table-primary"{% endif %}>
+                                    <td>{{ peer.rank }}</td>
+                                    <td>
+                                        {% if peer.home_name == 'This Home' %}
+                                            <strong>{{ selected_care_home.name }}</strong>
+                                        {% else %}
+                                            {{ peer.home_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if peer.cs_number %}
+                                            <small class="text-muted">{{ peer.cs_number }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="badge {% if peer.ci_rating == 6 %}bg-success{% elif peer.ci_rating == 5 %}bg-info{% elif peer.ci_rating == 4 %}bg-primary{% elif peer.ci_rating == 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ peer.ci_rating }}
+                                        </strong>
+                                    </td>
+                                    <td class="text-center">{{ peer.theme1_care_support|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme2_environment|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme3_staffing|default:"-" }}</td>
+                                    <td class="text-center">{{ peer.theme4_management|default:"-" }}</td>
+                                    <td>
+                                        {% if peer.inspection_date %}
+                                            <small>{{ peer.inspection_date|date:"d M Y" }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Predicted</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6-Month Trend -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> 6-Month Operational Metrics Trend</h5>
+                    <small class="text-muted">Monthly trends of factors influencing CI ratings (inspections are annual)</small>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Training %</th>
+                                    <th>Supervision %</th>
+                                    <th>Incidents</th>
+                                    <th>Turnover %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in ci_data.trend_6month %}
+                                <tr>
+                                    <td>{{ month.month }}</td>
+                                    <td>
+                                        <span class="badge {% if month.training_compliance >= 95 %}bg-success{% elif month.training_compliance >= 90 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.training_compliance }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.supervision_completion >= 90 %}bg-success{% elif month.supervision_completion >= 85 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.supervision_completion }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.incident_frequency <= 2.0 %}bg-success{% elif month.incident_frequency <= 3.0 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.incident_frequency }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if month.turnover_rate <= 15 %}bg-success{% elif month.turnover_rate <= 18 %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ month.turnover_rate }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-success mt-3 mb-0" style="font-size: 0.85rem;">
+                        <i class="fas fa-arrow-up"></i> <strong>Improving trend</strong> - All metrics moving toward target levels
+                    </div>
+                    <div class="mt-2" style="font-size: 0.8rem;">
+                        <strong>Targets:</strong> Training ≥95% • Supervision ≥90% • Incidents ≤2.0 • Turnover ≤15%
+                    </div>
+                    
+                    <!-- Additional Metrics -->
+                    <div class="mt-4">
+                        <h6 class="mb-3"><i class="fas fa-clipboard-check"></i> Additional Quality Metrics</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Staffing Level</th>
+                                        <th>Care Plan Reviews</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month in ci_data.trend_6month %}
+                                    <tr>
+                                        <td>{{ month.month }}</td>
+                                        <td>
+                                            <span class="badge {% if month.staffing_level >= 100 %}bg-success{% elif month.staffing_level >= 95 %}bg-info{% else %}bg-danger{% endif %}">
+                                                {{ month.staffing_level }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if month.care_plan_reviews >= 95 %}bg-success{% elif month.care_plan_reviews >= 90 %}bg-info{% else %}bg-warning{% endif %}">
+                                                {{ month.care_plan_reviews }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2" style="font-size: 0.8rem;">
+                            <strong>Targets:</strong> Staffing ≥100% of minimum • Care Plan Reviews ≥95%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Key Contributing Factors -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list-check"></i> Key Contributing Factors</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Factor</th>
+                                <th>Impact Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for factor, score in ci_data.key_factors %}
+                            <tr>
+                                <td>{{ factor }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                             style="width: {{ score }}%;" 
+                                             aria-valuenow="{{ score }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ score|floatformat:0 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Improvement Areas -->
+    {% if ci_data.improvement_areas %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bullseye"></i> Improvement Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for area in ci_data.improvement_areas %}
+                        <div class="col-md-4">
+                            <div class="improvement-card priority-{{ area.priority|lower }}">
+                                <h6>{{ area.area }}</h6>
+                                <div class="improvement-metric">
+                                    Current Impact: <strong>{{ area.current_impact|floatformat:1 }}%</strong>
+                                </div>
+                                <div class="improvement-target">
+                                    Target: {{ area.target_improvement }}
+                                </div>
+                                <span class="priority-badge">{{ area.priority }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="recommendations-list">
+                        {% for rec in ci_data.recommendations %}
+                        <li class="recommendation-item priority-{{ rec.priority|lower }}">
+                            <span class="rec-icon">{{ rec.icon }}</span>
+                            <div class="rec-content">
+                                <strong>{{ rec.title }}</strong>
+                                <p>{{ rec.action }}</p>
+                                <small class="text-muted">Impact: {{ rec.impact }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.ci-rating-card {
+    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
+    border-radius: 12px;
+    padding: 40px;
+    color: white;
+    text-align: center;
+}
+.rating-header h2 {
+    color: white;
+    margin-bottom: 20px;
+}
+.rating-display {
+    margin-top: 20px;
+}
+.rating-score {
+    font-size: 72px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.rating-score.excellent { color: #00ff88; }
+.rating-score.good { color: #88ddff; }
+.rating-score.adequate { color: #ffee88; }
+.rating-score.weak { color: #ff8888; }
+.rating-status {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+.status-icon {
+    font-size: 32px;
+    margin-right: 10px;
+}
+.rating-grade {
+    font-size: 20px;
+    margin-top: 15px;
+    opacity: 0.9;
+}
+.rating-confidence {
+    font-size: 16px;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+.peer-ranking {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.ranking-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+.ranking-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+.trend-indicator {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 16px;
+}
+.improvement-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+}
+.improvement-card.priority-high {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+.improvement-card.priority-medium {
+    border-color: #ffc107;
+    background: #fffef5;
+}
+.improvement-card h6 {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.improvement-metric {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+.improvement-target {
+    font-size: 12px;
+    color: #666;
+}
+.priority-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #333;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+}
+.recommendation-item {
+    display: flex;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ccc;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+.recommendation-item.priority-high {
+    border-left-color: #dc3545;
+}
+.recommendation-item.priority-medium {
+    border-left-color: #ffc107;
+}
+.rec-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+.rec-content {
+    flex: 1;
+}
+.rec-content strong {
+    display: block;
+    margin-bottom: 5px;
+}
+.rec-content p {
+    margin: 0 0 5px 0;
+}
+
+/* Table responsive fixes */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-sm th,
+.table-sm td {
+    padding: 0.5rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.02);
+}
+
+/* Ensure cards don't overlap */
+.card {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08);
+}
+
+.card-body {
+    overflow-x: auto;
+}
+
+/* Better spacing for peer benchmarking table */
+.peer-ranking {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1400px) {
+    .table-sm th,
+    .table-sm td {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .table-sm th,
+    .table-sm td {
+        font-size: 0.75rem;
+        padding: 0.3rem;
+    }
+    
+    .table-sm th:nth-child(3),
+    .table-sm td:nth-child(3) {
+        min-width: 100px;
+    }
+}
+</style>
+
+<script>
+// Pass backend ci_data to JavaScript
+const ciData = {{ ci_data_json|safe }};
+
+function updateFilters() {
+    const careHome = document.getElementById('care_home_filter').value;
+    window.location.href = `?care_home=${careHome}`;
+}
+
+// Load CI Performance Charts
+let inspectionScoresTrendChart, qualityIndicatorsChart, peerBenchmarkingChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCIPerformanceCharts();
+});
+
+// Also reload charts when page becomes visible (for SPA navigation)
+document.addEventListener("visibilitychange", function() {
+    if (!document.hidden) {
+        setTimeout(function() { loadCIPerformanceCharts(); }, 100);
+    }
+});
+
+// Also reload on window focus (backup method)
+window.addEventListener("focus", function() {
+    setTimeout(function() { loadCIPerformanceCharts(); }, 100);
+});
+
+
+async function loadCIPerformanceCharts() {
+    try {
+        console.log('=== CI Performance Charts Debug ===');
+        console.log('CI Data:', ciData);
+        console.log('Trend Data:', ciData.trend_6month);
+        console.log('Peer Data:', ciData.peer_benchmarking);
+        
+        // Extract trend data from backend
+        const trendData = ciData.trend_6month || [];
+        console.log(`Trend data length: ${trendData.length}`);
+        
+        if (trendData.length === 0) {
+            console.error('No trend data available!');
+            return;
+        }
+        
+        const last6Months = trendData.map(item => item.month);
+        console.log('Months:', last6Months);
+        
+        // Extract actual metrics from trend data
+        const trainingData = trendData.map(item => item.training_compliance);
+        const supervisionData = trendData.map(item => item.supervision_completion);
+        const staffingData = trendData.map(item => item.staffing_level);
+        const carePlanData = trendData.map(item => item.care_plan_reviews);
+        
+        console.log('Training Data:', trainingData);
+        console.log('Supervision Data:', supervisionData);
+        
+        // Hide skeleton loaders
+        document.querySelectorAll('.skeleton-chart').forEach(el => {
+            console.log('Hiding skeleton:', el);
+            el.style.display = 'none';
+        });
+        
+        console.log('Creating inspection scores trend chart...');
+        inspectionScoresTrendChart = ChartHelpers.createLineChart('inspectionScoresTrendChart', {
+            labels: last6Months,
+            datasets: [
+                {
+                    label: 'Training Compliance (%)',
+                    data: trainingData,
+                    borderColor: ChartHelpers.colors.primary[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.primary[500], 0.1),
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Supervision Completion (%)',
+                    data: supervisionData,
+                    borderColor: ChartHelpers.colors.secondary[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.secondary[500], 0.1),
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Staffing Level (%)',
+                    data: staffingData,
+                    borderColor: ChartHelpers.colors.accent[500],
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.accent[500], 0.1),
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Care Plan Reviews (%)',
+                    data: carePlanData,
+                    borderColor: '#9333ea',
+                    backgroundColor: ChartHelpers.addAlpha('#9333ea', 0.1),
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        }, {
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y.toFixed(1) + '%';
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    min: 80,
+                    max: 105,
+                    title: {
+                        display: true,
+                        text: 'Compliance (%)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Chart 2: Quality Indicators Breakdown (Doughnut Chart)
+        // Extract peer benchmarking data to calculate compliant vs at-risk indicators
+        const peerData = ciData.peer_benchmarking || [];
+        console.log('Peer data for quality indicators:', peerData);
+        
+        // Find current home - it's the first one in the peer data (always sorted with current home first)
+        const currentHome = peerData.length > 0 ? peerData[0] : null;
+        console.log('Current home for quality indicators:', currentHome);
+        
+        // Calculate compliance status based on CI ratings
+        // Rating 5-6 = Compliant, 3-4 = At Risk, 1-2 = Non-Compliant
+        let compliantCount = 0;
+        let atRiskCount = 0;
+        let nonCompliantCount = 0;
+        
+        if (currentHome) {
+            const themes = [
+                currentHome.theme1_care_support,
+                currentHome.theme2_environment,
+                currentHome.theme3_staffing,
+                currentHome.theme4_management
+            ];
+            
+            console.log('Theme ratings:', themes);
+            
+            themes.forEach(rating => {
+                if (rating >= 5) compliantCount++;
+                else if (rating >= 3) atRiskCount++;
+                else nonCompliantCount++;
+            });
+        }
+        
+        console.log('Quality indicator counts:', {compliantCount, atRiskCount, nonCompliantCount});
+        
+        qualityIndicatorsChart = ChartHelpers.createDoughnutChart('qualityIndicatorsChart', {
+            labels: ['Compliant', 'At Risk', 'Non-Compliant'],
+            datasets: [{
+                data: [compliantCount, atRiskCount, nonCompliantCount],
+                backgroundColor: [
+                    ChartHelpers.addAlpha(ChartHelpers.colors.secondary[500], 0.8), // Green for compliant
+                    ChartHelpers.addAlpha(ChartHelpers.colors.accent[500], 0.8), // Orange for at risk
+                    ChartHelpers.addAlpha('#ef4444', 0.8) // Red for non-compliant
+                ],
+                borderColor: [
+                    ChartHelpers.colors.secondary[500],
+                    ChartHelpers.colors.accent[500],
+                    '#ef4444'
+                ],
+                borderWidth: 2
+            }]
+        }, {
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        });
+        
+        // Chart 3: Peer Benchmarking Comparison (Bar Chart)
+        // Compares this home's theme ratings against sector averages for the 4 CI themes
+        const ciThemes = ['Care & Support', 'Environment', 'Staffing', 'Management & Leadership'];
+        
+        // Extract this home's scores from peer benchmarking data (first entry is always current home)
+        let thisHomeScores = [0, 0, 0, 0];
+        if (peerData.length > 0) {
+            const currentHomeData = peerData[0];
+            thisHomeScores = [
+                currentHomeData.theme1_care_support || 0,
+                currentHomeData.theme2_environment || 0,
+                currentHomeData.theme3_staffing || 0,
+                currentHomeData.theme4_management || 0
+            ];
+        }
+        
+        console.log('This home scores for benchmarking:', thisHomeScores);
+        
+        // Calculate sector averages from all peer homes
+        const sectorAverages = [0, 0, 0, 0];
+        if (peerData.length > 0) {
+            peerData.forEach(peer => {
+                sectorAverages[0] += peer.theme1_care_support || 0;
+                sectorAverages[1] += peer.theme2_environment || 0;
+                sectorAverages[2] += peer.theme3_staffing || 0;
+                sectorAverages[3] += peer.theme4_management || 0;
+            });
+            sectorAverages[0] = parseFloat((sectorAverages[0] / peerData.length).toFixed(1));
+            sectorAverages[1] = parseFloat((sectorAverages[1] / peerData.length).toFixed(1));
+            sectorAverages[2] = parseFloat((sectorAverages[2] / peerData.length).toFixed(1));
+            sectorAverages[3] = parseFloat((sectorAverages[3] / peerData.length).toFixed(1));
+        }
+        
+        peerBenchmarkingChart = ChartHelpers.createBarChart('peerBenchmarkingChart', {
+            labels: ciThemes,
+            datasets: [
+                {
+                    label: 'This Home',
+                    data: thisHomeScores,
+                    backgroundColor: ChartHelpers.addAlpha(ChartHelpers.colors.primary[500], 0.8),
+                    borderColor: ChartHelpers.colors.primary[500],
+                    borderWidth: 2
+                },
+                {
+                    label: 'Sector Average',
+                    data: sectorAverages,
+                    backgroundColor: ChartHelpers.addAlpha('#9ca3af', 0.6),
+                    borderColor: '#9ca3af',
+                    borderWidth: 2
+                }
+            ]
+        }, {
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        generateLabels: function(chart) {
+                            const datasets = chart.data.datasets;
+                            return datasets.map((dataset, i) => ({
+                                text: dataset.label,
+                                fillStyle: dataset.borderColor,
+                                strokeStyle: dataset.borderColor,
+                                lineWidth: 0,
+                                hidden: !chart.isDatasetVisible(i),
+                                index: i
+                            }));
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y.toFixed(1) + ' / 6';
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 6,
+                    title: {
+                        display: true,
+                        text: 'CI Rating (6 = Excellent)'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            const grades = ['', 'Unsatisfactory', 'Weak', 'Adequate', 'Good', 'Very Good', 'Excellent'];
+                            return value + ' - ' + (grades[value] || '');
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'CI Quality Themes'
+                    }
+                }
+            }
+        });
+        
+        console.log('CI Performance charts loaded successfully');
+    } catch (error) {
+        console.error('Error loading CI performance charts:', error);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "scheduling/email/base.html" %}
+
+{% block title %}Shift Reminder - {{ shift.date|date:"l, d F Y" }}{% endblock %}
+
+{% block header %}📅 Shift Reminder{% endblock %}
+
+{% block content %}
+<h2>Hello {{ staff_member.first_name }},</h2>
+
+<p>This is a reminder about your upcoming shift:</p>
+
+<div class="info-box">
+    <table class="shift-details">
+        <tr>
+            <th>Date</th>
+            <td><strong>{{ shift.date|date:"l, d F Y" }}</strong></td>
+        </tr>
+        <tr>
+            <th>Time</th>
+            <td>{{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}</td>
+        </tr>
+        <tr>
+            <th>Shift Type</th>
+            <td>{{ shift.shift_type.name }}</td>
+        </tr>
+        <tr>
+            <th>Unit</th>
+            <td>{{ shift.unit.name }}</td>
+        </tr>
+        <tr>
+            <th>Care Home</th>
+            <td>{{ shift.care_home.name }}</td>
+        </tr>
+    </table>
+</div>
+
+<p>Please ensure you:</p>
+<ul>
+    <li>Arrive 10-15 minutes early for handover</li>
+    <li>Have your required PPE and equipment</li>
+    <li>Review any resident updates before your shift</li>
+    <li>Contact your manager if you're unable to attend</li>
+</ul>
+
+<a href="{{ login_url }}" class="button">View Full Schedule</a>
+
+<p>Thank you for your dedication to quality care.</p>
+
+<p>Best regards,<br>
+<strong>Staff Rota System</strong></p>
+{% endblock %}

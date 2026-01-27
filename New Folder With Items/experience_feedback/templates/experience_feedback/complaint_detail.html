@@ -1,0 +1,280 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-exclamation-triangle"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-6 text-right">
+            <div class="btn-group mr-2">
+                <a href="{% url 'experience_feedback:complaint_edit' complaint.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'experience_feedback:complaint_update_status' complaint.pk %}" class="btn btn-success">
+                    <i class="fas fa-clipboard-check"></i> Update Status
+                </a>
+                <a href="{% url 'experience_feedback:complaint_delete' complaint.pk %}" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+            <a href="{% url 'experience_feedback:complaint_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Complaint Details -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-info-circle"></i> Complaint Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Reference:</strong> {{ complaint.complaint_reference }}</p>
+                    <p><strong>Care Home:</strong> {{ complaint.care_home.name }}</p>
+                    <p><strong>Date Received:</strong> {{ complaint.date_received|date:"d M Y" }}</p>
+                    <p><strong>Category:</strong> {{ complaint.get_complaint_category_display }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Severity:</strong>
+                        <span class="badge {% if complaint.severity == 'CRITICAL' %}badge-danger{% elif complaint.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                            {{ complaint.get_severity_display }}
+                        </span>
+                    </p>
+                    <p><strong>Status:</strong> <span class="badge badge-secondary">{{ complaint.get_status_display }}</span></p>
+                    <p><strong>Days Open:</strong> {{ days_open }} days
+                        {% if is_overdue %}
+                        <span class="badge badge-danger">OVERDUE</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Acknowledgement:</strong>
+                        {% if ack_within_target %}
+                        <span class="text-success"><i class="fas fa-check"></i> Within 3 days</span>
+                        {% elif complaint.date_acknowledged %}
+                        <span class="text-warning"><i class="fas fa-exclamation"></i> Late</span>
+                        {% else %}
+                        <span class="text-danger"><i class="fas fa-times"></i> Not yet acknowledged</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Complainant Information</h6>
+                    <p><strong>Name:</strong> {{ complaint.complainant_name }}</p>
+                    <p><strong>Relationship:</strong> {{ complaint.complainant_relationship }}</p>
+                    {% if complaint.resident %}
+                    <p><strong>Resident:</strong> {{ complaint.resident.full_name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Complaint Description</h6>
+                    <p>{{ complaint.complaint_description }}</p>
+                    {% if complaint.desired_outcome %}
+                    <h6 class="mt-3">Desired Outcome</h6>
+                    <p>{{ complaint.desired_outcome }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if complaint.investigation_notes %}
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Investigation Findings</h6>
+                    <p>{{ complaint.investigation_notes }}</p>
+                    {% if complaint.root_cause %}
+                    <h6 class="mt-3">Root Cause</h6>
+                    <p>{{ complaint.root_cause }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if complaint.resolution_details %}
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Resolution</h6>
+                    <p>{{ complaint.resolution_details }}</p>
+                    <p><strong>Complainant Satisfied:</strong>
+                        {% if complaint.complainant_satisfied %}
+                        <span class="text-success">Yes</span>
+                        {% elif complaint.complainant_satisfied == False %}
+                        <span class="text-danger">No</span>
+                        {% else %}
+                        <span class="text-muted">Not recorded</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Investigation Stages -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-tasks"></i> Investigation Stages</h5>
+            <a href="{% url 'experience_feedback:complaint_add_stage' complaint.pk %}" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Add Stage
+            </a>
+        </div>
+        <div class="card-body">
+            {% if investigation_stages %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Stage</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                            <th>Start Date</th>
+                            <th>Target</th>
+                            <th>Completed</th>
+                            <th>Findings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stage in investigation_stages %}
+                        <tr {% if stage.is_overdue %}class="table-warning"{% endif %}>
+                            <td>{{ stage.sequence_order }}</td>
+                            <td><strong>{{ stage.get_stage_name_display }}</strong></td>
+                            <td>{{ stage.assigned_to.get_full_name|default:"Unassigned" }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if stage.status == 'COMPLETED' %}badge-success
+                                    {% elif stage.status == 'IN_PROGRESS' %}badge-primary
+                                    {% elif stage.status == 'BLOCKED' %}badge-danger
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ stage.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ stage.start_date|date:"d M Y"|default:"—" }}</td>
+                            <td>{{ stage.target_completion|date:"d M Y"|default:"—" }}</td>
+                            <td>{{ stage.actual_completion|date:"d M Y"|default:"—" }}</td>
+                            <td>
+                                {% if stage.findings %}
+                                <button class="btn btn-sm btn-outline-info" type="button" 
+                                        data-toggle="collapse" data-target="#findings-{{ stage.id }}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <div class="collapse mt-2" id="findings-{{ stage.id }}">
+                                    <div class="card card-body">
+                                        <strong>Findings:</strong>
+                                        <p class="mb-2">{{ stage.findings }}</p>
+                                        {% if stage.evidence_collected %}
+                                        <strong>Evidence:</strong>
+                                        <p class="mb-2">{{ stage.evidence_collected }}</p>
+                                        {% endif %}
+                                        {% if stage.actions_required %}
+                                        <strong>Actions:</strong>
+                                        <p class="mb-0">{{ stage.actions_required }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">
+                <i class="fas fa-info-circle"></i> No investigation stages added yet.
+                <a href="{% url 'experience_feedback:complaint_add_stage' complaint.pk %}">Add the first stage</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stakeholders -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-users"></i> Stakeholders</h5>
+            <a href="{% url 'experience_feedback:complaint_add_stakeholder' complaint.pk %}" class="btn btn-light btn-sm">
+                <i class="fas fa-user-plus"></i> Add Stakeholder
+            </a>
+        </div>
+        <div class="card-body">
+            {% if stakeholders %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Contact</th>
+                            <th>Involvement</th>
+                            <th>Statement</th>
+                            <th>Updates</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stakeholder in stakeholders %}
+                        <tr>
+                            <td><span class="badge badge-info">{{ stakeholder.get_stakeholder_type_display }}</span></td>
+                            <td><strong>{{ stakeholder.name }}</strong></td>
+                            <td>{{ stakeholder.role_title|default:"—" }}</td>
+                            <td>{{ stakeholder.contact_details|default:"—" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-toggle="collapse" data-target="#involvement-{{ stakeholder.id }}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <div class="collapse mt-2" id="involvement-{{ stakeholder.id }}">
+                                    <div class="card card-body">
+                                        {{ stakeholder.involvement_description }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if stakeholder.statement_received %}
+                                <span class="text-success"><i class="fas fa-check"></i> Received {{ stakeholder.statement_date|date:"d M Y" }}</span>
+                                {% else %}
+                                <span class="text-muted">Not received</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stakeholder.requires_update %}
+                                <span class="badge badge-primary">{{ stakeholder.get_update_frequency_display }}</span>
+                                {% if stakeholder.last_updated %}
+                                <br><small class="text-muted">Last: {{ stakeholder.last_updated|date:"d M Y" }}</small>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted">Not required</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">
+                <i class="fas fa-info-circle"></i> No stakeholders added yet.
+                <a href="{% url 'experience_feedback:complaint_add_stakeholder' complaint.pk %}">Add the first stakeholder</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

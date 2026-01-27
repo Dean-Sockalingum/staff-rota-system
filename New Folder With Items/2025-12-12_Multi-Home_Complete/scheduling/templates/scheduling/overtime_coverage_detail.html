@@ -1,0 +1,274 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}OT Coverage Request Details - Staff Rota System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card">
+                <div class="card-header {% if coverage_request.status == 'covered' %}bg-success{% elif coverage_request.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %} text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> 
+                        Overtime Coverage Request #{{ coverage_request.id }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Request Status Banner -->
+                    <div class="alert {% if coverage_request.status == 'covered' %}alert-success{% elif coverage_request.status == 'pending' %}alert-warning{% else %}alert-danger{% endif %}">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="mb-0">
+                                    Status: 
+                                    {% if coverage_request.status == 'covered' %}
+                                        <strong>✓ COVERED</strong>
+                                    {% elif coverage_request.status == 'pending' %}
+                                        <strong>⏳ PENDING</strong>
+                                    {% else %}
+                                        <strong>✗ NOT COVERED</strong>
+                                    {% endif %}
+                                </h5>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small>
+                                    Created: {{ coverage_request.created_at|date:"d/m/Y H:i" }}<br>
+                                    By: {{ coverage_request.created_by.get_full_name }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Shift Details -->
+                    <h5><i class="fas fa-calendar-day"></i> Shift Needing Coverage</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <strong>Date:</strong><br>
+                            {{ coverage_request.shift.date|date:"l, d M Y" }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Shift Type:</strong><br>
+                            {{ coverage_request.shift.shift_type.name }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Unit:</strong><br>
+                            {{ coverage_request.shift.unit.get_name_display }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Role:</strong><br>
+                            {{ coverage_request.shift.role.get_name_display|default:"Any" }}
+                        </div>
+                    </div>
+                    
+                    <!-- Response Tracking -->
+                    <h5><i class="fas fa-users"></i> Staff Contacted & Responses</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Staff Member</th>
+                                    <th>Contacted</th>
+                                    <th>Response</th>
+                                    <th>Response Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for response in responses %}
+                                <tr class="{% if response.response_status == 'accepted' %}table-success{% elif response.response_status == 'declined' %}table-danger{% endif %}">
+                                    <td><strong>#{{ forloop.counter }}</strong></td>
+                                    <td>
+                                        <strong>{{ response.staff.full_name }}</strong><br>
+                                        <small class="text-muted">{{ response.staff.role.get_name_display }}</small>
+                                    </td>
+                                    <td>
+                                        {% if response.contacted_at %}
+                                            <i class="fas fa-check text-success"></i> 
+                                            {{ response.contacted_at|date:"d/m H:i" }}<br>
+                                            <small class="text-muted">via {{ response.contact_method }}</small>
+                                        {% else %}
+                                            <i class="fas fa-clock text-warning"></i> Not yet
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if response.response_status == 'accepted' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Accepted
+                                            </span>
+                                        {% elif response.response_status == 'declined' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle"></i> Declined
+                                            </span>
+                                            {% if response.decline_reason %}
+                                                <br><small class="text-muted">{{ response.decline_reason }}</small>
+                                            {% endif %}
+                                        {% elif response.response_status == 'no_response' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-hourglass-half"></i> No Response
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-question"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if response.responded_at %}
+                                            {{ response.responded_at|date:"d/m H:i" }}
+                                            {% if response.contacted_at %}
+                                                <br><small class="text-muted">
+                                                    ({{ response.get_response_time_display }})
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if response.response_status == 'pending' %}
+                                            <button class="btn btn-sm btn-success" 
+                                                    onclick="recordResponse({{ response.id }}, 'accepted')">
+                                                <i class="fas fa-check"></i> Accept
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" 
+                                                    onclick="recordResponse({{ response.id }}, 'declined')">
+                                                <i class="fas fa-times"></i> Decline
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        No staff have been contacted yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Summary Metrics -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary">{{ responses|length }}</h3>
+                                    <small class="text-muted">Staff Contacted</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-success">{{ accepted_count }}</h3>
+                                    <small class="text-muted">Accepted</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-danger">{{ declined_count }}</h3>
+                                    <small class="text-muted">Declined</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h3 class="text-warning">{{ pending_count }}</h3>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'view_rota' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Rota
+                        </a>
+                        {% if coverage_request.status == 'pending' and pending_count > 0 %}
+                            <button class="btn btn-warning" onclick="sendReminders()">
+                                <i class="fas fa-bell"></i> Send Reminders
+                            </button>
+                        {% endif %}
+                        {% if coverage_request.status == 'not_covered' %}
+                            <a href="{% url 'overtime_coverage_request' coverage_request.shift.id %}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-redo"></i> Request New Coverage
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Insights -->
+            {% if coverage_request.status == 'not_covered' %}
+            <div class="card mt-3 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> AI Suggestions</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>This shift remains uncovered. Consider:</strong></p>
+                    <ul>
+                        <li><strong>Expand search criteria:</strong> Contact staff from other homes willing to travel</li>
+                        <li><strong>Increase incentives:</strong> Offer premium rate for this difficult-to-cover shift</li>
+                        <li><strong>Review staffing:</strong> This shift pattern may need permanent staff adjustment</li>
+                        <li><strong>Agency backup:</strong> Contact agency partners for temporary cover</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function recordResponse(responseId, status) {
+    if (confirm('Record this response as ' + status + '?')) {
+        // In production, this would be an AJAX call to update the response
+        fetch('/management/api/overtime/response/' + responseId + '/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                status: status,
+                decline_reason: status === 'declined' ? prompt('Reason (optional):') : null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error recording response: ' + data.error);
+            }
+        });
+    }
+}
+
+function sendReminders() {
+    if (confirm('Send reminder alerts to all pending staff?')) {
+        fetch('/management/api/overtime/coverage/{{ coverage_request.id }}/remind/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Reminders sent to ' + data.count + ' staff');
+                location.reload();
+            } else {
+                alert('Error sending reminders: ' + data.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

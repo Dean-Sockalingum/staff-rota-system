@@ -1,0 +1,46 @@
+name: API Security Check
+
+on:
+  pull_request:
+    paths:
+      - 'scheduling/**/*.py'
+      - 'scheduling/urls.py'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scheduling/**/*.py'
+      - 'scheduling/urls.py'
+
+jobs:
+  check-api-security:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Check API authentication decorators
+        run: python3 tools/check_api_decorators.py --strict
+      
+      - name: Check API authorization/permissions
+        run: python3 tools/check_api_permissions.py
+        continue-on-error: true  # Advisory only, doesn't fail the build
+      
+      - name: Comment on PR if check fails
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **API Security Check Failed**\n\nSome API endpoints are missing `@api_login_required` decorator.\n\nRun locally:\n```bash\npython3 tools/check_api_decorators.py\npython3 tools/check_api_permissions.py\n```'
+            })

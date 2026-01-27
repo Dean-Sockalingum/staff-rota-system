@@ -1,0 +1,221 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Cache Performance - Staff Rota System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+    }
+    
+    .stat-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #2563eb;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .action-buttons {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-cache {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-clear {
+        background: #dc2626;
+        color: white;
+    }
+    
+    .btn-clear:hover {
+        background: #b91c1c;
+    }
+    
+    .btn-warm {
+        background: #16a34a;
+        color: white;
+    }
+    
+    .btn-warm:hover {
+        background: #15803d;
+    }
+    
+    .btn-refresh {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn-refresh:hover {
+        background: #1d4ed8;
+    }
+    
+    .alert {
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+    }
+    
+    .alert-success {
+        background: #dcfce7;
+        border: 1px solid #16a34a;
+        color: #166534;
+    }
+    
+    .alert-info {
+        background: #dbeafe;
+        border: 1px solid #2563eb;
+        color: #1e40af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    <h1>🚀 Cache Performance Dashboard</h1>
+    <p class="text-muted">Monitor and manage application caching for optimal performance</p>
+    
+    <div class="alert alert-info">
+        <strong>Cache Backend:</strong> {{ cache_backend }}
+        <br>
+        <small>Using in-memory cache (development) - Redis recommended for production</small>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Cached Keys</div>
+            <div class="stat-value" id="total-keys">{{ stats.total_keys|default:"0" }}</div>
+            <small class="text-muted">Entries in cache</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-label">Memory Used</div>
+            <div class="stat-value" id="memory-used">{{ stats.used_memory|default:"N/A" }}</div>
+            <small class="text-muted">Cache memory consumption</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-label">Hit Rate</div>
+            <div class="stat-value" id="hit-rate">{{ stats.hit_rate|floatformat:1|default:"0.0" }}%</div>
+            <small class="text-muted">Cache effectiveness</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-label">Connected Clients</div>
+            <div class="stat-value" id="connected-clients">{{ stats.connected_clients|default:"0" }}</div>
+            <small class="text-muted">Active connections</small>
+        </div>
+    </div>
+    
+    <div class="action-buttons">
+        <button class="btn-cache btn-refresh" onclick="refreshStats()">
+            🔄 Refresh Stats
+        </button>
+        <button class="btn-cache btn-warm" onclick="warmCache()">
+            🔥 Warm Cache
+        </button>
+        <button class="btn-cache btn-clear" onclick="clearCache()">
+            🗑️ Clear All Caches
+        </button>
+    </div>
+    
+    <div id="message-container"></div>
+    
+    <div style="margin-top: 40px;">
+        <h3>Cache Management Tips</h3>
+        <ul style="line-height: 1.8;">
+            <li><strong>Warm Cache:</strong> Pre-populate frequently accessed data for faster initial loads</li>
+            <li><strong>Clear Cache:</strong> Remove stale data when you make significant system changes</li>
+            <li><strong>Hit Rate:</strong> Aim for >70% hit rate for optimal performance</li>
+            <li><strong>Memory:</strong> Monitor memory usage to prevent cache eviction</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+function showMessage(message, type) {
+    const container = document.getElementById('message-container');
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-info';
+    container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => container.innerHTML = '', 5000);
+}
+
+function updateStats(stats) {
+    document.getElementById('total-keys').textContent = stats.total_keys || '0';
+    document.getElementById('memory-used').textContent = stats.used_memory || 'N/A';
+    document.getElementById('hit-rate').textContent = (stats.hit_rate * 100).toFixed(1) + '%';
+    document.getElementById('connected-clients').textContent = stats.connected_clients || '0';
+}
+
+function refreshStats() {
+    location.reload();
+}
+
+function warmCache() {
+    if (!confirm('This will pre-load dashboard data. Continue?')) return;
+    
+    fetch('{% url "warm_cache" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showMessage(data.message, 'success');
+        updateStats(data.stats);
+    })
+    .catch(error => {
+        showMessage('Error warming cache: ' + error, 'error');
+    });
+}
+
+function clearCache() {
+    if (!confirm('This will clear ALL caches. Are you sure?')) return;
+    
+    fetch('{% url "clear_cache" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showMessage(data.message, 'success');
+        updateStats(data.stats);
+    })
+    .catch(error => {
+        showMessage('Error clearing cache: ' + error, 'error');
+    });
+}
+</script>
+{% endblock %}

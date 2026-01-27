@@ -1,0 +1,135 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Surveys - Family Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-clipboard-list"></i> Surveys</h2>
+                <a href="{% url 'experience_feedback:family_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Surveys -->
+    {% if pending_surveys %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> Pending Surveys
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3">
+                            You have {{ pending_surveys|length }} survey{{ pending_surveys|length|pluralize }} awaiting completion.
+                            Your feedback helps us improve the care we provide.
+                        </p>
+                        <div class="list-group">
+                            {% for survey in pending_surveys %}
+                                <div class="list-group-item">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h6 class="mb-1">{{ survey.get_survey_type_display }}</h6>
+                                            <p class="mb-0 text-muted small">
+                                                Sent: {{ survey.sent_date|date:"F d, Y" }}
+                                                ({{ survey.days_since_sent }} day{{ survey.days_since_sent|pluralize }} ago)
+                                            </p>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <a href="{% url 'experience_feedback:public_survey_token' survey.survey_token %}" 
+                                               class="btn btn-success">
+                                                <i class="fas fa-pencil-alt"></i> Complete Survey
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Completed Surveys -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle"></i> Completed Surveys
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if completed_surveys %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Survey Type</th>
+                                        <th>Date</th>
+                                        <th>Overall Satisfaction</th>
+                                        <th>NPS Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for survey in completed_surveys %}
+                                        <tr>
+                                            <td>{{ survey.get_survey_type_display }}</td>
+                                            <td>{{ survey.survey_date|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if survey.overall_satisfaction %}
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="me-2">{{ survey.overall_satisfaction }}/5</div>
+                                                        <div class="progress" style="width: 100px; height: 20px;">
+                                                            <div class="progress-bar {% if survey.overall_satisfaction >= 4 %}bg-success{% elif survey.overall_satisfaction >= 3 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                                 role="progressbar" 
+                                                                 style="width: {{ survey.overall_satisfaction|floatformat:0 }}0%"
+                                                                 aria-valuenow="{{ survey.overall_satisfaction }}" 
+                                                                 aria-valuemin="0" 
+                                                                 aria-valuemax="5">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if survey.nps_score %}
+                                                    <span class="badge {% if survey.nps_score >= 9 %}bg-success{% elif survey.nps_score >= 7 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                        {{ survey.nps_score }}/10
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard fa-3x text-muted mb-3 opacity-25"></i>
+                            <p class="text-muted">No surveys completed yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .opacity-25 {
+        opacity: 0.25;
+    }
+</style>
+{% endblock %}

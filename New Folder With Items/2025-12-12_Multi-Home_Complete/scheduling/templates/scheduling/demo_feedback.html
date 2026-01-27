@@ -1,0 +1,596 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}Demo Feedback - Help Us Improve{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feedback-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+    
+    .feedback-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .feedback-header h1 {
+        color: #0066CC;
+        font-size: 2em;
+        margin-bottom: 10px;
+    }
+    
+    .feedback-header .subtitle {
+        color: #666;
+        font-size: 1.1em;
+    }
+    
+    .feedback-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .feedback-section h2 {
+        color: #0066CC;
+        font-size: 1.4em;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .section-number {
+        background: #0066CC;
+        color: white;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .form-group .helptext {
+        display: block;
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+        font-style: italic;
+    }
+    
+    .star-rating {
+        display: flex;
+        gap: 15px;
+        padding: 10px 0;
+    }
+    
+    .star-rating label {
+        cursor: pointer;
+        padding: 10px 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        transition: all 0.2s;
+        font-weight: normal;
+    }
+    
+    .star-rating input[type="radio"] {
+        display: none;
+    }
+    
+    .star-rating input[type="radio"]:checked + label {
+        background: #0066CC;
+        color: white;
+        border-color: #0066CC;
+    }
+    
+    .star-rating label:hover {
+        background: #e9ecef;
+        border-color: #0066CC;
+    }
+    
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 1em;
+        transition: border-color 0.2s;
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #0066CC;
+        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        height: 20px;
+        width: 20px;
+        cursor: pointer;
+    }
+    
+    .checkbox-group label {
+        margin: 0;
+        font-weight: normal;
+        cursor: pointer;
+    }
+    
+    .submit-section {
+        text-align: center;
+        padding: 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        margin-top: 40px;
+    }
+    
+    .submit-btn {
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 15px 50px;
+        font-size: 1.2em;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .required-indicator {
+        color: #dc3545;
+        font-weight: bold;
+        margin-left: 3px;
+    }
+    
+    .optional-text {
+        color: #6c757d;
+        font-size: 0.9em;
+        font-weight: normal;
+        margin-left: 5px;
+    }
+    
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #c3e6cb;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #f5c6cb;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="feedback-container">
+    <div class="feedback-header">
+        <h1>📝 Demo Feedback Questionnaire</h1>
+        <p class="subtitle">Help us improve the Staff Rota System</p>
+        <p style="color: #666; font-size: 0.95em; margin-top: 10px;">
+            Your feedback is invaluable! This should take about 5-10 minutes.
+        </p>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="success-message">
+                <strong>✅ Thank you!</strong> Your feedback has been submitted successfully.
+                <br>We'll use your insights to make the system even better.
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" id="feedbackForm">
+        {% csrf_token %}
+        
+        <!-- Section 1: Basic Info -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">1</span>
+                About You
+            </h2>
+            
+            <div class="form-group">
+                <label for="{{ form.user_role.id_for_label }}">
+                    {{ form.user_role.label }}
+                    <span class="required-indicator">*</span>
+                </label>
+                {{ form.user_role }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.care_home.id_for_label }}">
+                    {{ form.care_home.label }}
+                    <span class="optional-text">(optional)</span>
+                </label>
+                {{ form.care_home }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.session_duration_minutes.id_for_label }}">
+                    {{ form.session_duration_minutes.label }}
+                    <span class="optional-text">(optional)</span>
+                </label>
+                {{ form.session_duration_minutes }}
+            </div>
+        </div>
+        
+        <!-- Section 2: Overall Experience -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">2</span>
+                Overall Experience
+            </h2>
+            
+            <div class="form-group">
+                <label>
+                    {{ form.overall_rating.label }}
+                    <span class="required-indicator">*</span>
+                </label>
+                <div class="star-rating">
+                    {% for value, label in form.overall_rating.field.choices %}
+                        <input type="radio" name="overall_rating" value="{{ value }}" id="overall_{{ value }}" required>
+                        <label for="overall_{{ value }}">{{ label }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    {{ form.ease_of_use.label }}
+                    <span class="required-indicator">*</span>
+                </label>
+                <div class="star-rating">
+                    {% for value, label in form.ease_of_use.field.choices %}
+                        <input type="radio" name="ease_of_use" value="{{ value }}" id="ease_{{ value }}" required>
+                        <label for="ease_{{ value }}">{{ label }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    {{ form.would_recommend }}
+                    <label for="{{ form.would_recommend.id_for_label }}">
+                        {{ form.would_recommend.label }}
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 3: Feature Ratings -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">3</span>
+                Feature Ratings
+            </h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Rate each feature you tried (or select "Not Used" if you didn't use it)
+            </p>
+            
+            <div class="form-group">
+                <label for="{{ form.rota_viewing_rating.id_for_label }}">
+                    Viewing Rotas/Shifts
+                </label>
+                {{ form.rota_viewing_rating }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.shift_swapping_rating.id_for_label }}">
+                    Shift Swapping
+                </label>
+                {{ form.shift_swapping_rating }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.leave_request_rating.id_for_label }}">
+                    Leave Requests
+                </label>
+                {{ form.leave_request_rating }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.ai_assistant_rating.id_for_label }}">
+                    AI Assistant Chatbot
+                </label>
+                {{ form.ai_assistant_rating }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.dashboard_rating.id_for_label }}">
+                    Dashboard/Home Page
+                </label>
+                {{ form.dashboard_rating }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.mobile_experience_rating.id_for_label }}">
+                    Mobile/Tablet Experience
+                </label>
+                {{ form.mobile_experience_rating }}
+            </div>
+        </div>
+        
+        <!-- Section 4: What Did You Think? -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">4</span>
+                What Did You Think?
+            </h2>
+            
+            <div class="form-group">
+                <label for="{{ form.most_useful_features.id_for_label }}">
+                    {{ form.most_useful_features.label }}
+                </label>
+                {{ form.most_useful_features }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.least_useful_features.id_for_label }}">
+                    {{ form.least_useful_features.label }}
+                </label>
+                {{ form.least_useful_features }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.missing_features.id_for_label }}">
+                    {{ form.missing_features.label }}
+                </label>
+                {{ form.missing_features }}
+            </div>
+        </div>
+        
+        <!-- Section 5: Usability -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">5</span>
+                Usability & Design
+            </h2>
+            
+            <div class="form-group">
+                <label for="{{ form.navigation_issues.id_for_label }}">
+                    {{ form.navigation_issues.label }}
+                </label>
+                {{ form.navigation_issues }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.confusing_areas.id_for_label }}">
+                    {{ form.confusing_areas.label }}
+                </label>
+                {{ form.confusing_areas }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.design_feedback.id_for_label }}">
+                    {{ form.design_feedback.label }}
+                </label>
+                {{ form.design_feedback }}
+            </div>
+        </div>
+        
+        <!-- Section 6: Current System Comparison -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">6</span>
+                Comparison to Current System
+            </h2>
+            
+            <div class="form-group">
+                <label for="{{ form.currently_use_system.id_for_label }}">
+                    {{ form.currently_use_system.label }}
+                </label>
+                {{ form.currently_use_system }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.better_than_current.id_for_label }}">
+                    {{ form.better_than_current.label }}
+                </label>
+                {{ form.better_than_current }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.what_makes_it_better.id_for_label }}">
+                    {{ form.what_makes_it_better.label }}
+                </label>
+                {{ form.what_makes_it_better }}
+            </div>
+        </div>
+        
+        <!-- Section 7: Readiness -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">7</span>
+                Implementation Readiness
+            </h2>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    {{ form.ready_to_use_daily }}
+                    <label for="{{ form.ready_to_use_daily.id_for_label }}">
+                        {{ form.ready_to_use_daily.label }}
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.concerns_before_rollout.id_for_label }}">
+                    {{ form.concerns_before_rollout.label }}
+                </label>
+                {{ form.concerns_before_rollout }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.training_needs.id_for_label }}">
+                    {{ form.training_needs.label }}
+                </label>
+                {{ form.training_needs }}
+            </div>
+        </div>
+        
+        <!-- Section 8: Bugs & Final Thoughts -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">8</span>
+                Bugs & Final Thoughts
+            </h2>
+            
+            <div class="form-group">
+                <label for="{{ form.bugs_encountered.id_for_label }}">
+                    {{ form.bugs_encountered.label }}
+                </label>
+                {{ form.bugs_encountered }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.additional_comments.id_for_label }}">
+                    {{ form.additional_comments.label }}
+                </label>
+                {{ form.additional_comments }}
+            </div>
+        </div>
+        
+        <!-- Section 9: Follow-up -->
+        <div class="feedback-section">
+            <h2>
+                <span class="section-number">9</span>
+                Follow-up
+            </h2>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    {{ form.willing_to_followup }}
+                    <label for="{{ form.willing_to_followup.id_for_label }}">
+                        {{ form.willing_to_followup.label }}
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.contact_email.id_for_label }}">
+                    {{ form.contact_email.label }}
+                </label>
+                {{ form.contact_email }}
+            </div>
+        </div>
+        
+        <!-- Submit -->
+        <div class="submit-section">
+            <button type="submit" class="submit-btn">
+                Submit Feedback
+            </button>
+            <p style="color: white; margin-top: 15px; font-size: 0.9em;">
+                Thank you for taking the time to help us improve! 🙏
+            </p>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation and UX enhancements
+document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+    const overallRating = document.querySelector('input[name="overall_rating"]:checked');
+    const easeOfUse = document.querySelector('input[name="ease_of_use"]:checked');
+    const userRole = document.getElementById('id_user_role');
+    
+    if (!overallRating || !easeOfUse || !userRole.value) {
+        e.preventDefault();
+        alert('Please complete the required fields (marked with *)');
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('.submit-btn');
+    submitBtn.textContent = 'Submitting...';
+    submitBtn.disabled = true;
+});
+
+// Auto-save to localStorage (in case user accidentally closes)
+const inputs = document.querySelectorAll('input, select, textarea');
+inputs.forEach(input => {
+    // Load saved value
+    const saved = localStorage.getItem('feedback_' + input.name);
+    if (saved && !input.value) {
+        if (input.type === 'checkbox') {
+            input.checked = saved === 'true';
+        } else if (input.type === 'radio') {
+            if (input.value === saved) {
+                input.checked = true;
+            }
+        } else {
+            input.value = saved;
+        }
+    }
+    
+    // Save on change
+    input.addEventListener('change', function() {
+        if (this.type === 'checkbox') {
+            localStorage.setItem('feedback_' + this.name, this.checked);
+        } else {
+            localStorage.setItem('feedback_' + this.name, this.value);
+        }
+    });
+});
+
+// Clear localStorage on successful submit
+document.getElementById('feedbackForm').addEventListener('submit', function() {
+    setTimeout(() => {
+        inputs.forEach(input => {
+            localStorage.removeItem('feedback_' + input.name);
+        });
+    }, 1000);
+});
+</script>
+{% endblock %}

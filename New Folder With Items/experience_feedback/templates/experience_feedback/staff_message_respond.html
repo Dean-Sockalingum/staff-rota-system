@@ -1,0 +1,145 @@
+{% extends 'scheduling/base.html' %}
+
+{% block title %}Respond to Family Message{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{% url 'experience_feedback:staff_family_messages' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Messages
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Original Message -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope"></i> {{ message.subject }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>From:</strong> {{ message.family_member.get_full_name }}
+                                ({{ message.family_member.relationship }})
+                            </p>
+                            <p class="mb-1">
+                                <strong>Email:</strong> {{ message.family_member.email }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Phone:</strong> {{ message.family_member.phone|default:"Not provided" }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>Resident:</strong> {{ message.resident.first_name }} {{ message.resident.last_name }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Care Home:</strong> {{ message.care_home.name }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Sent:</strong> {{ message.sent_date|date:"F d, Y H:i" }}
+                                ({{ message.days_since_sent }} days ago)
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <p class="mb-1">
+                                <strong>Category:</strong> 
+                                <span class="badge bg-secondary">{{ message.get_category_display }}</span>
+                            </p>
+                            <p class="mb-1">
+                                <strong>Priority:</strong>
+                                <span class="badge {% if message.priority == 'URGENT' %}bg-danger{% elif message.priority == 'HIGH' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ message.get_priority_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="message-content">
+                        <strong>Message:</strong>
+                        <div class="p-3 bg-light rounded mt-2">
+                            {{ message.message|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Section -->
+            {% if message.staff_responded %}
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle"></i> Response Already Sent
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <strong>Responded by:</strong> {{ message.responder.get_full_name }}<br>
+                            <strong>Date:</strong> {{ message.response_date|date:"F d, Y H:i" }}<br>
+                            <strong>Response time:</strong> {{ message.response_time_days }} day{{ message.response_time_days|pluralize }}
+                        </p>
+                        <hr>
+                        <div class="p-3 bg-light rounded">
+                            {{ message.response_text|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-reply"></i> Send Response
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Response Guidelines:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Be professional, compassionate, and clear</li>
+                                <li>Address all points raised in the message</li>
+                                <li>Provide specific information and actionable next steps</li>
+                                <li>Include contact information for follow-up if needed</li>
+                            </ul>
+                        </div>
+
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label for="{{ form.response_text.id_for_label }}" class="form-label">
+                                    <i class="fas fa-pen"></i> Your Response *
+                                </label>
+                                {{ form.response_text }}
+                                {% if form.response_text.help_text %}
+                                    <div class="form-text">{{ form.response_text.help_text }}</div>
+                                {% endif %}
+                                {% if form.response_text.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.response_text.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'experience_feedback:staff_family_messages' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-paper-plane"></i> Send Response
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

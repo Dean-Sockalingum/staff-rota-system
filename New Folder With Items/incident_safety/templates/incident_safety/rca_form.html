@@ -1,0 +1,532 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Root Cause Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section h4 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .form-section h4 i {
+        margin-right: 0.75rem;
+        font-size: 1.3rem;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        border-left: 4px solid #667eea;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-box i {
+        color: #667eea;
+        margin-right: 0.5rem;
+    }
+    
+    .required-note {
+        background: #fef3c7;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-label .required {
+        color: #ef4444;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .why-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .why-section label {
+        font-weight: 700;
+        color: #3b82f6;
+    }
+    
+    .why-help-text {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-style: italic;
+        margin-top: 0.25rem;
+    }
+    
+    .fishbone-category {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .fishbone-category label {
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+    }
+    
+    .fishbone-category label .emoji {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    .category-people { border-left: 4px solid #ef4444; }
+    .category-environment { border-left: 4px solid #10b981; }
+    .category-processes { border-left: 4px solid #f59e0b; }
+    .category-organization { border-left: 4px solid #8b5cf6; }
+    .category-external { border-left: 4px solid #3b82f6; }
+    
+    .approval-checkbox {
+        background: #dbeafe;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .approval-checkbox label {
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .btn-save-draft {
+        background-color: #6b7280;
+        border-color: #6b7280;
+        color: white;
+    }
+    
+    .btn-save-draft:hover {
+        background-color: #4b5563;
+        border-color: #4b5563;
+        color: white;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="gradient-header">
+                <h2>
+                    <i class="bi bi-search"></i>
+                    {% if form.instance.pk %}
+                        Edit Root Cause Analysis
+                    {% else %}
+                        Create Root Cause Analysis
+                    {% endif %}
+                </h2>
+                <p class="mb-0">Systematic investigation to identify the underlying cause of the incident</p>
+            </div>
+
+            <!-- Info Box -->
+            <div class="info-box">
+                <i class="bi bi-info-circle-fill"></i>
+                <strong>About Root Cause Analysis:</strong>
+                Complete a thorough investigation using the 5 Whys method and Fishbone diagram to identify
+                contributing factors across People, Environment, Processes, Organization, and External categories.
+                This analysis will inform Health and Safety Action Plans to prevent recurrence.
+            </div>
+
+            <div class="required-note">
+                <i class="bi bi-asterisk"></i>
+                Fields marked with <span class="text-danger">*</span> are required
+            </div>
+
+            <!-- Error Messages -->
+            {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Please correct the errors below before submitting.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <form method="post" id="rcaForm">
+                {% csrf_token %}
+
+                <!-- Section 1: Basic Information -->
+                <div class="form-section">
+                    <h4><i class="bi bi-file-text"></i> Basic Information</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.incident.id_for_label }}" class="form-label">
+                                Incident <span class="required">*</span>
+                            </label>
+                            {{ form.incident }}
+                            {% if form.incident.errors %}
+                                <div class="text-danger small">{{ form.incident.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Select the incident being investigated</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.lead_investigator.id_for_label }}" class="form-label">
+                                Lead Investigator <span class="required">*</span>
+                            </label>
+                            {{ form.lead_investigator }}
+                            {% if form.lead_investigator.errors %}
+                                <div class="text-danger small">{{ form.lead_investigator.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Person responsible for the investigation</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.team_members.id_for_label }}" class="form-label">
+                            Investigation Team
+                        </label>
+                        {{ form.team_members }}
+                        {% if form.team_members.errors %}
+                            <div class="text-danger small">{{ form.team_members.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple team members</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.investigation_date.id_for_label }}" class="form-label">
+                                Investigation Date <span class="required">*</span>
+                            </label>
+                            {{ form.investigation_date }}
+                            {% if form.investigation_date.errors %}
+                                <div class="text-danger small">{{ form.investigation_date.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.target_completion_date.id_for_label }}" class="form-label">
+                                Target Completion Date <span class="required">*</span>
+                            </label>
+                            {{ form.target_completion_date }}
+                            {% if form.target_completion_date.errors %}
+                                <div class="text-danger small">{{ form.target_completion_date.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">When should the investigation be completed?</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: 5 Whys Analysis -->
+                <div class="form-section">
+                    <h4><i class="bi bi-list-ol"></i> 5 Whys Analysis</h4>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb-fill me-2"></i>
+                        Ask "why" five times to drill down from the symptoms to the root cause. Each answer becomes
+                        the basis for the next "why" question. The final answer typically reveals the root cause.
+                    </div>
+
+                    <div class="why-section">
+                        <label for="{{ form.why_1.id_for_label }}">
+                            Why 1: Why did the incident occur? <span class="required">*</span>
+                        </label>
+                        {{ form.why_1 }}
+                        {% if form.why_1.errors %}
+                            <div class="text-danger small">{{ form.why_1.errors }}</div>
+                        {% endif %}
+                        <div class="why-help-text">Start with the immediate cause of the incident</div>
+                    </div>
+
+                    <div class="why-section">
+                        <label for="{{ form.why_2.id_for_label }}">
+                            Why 2: Why did that happen?
+                        </label>
+                        {{ form.why_2 }}
+                        {% if form.why_2.errors %}
+                            <div class="text-danger small">{{ form.why_2.errors }}</div>
+                        {% endif %}
+                        <div class="why-help-text">Dig deeper into the cause from Why 1</div>
+                    </div>
+
+                    <div class="why-section">
+                        <label for="{{ form.why_3.id_for_label }}">
+                            Why 3: Why did that happen?
+                        </label>
+                        {{ form.why_3 }}
+                        {% if form.why_3.errors %}
+                            <div class="text-danger small">{{ form.why_3.errors }}</div>
+                        {% endif %}
+                        <div class="why-help-text">Continue probing the underlying causes</div>
+                    </div>
+
+                    <div class="why-section">
+                        <label for="{{ form.why_4.id_for_label }}">
+                            Why 4: Why did that happen?
+                        </label>
+                        {{ form.why_4 }}
+                        {% if form.why_4.errors %}
+                            <div class="text-danger small">{{ form.why_4.errors }}</div>
+                        {% endif %}
+                        <div class="why-help-text">Getting closer to the root cause</div>
+                    </div>
+
+                    <div class="why-section">
+                        <label for="{{ form.why_5.id_for_label }}">
+                            Why 5: Why did that happen? (Root Cause)
+                        </label>
+                        {{ form.why_5 }}
+                        {% if form.why_5.errors %}
+                            <div class="text-danger small">{{ form.why_5.errors }}</div>
+                        {% endif %}
+                        <div class="why-help-text">This should reveal the fundamental root cause</div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Fishbone Categories -->
+                <div class="form-section">
+                    <h4><i class="bi bi-diagram-3"></i> Fishbone Diagram Categories</h4>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb-fill me-2"></i>
+                        Analyze contributing factors across five categories. Consider what factors in each category
+                        may have contributed to the incident.
+                    </div>
+
+                    <div class="fishbone-category category-people">
+                        <label for="{{ form.fishbone_people.id_for_label }}">
+                            <span class="emoji">👥</span> People
+                        </label>
+                        {{ form.fishbone_people }}
+                        {% if form.fishbone_people.errors %}
+                            <div class="text-danger small">{{ form.fishbone_people.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Staff knowledge, skills, training, communication, fatigue, etc.</small>
+                    </div>
+
+                    <div class="fishbone-category category-environment">
+                        <label for="{{ form.fishbone_environment.id_for_label }}">
+                            <span class="emoji">🏢</span> Environment
+                        </label>
+                        {{ form.fishbone_environment }}
+                        {% if form.fishbone_environment.errors %}
+                            <div class="text-danger small">{{ form.fishbone_environment.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Physical space, lighting, noise, temperature, cleanliness, etc.</small>
+                    </div>
+
+                    <div class="fishbone-category category-processes">
+                        <label for="{{ form.fishbone_processes.id_for_label }}">
+                            <span class="emoji">⚙️</span> Processes
+                        </label>
+                        {{ form.fishbone_processes }}
+                        {% if form.fishbone_processes.errors %}
+                            <div class="text-danger small">{{ form.fishbone_processes.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Procedures, workflows, protocols, documentation, equipment, etc.</small>
+                    </div>
+
+                    <div class="fishbone-category category-organization">
+                        <label for="{{ form.fishbone_organization.id_for_label }}">
+                            <span class="emoji">🏛️</span> Organization
+                        </label>
+                        {{ form.fishbone_organization }}
+                        {% if form.fishbone_organization.errors %}
+                            <div class="text-danger small">{{ form.fishbone_organization.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Leadership, culture, policies, resources, staffing levels, etc.</small>
+                    </div>
+
+                    <div class="fishbone-category category-external">
+                        <label for="{{ form.fishbone_external.id_for_label }}">
+                            <span class="emoji">🌐</span> External Factors
+                        </label>
+                        {{ form.fishbone_external }}
+                        {% if form.fishbone_external.errors %}
+                            <div class="text-danger small">{{ form.fishbone_external.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Regulations, external services, family involvement, weather, etc.</small>
+                    </div>
+                </div>
+
+                <!-- Section 4: Findings & Recommendations -->
+                <div class="form-section">
+                    <h4><i class="bi bi-clipboard-check"></i> Findings & Recommendations</h4>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.root_cause_statement.id_for_label }}" class="form-label">
+                            Root Cause Statement <span class="required">*</span>
+                        </label>
+                        {{ form.root_cause_statement }}
+                        {% if form.root_cause_statement.errors %}
+                            <div class="text-danger small">{{ form.root_cause_statement.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Clear, concise statement of the fundamental root cause identified through the investigation
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.lessons_learned.id_for_label }}" class="form-label">
+                            Lessons Learned
+                        </label>
+                        {{ form.lessons_learned }}
+                        {% if form.lessons_learned.errors %}
+                            <div class="text-danger small">{{ form.lessons_learned.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            What insights or knowledge can be shared to prevent similar incidents?
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.recommendations.id_for_label }}" class="form-label">
+                            Recommendations <span class="required">*</span>
+                        </label>
+                        {{ form.recommendations }}
+                        {% if form.recommendations.errors %}
+                            <div class="text-danger small">{{ form.recommendations.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Proposed actions to address the root cause and prevent recurrence (will inform Health and Safety Action Plans)
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Section 5: Approval Workflow -->
+                <div class="form-section">
+                    <h4><i class="bi bi-check-circle"></i> Completion & Approval</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.actual_completion_date.id_for_label }}" class="form-label">
+                                Actual Completion Date
+                            </label>
+                            {{ form.actual_completion_date }}
+                            {% if form.actual_completion_date.errors %}
+                                <div class="text-danger small">{{ form.actual_completion_date.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Leave blank if investigation is still in progress</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                Status <span class="required">*</span>
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Note:</strong> Once the investigation is complete, it must be reviewed and approved
+                        by the Quality Manager before Health and Safety Action Plans can be implemented.
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 justify-content-between mb-4">
+                    <a href="{% if form.instance.pk %}{% url 'incident_safety:rca_detail' form.instance.pk %}{% else %}{% url 'incident_safety:incident_list' %}{% endif %}" 
+                       class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="save_draft" class="btn btn-save-draft">
+                            <i class="bi bi-file-earmark"></i> Save Draft
+                        </button>
+                        <button type="submit" name="submit" class="btn btn-submit">
+                            <i class="bi bi-check-circle"></i> Save RCA
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.getElementById('rcaForm');
+    
+    // Add Bootstrap form-control classes to Django widgets
+    const inputs = form.querySelectorAll('input[type="text"], input[type="date"], textarea, select');
+    inputs.forEach(input => {
+        if (input.tagName === 'SELECT') {
+            input.classList.add('form-select');
+        } else {
+            input.classList.add('form-control');
+        }
+    });
+    
+    // Multi-select styling
+    const teamSelect = document.querySelector('select[multiple]');
+    if (teamSelect) {
+        teamSelect.style.minHeight = '150px';
+    }
+    
+    // Auto-fill investigation date to today if creating new RCA
+    {% if not form.instance.pk %}
+    const investigationDate = document.getElementById('{{ form.investigation_date.id_for_label }}');
+    if (investigationDate && !investigationDate.value) {
+        const today = new Date().toISOString().split('T')[0];
+        investigationDate.value = today;
+    }
+    
+    // Auto-fill target completion to 30 days from now
+    const targetDate = document.getElementById('{{ form.target_completion_date.id_for_label }}');
+    if (targetDate && !targetDate.value) {
+        const future = new Date();
+        future.setDate(future.getDate() + 30);
+        targetDate.value = future.toISOString().split('T')[0];
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

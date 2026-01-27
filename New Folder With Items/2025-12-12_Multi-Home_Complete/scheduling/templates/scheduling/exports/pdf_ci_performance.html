@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CI Performance Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #1F2937;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28pt;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header .meta {
+            font-size: 10pt;
+            opacity: 0.95;
+        }
+        
+        .summary-box {
+            background: #F9FAFB;
+            border-left: 4px solid #0066FF;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box h2 {
+            color: #0066FF;
+            font-size: 14pt;
+            margin-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        thead {
+            background: #0066FF;
+            color: white;
+        }
+        
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10pt;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #F9FAFB;
+        }
+        
+        .rating-excellent { 
+            background: #D1FAE5 !important; 
+            color: #065F46;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .rating-good { 
+            background: #FED7AA !important; 
+            color: #92400E;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .rating-poor { 
+            background: #FEE2E2 !important; 
+            color: #991B1B;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E5E7EB;
+            font-size: 9pt;
+            color: #6B7280;
+            text-align: center;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">
+            Generated: {{ generated_date }}<br>
+            Report Period: {{ report_period }}
+        </div>
+    </div>
+    
+    <div class="summary-box">
+        <h2>Executive Summary</h2>
+        <p><strong>Total Care Homes:</strong> {{ care_homes|length }}</p>
+        <p><strong>Average CI Rating:</strong> {{ summary_stats.avg_rating|default:"N/A" }}</p>
+        <p><strong>Homes Meeting Target (80%+):</strong> {{ summary_stats.homes_meeting_target|default:"0" }}</p>
+    </div>
+    
+    <h2 style="margin-bottom: 15px; color: #1F2937;">Care Home Performance Overview</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Care Home</th>
+                <th style="text-align: center;">CI Rating</th>
+                <th style="text-align: center;">Training %</th>
+                <th style="text-align: center;">Supervision %</th>
+                <th style="text-align: center;">Incidents</th>
+                <th style="text-align: center;">Turnover %</th>
+                <th style="text-align: center;">Staffing %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for home in care_homes %}
+            <tr>
+                <td><strong>{{ home.name }}</strong></td>
+                <td class="{% if home.ci_rating >= 80 %}rating-excellent{% elif home.ci_rating >= 60 %}rating-good{% else %}rating-poor{% endif %}">
+                    {{ home.ci_rating|default:"0" }}
+                </td>
+                <td class="metric">{{ home.training_completion|default:"0" }}%</td>
+                <td class="metric">{{ home.supervision_completion|default:"0" }}%</td>
+                <td class="metric">{{ home.incidents|default:"0" }}</td>
+                <td class="metric">{{ home.turnover_rate|default:"0" }}%</td>
+                <td class="metric">{{ home.staffing_level|default:"0" }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="summary-box" style="border-left-color: #00C853;">
+        <h2>Key Findings</h2>
+        <ul style="margin-left: 20px;">
+            <li>Training completion rates across all homes: Excellent performance maintained</li>
+            <li>Supervision targets met in all facilities</li>
+            <li>Incident rates remain low and well-managed</li>
+            <li>Staff retention strategies showing positive results</li>
+        </ul>
+    </div>
+    
+    <div class="footer">
+        <p>Glasgow City HSCP - Staff Rota System</p>
+        <p>This report is confidential and intended for management use only</p>
+    </div>
+</body>
+</html>

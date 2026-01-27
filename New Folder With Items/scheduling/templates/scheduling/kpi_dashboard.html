@@ -1,0 +1,425 @@
+{% extends 'scheduling/base.html' %}
+{% load static %}
+
+{% block title %}KPI Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .summary-card.excellent {
+        border-left: 5px solid #10b981;
+    }
+    
+    .summary-card.good {
+        border-left: 5px solid #3b82f6;
+    }
+    
+    .summary-card.warning {
+        border-left: 5px solid #f59e0b;
+    }
+    
+    .summary-card.critical {
+        border-left: 5px solid #ef4444;
+    }
+    
+    .summary-number {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .kpi-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .kpi-card.status-excellent {
+        border-left: 5px solid #10b981;
+    }
+    
+    .kpi-card.status-good {
+        border-left: 5px solid #3b82f6;
+    }
+    
+    .kpi-card.status-warning {
+        border-left: 5px solid #f59e0b;
+    }
+    
+    .kpi-card.status-critical {
+        border-left: 5px solid #ef4444;
+    }
+    
+    .kpi-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .kpi-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .kpi-category {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        margin-right: 0.5rem;
+    }
+    
+    .kpi-category.staffing { background: #dbeafe; color: #1e40af; }
+    .kpi-category.occupancy { background: #d1fae5; color: #065f46; }
+    .kpi-category.financial { background: #fef3c7; color: #92400e; }
+    .kpi-category.compliance { background: #e0e7ff; color: #3730a3; }
+    .kpi-category.quality { background: #fce7f3; color: #831843; }
+    .kpi-category.efficiency { background: #f3e8ff; color: #581c87; }
+    
+    .kpi-status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .kpi-status-badge.excellent { background: #d1fae5; color: #065f46; }
+    .kpi-status-badge.good { background: #dbeafe; color: #1e40af; }
+    .kpi-status-badge.warning { background: #fef3c7; color: #92400e; }
+    .kpi-status-badge.critical { background: #fee2e2; color: #991b1b; }
+    
+    .kpi-value {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 1rem 0;
+    }
+    
+    .kpi-target {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .kpi-variance {
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .kpi-variance.positive { color: #10b981; }
+    .kpi-variance.negative { color: #ef4444; }
+    
+    .kpi-description {
+        color: #6b7280;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+    
+    .kpi-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .alert-box {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .alert-box.critical {
+        background: #fee2e2;
+        border-left-color: #ef4444;
+    }
+    
+    .alert-box-title {
+        font-weight: 600;
+        color: #92400e;
+        margin-bottom: 0.5rem;
+    }
+    
+    .alert-box.critical .alert-box-title {
+        color: #991b1b;
+    }
+    
+    .period-selector {
+        background: white;
+        border-radius: 10px;
+        padding: 0.5rem;
+        display: inline-flex;
+        gap: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .period-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+    
+    .period-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .period-btn:hover:not(.active) {
+        background: #f3f4f6;
+    }
+    
+    .btn-calculate {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-calculate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .gauge-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 1rem auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-header">
+    <div class="container">
+        <h1><i class="fas fa-chart-line"></i> KPI Dashboard</h1>
+        <p class="lead">Track key performance indicators across your organization</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="period-selector">
+            <button class="period-btn {% if period == 'week' %}active{% endif %}" onclick="window.location.href='?period=week'">Week</button>
+            <button class="period-btn {% if period == 'month' %}active{% endif %}" onclick="window.location.href='?period=month'">Month</button>
+            <button class="period-btn {% if period == 'quarter' %}active{% endif %}" onclick="window.location.href='?period=quarter'">Quarter</button>
+        </div>
+        
+        <div>
+            <button class="btn-calculate" onclick="calculateAllKPIs()">
+                <i class="fas fa-sync-alt"></i> Calculate All KPIs
+            </button>
+            <a href="{% url 'kpi_executive_summary' %}?period={{ period }}" class="btn btn-outline-primary ms-2">
+                <i class="fas fa-file-alt"></i> Executive Summary
+            </a>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="summary-card excellent">
+                <div class="summary-number">{{ summary.excellent }}</div>
+                <div class="summary-label">Excellent</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card good">
+                <div class="summary-number">{{ summary.good }}</div>
+                <div class="summary-label">Good</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card warning">
+                <div class="summary-number">{{ summary.warning }}</div>
+                <div class="summary-label">Warning</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card critical">
+                <div class="summary-number">{{ summary.critical }}</div>
+                <div class="summary-label">Critical</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Alerts -->
+    {% if summary.recent_alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3><i class="fas fa-exclamation-triangle"></i> Recent Alerts</h3>
+            {% for alert in summary.recent_alerts %}
+            <div class="alert-box {% if alert.severity == 'CRITICAL' %}critical{% endif %}">
+                <div class="alert-box-title">
+                    <i class="fas fa-exclamation-circle"></i> {{ alert.kpi }}
+                </div>
+                <div>{{ alert.message }}</div>
+                <small class="text-muted">{{ alert.date }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- KPI Cards -->
+    <div class="row">
+        {% for kpi in kpi_data %}
+        <div class="col-md-6 col-lg-4">
+            <div class="kpi-card status-{{ kpi.latest_measurement.status|lower|default:'good' }}">
+                <div class="kpi-header-row">
+                    <div>
+                        <div class="kpi-title">{{ kpi.definition.name }}</div>
+                        <span class="kpi-category {{ kpi.definition.category|lower }}">
+                            {{ kpi.definition.get_category_display }}
+                        </span>
+                    </div>
+                    {% if kpi.latest_measurement %}
+                    <span class="kpi-status-badge {{ kpi.latest_measurement.status|lower }}">
+                        {{ kpi.latest_measurement.get_status_display }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="kpi-description">{{ kpi.definition.description|truncatewords:15 }}</div>
+                
+                {% if kpi.latest_measurement %}
+                <div class="kpi-value">
+                    {{ kpi.latest_measurement.measured_value }}{% if kpi.definition.calculation_type == 'PERCENTAGE' %}%{% endif %}
+                </div>
+                
+                {% if kpi.latest_measurement.target_value %}
+                <div class="kpi-target">
+                    Target: {{ kpi.latest_measurement.target_value }}{% if kpi.definition.calculation_type == 'PERCENTAGE' %}%{% endif %}
+                </div>
+                
+                {% if kpi.latest_measurement.variance %}
+                <div class="kpi-variance {% if kpi.latest_measurement.variance >= 0 and kpi.definition.higher_is_better or kpi.latest_measurement.variance < 0 and not kpi.definition.higher_is_better %}positive{% else %}negative{% endif %}">
+                    {% if kpi.latest_measurement.variance >= 0 %}+{% endif %}{{ kpi.latest_measurement.variance|floatformat:2 }}
+                    ({% if kpi.latest_measurement.variance_percentage >= 0 %}+{% endif %}{{ kpi.latest_measurement.variance_percentage|floatformat:1 }}%)
+                </div>
+                {% endif %}
+                {% endif %}
+                
+                <small class="text-muted d-block mt-2">
+                    Last measured: {{ kpi.latest_measurement.measurement_date }}
+                </small>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <div>No measurements yet</div>
+                </div>
+                {% endif %}
+                
+                <div class="kpi-actions">
+                    <a href="{% url 'kpi_detail' kpi.definition.id %}" class="btn btn-sm btn-outline-primary flex-fill">
+                        <i class="fas fa-chart-line"></i> View Trend
+                    </a>
+                    <button class="btn btn-sm btn-outline-success" onclick="calculateKPI({{ kpi.definition.id }})">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not kpi_data %}
+    <div class="text-center py-5">
+        <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+        <h3>No KPIs Configured</h3>
+        <p class="text-muted">Contact your system administrator to set up KPIs for tracking.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function calculateKPI(kpiId) {
+    fetch('{% url "kpi_calculate" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({kpi_id: kpiId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function calculateAllKPIs() {
+    if (!confirm('Calculate all KPIs? This may take a few moments.')) return;
+    
+    fetch('{% url "kpi_calculate" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Training Requirements{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-book-open"></i> Training Requirements by Role
+            </h1>
+        </div>
+    </div>
+
+    <!-- Role Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-10">
+                            <label class="form-label">Select Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="">-- Select a Role --</option>
+                                {% for role in roles %}
+                                    <option value="{{ role.id }}" {% if selected_role.id == role.id %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> View Requirements
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if selected_role %}
+        <!-- Selected Role Info -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">{{ selected_role.name }} - Training Requirements</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Requirements -->
+        {% if requirements %}
+            <!-- Mandatory Training -->
+            {% with mandatory_courses=requirements|dictsort:"requirement_type" %}
+                {% for req in mandatory_courses %}
+                    {% if req.requirement_type == 'MANDATORY' and forloop.first %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-danger">
+                                    <div class="card-header bg-danger text-white">
+                                        <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Mandatory Training</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Priority</th>
+                                                        <th>Training Course</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    {% endif %}
+                    {% if req.requirement_type == 'MANDATORY' %}
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">{{ req.priority_order }}</span></td>
+                                                        <td><strong>{{ req.training_course.name }}</strong></td>
+                                                        <td>{{ req.training_course.description|truncatewords:20|default:"-" }}</td>
+                                                    </tr>
+                    {% endif %}
+                    {% if req.requirement_type == 'MANDATORY' and forloop.last %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- Essential Training -->
+            {% with essential_courses=requirements|dictsort:"requirement_type" %}
+                {% for req in essential_courses %}
+                    {% if req.requirement_type == 'ESSENTIAL' and forloop.first %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h5 class="mb-0"><i class="fas fa-star"></i> Essential Training</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Priority</th>
+                                                        <th>Training Course</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    {% endif %}
+                    {% if req.requirement_type == 'ESSENTIAL' %}
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">{{ req.priority_order }}</span></td>
+                                                        <td><strong>{{ req.training_course.name }}</strong></td>
+                                                        <td>{{ req.training_course.description|truncatewords:20|default:"-" }}</td>
+                                                    </tr>
+                    {% endif %}
+                    {% if req.requirement_type == 'ESSENTIAL' and forloop.last %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- Recommended Training -->
+            {% with recommended_courses=requirements|dictsort:"requirement_type" %}
+                {% for req in recommended_courses %}
+                    {% if req.requirement_type == 'RECOMMENDED' and forloop.first %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Recommended Training</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Priority</th>
+                                                        <th>Training Course</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    {% endif %}
+                    {% if req.requirement_type == 'RECOMMENDED' %}
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">{{ req.priority_order }}</span></td>
+                                                        <td><strong>{{ req.training_course.name }}</strong></td>
+                                                        <td>{{ req.training_course.description|truncatewords:20|default:"-" }}</td>
+                                                    </tr>
+                    {% endif %}
+                    {% if req.requirement_type == 'RECOMMENDED' and forloop.last %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- Optional Training -->
+            {% with optional_courses=requirements|dictsort:"requirement_type" %}
+                {% for req in optional_courses %}
+                    {% if req.requirement_type == 'OPTIONAL' and forloop.first %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-secondary">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Optional Training</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Priority</th>
+                                                        <th>Training Course</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                    {% endif %}
+                    {% if req.requirement_type == 'OPTIONAL' %}
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">{{ req.priority_order }}</span></td>
+                                                        <td><strong>{{ req.training_course.name }}</strong></td>
+                                                        <td>{{ req.training_course.description|truncatewords:20|default:"-" }}</td>
+                                                    </tr>
+                    {% endif %}
+                    {% if req.requirement_type == 'OPTIONAL' and forloop.last %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+        {% else %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No training requirements defined for this role yet.
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Please select a role to view its training requirements.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'training_competency:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

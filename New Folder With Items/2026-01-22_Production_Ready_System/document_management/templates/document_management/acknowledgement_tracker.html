@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Staff Acknowledgement Tracker - TQM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tracker-grid {
+        overflow-x: auto;
+    }
+    .tracker-table {
+        min-width: 1200px;
+    }
+    .tracker-table td, .tracker-table th {
+        padding: 8px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    .ack-badge {
+        display: inline-block;
+        width: 50px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .ack-done {
+        background-color: #d1e7dd;
+        color: #0a3622;
+    }
+    .ack-pending {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
+    .ack-overdue {
+        background-color: #f8d7da;
+        color: #58151c;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 10;
+    }
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 20;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-check2-square"></i> Staff Acknowledgement Tracker
+            </h1>
+            <p class="text-muted">Monitor policy acknowledgement compliance</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'document_management:document_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Document</label>
+                    <select name="document" class="form-select">
+                        <option value="">All Documents</option>
+                        {% for doc in documents %}
+                            <option value="{{ doc.id }}" {% if request.GET.document|add:"0" == doc.id %}selected{% endif %}>
+                                {{ doc.document_code }} - {{ doc.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Care Home</label>
+                    <select name="care_home" class="form-select">
+                        <option value="">All Care Homes</option>
+                        {% for home in care_homes %}
+                            <option value="{{ home.id }}" {% if request.GET.care_home|add:"0" == home.id %}selected{% endif %}>
+                                {{ home.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Show</label>
+                    <select name="filter" class="form-select">
+                        <option value="">All Staff</option>
+                        <option value="overdue" {% if request.GET.filter == 'overdue' %}selected{% endif %}>Overdue Only</option>
+                        <option value="pending" {% if request.GET.filter == 'pending' %}selected{% endif %}>Pending Only</option>
+                        <option value="completed" {% if request.GET.filter == 'completed' %}selected{% endif %}>Completed Only</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <a href="{% url 'document_management:acknowledgement_tracker' %}" class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h6 class="text-muted">Completed</h6>
+                    <h2 class="text-success">{{ stats.completed }}</h2>
+                    <small class="text-muted">{{ stats.completed_rate|floatformat:0 }}% of total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending</h6>
+                    <h2 class="text-warning">{{ stats.pending }}</h2>
+                    <small class="text-muted">{{ stats.pending_rate|floatformat:0 }}% of total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h6 class="text-muted">Overdue</h6>
+                    <h2 class="text-danger">{{ stats.overdue }}</h2>
+                    <small class="text-muted">{{ stats.overdue_rate|floatformat:0 }}% of total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">Overall Rate</h6>
+                    <h2 class="text-primary">{{ stats.overall_rate|floatformat:0 }}%</h2>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar {% if stats.overall_rate >= 90 %}bg-success{% elif stats.overall_rate >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ stats.overall_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tracker Grid -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Acknowledgement Grid</h5>
+        </div>
+        <div class="card-body tracker-grid">
+            {% if tracker_data %}
+                <div class="table-responsive">
+                    <table class="table table-bordered tracker-table">
+                        <thead>
+                            <tr class="sticky-header">
+                                <th class="sticky-col">Staff Member</th>
+                                <th class="sticky-col" style="left: 200px;">Role</th>
+                                {% for doc in tracker_documents %}
+                                    <th class="text-center" style="min-width: 120px;">
+                                        <small>
+                                            {{ doc.document_code }}<br>
+                                            <span class="text-muted">{{ doc.title|truncatewords:3 }}</span>
+                                        </small>
+                                    </th>
+                                {% endfor %}
+                                <th class="text-center">Compliance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff_id, data in tracker_data.items %}
+                                <tr>
+                                    <td class="sticky-col">
+                                        <strong>{{ data.staff.get_full_name }}</strong>
+                                    </td>
+                                    <td class="sticky-col" style="left: 200px;">
+                                        <small class="text-muted">{{ data.staff.role|default:"Staff" }}</small>
+                                    </td>
+                                    {% for doc in tracker_documents %}
+                                        <td class="text-center">
+                                            {% with ack=data.acknowledgements|get_item:doc.id %}
+                                                {% if ack %}
+                                                    {% if ack.acknowledged_at %}
+                                                        <span class="ack-badge ack-done" title="Acknowledged {{ ack.acknowledged_at|date:'M d, Y' }}">
+                                                            <i class="bi bi-check"></i> Done
+                                                        </span>
+                                                        {% if ack.requires_quiz %}
+                                                            <br>
+                                                            <small class="{% if ack.quiz_passed %}text-success{% else %}text-danger{% endif %}">
+                                                                {{ ack.quiz_score }}%
+                                                            </small>
+                                                        {% endif %}
+                                                    {% elif ack.is_overdue %}
+                                                        <span class="ack-badge ack-overdue" title="Due {{ ack.acknowledgement_deadline|date:'M d, Y' }}">
+                                                            <i class="bi bi-exclamation"></i> Overdue
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="ack-badge ack-pending" title="Due {{ ack.acknowledgement_deadline|date:'M d, Y' }}">
+                                                            <i class="bi bi-clock"></i> Pending
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                    {% endfor %}
+                                    <td class="text-center">
+                                        <div class="progress" style="height: 20px; min-width: 80px;">
+                                            {% with rate=data.compliance_rate %}
+                                                <div class="progress-bar 
+                                                    {% if rate >= 90 %}bg-success
+                                                    {% elif rate >= 70 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ rate }}%">
+                                                    {{ rate|floatformat:0 }}%
+                                                </div>
+                                            {% endwith %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
+                    <h5 class="mt-3 text-muted">No acknowledgement data available</h5>
+                    <p class="text-muted">Configure acknowledgement requirements for your documents</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <strong>Legend:</strong>
+            <span class="ack-badge ack-done ms-3"><i class="bi bi-check"></i> Done</span>
+            <span class="ack-badge ack-pending ms-2"><i class="bi bi-clock"></i> Pending</span>
+            <span class="ack-badge ack-overdue ms-2"><i class="bi bi-exclamation"></i> Overdue</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Custom template filter simulation for getting dictionary items
+    if (!Element.prototype.get_item) {
+        // Add helper function to retrieve acknowledgement data
+        // (In practice, this would be handled in the view context)
+    }
+</script>
+{% endblock %}

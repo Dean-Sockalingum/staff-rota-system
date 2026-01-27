@@ -1,0 +1,511 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+    .metric-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .nps-score {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .nps-excellent { color: #28a745; }
+    .nps-good { color: #ffc107; }
+    .nps-poor { color: #dc3545; }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-heart"></i> {{ page_title }}</h2>
+            <p class="text-muted">Resident and family experience tracking</p>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="care-home-filter">Care Home:</label>
+                <select class="form-control" id="care-home-filter" onchange="filterByCareHome(this.value)">
+                    <option value="">All Homes</option>
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}" {% if selected_home.id == home.id %}selected{% endif %}>
+                        {{ home.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3 text-right">
+            <a href="{% url 'experience_feedback:analytics_dashboard' %}" class="btn btn-lg btn-primary">
+                <i class="fas fa-chart-bar"></i> Advanced Analytics
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <!-- Average Satisfaction -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="metric-label">
+                        <i class="fas fa-smile"></i> Avg Satisfaction
+                    </div>
+                    {% if avg_satisfaction %}
+                    <div class="metric-value">{{ avg_satisfaction|floatformat:2 }}<span class="text-muted" style="font-size: 1rem;">/5.0</span></div>
+                    <small class="text-muted">Last 30 days ({{ total_surveys }} surveys)</small>
+                    {% else %}
+                    <div class="metric-value text-muted">-</div>
+                    <small class="text-muted">No data available</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Promoter Score -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="metric-label">
+                        <i class="fas fa-chart-line"></i> Net Promoter Score
+                    </div>
+                    {% if nps_score is not None %}
+                    <div class="nps-score {% if nps_score >= 50 %}nps-excellent{% elif nps_score >= 0 %}nps-good{% else %}nps-poor{% endif %}">
+                        {{ nps_score|floatformat:0 }}
+                    </div>
+                    <small class="text-muted">
+                        {% if nps_score >= 50 %}Excellent{% elif nps_score >= 0 %}Good{% else %}Needs Improvement{% endif %}
+                    </small>
+                    {% else %}
+                    <div class="nps-score text-muted">-</div>
+                    <small class="text-muted">No NPS data</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Complaints -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100" style="border-left-color: {% if overdue_complaints > 0 %}#dc3545{% elif open_complaints > 0 %}#ffc107{% else %}#28a745{% endif %};">
+                <div class="card-body">
+                    <div class="metric-label">
+                        <i class="fas fa-exclamation-triangle"></i> Open Complaints
+                    </div>
+                    <div class="metric-value" style="color: {% if overdue_complaints > 0 %}#dc3545{% elif open_complaints > 0 %}#ffc107{% else %}#28a745{% endif %};">
+                        {{ open_complaints }}
+                    </div>
+                    <small class="text-muted">
+                        {% if overdue_complaints > 0 %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ overdue_complaints }} overdue</span>
+                        {% else %}
+                        All on track
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average QoL Score -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100" style="border-left-color: #17a2b8;">
+                <div class="card-body">
+                    <div class="metric-label">
+                        <i class="fas fa-heartbeat"></i> Avg Quality of Life
+                    </div>
+                    {% if avg_qol_score %}
+                    <div class="metric-value" style="color: #17a2b8;">{{ avg_qol_score|floatformat:2 }}<span class="text-muted" style="font-size: 1rem;">/5.0</span></div>
+                    <small class="text-muted">Last 30 days</small>
+                    {% else %}
+                    <div class="metric-value text-muted">-</div>
+                    <small class="text-muted">No assessments</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Satisfaction Trend Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-chart-line"></i> Satisfaction Trend (90 days)
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="satisfactionTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NPS Trend Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-thumbs-up"></i> Net Promoter Score Trend
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="npsTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complaint Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <i class="fas fa-exclamation-circle"></i> Complaint Status
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="complaintStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-fire"></i> Complaint Severity
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="complaintSeverityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-bar"></i> Monthly Complaint Volume
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="complaintVolumeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Row -->
+    <div class="row">
+        <!-- Recent Surveys -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-clipboard-list"></i> Recent Surveys
+                    <a href="{% url 'experience_feedback:survey_list' %}" class="btn btn-sm btn-outline-primary float-right">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_surveys %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Respondent</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for survey in recent_surveys %}
+                                <tr>
+                                    <td>{{ survey.survey_date|date:"Y-m-d" }}</td>
+                                    <td><span class="badge badge-info">{{ survey.get_survey_type_display }}</span></td>
+                                    <td>
+                                        {% if survey.is_anonymous %}
+                                        <em>Anonymous</em>
+                                        {% else %}
+                                        {{ survey.respondent_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% with avg=survey.get_average_score %}
+                                        <span class="badge {% if avg >= 4 %}badge-success{% elif avg >= 3 %}badge-warning{% else %}badge-danger{% endif %}">
+                                            {{ avg|floatformat:1 }}/5.0
+                                        </span>
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No recent surveys</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Complaints -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-exclamation-triangle"></i> Recent Complaints
+                    <a href="{% url 'experience_feedback:complaint_list' %}" class="btn btn-sm btn-outline-primary float-right">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_complaints %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Ref</th>
+                                    <th>Date</th>
+                                    <th>Severity</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for complaint in recent_complaints %}
+                                <tr>
+                                    <td><a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}">{{ complaint.complaint_reference }}</a></td>
+                                    <td>{{ complaint.date_received|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <span class="badge {% if complaint.severity == 'CRITICAL' %}badge-danger{% elif complaint.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                                            {{ complaint.get_severity_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary">{{ complaint.get_status_display }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No recent complaints</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function filterByCareHome(homeId) {
+    const url = new URL(window.location.href);
+    if (homeId) {
+        url.searchParams.set('care_home', homeId);
+    } else {
+        url.searchParams.delete('care_home');
+    }
+    window.location.href = url.toString();
+}
+
+// Get care home filter
+const careHomeId = document.getElementById('care-home-filter').value;
+
+// Satisfaction Trend Chart
+fetch(`/experience-feedback/api/satisfaction-trend/?care_home=${careHomeId}&days=90`)
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('satisfactionTrendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.data.map(d => d.date),
+                datasets: [{
+                    label: 'Average Satisfaction',
+                    data: data.data.map(d => d.avg_satisfaction),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 5,
+                        title: {
+                            display: true,
+                            text: 'Score (1-5)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+
+// NPS Trend Chart
+fetch(`/experience-feedback/api/nps-trend/?care_home=${careHomeId}&days=90`)
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('npsTrendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.data.map(d => d.month),
+                datasets: [{
+                    label: 'NPS Score',
+                    data: data.data.map(d => d.nps_score),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: -100,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'NPS Score'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+
+// Complaint Statistics
+fetch(`/experience-feedback/api/complaint-stats/?care_home=${careHomeId}`)
+    .then(response => response.json())
+    .then(data => {
+        // Status Distribution
+        const statusCtx = document.getElementById('complaintStatusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.status_distribution.map(d => d.status),
+                datasets: [{
+                    data: data.status_distribution.map(d => d.count),
+                    backgroundColor: [
+                        '#6c757d', '#17a2b8', '#007bff', '#ffc107',
+                        '#28a745', '#dc3545', '#6c757d'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Severity Distribution
+        const severityCtx = document.getElementById('complaintSeverityChart').getContext('2d');
+        new Chart(severityCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.severity_distribution.map(d => d.severity),
+                datasets: [{
+                    data: data.severity_distribution.map(d => d.count),
+                    backgroundColor: ['#17a2b8', '#ffc107', '#fd7e14', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Monthly Volume
+        const volumeCtx = document.getElementById('complaintVolumeChart').getContext('2d');
+        new Chart(volumeCtx, {
+            type: 'bar',
+            data: {
+                labels: data.monthly_volume.map(d => d.month),
+                datasets: [{
+                    label: 'Complaints',
+                    data: data.monthly_volume.map(d => d.count),
+                    backgroundColor: '#17a2b8'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

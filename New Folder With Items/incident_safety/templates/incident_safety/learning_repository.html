@@ -1,0 +1,439 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}Learning Repository - Lessons from Incidents{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 25px;
+        padding: 15px 25px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .search-box input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 1.1rem;
+        padding: 5px;
+    }
+    
+    .search-box button {
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px 25px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .search-box button:hover {
+        background: #764ba2;
+        transform: translateY(-2px);
+    }
+    
+    .filter-pills {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .filter-pill {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        border: 2px solid rgba(255,255,255,0.5);
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+    
+    .filter-pill:hover, .filter-pill.active {
+        background: white;
+        color: #667eea;
+        border-color: white;
+    }
+    
+    .lesson-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        border-left: 5px solid #667eea;
+    }
+    
+    .lesson-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        transform: translateY(-3px);
+    }
+    
+    .lesson-header {
+        display: flex;
+        justify-content: between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+    
+    .lesson-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .lesson-meta {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .severity-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .severity-critical { background: #dc3545; }
+    .severity-major { background: #fd7e14; }
+    .severity-moderate { background: #ffc107; }
+    .severity-minor { background: #0dcaf0; }
+    .severity-near-miss { background: #198754; }
+    
+    .lesson-content {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .lesson-section {
+        margin-bottom: 15px;
+    }
+    
+    .lesson-section h6 {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+    }
+    
+    .recommendation-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .recommendation-list li {
+        padding-left: 25px;
+        position: relative;
+        margin-bottom: 8px;
+    }
+    
+    .recommendation-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #28a745;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .theme-badge {
+        background: #e7f3ff;
+        color: #0066cc;
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .stats-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        flex: 1;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Search Panel -->
+    <div class="search-panel">
+        <h1 class="mb-4">
+            <i class="bi bi-journal-bookmark"></i> Learning Repository
+        </h1>
+        <p class="mb-4">Searchable database of lessons learned from incident investigations. Learn from past experiences to prevent future occurrences.</p>
+        
+        <form method="get" action="">
+            <div class="search-box">
+                <i class="bi bi-search text-muted me-3" style="font-size: 1.3rem;"></i>
+                <input type="text" 
+                       name="q" 
+                       placeholder="Search lessons, themes, recommendations..."
+                       value="{{ request.GET.q }}"
+                       autofocus>
+                <button type="submit">
+                    <i class="bi bi-search me-2"></i> Search
+                </button>
+            </div>
+        </form>
+        
+        <div class="filter-pills">
+            <span style="margin-right: 10px;">Filter by theme:</span>
+            <a href="?theme=all" class="filter-pill {% if not request.GET.theme or request.GET.theme == 'all' %}active{% endif %}">
+                All Themes
+            </a>
+            <a href="?theme=communication" class="filter-pill {% if request.GET.theme == 'communication' %}active{% endif %}">
+                Communication
+            </a>
+            <a href="?theme=training" class="filter-pill {% if request.GET.theme == 'training' %}active{% endif %}">
+                Training
+            </a>
+            <a href="?theme=equipment" class="filter-pill {% if request.GET.theme == 'equipment' %}active{% endif %}">
+                Equipment
+            </a>
+            <a href="?theme=process" class="filter-pill {% if request.GET.theme == 'process' %}active{% endif %}">
+                Process
+            </a>
+            <a href="?theme=supervision" class="filter-pill {% if request.GET.theme == 'supervision' %}active{% endif %}">
+                Supervision
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.total_lessons }}</div>
+            <div class="stat-label">Lessons Learned</div>
+        </div>
+        <div class="stat-card">
+            <i class="bi bi-lightbulb text-warning" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.total_recommendations }}</div>
+            <div class="stat-label">Recommendations</div>
+        </div>
+        <div class="stat-card">
+            <i class="bi bi-calendar-check text-info" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.this_month }}</div>
+            <div class="stat-label">Added This Month</div>
+        </div>
+        <div class="stat-card">
+            <i class="bi bi-graph-up text-primary" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.themes_count }}</div>
+            <div class="stat-label">Unique Themes</div>
+        </div>
+    </div>
+    
+    <!-- Lessons List -->
+    <div class="row">
+        <div class="col-12">
+            {% if lessons %}
+                <div class="mb-3">
+                    <strong>{{ lessons|length }}</strong> lesson(s) found
+                    {% if request.GET.q %}
+                        matching "{{ request.GET.q }}"
+                    {% endif %}
+                </div>
+                
+                {% for rca in lessons %}
+                <div class="lesson-card">
+                    <div class="lesson-title">
+                        <i class="bi bi-bookmark-fill text-primary me-2"></i>
+                        Incident {{ rca.incident.reference_number }}
+                    </div>
+                    
+                    <div class="lesson-meta">
+                        <div class="meta-item">
+                            <span class="severity-dot severity-{{ rca.incident.severity|lower }}"></span>
+                            {{ rca.incident.get_severity_display }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="bi bi-calendar3"></i>
+                            {{ rca.incident.incident_date|date:"d M Y" }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="bi bi-building"></i>
+                            {{ rca.incident.location }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="bi bi-diagram-3"></i>
+                            {{ rca.incident.get_incident_type_display }}
+                        </div>
+                    </div>
+                    
+                    <!-- Themes -->
+                    {% if rca.themes %}
+                    <div class="mb-3">
+                        {% for theme in rca.themes.all %}
+                        <span class="theme-badge">{{ theme }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="lesson-content">
+                        <!-- What Happened -->
+                        <div class="lesson-section">
+                            <h6><i class="bi bi-exclamation-circle"></i> What Happened</h6>
+                            <p>{{ rca.incident.description }}</p>
+                        </div>
+                        
+                        <!-- Root Cause -->
+                        {% if rca.root_cause_summary %}
+                        <div class="lesson-section">
+                            <h6><i class="bi bi-bullseye"></i> Root Cause</h6>
+                            <p>{{ rca.root_cause_summary }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Lessons Learned -->
+                        <div class="lesson-section">
+                            <h6><i class="bi bi-lightbulb-fill"></i> Lessons Learned</h6>
+                            <p>{{ rca.lessons_learned }}</p>
+                        </div>
+                        
+                        <!-- Recommendations -->
+                        {% if rca.recommendations %}
+                        <div class="lesson-section">
+                            <h6><i class="bi bi-clipboard-check"></i> Recommendations Implemented</h6>
+                            <ul class="recommendation-list">
+                                {% for line in rca.recommendations.splitlines %}
+                                    {% if line.strip %}
+                                        <li>{{ line }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Action Links -->
+                    <div class="mt-3 d-flex gap-2">
+                        <a href="{% url 'incident_safety:rca_detail' rca.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> View Full RCA
+                        </a>
+                        <a href="{% url 'incident_safety:rca_fishbone' rca.pk %}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-diagram-3"></i> Fishbone
+                        </a>
+                        <a href="{% url 'incident_safety:rca_five_whys' rca.pk %}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-list-ol"></i> 5 Whys
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                
+            {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No Lessons Found</h4>
+                    <p class="text-muted">
+                        {% if request.GET.q %}
+                            No lessons match your search criteria. Try different keywords.
+                        {% else %}
+                            No approved RCAs with lessons learned yet. Complete incident investigations to build the learning repository.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Help Panel -->
+    <div class="alert alert-light border mt-4">
+        <h6><i class="bi bi-info-circle text-primary"></i> How to Use the Learning Repository</h6>
+        <ul class="mb-0">
+            <li><strong>Search:</strong> Use keywords to find specific lessons (e.g., "medication error", "communication")</li>
+            <li><strong>Filter by Theme:</strong> Browse lessons organized by common themes</li>
+            <li><strong>Learn from History:</strong> Review similar past incidents to prevent recurrence</li>
+            <li><strong>Share Knowledge:</strong> Use these lessons in staff training and team meetings</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-focus search on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('input[name="q"]');
+        if (searchInput && !searchInput.value) {
+            searchInput.focus();
+        }
+        
+        // Highlight search terms in results
+        const query = '{{ request.GET.q|escapejs }}';
+        if (query) {
+            const lessons = document.querySelectorAll('.lesson-content');
+            lessons.forEach(lesson => {
+                const regex = new RegExp(`(${query})`, 'gi');
+                lesson.innerHTML = lesson.innerHTML.replace(regex, '<mark>$1</mark>');
+            });
+        }
+    });
+</script>
+{% endblock %}

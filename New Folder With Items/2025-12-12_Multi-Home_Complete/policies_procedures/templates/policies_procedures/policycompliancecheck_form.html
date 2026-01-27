@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New Compliance Check{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Conduct Compliance Check
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Compliance Check:</strong> Use this form to record compliance audits and assessments for policies.
+                        Document findings, identify areas of non-compliance, and specify required corrective actions.
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the following errors:</strong>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <h5 class="border-bottom pb-2 mb-3">Check Details</h5>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.policy.id_for_label }}" class="form-label">Policy *</label>
+                            {{ form.policy }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.check_date.id_for_label }}" class="form-label">Check Date *</label>
+                            {{ form.check_date }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.compliance_status.id_for_label }}" class="form-label">Compliance Status *</label>
+                            {{ form.compliance_status }}
+                            <small class="form-text text-muted">Assess the overall compliance status</small>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Findings & Actions</h5>
+
+                        <div class="mb-3">
+                            <label for="{{ form.findings.id_for_label }}" class="form-label">Findings *</label>
+                            {{ form.findings }}
+                            <small class="form-text text-muted">Document specific findings from the compliance check</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.actions_required.id_for_label }}" class="form-label">Actions Required</label>
+                            {{ form.actions_required }}
+                            <small class="form-text text-muted">List any corrective actions needed to achieve compliance</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.due_date.id_for_label }}" class="form-label">Action Due Date</label>
+                            {{ form.due_date }}
+                            <small class="form-text text-muted">Deadline for completing corrective actions</small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            {{ form.completed }}
+                            <label class="form-check-label" for="{{ form.completed.id_for_label }}">
+                                Mark as completed
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'policies_procedures:compliance_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Record Compliance Check
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

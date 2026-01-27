@@ -1,0 +1,104 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-exclamation-triangle"></i> {{ page_title }}</h2>
+        </div>
+        <div class="col-md-6 text-right">
+            <a href="{% url 'experience_feedback:complaint_create' %}" class="btn btn-success mr-2">
+                <i class="fas fa-plus"></i> Register New Complaint
+            </a>
+            <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <select name="status" class="form-control mr-2">
+                    <option value="">All Statuses</option>
+                    <option value="RECEIVED">Received</option>
+                    <option value="INVESTIGATING">Investigating</option>
+                    <option value="RESOLVED">Resolved</option>
+                </select>
+                <select name="severity" class="form-control mr-2">
+                    <option value="">All Severities</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                </select>
+                <select name="care_home" class="form-control mr-2">
+                    <option value="">All Homes</option>
+                    {% for home in care_homes %}
+                    <option value="{{ home.id }}">{{ home.name }}</option>
+                    {% endfor %}
+                </select>
+                <label class="mr-2">
+                    <input type="checkbox" name="show_overdue" value="true"> Overdue Only
+                </label>
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Complaints Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Date</th>
+                            <th>Complainant</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Days Open</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for complaint in complaints %}
+                        <tr {% if complaint.is_overdue %}class="table-danger"{% endif %}>
+                            <td><strong>{{ complaint.complaint_reference }}</strong></td>
+                            <td>{{ complaint.date_received|date:"Y-m-d" }}</td>
+                            <td>{{ complaint.complainant_name }}</td>
+                            <td>
+                                <span class="badge {% if complaint.severity == 'CRITICAL' %}badge-danger{% elif complaint.severity == 'HIGH' %}badge-warning{% else %}badge-info{% endif %}">
+                                    {{ complaint.get_severity_display }}
+                                </span>
+                            </td>
+                            <td><span class="badge badge-secondary">{{ complaint.get_status_display }}</span></td>
+                            <td>
+                                {{ complaint.days_since_received }} days
+                                {% if complaint.is_overdue %}
+                                <i class="fas fa-exclamation-circle text-danger" title="Overdue"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'experience_feedback:complaint_detail' complaint.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No complaints found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

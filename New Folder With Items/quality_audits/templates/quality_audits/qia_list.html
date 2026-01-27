@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All QIAs - List View{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-panel {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    .overdue { background-color: #fff3cd; }
+    .critical { border-left: 4px solid #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-list"></i> All QIAs</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'quality_audits:qia_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create QIA
+            </a>
+            <a href="{% url 'quality_audits:qia_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-panel">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="IDENTIFIED">Identified</option>
+                    <option value="PLANNED">Planned</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="IMPLEMENTING">Implementing</option>
+                    <option value="IMPLEMENTED">Implemented</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Priority</label>
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Source</label>
+                <select name="source_type" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="INCIDENT">Incident</option>
+                    <option value="AUDIT">Audit</option>
+                    <option value="RISK">Risk</option>
+                    <option value="COMPLAINT">Complaint</option>
+                    <option value="TREND">Trend</option>
+                    <option value="PDSA">PDSA</option>
+                    <option value="INSPECTION">Inspection</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Action Type</label>
+                <select name="action_type" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="CORRECTIVE">Corrective</option>
+                    <option value="PREVENTIVE">Preventive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control form-control-sm" 
+                       placeholder="Reference, title, description...">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+        <div class="card-body">
+            {% if qias %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Reference</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Source</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Responsible</th>
+                            <th>Due Date</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for qia in qias %}
+                        <tr class="{% if qia.is_overdue %}overdue{% endif %} {% if qia.priority == 'CRITICAL' %}critical{% endif %}">
+                            <td>
+                                <a href="{% url 'quality_audits:qia_detail' qia.pk %}">
+                                    {{ qia.qia_reference }}
+                                </a>
+                            </td>
+                            <td>{{ qia.title|truncatewords:8 }}</td>
+                            <td>
+                                <span class="badge bg-{% if qia.action_type == 'CORRECTIVE' %}warning{% else %}success{% endif %}">
+                                    {{ qia.get_action_type_display }}
+                                </span>
+                            </td>
+                            <td><small>{{ qia.get_source_type_display }}</small></td>
+                            <td>
+                                <span class="badge bg-{% if qia.priority == 'CRITICAL' %}danger{% elif qia.priority == 'HIGH' %}warning{% elif qia.priority == 'MEDIUM' %}info{% else %}success{% endif %}">
+                                    {{ qia.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if qia.status == 'CLOSED' %}success{% elif qia.status == 'VERIFIED' %}info{% else %}secondary{% endif %}">
+                                    {{ qia.get_status_display }}
+                                </span>
+                            </td>
+                            <td><small>{{ qia.responsible_person.get_full_name|truncatewords:2 }}</small></td>
+                            <td>
+                                {{ qia.target_completion_date|date:"d M Y" }}
+                                {% if qia.is_overdue %}
+                                <i class="fas fa-exclamation-triangle text-danger" title="Overdue"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 15px; width: 80px;">
+                                    <div class="progress-bar bg-success" style="width: {{ qia.percent_complete }}%">
+                                        {{ qia.percent_complete }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'quality_audits:qia_detail' qia.pk %}" 
+                                       class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'quality_audits:qia_update' qia.pk %}" 
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <p class="text-center text-muted py-5">No QIAs found matching your filters.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

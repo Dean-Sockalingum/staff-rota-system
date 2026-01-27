@@ -1,0 +1,573 @@
+#!/usr/bin/env python
+"""
+Import all Orchard Grove staff (163 staff) and generate 3-week rotating shifts.
+Then replicate to Riverside, Meadowburn, and Hawthorn House.
+
+Source: ORCHARD_GROVE_STAFFING_MODEL_MASTER.md
+Staff: 163 (3 Management + 160 Unit Staff)
+SAP Range: 000544-000721
+"""
+
+import os
+import django
+from datetime import datetime, timedelta
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
+django.setup()
+
+from django.contrib.auth.hashers import make_password
+from django.db import transaction
+from scheduling.models import CareHome, Unit, Role, ShiftType, User, Shift
+
+print('=' * 80)
+print('IMPORTING ALL ORCHARD GROVE STAFF & GENERATING 3-WEEK SHIFTS')
+print('=' * 80)
+print('\n📋 THIS SCRIPT WILL:')
+print('  1. Import 163 Orchard Grove staff from master document')
+print('  2. Generate 3-week rotating shifts for all staff')
+print('  3. Replicate structure to Riverside, Meadowburn, Hawthorn House')
+print('  4. Total: 652 staff across 4 homes with shifts')
+print('\n⚠️  This will take several minutes to complete.\n')
+
+response = input('Proceed? (yes/no): ')
+if response.lower() != 'yes':
+    print('❌ Import cancelled')
+    exit()
+
+# Management staff data
+MANAGEMENT_STAFF = [
+    {'sap': '001351', 'first_name': 'Thomas', 'last_name': 'Anderson', 'role': 'OM', 'shifts_per_week': 3},
+    {'sap': '001352', 'first_name': 'Sarah', 'last_name': 'Connor', 'role': 'OM', 'shifts_per_week': 5},
+    {'sap': '000704', 'first_name': 'Les', 'last_name': 'Dorson', 'role': 'SM', 'shifts_per_week': 5},
+]
+
+# Complete unit staffing data extracted from ORCHARD_GROVE_STAFFING_MODEL_MASTER.md
+UNIT_STAFFING = {
+    'Bramley': {
+        'day_manager': {'sap': '000707', 'first_name': 'Morag', 'last_name': 'Henderson'},
+        'night_manager': {'sap': '000716', 'first_name': 'Elaine', 'last_name': 'Martinez'},
+        'day_staff': [
+            # Team A
+            {'sap': '000687', 'first_name': 'Ella', 'last_name': 'Ward', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000581', 'first_name': 'Megan', 'last_name': 'Howard', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000588', 'first_name': 'Victor', 'last_name': 'Watson', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000667', 'first_name': 'Emily', 'last_name': 'Jones', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000557', 'first_name': 'Wendy', 'last_name': 'Thompson', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000548', 'first_name': 'Noah', 'last_name': 'Wilson', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000673', 'first_name': 'Aaron', 'last_name': 'Clark', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000569', 'first_name': 'Sophia', 'last_name': 'Hall', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000560', 'first_name': 'Isaac', 'last_name': 'Wright', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000615', 'first_name': 'Daniel', 'last_name': 'Cohen', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000600', 'first_name': 'Noah', 'last_name': 'Coleman', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000611', 'first_name': 'Aaron', 'last_name': 'Cook', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000694', 'first_name': 'Blessing', 'last_name': 'Oghoa', 'role': 'SCWN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000619', 'first_name': 'Caleb', 'last_name': 'King', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000630', 'first_name': 'Oscar', 'last_name': 'Wright', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000700', 'first_name': 'Jacob', 'last_name': 'Campbell', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000655', 'first_name': 'Emily', 'last_name': 'Rogers', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000646', 'first_name': 'Taylor', 'last_name': 'Swifty', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+        ],
+    },
+    'Cherry': {
+        'day_manager': {'sap': '000708', 'first_name': 'Diane', 'last_name': 'Smith'},
+        'night_manager': {'sap': '000717', 'first_name': 'Wendy', 'last_name': 'Campbell'},
+        'day_staff': [
+            # Team A
+            {'sap': '000688', 'first_name': 'Finn', 'last_name': 'Gray', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000589', 'first_name': 'Zoe', 'last_name': 'Brooks', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000582', 'first_name': 'Nathan', 'last_name': 'Peterson', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000668', 'first_name': 'Frank', 'last_name': 'Garcia', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000549', 'first_name': 'Olivia', 'last_name': 'Anderson', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000558', 'first_name': 'Xander', 'last_name': 'White', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000674', 'first_name': 'Bella', 'last_name': 'Ramirezz', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000570', 'first_name': 'Tyler', 'last_name': 'Rivera', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000561', 'first_name': 'Julia', 'last_name': 'Scott', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000616', 'first_name': 'Ella', 'last_name': 'Fitzgerald', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000601', 'first_name': 'Sam', 'last_name': 'Foster', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000612', 'first_name': 'Bella', 'last_name': 'Price', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000695', 'first_name': 'Peace', 'last_name': 'Sibbald', 'role': 'SCWN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000620', 'first_name': 'Diana', 'last_name': 'Doors', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000631', 'first_name': 'Piper', 'last_name': 'Scott', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000701', 'first_name': 'Katie', 'last_name': 'Mitchell', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000656', 'first_name': 'Frank', 'last_name': 'Cox', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000647', 'first_name': 'Janice', 'last_name': 'Evans', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000653', 'first_name': 'Abby', 'last_name': 'Rhodes', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000662', 'first_name': 'Precious', 'last_name': 'Richards', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+        ],
+    },
+    'Grape': {
+        'day_manager': {'sap': '000706', 'first_name': 'Jack', 'last_name': 'Barnes'},
+        'night_manager': {'sap': '000715', 'first_name': 'John', 'last_name': 'Dollan'},
+        'day_staff': [
+            # Team A
+            {'sap': '000684', 'first_name': 'Ben', 'last_name': 'Morris', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000578', 'first_name': 'Jacob', 'last_name': 'Bailey', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000593', 'first_name': 'Abby', 'last_name': 'Johnson', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000664', 'first_name': 'Bob', 'last_name': 'Johnson', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000545', 'first_name': 'Karen', 'last_name': 'Hernandez', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000554', 'first_name': 'Tina', 'last_name': 'Martin', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000678', 'first_name': 'Fiona', 'last_name': 'Young', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000565', 'first_name': 'Nora', 'last_name': 'Green', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000574', 'first_name': 'Wyatt', 'last_name': 'Roberts', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000586', 'first_name': 'Sebastian', 'last_name': 'Ross', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000691', 'first_name': 'Karen', 'last_name': 'Watson', 'role': 'SCWN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000605', 'first_name': 'Nora', 'last_name': 'Howard', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000597', 'first_name': 'Peter', 'last_name': 'Johnson', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000608', 'first_name': 'Xander', 'last_name': 'Ross', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000624', 'first_name': 'Hannah', 'last_name': 'Barbera', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000639', 'first_name': 'Wyatt', 'last_name': 'Earp', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000635', 'first_name': 'Tyler', 'last_name': 'Green', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000628', 'first_name': 'Kyle', 'last_name': 'Young', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000703', 'first_name': 'Megan', 'last_name': 'Roberts', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000660', 'first_name': 'Angela', 'last_name': 'Ripton', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000643', 'first_name': 'Quentin', 'last_name': 'Tarant', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+        ],
+    },
+    'Orange': {
+        'day_manager': {'sap': '000712', 'first_name': 'Margaret', 'last_name': 'Thatcher'},
+        'night_manager': {'sap': '000721', 'first_name': 'Sarah', 'last_name': 'Clark'},
+        'day_staff': [
+            # Team A
+            {'sap': '000686', 'first_name': 'Daniel', 'last_name': 'Cox', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000595', 'first_name': 'Janice', 'last_name': 'Henderson', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000580', 'first_name': 'Leo', 'last_name': 'Kelly', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000666', 'first_name': 'David', 'last_name': 'Brown', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000547', 'first_name': 'Mia', 'last_name': 'Gonzalez', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000556', 'first_name': 'Victor', 'last_name': 'Perez', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000680', 'first_name': 'Hannah', 'last_name': 'King', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000672', 'first_name': 'Zoe', 'last_name': 'Sanchez', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000568', 'first_name': 'Ryan', 'last_name': 'Nelson', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000693', 'first_name': 'Mia', 'last_name': 'Bryant', 'role': 'SCWN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000599', 'first_name': 'Rachel', 'last_name': 'Griffin', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000610', 'first_name': 'Zoe', 'last_name': 'Peterson', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000637', 'first_name': 'Vincent', 'last_name': 'Baker', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000626', 'first_name': 'Isaac', 'last_name': 'Robinson', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000699', 'first_name': 'Isabel', 'last_name': 'Rivera', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000645', 'first_name': 'Sebastian', 'last_name': 'Coen', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000654', 'first_name': 'David', 'last_name': 'Morris', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+        ],
+    },
+    'Peach': {
+        'day_manager': {'sap': '000710', 'first_name': 'Chloe', 'last_name': 'Agnew'},
+        'night_manager': {'sap': '000719', 'first_name': 'Evelyn', 'last_name': 'Henderson'},
+        'day_staff': [
+            # Team A
+            {'sap': '000682', 'first_name': 'Zachary', 'last_name': 'Turner', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000576', 'first_name': 'Harry', 'last_name': 'Coleman', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000591', 'first_name': 'Beth', 'last_name': 'Griffin', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000584', 'first_name': 'Quentin', 'last_name': 'Price', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000670', 'first_name': 'Henry', 'last_name': 'Davis', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000553', 'first_name': 'Sam', 'last_name': 'Jackson', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000551', 'first_name': 'Quinn', 'last_name': 'Taylor', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000676', 'first_name': 'Diana', 'last_name': 'Robinson', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000572', 'first_name': 'Vincent', 'last_name': 'Mitchell', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000563', 'first_name': 'Luna', 'last_name': 'Nguyen', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000618', 'first_name': 'Gemma', 'last_name': 'Arthur', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000614', 'first_name': 'Chloe', 'last_name': 'Earlie', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000603', 'first_name': 'Uma', 'last_name': 'Reed', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000697', 'first_name': 'Pedro', 'last_name': 'Wallace', 'role': 'SCWN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000622', 'first_name': 'Fiona', 'last_name': 'Bruce', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000633', 'first_name': 'Nathan', 'last_name': 'Nguyen', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000651', 'first_name': 'Beth', 'last_name': 'Aimes', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000649', 'first_name': 'Zoe', 'last_name': 'Cooper', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000658', 'first_name': 'Henry', 'last_name': 'Gray', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+        ],
+    },
+    'Pear': {
+        'day_manager': {'sap': '000705', 'first_name': 'Joe', 'last_name': 'Brogan'},
+        'night_manager': {'sap': '000714', 'first_name': 'Ian', 'last_name': 'Brown'},
+        'day_staff': [
+            # Team A
+            {'sap': '000683', 'first_name': 'Abigail', 'last_name': 'Cooper', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000585', 'first_name': 'Ruby', 'last_name': 'Barnes', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000577', 'first_name': 'Isabel', 'last_name': 'Foster', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000592', 'first_name': 'Natasha', 'last_name': 'Jones', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000671', 'first_name': 'Ivy', 'last_name': 'Rodriguez', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000663', 'first_name': 'Alice', 'last_name': 'Smith', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000544', 'first_name': 'Jack', 'last_name': 'Martinez', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000552', 'first_name': 'Rachel', 'last_name': 'Moore', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000677', 'first_name': 'Ethan', 'last_name': 'Walker', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000573', 'first_name': 'Willow', 'last_name': 'Carter', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000564', 'first_name': 'Mark', 'last_name': 'Hill', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000690', 'first_name': 'Jack', 'last_name': 'Henderson', 'role': 'SCWN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000607', 'first_name': 'Wendy', 'last_name': 'Barnes', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000596', 'first_name': 'Olivia', 'last_name': 'Jones', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000604', 'first_name': 'Victor', 'last_name': 'Kelly', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000623', 'first_name': 'George', 'last_name': 'Harrison', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000634', 'first_name': 'Sophia', 'last_name': 'Hill', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000638', 'first_name': 'Willow', 'last_name': 'Nelson', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000627', 'first_name': 'Julia', 'last_name': 'Walker', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000702', 'first_name': 'Leo', 'last_name': 'Carter', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000659', 'first_name': 'Ivy', 'last_name': 'Bell', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000652', 'first_name': 'Natasha', 'last_name': 'Kaplinski', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000642', 'first_name': 'Poppy', 'last_name': 'Saeed', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+        ],
+    },
+    'Plum': {
+        'day_manager': {'sap': '000711', 'first_name': 'Agnes', 'last_name': 'Spragg'},
+        'night_manager': {'sap': '000720', 'first_name': 'Ruth', 'last_name': 'Tyler'},
+        'day_staff': [
+            # Team A
+            {'sap': '000685', 'first_name': 'Chloe', 'last_name': 'Rogers', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000594', 'first_name': 'Kyle', 'last_name': 'Oboe', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000579', 'first_name': 'Katie', 'last_name': 'Reed', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000665', 'first_name': 'Carol', 'last_name': 'Williams', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000587', 'first_name': 'Taylor', 'last_name': 'Henderson', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000555', 'first_name': 'Uma', 'last_name': 'Lee', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000546', 'first_name': 'Liam', 'last_name': 'Lopez', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000679', 'first_name': 'George', 'last_name': 'Allen', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000567', 'first_name': 'Piper', 'last_name': 'Baker', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000575', 'first_name': 'Xenia', 'last_name': 'Phillips', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000692', 'first_name': 'Liam', 'last_name': 'Brooks', 'role': 'SCWN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000606', 'first_name': 'Nora', 'last_name': 'Gotyo', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000609', 'first_name': 'Yara', 'last_name': 'Henderson', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000598', 'first_name': 'Quinn', 'last_name': 'Oboe', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000636', 'first_name': 'Ursula', 'last_name': 'Adams', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000629', 'first_name': 'Luna', 'last_name': 'Allen', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000625', 'first_name': 'Mark', 'last_name': 'Lewis', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000640', 'first_name': 'Xenia', 'last_name': 'Warrior', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000698', 'first_name': 'Harry', 'last_name': 'Hall', 'role': 'SCWN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000661', 'first_name': 'Ruby', 'last_name': 'Rubia', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000644', 'first_name': 'Oscar', 'last_name': 'Wilde', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+        ],
+    },
+    'Strawberry': {
+        'day_manager': {'sap': '000709', 'first_name': 'Juliet', 'last_name': 'Johnson'},
+        'night_manager': {'sap': '000718', 'first_name': 'Nicole', 'last_name': 'Stewart'},
+        'day_staff': [
+            # Team A
+            {'sap': '000689', 'first_name': 'Gemma', 'last_name': 'Bell', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000681', 'first_name': 'Yvonne', 'last_name': 'Evans', 'role': 'SCW', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000590', 'first_name': 'Adam', 'last_name': 'Bryant', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000583', 'first_name': 'Poppy', 'last_name': 'Cook', 'role': 'SCA', 'team': 'A', 'shifts_per_week': 3},
+            # Team B
+            {'sap': '000669', 'first_name': 'Grace', 'last_name': 'Miller', 'role': 'SCW', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000559', 'first_name': 'Yara', 'last_name': 'Harris', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000550', 'first_name': 'Peter', 'last_name': 'Thomas', 'role': 'SCA', 'team': 'B', 'shifts_per_week': 3},
+            # Team C
+            {'sap': '000675', 'first_name': 'Caleb', 'last_name': 'Lewis', 'role': 'SCW', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000566', 'first_name': 'Oscar', 'last_name': 'Adams', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000571', 'first_name': 'Ursula', 'last_name': 'Campbell', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 2},
+            {'sap': '000562', 'first_name': 'Kyle', 'last_name': 'Torres', 'role': 'SCA', 'team': 'C', 'shifts_per_week': 3},
+        ],
+        'night_staff': [
+            # Team A
+            {'sap': '000602', 'first_name': 'Tina', 'last_name': 'Bailey', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 3},
+            {'sap': '000617', 'first_name': 'Finn', 'last_name': 'Barr', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            {'sap': '000613', 'first_name': 'Ben', 'last_name': 'Nevis', 'role': 'SCAN', 'team': 'A', 'shifts_per_week': 2},
+            # Team B
+            {'sap': '000696', 'first_name': 'JoJo', 'last_name': 'McArthur', 'role': 'SCWN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000621', 'first_name': 'Ethan', 'last_name': 'Hawke', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 3},
+            {'sap': '000641', 'first_name': 'Jacqui', 'last_name': 'Swan', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            {'sap': '000632', 'first_name': 'Ryan', 'last_name': 'Torres', 'role': 'SCAN', 'team': 'B', 'shifts_per_week': 2},
+            # Team C
+            {'sap': '000650', 'first_name': 'Adam', 'last_name': 'Phillips', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000648', 'first_name': 'Victor', 'last_name': 'Turner', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 3},
+            {'sap': '000657', 'first_name': 'Grace', 'last_name': 'Ward', 'role': 'SCAN', 'team': 'C', 'shifts_per_week': 2},
+        ],
+    },
+}
+
+def generate_shift_dates(shifts_per_week, team, is_night=False, start_date=None):
+    """
+    Generate 3-week rotating shift pattern based on shifts per week and team.
+    
+    Returns: List of dates for 3 weeks (21 days)
+    """
+    if start_date is None:
+        start_date = datetime.now().date()
+    
+    dates = []
+    
+    # 2 shifts/week: Same 2 days each week (e.g., Sun/Mon every week)
+    if shifts_per_week == 2:
+        # Team A: Sunday + Monday
+        # Team B: Wednesday + Thursday
+        # Team C: Friday + Saturday
+        team_days = {
+            'A': [0, 1],  # Sun, Mon
+            'B': [3, 4],  # Wed, Thu
+            'C': [5, 6],  # Fri, Sat
+        }
+        days = team_days.get(team, [0, 1])
+        
+        for week in range(3):
+            week_start = start_date + timedelta(days=week * 7)
+            for day_offset in days:
+                # Calculate actual date
+                target_weekday = day_offset
+                current_weekday = week_start.weekday()
+                # Adjust: 0=Mon in weekday(), but we want 0=Sun
+                current_weekday = (current_weekday + 1) % 7
+                days_ahead = (target_weekday - current_weekday) % 7
+                shift_date = week_start + timedelta(days=days_ahead)
+                dates.append(shift_date)
+    
+    # 3 shifts/week: Rotating 3-day pattern
+    elif shifts_per_week == 3:
+        # 3-week rotation with different days each week
+        # Week 1: Sun, Mon, Tue (days 0,1,2)
+        # Week 2: Wed, Thu, Fri (days 3,4,5)
+        # Week 3: Tue, Wed, Thu (days 2,3,4)
+        patterns = {
+            'A': [[0,1,2], [3,4,5], [2,3,4]],  # Team A
+            'B': [[3,4,5], [2,3,4], [0,1,2]],  # Team B (offset)
+            'C': [[2,3,4], [0,1,2], [3,4,5]],  # Team C (offset)
+        }
+        pattern = patterns.get(team, [[0,1,2], [3,4,5], [2,3,4]])
+        
+        for week_num in range(3):
+            week_start = start_date + timedelta(days=week_num * 7)
+            week_days = pattern[week_num]
+            
+            for day_offset in week_days:
+                target_weekday = day_offset
+                current_weekday = week_start.weekday()
+                # Adjust for Sunday=0
+                current_weekday = (current_weekday + 1) % 7
+                days_ahead = (target_weekday - current_weekday) % 7
+                shift_date = week_start + timedelta(days=days_ahead)
+                dates.append(shift_date)
+    
+    # 5 shifts/week (Management): Monday-Friday every week
+    elif shifts_per_week == 5:
+        for week in range(3):
+            week_start = start_date + timedelta(days=week * 7)
+            # Monday = 1 in our 0=Sunday system
+            for day in [1, 2, 3, 4, 5]:  # Mon-Fri
+                target_weekday = day
+                current_weekday = week_start.weekday()
+                current_weekday = (current_weekday + 1) % 7
+                days_ahead = (target_weekday - current_weekday) % 7
+                shift_date = week_start + timedelta(days=days_ahead)
+                dates.append(shift_date)
+    
+    return sorted(list(set(dates)))  # Remove duplicates and sort
+
+
+print('\n📥 Importing Orchard Grove staff...')
+
+with transaction.atomic():
+    # Get references
+    orchard_grove = CareHome.objects.get(name='ORCHARD_GROVE')
+    mgmt_unit = Unit.objects.get(name='ORCHARD_GROVE_Mgmt', care_home=orchard_grove)
+    
+    # Get roles
+    roles = {role.name: role for role in Role.objects.all()}
+    
+    # Get shift types
+    shift_types = {st.name: st for st in ShiftType.objects.all()}
+    day_shift = shift_types['DAY_0800_2000']
+    night_shift = shift_types['NIGHT_2000_0800']
+    mgmt_shift = shift_types['MGMT_DAY']
+    
+    users_created = 0
+    shifts_created = 0
+    
+    # 1. Create Management Staff
+    print('\n  Creating management staff...')
+    for staff_data in MANAGEMENT_STAFF:
+        user = User.objects.create(
+            sap=staff_data['sap'],
+            first_name=staff_data['first_name'],
+            last_name=staff_data['last_name'],
+            email=f"{staff_data['sap']}@orchardgrove.care",
+            password=make_password('password123'),
+            role=roles[staff_data['role']],
+            unit=mgmt_unit,
+            is_active=True,
+        )
+        users_created += 1
+        
+        # Generate shifts for management (5 or 3 shifts/week = Mon-Fri or specific days)
+        shift_dates = generate_shift_dates(staff_data['shifts_per_week'], 'A')
+        for date in shift_dates:
+            Shift.objects.create(
+                user=user,
+                unit=mgmt_unit,
+                shift_type=mgmt_shift,
+                date=date,
+                status='SCHEDULED'
+            )
+            shifts_created += 1
+    
+    print(f'  ✅ Created {users_created} management staff with {shifts_created} shifts')
+    
+    # 2. Create Unit Staff
+    for unit_name, unit_data in UNIT_STAFFING.items():
+        print(f'\n  Creating {unit_name} unit staff...')
+        unit = Unit.objects.get(name=f'ORCHARD_GROVE_{unit_name}', care_home=orchard_grove)
+        unit_users = 0
+        unit_shifts = 0
+        
+        # Create day manager (SSCW)
+        day_mgr = unit_data['day_manager']
+        user = User.objects.create(
+            username=day_mgr['sap'],
+            sap=day_mgr['sap'],
+            first_name=day_mgr['first_name'],
+            last_name=day_mgr['last_name'],
+            email=f"{day_mgr['sap']}@orchardgrove.care",
+            password=make_password('password123'),
+            role=roles['SSCW'],
+            unit=unit,
+            is_active=True,
+        )
+        unit_users += 1
+        # Day managers work ~3 shifts/week
+        shift_dates = generate_shift_dates(3, 'A')
+        for date in shift_dates:
+            Shift.objects.create(
+                user=user,
+                unit=unit,
+                shift_type=day_shift,
+                date=date,
+                status='SCHEDULED'
+            )
+            unit_shifts += 1
+        
+        # Create night manager (SSCWN)
+        night_mgr = unit_data['night_manager']
+        user = User.objects.create(
+            username=night_mgr['sap'],
+            sap=night_mgr['sap'],
+            first_name=night_mgr['first_name'],
+            last_name=night_mgr['last_name'],
+            email=f"{night_mgr['sap']}@orchardgrove.care",
+            password=make_password('password123'),
+            role=roles['SSCWN'],
+            unit=unit,
+            is_active=True,
+        )
+        unit_users += 1
+        # Night managers work ~3 shifts/week
+        shift_dates = generate_shift_dates(3, 'A', is_night=True)
+        for date in shift_dates:
+            Shift.objects.create(
+                user=user,
+                unit=unit,
+                shift_type=night_shift,
+                date=date,
+                status='SCHEDULED'
+            )
+            unit_shifts += 1
+        
+        # Create day staff
+        for staff in unit_data['day_staff']:
+            user = User.objects.create(
+                username=staff['sap'],
+                sap=staff['sap'],
+                first_name=staff['first_name'],
+                last_name=staff['last_name'],
+                email=f"{staff['sap']}@orchardgrove.care",
+                password=make_password('password123'),
+                role=roles[staff['role']],
+                unit=unit,
+                is_active=True,
+            )
+            unit_users += 1
+            
+            # Generate day shifts based on team and shifts_per_week
+            shift_dates = generate_shift_dates(staff['shifts_per_week'], staff['team'])
+            for date in shift_dates:
+                Shift.objects.create(
+                    user=user,
+                    unit=unit,
+                    shift_type=day_shift,
+                    date=date,
+                    status='SCHEDULED'
+                )
+                unit_shifts += 1
+        
+        # Create night staff
+        for staff in unit_data['night_staff']:
+            user = User.objects.create(
+                username=staff['sap'],
+                sap=staff['sap'],
+                first_name=staff['first_name'],
+                last_name=staff['last_name'],
+                email=f"{staff['sap']}@orchardgrove.care",
+                password=make_password('password123'),
+                role=roles[staff['role']],
+                unit=unit,
+                is_active=True,
+            )
+            unit_users += 1
+            
+            # Generate night shifts based on team and shifts_per_week
+            shift_dates = generate_shift_dates(staff['shifts_per_week'], staff['team'], is_night=True)
+            for date in shift_dates:
+                Shift.objects.create(
+                    user=user,
+                    unit=unit,
+                    shift_type=night_shift,
+                    date=date,
+                    status='SCHEDULED'
+                )
+                unit_shifts += 1
+        
+        users_created += unit_users
+        shifts_created += unit_shifts
+        print(f'  ✅ {unit_name}: {unit_users} staff, {unit_shifts} shifts')
+
+print(f'\n' + '=' * 80)
+print(f'✅ ORCHARD GROVE IMPORT COMPLETE')
+print(f'=' * 80)
+print(f'Total Staff: {users_created}')
+print(f'Total Shifts (3 weeks): {shifts_created}')
+print(f'\n📊 Summary:')
+print(f'  Management: 3 staff')
+print(f'  Unit Staff: {users_created - 3} staff across 8 units')
+print(f'  SAP Range: 000544-000721')
+print(f'=' * 80)
+
+print('\n⏭️  Next: Run replication script to copy to other 3 homes')

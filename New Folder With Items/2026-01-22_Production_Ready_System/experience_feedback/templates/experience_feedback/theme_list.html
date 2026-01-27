@@ -1,0 +1,87 @@
+{% extends "scheduling/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - DLP Staff Rota{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-tags"></i> {{ page_title }}</h2>
+            <p class="text-muted">Thematic analysis of resident and family feedback</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'experience_feedback:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Themes Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Theme</th>
+                            <th>Category</th>
+                            <th>Occurrences</th>
+                            <th>Trend</th>
+                            <th>Impact</th>
+                            <th>Last Occurrence</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for theme in themes %}
+                        <tr>
+                            <td><strong>{{ theme.theme_name }}</strong></td>
+                            <td>
+                                <span class="badge {% if theme.theme_category == 'POSITIVE' %}badge-success{% elif theme.theme_category == 'CONCERN' %}badge-warning{% elif theme.theme_category == 'COMPLAINT' %}badge-danger{% else %}badge-info{% endif %}">
+                                    {{ theme.get_theme_category_display }}
+                                </span>
+                            </td>
+                            <td><strong>{{ theme.occurrences_count }}</strong></td>
+                            <td>
+                                {% if theme.trend_direction %}
+                                {{ theme.get_trend_direction_display }}
+                                {% if theme.trend_direction == 'INCREASING' %}↗️{% elif theme.trend_direction == 'DECREASING' %}↘️{% else %}→{% endif %}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if theme.impact_on_satisfaction %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= theme.impact_on_satisfaction %}
+                                    <i class="fas fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="far fa-star text-muted"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{% if theme.last_occurrence %}{{ theme.last_occurrence|date:"Y-m-d" }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if theme.is_active %}
+                                <span class="badge badge-success">Active</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Resolved</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No themes found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

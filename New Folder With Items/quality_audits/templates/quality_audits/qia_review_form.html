@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}QIA Review - {{ qia.qia_reference }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-check-circle"></i> QIA Effectiveness Review
+                    </h4>
+                    <small>{{ qia.qia_reference }} - {{ qia.title }}</small>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            {{ form.errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Effectiveness Evaluation -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-primary">
+                                <i class="fas fa-clipboard-check"></i> Effectiveness Evaluation
+                            </legend>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.is_effective }}
+                                        <label class="form-check-label" for="{{ form.is_effective.id_for_label }}">
+                                            <strong>Was the action effective?</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.effectiveness_rating|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.effectiveness_evidence|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    Provide evidence: data, observations, feedback, audit results
+                                </small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Sustainability -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-success">
+                                <i class="fas fa-sync"></i> Sustainability
+                            </legend>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.is_sustainable }}
+                                    <label class="form-check-label" for="{{ form.is_sustainable.id_for_label }}">
+                                        <strong>Are the improvements sustainable?</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.sustainability_plan|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    How will improvements be maintained? Training, SOPs, monitoring?
+                                </small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Follow-up -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-warning">
+                                <i class="fas fa-tasks"></i> Follow-up Actions
+                            </legend>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.follow_up_required }}
+                                    <label class="form-check-label" for="{{ form.follow_up_required.id_for_label }}">
+                                        <strong>Are follow-up actions needed?</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.follow_up_actions|as_crispy_field }}
+                            </div>
+                        </fieldset>
+
+                        <!-- Lessons Learned & Spread -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-secondary">
+                                <i class="fas fa-lightbulb"></i> Lessons Learned & Spread
+                            </legend>
+                            
+                            <div class="mb-3">
+                                {{ form.lessons_learned|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    What did we learn? What would we do differently?
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.recommend_spread }}
+                                    <label class="form-check-label" for="{{ form.recommend_spread.id_for_label }}">
+                                        <strong>Recommend spreading to other areas/homes?</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.spread_notes|as_crispy_field }}
+                            </div>
+                        </fieldset>
+
+                        <!-- Closure Decision -->
+                        <fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 text-danger">
+                                <i class="fas fa-lock"></i> Closure Decision
+                            </legend>
+                            
+                            <div class="alert alert-warning">
+                                <strong>Important:</strong> Only approve for closure if the action has been fully implemented,
+                                verified as effective, and sustainability measures are in place.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.approved_for_closure }}
+                                    <label class="form-check-label" for="{{ form.approved_for_closure.id_for_label }}">
+                                        <strong>Approve for closure</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.closure_notes|as_crispy_field }}
+                            </div>
+                        </fieldset>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'quality_audits:qia_detail' qia.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-info text-white">
+                                <i class="fas fa-save"></i> Submit Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- QIA Summary -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">QIA Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            <strong>Problem:</strong> {{ qia.problem_description }}
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <strong>Action Plan:</strong> {{ qia.action_plan }}
+                        </div>
+                        <div class="col-md-12">
+                            <strong>Success Criteria:</strong> {{ qia.success_criteria }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

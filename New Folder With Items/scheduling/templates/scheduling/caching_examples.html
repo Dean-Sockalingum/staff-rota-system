@@ -1,0 +1,202 @@
+{% comment %}
+TEMPLATE FRAGMENT CACHING EXAMPLES
+===================================
+
+This file demonstrates how to add caching to expensive template sections.
+Apply these patterns to your existing templates to improve performance.
+
+Key Benefits:
+- Reduces database queries by caching rendered HTML
+- Speeds up page load times for repeated views
+- Automatically invalidates based on time or cache key
+
+Usage:
+1. Load the cache template tag at the top of your template
+2. Wrap expensive sections with {% cache %}
+3. Use unique cache keys that include relevant IDs/dates
+4. Set appropriate timeout values
+{% endcomment %}
+
+{% load cache %}
+
+{% comment %}
+Example 1: Cache entire rota table for a specific date range
+Cache key includes: home_id, start_date, end_date
+Timeout: 5 minutes (300 seconds)
+Invalidates: When shifts change or after 5 minutes
+{% endcomment %}
+
+{% cache 300 rota_table home.id start_date end_date %}
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Staff</th>
+                <th>Shift Type</th>
+                <!-- ... more columns ... -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for shift in shifts %}
+            <tr>
+                <td>{{ shift.date }}</td>
+                <td>{{ shift.user.get_full_name }}</td>
+                <td>{{ shift.shift_type.name }}</td>
+                <!-- ... more cells ... -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endcache %}
+
+
+{% comment %}
+Example 2: Cache staff list for a specific home
+Cache key includes: home_id, "staff_list"
+Timeout: 15 minutes (900 seconds) - staff changes less frequently
+{% endcomment %}
+
+{% cache 900 staff_list home.id %}
+<div class="card">
+    <div class="card-header">
+        <h5>Staff Members</h5>
+    </div>
+    <div class="card-body">
+        <ul class="list-group">
+            {% for staff in staff_members %}
+            <li class="list-group-item">
+                {{ staff.get_full_name }} - {{ staff.role.name }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endcache %}
+
+
+{% comment %}
+Example 3: Cache shift statistics for manager dashboard
+Cache key includes: home_id, date, "stats"
+Timeout: 5 minutes (300 seconds)
+{% endcomment %}
+
+{% cache 300 shift_stats home.id today "stats" %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <h3>{{ total_shifts }}</h3>
+            <p>Total Shifts</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <h3>{{ unfilled_shifts }}</h3>
+            <p>Unfilled</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <h3>{{ total_hours }}</h3>
+            <p>Total Hours</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <h3>{{ staff_on_duty }}</h3>
+            <p>Staff On Duty</p>
+        </div>
+    </div>
+</div>
+{% endcache %}
+
+
+{% comment %}
+Example 4: Cache navigation menu (rarely changes)
+Cache key: "nav_menu", user.id
+Timeout: 1 hour (3600 seconds)
+{% endcomment %}
+
+{% cache 3600 nav_menu user.id %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Staff Rota</a>
+        <div class="navbar-nav">
+            {% if user.role.is_management %}
+            <a class="nav-link" href="{% url 'manager_dashboard' %}">Dashboard</a>
+            <a class="nav-link" href="{% url 'rota_view' %}">Rota</a>
+            <a class="nav-link" href="{% url 'all_staff_management' %}">Staff</a>
+            {% else %}
+            <a class="nav-link" href="{% url 'staff_dashboard' %}">My Dashboard</a>
+            <a class="nav-link" href="{% url 'my_rota' %}">My Rota</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+{% endcache %}
+
+
+{% comment %}
+Example 5: Conditional caching (cache only in production)
+Use settings.DEBUG to disable caching in development
+{% endcomment %}
+
+{% if not debug %}
+    {% cache 300 complex_section home.id date %}
+    <!-- Expensive template section here -->
+    <div class="complex-calculations">
+        {% for item in expensive_queryset %}
+            <!-- ... -->
+        {% endfor %}
+    </div>
+    {% endcache %}
+{% else %}
+    <!-- No caching in development for easier debugging -->
+    <div class="complex-calculations">
+        {% for item in expensive_queryset %}
+            <!-- ... -->
+        {% endfor %}
+    </div>
+{% endif %}
+
+
+{% comment %}
+BEST PRACTICES:
+===============
+
+1. Cache Timeouts:
+   - Frequently changing data (shifts for today): 2-5 minutes
+   - Semi-static data (weekly rota): 10-15 minutes
+   - Static data (staff list, roles): 30-60 minutes
+   - Navigation/UI elements: 1+ hours
+
+2. Cache Keys:
+   - Always include relevant IDs (home_id, unit_id, user_id)
+   - Include date/time for date-sensitive content
+   - Use string constants for clarity ("stats", "list", "summary")
+   - Keep keys unique but readable
+
+3. Invalidation:
+   - Short timeouts for frequently updated content
+   - Manual invalidation in views when data changes:
+     ```python
+     from django.core.cache import cache
+     cache.delete('rota_table_{}_{}'.format(home_id, date))
+     ```
+
+4. What to Cache:
+   - ✓ Large tables with many rows
+   - ✓ Complex calculations or aggregations
+   - ✓ Navigation menus
+   - ✓ Static content blocks
+   - ✗ User-specific dynamic content (unless keyed by user.id)
+   - ✗ CSRF tokens or forms
+   - ✗ Flash messages
+
+5. Monitoring:
+   - Use QueryOptimizer context manager in views
+   - Check Django Debug Toolbar for cache hits/misses
+   - Monitor cache memory usage in production
+
+{% endcomment %}
