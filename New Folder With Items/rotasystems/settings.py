@@ -289,6 +289,7 @@ if not DEBUG:
                 'maxBytes': 1024 * 1024 * 15,  # 15MB
                 'backupCount': 10,
                 'formatter': 'verbose',
+                'mode': 'a',
             },
             'security': {
                 'level': 'WARNING',
@@ -297,6 +298,7 @@ if not DEBUG:
                 'maxBytes': 1024 * 1024 * 10,  # 10MB
                 'backupCount': 20,
                 'formatter': 'verbose',
+                'mode': 'a',
             },
             'mail_admins': {
                 'level': 'ERROR',
