@@ -327,33 +327,8 @@ class ProactiveSuggestionEngine:
         """Suggest overtime budget optimizations"""
         suggestions = []
         
-        # Calculate OT usage this month
-        current_month_start = self.today.replace(day=1)
-        
-        ot_shifts = Shift.objects.filter(
-            date__gte=current_month_start,
-            date__lte=self.today,
-            is_overtime=True
-        )
-        
-        if self.care_home:
-            ot_shifts = ot_shifts.filter(unit__care_home=self.care_home)
-        
-        ot_count = ot_shifts.count()
-        
-        # Simple budget check (could be enhanced with actual budget model)
-        if ot_count > 50:  # Threshold
-            suggestions.append({
-                'priority': 'medium',
-                'category': 'budget',
-                'title': f'High Overtime Usage This Month',
-                'description': f'{ot_count} overtime shifts this month. Review patterns to optimize costs.',
-                'action': 'Analyze overtime distribution',
-                'action_url': '/management/overtime/preferences/',
-                'details': None,
-                'icon': 'pound-sign',
-                'color': 'warning'
-            })
+        # Calculate OT usage this month - DISABLED: is_overtime field not in Shift model
+        # Would need to implement overtime tracking in Shift model first
         
         return suggestions
     
@@ -361,13 +336,10 @@ class ProactiveSuggestionEngine:
         """Suggest fairness improvements"""
         suggestions = []
         
-        # Check for staff working excessive overtime
-        ot_distribution = Shift.objects.filter(
-            is_overtime=True,
-            date__gte=self.today - timedelta(days=30)
-        ).values('user__full_name', 'user__sap').annotate(
-            ot_count=Count('id')
-        ).order_by('-ot_count')
+        # Check for staff working excessive overtime - DISABLED: is_overtime field not in Shift model
+        # Would need to implement overtime tracking in Shift model first
+        
+        return suggestions
         
         if ot_distribution.exists():
             top_ot = ot_distribution.first()
