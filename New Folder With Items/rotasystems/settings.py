@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 import sys
+import logging.handlers
 from pathlib import Path
 try:
     from celery.schedules import crontab
