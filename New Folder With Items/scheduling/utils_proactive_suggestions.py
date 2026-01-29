@@ -158,7 +158,7 @@ class ProactiveSuggestionEngine:
                 status='approved',
                 start_date__year=self.today.year
             ).aggregate(
-                total_days=Sum('total_days')
+                total_days=Sum('days_requested')
             )['total_days'] or 0
             
             # Assume 28 days annual leave (could be from staff profile)
