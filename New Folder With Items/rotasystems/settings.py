@@ -642,43 +642,6 @@ SMS_RATE_LIMIT_PER_USER_HOUR = 5  # Max SMS per user per hour (prevent spam)
 # Database Connection Pooling (production)
 CONN_MAX_AGE = config('CONN_MAX_AGE', default=0, cast=int)
 
-# ===== Logging Configuration =====
-if not DEBUG:
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'verbose': {
-                'format': '{levelname} {asctime} {module} {message}',
-                'style': '{',
-            },
-        },
-        'handlers': {
-            'dev_file': {
-                'level': 'ERROR',
-                'class': 'logging.FileHandler',
-                'filename': BASE_DIR / 'logs' / 'django_errors.log',
-                'formatter': 'verbose',
-            },
-            'console': {
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                'formatter': 'verbose',
-            },
-        },
-        'root': {
-            'handlers': ['console', 'dev_file'],
-            'level': 'INFO',
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['console', 'dev_file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-        },
-    }
-
 # ===== Automated Staffing Workflow Configuration =====
 STAFFING_WORKFLOW = {
     # Timeouts and deadlines
