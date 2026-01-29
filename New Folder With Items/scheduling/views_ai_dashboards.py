@@ -6,6 +6,7 @@ Frontend views for AI-powered Quick Win features:
 - Rota Health Scoring Dashboard
 """
 
+import logging
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -23,6 +24,7 @@ from scheduling.utils_rota_health_scoring import (
     score_next_week
 )
 
+logger = logging.getLogger(__name__)
 
 @login_required
 def proactive_suggestions_dashboard(request):
@@ -36,82 +38,92 @@ def proactive_suggestions_dashboard(request):
     - Care home filtering
     - Look-ahead days configuration
     """
-    # Get filter parameters
-    care_home_id = request.GET.get('care_home')
-    priority_filter = request.GET.get('priority', 'all')
-    category_filter = request.GET.get('category', 'all')
-    days_ahead = int(request.GET.get('days_ahead', 14))
-    
-    # Get care home context
-    if care_home_id:
-        care_home = get_object_or_404(CareHome, id=care_home_id)
-    else:
-        # Default to first care home or user's home
-        if hasattr(request.user, 'care_home') and request.user.care_home:
-            care_home = request.user.care_home
+    try:
+        # Get filter parameters
+        care_home_id = request.GET.get('care_home')
+        priority_filter = request.GET.get('priority', 'all')
+        category_filter = request.GET.get('category', 'all')
+        days_ahead = int(request.GET.get('days_ahead', 14))
+        
+        # Get care home context
+        if care_home_id:
+            care_home = get_object_or_404(CareHome, id=care_home_id)
         else:
-            care_home = CareHome.objects.first()
-    
-    # Get all suggestions
-    all_suggestions = get_proactive_suggestions(
-        care_home=care_home,
-        days_ahead=days_ahead
-    )
-    
-    # Apply filters
-    filtered_suggestions = all_suggestions
-    
-    if priority_filter != 'all':
-        filtered_suggestions = [
-            s for s in filtered_suggestions
-            if s['priority'] == priority_filter
+            # Default to first care home or user's home
+            if hasattr(request.user, 'care_home') and request.user.care_home:
+                care_home = request.user.care_home
+            else:
+                care_home = CareHome.objects.first()
+        
+        # Get all suggestions
+        all_suggestions = get_proactive_suggestions(
+            care_home=care_home,
+            days_ahead=days_ahead
+        )
+        
+        # Apply filters
+        filtered_suggestions = all_suggestions
+        
+        if priority_filter != 'all':
+            filtered_suggestions = [
+                s for s in filtered_suggestions
+                if s['priority'] == priority_filter
+            ]
+        
+        if category_filter != 'all':
+            filtered_suggestions = [
+                s for s in filtered_suggestions
+                if s['category'] == category_filter
+            ]
+        
+        # Count by priority
+        high_count = len([s for s in all_suggestions if s['priority'] == 'high'])
+        medium_count = len([s for s in all_suggestions if s['priority'] == 'medium'])
+        low_count = len([s for s in all_suggestions if s['priority'] == 'low'])
+        
+        # Count by category
+        category_counts = {}
+        for suggestion in all_suggestions:
+            cat = suggestion['category']
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+        
+        # Available categories
+        categories = [
+            ('staffing', 'Staffing Levels'),
+            ('leave', 'Leave Management'),
+            ('training', 'Training & Compliance'),
+            ('sickness', 'Sickness Patterns'),
+            ('overtime_budget', 'Overtime Budget'),
+            ('fairness', 'Fairness & Balance'),
+            ('compliance', 'Regulatory Compliance'),
         ]
-    
-    if category_filter != 'all':
-        filtered_suggestions = [
-            s for s in filtered_suggestions
-            if s['category'] == category_filter
-        ]
-    
-    # Count by priority
-    high_count = len([s for s in all_suggestions if s['priority'] == 'high'])
-    medium_count = len([s for s in all_suggestions if s['priority'] == 'medium'])
-    low_count = len([s for s in all_suggestions if s['priority'] == 'low'])
-    
-    # Count by category
-    category_counts = {}
-    for suggestion in all_suggestions:
-        cat = suggestion['category']
-        category_counts[cat] = category_counts.get(cat, 0) + 1
-    
-    # Available categories
-    categories = [
-        ('staffing', 'Staffing Levels'),
-        ('leave', 'Leave Management'),
-        ('training', 'Training & Compliance'),
-        ('sickness', 'Sickness Patterns'),
-        ('overtime_budget', 'Overtime Budget'),
-        ('fairness', 'Fairness & Balance'),
-        ('compliance', 'Regulatory Compliance'),
-    ]
-    
-    context = {
-        'suggestions': filtered_suggestions,
-        'care_home': care_home,
-        'all_care_homes': CareHome.objects.all(),
-        'priority_filter': priority_filter,
-        'category_filter': category_filter,
-        'days_ahead': days_ahead,
-        'high_count': high_count,
-        'medium_count': medium_count,
-        'low_count': low_count,
-        'total_count': len(all_suggestions),
-        'filtered_count': len(filtered_suggestions),
-        'category_counts': category_counts,
-        'categories': categories,
-    }
-    
-    return render(request, 'scheduling/proactive_suggestions_dashboard.html', context)
+        
+        context = {
+            'suggestions': filtered_suggestions,
+            'care_home': care_home,
+            'all_care_homes': CareHome.objects.all(),
+            'priority_filter': priority_filter,
+            'category_filter': category_filter,
+            'days_ahead': days_ahead,
+            'high_count': high_count,
+            'medium_count': medium_count,
+            'low_count': low_count,
+            'total_count': len(all_suggestions),
+            'filtered_count': len(filtered_suggestions),
+            'category_counts': category_counts,
+            'categories': categories,
+        }
+        
+        return render(request, 'scheduling/proactive_suggestions_dashboard.html', context)
+        
+    except Exception as e:
+        # Log the error and return a user-friendly error page
+        logger.error(f"Error in proactive_suggestions_dashboard: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': 'Unable to load suggestions',
+            'message': str(e),
+            'detail': 'Please contact support if this persists.'
+        }, status=500)
 
 
 @login_required
