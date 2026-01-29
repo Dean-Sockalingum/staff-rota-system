@@ -285,19 +285,15 @@ if not DEBUG:
             },
             'file': {
                 'level': 'INFO',
-                'class': 'logging.handlers.RotatingFileHandler',
+                'class': 'logging.FileHandler',
                 'filename': config('LOG_FILE', default='/var/log/rota/django.log'),
-                'maxBytes': 1024 * 1024 * 15,  # 15MB
-                'backupCount': 10,
                 'formatter': 'verbose',
                 'encoding': 'utf-8',
             },
             'security': {
                 'level': 'WARNING',
-                'class': 'logging.handlers.RotatingFileHandler',
+                'class': 'logging.FileHandler',
                 'filename': config('SECURITY_LOG_FILE', default='/var/log/rota/security.log'),
-                'maxBytes': 1024 * 1024 * 10,  # 10MB
-                'backupCount': 20,
                 'formatter': 'verbose',
                 'encoding': 'utf-8',
             },
