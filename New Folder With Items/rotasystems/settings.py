@@ -654,7 +654,7 @@ if not DEBUG:
             },
         },
         'handlers': {
-            'file': {
+            'dev_file': {
                 'level': 'ERROR',
                 'class': 'logging.FileHandler',
                 'filename': BASE_DIR / 'logs' / 'django_errors.log',
@@ -667,12 +667,12 @@ if not DEBUG:
             },
         },
         'root': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'dev_file'],
             'level': 'INFO',
         },
         'loggers': {
             'django': {
-                'handlers': ['console', 'file'],
+                'handlers': ['console', 'dev_file'],
                 'level': 'INFO',
                 'propagate': False,
             },
