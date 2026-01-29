@@ -72,7 +72,7 @@ class ProactiveSuggestionEngine:
         if self.care_home:
             uncovered_shifts = uncovered_shifts.filter(unit__care_home=self.care_home)
         
-        uncovered_shifts = uncovered_shifts.select_related('shift_type', 'unit', 'role')
+        uncovered_shifts = uncovered_shifts.select_related('shift_type', 'unit')
         
         # Group by urgency
         urgent = []  # Within 3 days
