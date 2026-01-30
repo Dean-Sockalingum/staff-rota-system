@@ -70,6 +70,25 @@ try:
 		os.getcwd(),
 		sys.path[:3],
 	)
+
+	# Runtime safeguard: ensure required hosts/origins are present in settings
+	required_hosts_set = {
+		'therota.co.uk', 'www.therota.co.uk', 'demo.therota.co.uk',
+		'localhost', '127.0.0.1', '192.168.1.125'
+	}
+	final_hosts = sorted(set(settings.ALLOWED_HOSTS or []) | required_hosts_set)
+	if final_hosts != list(settings.ALLOWED_HOSTS or []):
+		settings.ALLOWED_HOSTS = final_hosts
+		logger.info("WSGI fixup: adjusted ALLOWED_HOSTS to %s", final_hosts)
+
+	required_csrf_set = {
+		'https://therota.co.uk', 'https://www.therota.co.uk', 'https://demo.therota.co.uk'
+	}
+	current_csrf = list(settings.CSRF_TRUSTED_ORIGINS or [])
+	final_csrf = sorted(set(current_csrf) | required_csrf_set)
+	if final_csrf != current_csrf:
+		settings.CSRF_TRUSTED_ORIGINS = final_csrf
+		logger.info("WSGI fixup: adjusted CSRF_TRUSTED_ORIGINS to %s", final_csrf)
 except Exception as e:
 	# Fallback to stdout if logging is not yet fully configured
 	print(f"WSGI startup log failed: {e}")
