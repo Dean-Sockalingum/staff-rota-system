@@ -17,6 +17,36 @@ import importlib
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
 
+# Defensive: ensure required hosts/origins are present in environment before settings load
+required_hosts = [
+	'therota.co.uk',
+	'www.therota.co.uk',
+	'demo.therota.co.uk',
+	'localhost',
+	'127.0.0.1',
+	'192.168.1.125',
+]
+hosts_env = os.environ.get('ALLOWED_HOSTS', '')
+if hosts_env:
+	current = {h.strip() for h in hosts_env.split(',') if h.strip()}
+	merged = current.union(required_hosts)
+	os.environ['ALLOWED_HOSTS'] = ','.join(sorted(merged))
+else:
+	os.environ['ALLOWED_HOSTS'] = ','.join(required_hosts)
+
+required_csrf = [
+	'https://therota.co.uk',
+	'https://www.therota.co.uk',
+	'https://demo.therota.co.uk',
+]
+csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if csrf_env:
+	current = {o.strip() for o in csrf_env.split(',') if o.strip()}
+	merged = current.union(required_csrf)
+	os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(sorted(merged))
+else:
+	os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(required_csrf)
+
 application = get_wsgi_application()
 
 # Emit a startup log with key settings for operational verification
