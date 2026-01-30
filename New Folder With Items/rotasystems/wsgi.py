@@ -12,6 +12,7 @@ import os
 from django.core.wsgi import get_wsgi_application
 from django.conf import settings
 import logging
+import sys
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
 
@@ -21,10 +22,13 @@ application = get_wsgi_application()
 try:
 	logger = logging.getLogger('django')
 	logger.info(
-		"WSGI startup: DEBUG=%s, ALLOWED_HOSTS=%s, CSRF_TRUSTED_ORIGINS=%s",
+		"WSGI startup: DEBUG=%s, ALLOWED_HOSTS=%s, CSRF_TRUSTED_ORIGINS=%s, SETTINGS_FILE=%s, CWD=%s, SYS_PATH_HEAD=%s",
 		settings.DEBUG,
 		settings.ALLOWED_HOSTS,
 		settings.CSRF_TRUSTED_ORIGINS,
+		getattr(settings, "__file__", "<unknown>"),
+		os.getcwd(),
+		sys.path[:3],
 	)
 except Exception as e:
 	# Fallback to stdout if logging is not yet fully configured
