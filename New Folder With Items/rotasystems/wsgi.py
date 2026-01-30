@@ -17,35 +17,40 @@ import importlib
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rotasystems.settings')
 
-# Defensive: ensure required hosts/origins are present in environment before settings load
-required_hosts = [
-	'therota.co.uk',
-	'www.therota.co.uk',
-	'demo.therota.co.uk',
-	'localhost',
-	'127.0.0.1',
-	'192.168.1.125',
-]
-hosts_env = os.environ.get('ALLOWED_HOSTS', '')
-if hosts_env:
-	current = {h.strip() for h in hosts_env.split(',') if h.strip()}
-	merged = current.union(required_hosts)
-	os.environ['ALLOWED_HOSTS'] = ','.join(sorted(merged))
-else:
-	os.environ['ALLOWED_HOSTS'] = ','.join(required_hosts)
+# Gate the hosts/origins hotfix behind an environment flag
+# Set ROTASYSTEMS_HOSTS_HOTFIX=0 to disable once environment is clean
+HOTFIX_ENABLED = str(os.environ.get('ROTASYSTEMS_HOSTS_HOTFIX', '1')).lower() in ('1', 'true', 'yes')
 
-required_csrf = [
-	'https://therota.co.uk',
-	'https://www.therota.co.uk',
-	'https://demo.therota.co.uk',
-]
-csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
-if csrf_env:
-	current = {o.strip() for o in csrf_env.split(',') if o.strip()}
-	merged = current.union(required_csrf)
-	os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(sorted(merged))
-else:
-	os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(required_csrf)
+if HOTFIX_ENABLED:
+	# Defensive: ensure required hosts/origins are present in environment before settings load
+	required_hosts = [
+		'therota.co.uk',
+		'www.therota.co.uk',
+		'demo.therota.co.uk',
+		'localhost',
+		'127.0.0.1',
+		'192.168.1.125',
+	]
+	hosts_env = os.environ.get('ALLOWED_HOSTS', '')
+	if hosts_env:
+		current = {h.strip() for h in hosts_env.split(',') if h.strip()}
+		merged = current.union(required_hosts)
+		os.environ['ALLOWED_HOSTS'] = ','.join(sorted(merged))
+	else:
+		os.environ['ALLOWED_HOSTS'] = ','.join(required_hosts)
+
+	required_csrf = [
+		'https://therota.co.uk',
+		'https://www.therota.co.uk',
+		'https://demo.therota.co.uk',
+	]
+	csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+	if csrf_env:
+		current = {o.strip() for o in csrf_env.split(',') if o.strip()}
+		merged = current.union(required_csrf)
+		os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(sorted(merged))
+	else:
+		os.environ['CSRF_TRUSTED_ORIGINS'] = ','.join(required_csrf)
 
 application = get_wsgi_application()
 
@@ -61,34 +66,38 @@ try:
 		pass
 
 	logger.info(
-		"WSGI startup: DEBUG=%s, ALLOWED_HOSTS=%s, CSRF_TRUSTED_ORIGINS=%s, SETTINGS_MODULE=%s, SETTINGS_FILE=%s, CWD=%s, SYS_PATH_HEAD=%s",
+		"WSGI startup: DEBUG=%s, ALLOWED_HOSTS=%s, CSRF_TRUSTED_ORIGINS=%s, SETTINGS_MODULE=%s, SETTINGS_FILE=%s, HOTFIX_ENABLED=%s, CWD=%s, SYS_PATH_HEAD=%s",
 		settings.DEBUG,
 		settings.ALLOWED_HOSTS,
 		settings.CSRF_TRUSTED_ORIGINS,
 		settings_module,
 		settings_file,
+		HOTFIX_ENABLED,
 		os.getcwd(),
 		sys.path[:3],
 	)
 
-	# Runtime safeguard: ensure required hosts/origins are present in settings
-	required_hosts_set = {
-		'therota.co.uk', 'www.therota.co.uk', 'demo.therota.co.uk',
-		'localhost', '127.0.0.1', '192.168.1.125'
-	}
-	final_hosts = sorted(set(settings.ALLOWED_HOSTS or []) | required_hosts_set)
-	if final_hosts != list(settings.ALLOWED_HOSTS or []):
-		settings.ALLOWED_HOSTS = final_hosts
-		logger.info("WSGI fixup: adjusted ALLOWED_HOSTS to %s", final_hosts)
+	if HOTFIX_ENABLED:
+		# Runtime safeguard: ensure required hosts/origins are present in settings
+		required_hosts_set = {
+			'therota.co.uk', 'www.therota.co.uk', 'demo.therota.co.uk',
+			'localhost', '127.0.0.1', '192.168.1.125'
+		}
+		final_hosts = sorted(set(settings.ALLOWED_HOSTS or []) | required_hosts_set)
+		if final_hosts != list(settings.ALLOWED_HOSTS or []):
+			settings.ALLOWED_HOSTS = final_hosts
+			logger.info("WSGI fixup: adjusted ALLOWED_HOSTS to %s", final_hosts)
 
-	required_csrf_set = {
-		'https://therota.co.uk', 'https://www.therota.co.uk', 'https://demo.therota.co.uk'
-	}
-	current_csrf = list(settings.CSRF_TRUSTED_ORIGINS or [])
-	final_csrf = sorted(set(current_csrf) | required_csrf_set)
-	if final_csrf != current_csrf:
-		settings.CSRF_TRUSTED_ORIGINS = final_csrf
-		logger.info("WSGI fixup: adjusted CSRF_TRUSTED_ORIGINS to %s", final_csrf)
+		required_csrf_set = {
+			'https://therota.co.uk', 'https://www.therota.co.uk', 'https://demo.therota.co.uk'
+		}
+		current_csrf = list(settings.CSRF_TRUSTED_ORIGINS or [])
+		final_csrf = sorted(set(current_csrf) | required_csrf_set)
+		if final_csrf != current_csrf:
+			settings.CSRF_TRUSTED_ORIGINS = final_csrf
+			logger.info("WSGI fixup: adjusted CSRF_TRUSTED_ORIGINS to %s", final_csrf)
+	else:
+		logger.info("WSGI hotfix disabled via ROTASYSTEMS_HOSTS_HOTFIX; using settings as-is")
 except Exception as e:
 	# Fallback to stdout if logging is not yet fully configured
 	print(f"WSGI startup log failed: {e}")

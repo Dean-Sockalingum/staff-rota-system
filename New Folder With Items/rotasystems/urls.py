@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from django.http import FileResponse
 from rotasystems import saml_views
+from rotasystems import health_views
 import os
 
 def service_worker_view(request):
@@ -33,6 +34,7 @@ def service_worker_view(request):
 
 urlpatterns = [
     path('service-worker.js', service_worker_view, name='service-worker'),
+    path('health-config/', health_views.health_config, name='health-config'),
     path('admin/', admin.site.urls),
     path('', include('scheduling.management.urls')),
     path('', include('scheduling.urls_activity')),  # Task 55: Activity Feed
